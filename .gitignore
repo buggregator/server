@@ -1,0 +1,9 @@
+.idea
+vendor
+runtime
+rr*
+protoc-gen-php-grpc*
+.env
+.phpunit.result.cache
+.deptrac.cache
+composer.lock

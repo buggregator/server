@@ -1,0 +1,46 @@
+version: '2.7'
+
+rpc:
+  listen: tcp://127.0.0.1:6001
+
+server:
+  command: 'php app.php'
+  relay: pipes
+
+logs:
+  level: info
+
+tcp:
+  servers:
+    monolog:
+      addr: 127.0.0.1:9913
+      delimiter: "\n"
+    var-dumper:
+      addr: 127.0.0.1:9912
+      delimiter: "\n"
+
+jobs:
+  consume: [ "default", "events" ]
+  pipelines:
+    default:
+      driver: memory
+      config: { }
+    events:
+      driver: memory
+      config: { }
+  pool:
+    num_workers: 2
+
+service:
+  centrifuge:
+    service_name_in_log: true
+    remain_after_exit: true
+    restart_sec: 1
+    command: "./bin/centrifugo --config=centrifugo.json"
+
+centrifuge:
+  proxy_address: "tcp://127.0.0.1:10001"
+  grpc_api_address: "tcp://127.0.0.1:10000"
+  pool:
+    reset_timeout: 10
+    num_workers: 2

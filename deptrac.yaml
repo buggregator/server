@@ -1,0 +1,152 @@
+# deptrac.yaml
+deptrac:
+  paths:
+    - ./app/src
+  exclude_files:
+    - '#test/.*#'
+    - '#app/src/module/.*/test/.*#'
+  layers:
+    # App
+    - name: Application
+      collectors:
+        - type: bool
+          must:
+            - type: className
+              value: App\\Application\\.*
+          must_not:
+            - type: layer
+              layer: AppBootloader
+            - type: layer
+              layer: AppKernel
+    - name: AppKernel
+      collectors:
+        - type: className
+          value: App\\Application\\Kernel
+    - name: AppBootloader
+      collectors:
+        - type: className
+          value: App\\Application\\Bootloader\\.*
+#    - name: AppTest
+#      collectors:
+#        - type: className
+#          value: Tests\\.*
+
+    # Api
+    - name: Controller
+      collectors:
+        - type: className
+          value: App\\Api\\.*
+
+    # Modules
+    - name: ModuleContract
+      collectors:
+        - type: className
+          value: App\\Module\\[a-z_][a-z0-9_]*\\Api\\.*
+    - name: ModuleInternal
+      collectors:
+        - type: className
+          value: App\\Module\\[a-z_][a-z0-9_]*\\Internal\\.*
+    - name: ModuleApplication
+      collectors:
+        - type: bool
+          must:
+            - type: className
+              value: App\\Module\\[a-z_][a-z0-9_]*\\Application\\.*
+          must_not:
+            - type: layer
+              layer: ModuleBootloader
+    - name: ModuleBootloader
+      collectors:
+        - type: className
+          value: App\\Module\\.*Bootloader.*
+#    - name: ModuleTest
+#      collectors:
+#        - type: className
+#          value: App\\Module\\[a-z_][a-z0-9_]*\\Tests?\\.*
+
+    # Vendor
+    - name: VendorBootloader
+      collectors:
+        - type: bool
+          must:
+            - type: className
+              value: .*Bootloader.*
+          must_not:
+            - type: className
+              value: App\\.*
+    - name: VendorDev
+      collectors:
+        - type: className
+          value: PhpUnit\\.*
+        - type: className
+          value: Spiral\\Testing\\.*
+    - name: Vendor
+      collectors:
+        - type: bool
+          must:
+            - type: className
+              value: .+\\.+
+          must_not:
+            - type: className
+              value: App\\.*
+            - type: layer
+              layer: VendorDev
+            - type: layer
+              layer: SpiralKernel
+            - type: layer
+              layer: SpiralPrototype
+    - name: SpiralKernel
+      collectors:
+        - type: className
+          value: Spiral\\Framework\\Kernel
+    - name: SpiralPrototype
+      collectors:
+        - type: className
+          value: Spiral\\Prototype\\.*
+
+  ruleset:
+    AppKernel:
+      - AppBootloader
+      - ModuleBootloader
+      - VendorBootloader
+      - SpiralKernel
+    AppBootloader:
+      - VendorBootloader
+      - Application
+      - Vendor
+    Application:
+      - ModuleApplication
+      - Vendor
+
+    Controller:
+      - ModuleContract
+      - SpiralPrototype
+      # todo add more details
+      - Vendor
+
+    ModuleContract:
+      - ModuleContract
+    ModuleInternal:
+      - ModuleContract
+    ModuleApplication:
+      - ModuleContract
+      - ModuleInternal
+    ModuleBootloader:
+      - AppBootloader
+      - VendorBootloader
+      - ModuleContract
+      - ModuleInternal
+#    ModuleTest:
+#      - ModuleInternal
+#      - ModuleContract
+#      - VendorDev
+
+#    AppTest:
+#      - Application
+#      - AppBootloader
+#      - AppKernel
+#      - Controller
+#      - ModuleContract
+#      - ModuleInternal
+#      - ModuleApplication
+#      - VendorDev
