@@ -45,8 +45,7 @@ import InspectorComponent from "@/Components/Events/Inspector/Event"
 
 export default {
   components: {
-    Labels,
-    WsConnectionStatus, Tips,
+    Labels, WsConnectionStatus, Tips,
     SentryComponent, SmtpComponent, VarDumpComponent,
     MonologComponent, InspectorComponent,
   },
@@ -55,7 +54,7 @@ export default {
   },
   computed: {
     hasEvents() {
-      return this.totalEvents > 0
+      return this.events.length > 0
     },
     events() {
       return this.$store.getters['events/filtered']
@@ -68,9 +67,9 @@ export default {
     },
     eventComponent(event) {
       if (event instanceof SentryEvent) {
-        return 'SentryEventComponent'
+        return 'SentryComponent'
       } else if (event instanceof SmtpEvent) {
-        return 'SmtpEventComponent'
+        return 'SmtpComponent'
       } else if (event instanceof VarDumpEvent) {
         return 'VarDumpComponent'
       } else if (event instanceof MonologEvent) {

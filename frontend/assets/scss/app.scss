@@ -1,6 +1,7 @@
 @import 'tailwindcss/base';
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
+@import "highlight.js/scss/github-dark";
 @import "vue3-perfect-scrollbar/dist/vue3-perfect-scrollbar.css";
 @import "./components/buttons";
 @import "./components/event-table";
