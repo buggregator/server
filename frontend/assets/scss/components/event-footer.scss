@@ -1,0 +1,7 @@
+.event-footer {
+    @apply flex space-x-4 items-center;
+
+    &__name {
+        @apply text-muted underline text-2xs cursor-help;
+    }
+}

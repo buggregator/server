@@ -8,7 +8,7 @@ use App\Application\Commands\FindEvents;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Spiral\Cqrs\Attribute\QueryHandler;
 
-class FindEventsHandler extends EventsHandler
+final class FindEventsHandler extends EventsHandler
 {
     public function __construct(
         private readonly EventRepositoryInterface $events
@@ -20,9 +20,7 @@ class FindEventsHandler extends EventsHandler
     {
         return $this->events->findAll(
             self::getScopeFromFindEvents($query),
-            ['date' => 'asc'],
-            $query->limit,
-            $query->offset,
+            ['date' => 'desc']
         );
     }
 }

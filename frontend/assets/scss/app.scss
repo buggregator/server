@@ -1,0 +1,64 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+@import "vue3-perfect-scrollbar/dist/vue3-perfect-scrollbar.css";
+@import "./components/buttons";
+@import "./components/event-table";
+@import "./components/event-footer";
+@import "./components/code-snippet";
+@import "./components/host";
+@import "./components/label";
+@import "./components/json-chip";
+@import "./components/collapsed";
+@import "./components/sshpre";
+@import "./components/dump";
+@import "./components/html-preview";
+@import "./components/tab";
+@import "./components/ws-connection";
+@import "./components/auth";
+@import "./components/settings";
+@import "./components/layouts/main-layout";
+@import "./components/layouts/left-sidebar";
+@import "./components/layouts/logout";
+@import "./components/layouts/events-page";
+@import "./components/layouts/filters";
+@import "./components/layouts/tips";
+@import "./components/layouts/screens";
+@import "./components/layouts/event";
+@import "./components/layouts/breadcrumbs";
+@import "./components/events/list-page/event-ray";
+@import "./components/events/list-page/event-monolog";
+@import "./components/events/list-page/event-inspector";
+@import "./components/events/list-page/event-vardump";
+@import "./components/events/list-page/event-sentry";
+@import "./components/events/list-page/event-smtp";
+@import "components/events/single-page/common";
+@import "./components/events/single-page/smtp";
+@import "./components/events/single-page/inspector";
+@import "./components/events/single-page/sentry";
+@import "./components/vue-pagination";
+@import "vue-loading-overlay/dist/vue-loading.css";
+
+body {
+    @apply bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-50;
+}
+
+.text-muted {
+    @apply text-gray-600 dark:text-gray-300;
+}
+
+.text-muted.red {
+    @apply text-red-600 dark:text-red-300;
+}
+
+.text-responsive {
+    @apply text-2xs sm:text-xs md:text-sm lg:text-base;
+}
+
+.border-style {
+    @apply border-gray-300 dark:border-gray-500 divide-gray-300 dark:divide-gray-500;
+}
+
+.svg-icon {
+  @apply fill-current;
+}

@@ -1,0 +1,359 @@
+.ssh-pre {
+    margin-top: 0 !important;
+    @apply font-mono relative border border-style p-2 md:px-3 lg:px-4 text-responsive bg-gray-800 block;
+}
+
+.ssh-pre__content {
+    white-space: pre-wrap;
+    word-break: break-word
+}
+
+.ssh-pre .txt {
+    @apply text-gray-300
+}
+
+.ssh-pre .comment {
+    @apply italic text-gray-800;
+}
+
+.ssh-pre .comment * {
+    color: inherit !important
+}
+
+.ssh-pre .quote {
+    @apply text-red-300
+}
+
+.ssh-pre .quote * {
+    color: inherit !important
+}
+
+.ssh-pre .htmlentity {
+    @apply text-blue-300 font-bold
+}
+
+.ssh-pre .number {
+    @apply text-red-300
+}
+
+.ssh-pre .boolean {
+    @apply text-red-300
+}
+
+.ssh-pre .keyword {
+    @apply text-blue-300 font-bold
+}
+
+.ssh-pre .this {
+    @apply text-purple-300 font-bold
+}
+
+.ssh-pre .punctuation {
+    @apply text-purple-300
+}
+
+.ssh-pre .external-var, .ssh-pre .special {
+    @apply text-orange-300
+}
+
+.ssh-pre .variable {
+    @apply text-blue-300
+}
+
+.ssh-pre .obj-attr {
+    color: #0bc
+}
+
+.ssh-pre[data-type=shell] .keyword {
+    color: #ff5252
+}
+
+.ssh-pre[data-type=shell] .param {
+    color: #f63
+}
+
+.ssh-pre[data-type=html] .doctype {
+    @apply text-blue-100
+}
+
+.ssh-pre[data-type=html] .tag-name {
+    @apply text-blue-300
+}
+
+.ssh-pre[data-type=html] .attribute {
+    @apply text-orange-300
+}
+
+.ssh-pre[data-type=html-vue] .doctype {
+    @apply text-blue-100
+}
+
+.ssh-pre[data-type=html-vue] .tag-name {
+    color: #42b983
+}
+
+.ssh-pre[data-type=html-vue] .punctuation {
+    color: #128953
+}
+
+.ssh-pre[data-type=html-vue] .attribute {
+    color: #ff5252
+}
+
+.ssh-pre[data-type=pug] .tag-name {
+    @apply text-blue-300 font-bold
+}
+
+.ssh-pre[data-type=pug] .punctuation {
+    color: #999
+}
+
+.ssh-pre[data-type=pug] .id {
+    color: #e3f
+}
+
+.ssh-pre[data-type=pug] .class {
+    color: #09e
+}
+
+.ssh-pre[data-type=pug] .attribute {
+    @apply text-orange-300
+}
+
+.ssh-pre[data-type=pug] .text {
+    color: #495a70
+}
+
+.ssh-pre[data-type=xml] .doctype {
+    color: #02027e
+}
+
+.ssh-pre[data-type=xml] .tag-name {
+    color: #11c
+}
+
+.ssh-pre[data-type=xml] .attribute {
+    color: #f93
+}
+
+.ssh-pre[data-type=css] .variable {
+    color: #29e;
+    font-weight: bold
+}
+
+.ssh-pre[data-type=css] .selector {
+    color: #f0d
+}
+
+.ssh-pre[data-type=css] .selector.class-id {
+    color: #f0d
+}
+
+.ssh-pre[data-type=css] .pseudo {
+    color: #f35
+}
+
+.ssh-pre[data-type=css] .selector.keyword {
+    color: #f5f
+}
+
+.ssh-pre[data-type=css] .selector.keyword.vendor {
+    color: #0c8
+}
+
+.ssh-pre[data-type=css] .keyword {
+    color: #c06
+}
+
+.ssh-pre[data-type=css] .attribute {
+    color: #70d
+}
+
+.ssh-pre[data-type=css] .keyword {
+    color: #e28
+}
+
+.ssh-pre[data-type=css] .value {
+    color: #c11
+}
+
+.ssh-pre[data-type=css] .vendor {
+    color: #0c8
+}
+
+.ssh-pre[data-type=css] .color {
+    background: #eee;
+    padding: 0 3px;
+    border: 1px solid rgba(0, 0, 0, .1);
+    border-radius: 3px
+}
+
+.ssh-pre[data-type=css] .unit {
+    color: #0bc
+}
+
+.ssh-pre[data-type=css] .important {
+    color: red;
+    font-weight: bold
+}
+
+.ssh-pre[data-type=sql] .var-type {
+    @apply text-orange-300 font-bold
+}
+
+.ssh-pre--dark .txt {
+    color: #ccc
+}
+
+.ssh-pre--dark .comment {
+    font-style: italic;
+    color: #7c6
+}
+
+.ssh-pre--dark .quote {
+    color: #da8e72
+}
+
+.ssh-pre--dark .htmlentity {
+    color: #7ba3c9;
+    font-weight: bold
+}
+
+.ssh-pre--dark .boolean, .ssh-pre--dark .number {
+    color: #adcfa4
+}
+
+.ssh-pre--dark .keyword {
+    color: #e67ad2
+}
+
+.ssh-pre--dark .this {
+    color: #329ddb
+}
+
+.ssh-pre--dark .punctuation {
+    color: #aac
+}
+
+.ssh-pre--dark .external-var, .ssh-pre--dark .special {
+    color: #7bcced
+}
+
+.ssh-pre--dark .variable {
+    color: #84deff
+}
+
+.ssh-pre--dark .obj-attr {
+    color: #0dc
+}
+
+.ssh-pre--dark[data-type=shell] .keyword {
+    color: #ff5252
+}
+
+.ssh-pre--dark[data-type=shell] .param {
+    color: #7bcced
+}
+
+.ssh-pre--dark[data-type=html] .tag-name {
+    color: #339cda
+}
+
+.ssh-pre--dark[data-type=html] .attribute {
+    color: #7bcced
+}
+
+.ssh-pre--dark[data-type=html-vue] .tag-name {
+    color: #339cda
+}
+
+.ssh-pre--dark[data-type=html-vue] .punctuation {
+    color: #99c
+}
+
+.ssh-pre--dark[data-type=html-vue] .attribute {
+    color: #7bcced
+}
+
+.ssh-pre--dark[data-type=pug] .tag-name {
+    color: #339cda;
+    font-weight: bold
+}
+
+.ssh-pre--dark[data-type=pug] .punctuation {
+    color: #999
+}
+
+.ssh-pre--dark[data-type=pug] .id {
+    color: #ed9bfd
+}
+
+.ssh-pre--dark[data-type=pug] .class {
+    color: #0ba7b3
+}
+
+.ssh-pre--dark[data-type=pug] .attribute {
+    color: #8adeff
+}
+
+.ssh-pre--dark[data-type=pug] .text {
+    color: #c4d8f3
+}
+
+.ssh-pre--dark[data-type=xml] .tag-name {
+    color: #339cda
+}
+
+.ssh-pre--dark[data-type=xml] .attribute {
+    color: #f93
+}
+
+.ssh-pre--dark[data-type=css] .selector, .ssh-pre--dark[data-type=css] .class-id {
+    color: #ff9a57
+}
+
+.ssh-pre--dark[data-type=css] .pseudo {
+    color: #ff516e
+}
+
+.ssh-pre--dark[data-type=css] .keyword {
+    color: #ff73ff
+}
+
+.ssh-pre--dark[data-type=css] .keyword {
+    color: #c06
+}
+
+.ssh-pre--dark[data-type=css] .attribute {
+    color: #70d
+}
+
+.ssh-pre--dark[data-type=css] .keyword {
+    color: #ee499b
+}
+
+.ssh-pre--dark[data-type=css] .value {
+    color: #cf3838
+}
+
+.ssh-pre--dark[data-type=css] .vendor {
+    color: #0c8
+}
+
+.ssh-pre--dark[data-type=css] .color {
+    background: #111;
+    border-color: #ffffff40
+}
+
+.ssh-pre--dark[data-type=css] .unit {
+    color: #0bc
+}
+
+.ssh-pre--dark[data-type=css] .important {
+    color: #fe4848
+}
+
+.ssh-pre--dark[data-type=sql] .var-type {
+    color: #7bcced;
+    font-weight: bold
+}

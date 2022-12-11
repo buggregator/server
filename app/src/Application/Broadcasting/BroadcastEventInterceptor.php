@@ -23,7 +23,10 @@ final class BroadcastEventInterceptor implements CoreInterceptorInterface
         if ($event instanceof ShouldBroadcastInterface) {
             $this->broadcast->publish(
                 $event->getBroadcastTopics(),
-                \json_encode($event)
+                \json_encode([
+                    'event' => $event->getEventName(),
+                    'data' =>  $event->jsonSerialize(),
+                ])
             );
         }
 

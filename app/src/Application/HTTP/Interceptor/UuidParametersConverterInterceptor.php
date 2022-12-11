@@ -15,7 +15,7 @@ final class UuidParametersConverterInterceptor implements CoreInterceptorInterfa
         $refMethod = new \ReflectionMethod($controller, $action);
 
         foreach ($refMethod->getParameters() as $parameter) {
-            if ($parameter->getType() === Uuid::class) {
+            if ($parameter->getType()->getName() === Uuid::class) {
                 $parameters[$parameter->getName()] = Uuid::fromString($parameters[$parameter->getName()]);
             }
         }

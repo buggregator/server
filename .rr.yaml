@@ -10,6 +10,20 @@ server:
 logs:
   level: info
 
+http:
+  address: 0.0.0.0:8082
+  middleware: [ "headers" ]
+  headers:
+    cors:
+      allowed_origin: "*"
+      allowed_headers: "*"
+      allowed_methods: "GET,POST,PUT,DELETE"
+      allow_credentials: true
+      exposed_headers: "Cache-Control,Content-Language,Content-Type,Expires,Last-Modified,Pragma"
+      max_age: 600
+  pool:
+    num_workers: 2
+
 tcp:
   servers:
     monolog:
@@ -32,6 +46,14 @@ jobs:
     num_workers: 2
 
 service:
+  frontend:
+    service_name_in_log: true
+    remain_after_exit: true
+    restart_sec: 1
+    command: "npm run dev"
+    env:
+      API_URL: http://127.0.0.1:8082
+      WS_URL: ws://127.0.0.1:8089/connection/websocket
   centrifuge:
     service_name_in_log: true
     remain_after_exit: true
@@ -43,4 +65,4 @@ centrifuge:
   grpc_api_address: "tcp://127.0.0.1:10000"
   pool:
     reset_timeout: 10
-    num_workers: 2
+    num_workers: 5

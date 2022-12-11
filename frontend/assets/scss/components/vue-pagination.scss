@@ -1,0 +1,10 @@
+.VuePagination {
+    .pagination > li {
+        padding: 3px;
+        display: inline-block;
+    }
+
+    button.active {
+        font-weight: bold;
+    }
+}

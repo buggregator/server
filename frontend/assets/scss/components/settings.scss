@@ -1,0 +1,14 @@
+.settings {
+    &__header {
+        @apply border-b flex items-center gap-x-2 text-xs font-semibold px-4 py-2;
+    }
+    &__main {
+        @apply p-5 flex flex-col flex-grow;
+    }
+    &__title {
+        @apply text-2xl font-bold;
+    }
+    &__radio {
+        @apply flex space-x-5 items-center my-5;
+    }
+}

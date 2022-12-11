@@ -1,0 +1,35 @@
+.sentry-page {
+  &-title_wrapper {
+    @apply flex justify-between items-center mb-4;
+  }
+}
+
+.sentry-events {
+  &_list {
+    @apply divide-y border-2 border-style;
+  }
+
+  &_item {
+
+  }
+
+  &_empty {
+    @apply h-full flex flex-col items-center justify-center my-10;
+
+    &-icon {
+      @apply w-1/3 max-w-xs mb-5 fill-current text-blue-400 dark:text-gray-100;
+    }
+
+    > h3 {
+      @apply font-semibold text-muted text-2xl mt-2;
+    }
+  }
+
+  &__item {
+    @apply relative;
+
+    &-link {
+      @apply cursor-pointer p-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800;
+    }
+  }
+}

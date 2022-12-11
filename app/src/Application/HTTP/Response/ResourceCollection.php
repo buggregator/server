@@ -41,7 +41,6 @@ class ResourceCollection implements ResourceInterface
         $resourceClass = $this->getResourceClass();
 
         foreach ($this->getData() as $key => $row) {
-            dump($row);
             $data[$key] = (new $resourceClass($row))->resolve($request);
         }
 

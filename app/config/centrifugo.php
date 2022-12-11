@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Api\Centrifugo\ConnectService;
-use App\Api\Centrifugo\RPCService;
-use App\Api\Centrifugo\SubscribeService;
+use App\Interfaces\Centrifugo\ConnectService;
+use App\Interfaces\Centrifugo\RPCService;
+use App\Interfaces\Centrifugo\SubscribeService;
 use RoadRunner\Centrifugo\Request\RequestType;
 
 return [

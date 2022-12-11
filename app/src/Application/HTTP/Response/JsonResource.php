@@ -13,9 +13,11 @@ class JsonResource implements ResourceInterface, \ArrayAccess
 {
     use JsonTrait;
 
-    public function __construct(
-        protected readonly array|JsonSerializable $data
-    ) {
+    protected readonly mixed $data;
+
+    public function __construct(mixed $data)
+    {
+        $this->data = $data;
     }
 
     protected function mapData(ServerRequestInterface $request): array|JsonSerializable

@@ -17,8 +17,8 @@ final class AppBootloader extends DomainBootloader
     ];
 
     protected const INTERCEPTORS = [
-        UuidParametersConverterInterceptor::class,
         StringToIntParametersInterceptor::class,
+        UuidParametersConverterInterceptor::class,
         JsonResourceInterceptor::class,
     ];
 }

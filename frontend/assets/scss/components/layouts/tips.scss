@@ -1,0 +1,40 @@
+.tips {
+  @apply mt-6 p-6 bg-white dark:bg-gray-900 rounded-l text-muted border;
+
+  &__title {
+    @apply text-xl font-bold mb-3;
+  }
+
+  &__list {
+    @apply flex flex-col space-y-4;
+    @apply flex flex-col space-y-4;
+  }
+
+  &__item {
+    @apply flex space-x-3 items-center;
+  }
+
+  &__link {
+    @apply text-blue-600 dark:text-blue-200 underline break-all;
+  }
+
+  &__icon {
+    @apply w-6 dark:text-white;
+
+    &.github {
+      @apply text-gray-800;
+    }
+
+    &.sentry {
+      @apply text-red-800;
+    }
+
+    &.inspector {
+      @apply text-blue-800;
+    }
+
+    &.ray {
+      @apply text-blue-800;
+    }
+  }
+}

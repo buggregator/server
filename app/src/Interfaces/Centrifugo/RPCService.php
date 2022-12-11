@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Api\Centrifugo;
+namespace App\Interfaces\Centrifugo;
 
 use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -57,7 +57,7 @@ final class RPCService implements ServiceInterface
         [$method, $uri] = \explode(':', $request->method, 2);
         $method = \strtoupper($method);
 
-        $httpRequest = $this->requestFactory->createServerRequest(\strtoupper($method), 'api/' . \ltrim($uri, '/'))
+        $httpRequest = $this->requestFactory->createServerRequest(\strtoupper($method), \ltrim($uri, '/'))
             ->withHeader('Content-Type', 'application/json');
 
 //        foreach ($request->headers as $key => $headers) {

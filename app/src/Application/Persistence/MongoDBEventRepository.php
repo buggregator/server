@@ -24,7 +24,7 @@ final class MongoDBEventRepository implements EventRepositoryInterface
             '_id' => (string)$event->getUuid(),
             'type' => $event->getType(),
             'project_id' => $event->getProjectId(),
-            'created_at' => $event->getDate()->getTimestamp(),
+            'date' => $event->getDate()->getTimestamp(),
             'payload' => $event->getPayload()->jsonSerialize(),
         ]);
 
@@ -38,7 +38,7 @@ final class MongoDBEventRepository implements EventRepositoryInterface
 
     public function deleteByPK(string $uuid): bool
     {
-        $deleteResult = $this->collection->deleteOne(['state' => 'ny']);
+        $deleteResult = $this->collection->deleteOne(['_id' => $uuid]);
 
         return $deleteResult->getDeletedCount() > 0;
     }
@@ -51,7 +51,7 @@ final class MongoDBEventRepository implements EventRepositoryInterface
     public function findAll(array $scope = [], array $orderBy = []): iterable
     {
         $cursor = $this->collection->find($scope, [
-            'sort' => $orderBy,
+            'sort' => $this->mapOrderBy($orderBy),
         ]);
 
         foreach ($cursor as $document) {
@@ -59,9 +59,9 @@ final class MongoDBEventRepository implements EventRepositoryInterface
         }
     }
 
-    public function findByPK(mixed $id): ?Event
+    public function findByPK(mixed $uuid): ?Event
     {
-        return $this->findOne(['_id' => $id]);
+        return $this->findOne(['_id' => $uuid]);
     }
 
     public function findOne(array $scope = []): ?Event
@@ -75,14 +75,25 @@ final class MongoDBEventRepository implements EventRepositoryInterface
         return $this->mapDocumentInfoEvent($document);
     }
 
-    public function mapDocumentInfoEvent(array $document): Event
+    public function mapDocumentInfoEvent(\MongoDB\Model\BSONDocument $document): Event
     {
         return new Event(
             uuid: Uuid::fromString($document['_id']),
             type: $document['type'],
-            payload: new Json($document['payload']),
-            date: Carbon::createFromTimestamp($document['created_at'])->toDateTimeImmutable(),
+            payload: new Json((array) $document['payload']),
+            date: Carbon::createFromTimestamp($document['date'])->toDateTimeImmutable(),
             projectId: $document['project_id'],
         );
+    }
+
+    private function mapOrderBy(array $orderBy): array
+    {
+        $result = [];
+
+        foreach ($orderBy as $key => $order) {
+            $result[$key] = $order === 'asc' ? 1 : -1;
+        }
+
+        return $result;
     }
 }

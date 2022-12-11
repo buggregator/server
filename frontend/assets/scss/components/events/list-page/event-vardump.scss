@@ -1,0 +1,5 @@
+.event-var-dump {
+    &__footer {
+      @apply flex flex-col sm:flex-row sm:justify-between sm:items-center mt-3 text-xs text-gray-400 cursor-help;
+    }
+}

@@ -11,7 +11,7 @@ use Spiral\Router\Annotation\Route;
 
 final class ClearEventsAction
 {
-    #[Route(route: 'events', name: 'events.clear', methods: 'POST', group: 'api')]
+    #[Route(route: 'events', name: 'events.clear', methods: 'DELETE', group: 'api')]
     public function __invoke(ClearEventsRequest $request, CommandBusInterface $bus): void
     {
         $bus->dispatch(

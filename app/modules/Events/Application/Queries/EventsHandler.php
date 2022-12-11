@@ -9,8 +9,10 @@ abstract class EventsHandler
     protected static function getScopeFromFindEvents(AskEvents $query): array
     {
         $scope = [];
-        $scope['type'] = $query->type;
-        if ($query->projectId) {
+        if ($query->type !== null) {
+            $scope['type'] = $query->type;
+        }
+        if ($query->projectId !== null) {
             $scope['project_id'] = $query->projectId;
         }
 

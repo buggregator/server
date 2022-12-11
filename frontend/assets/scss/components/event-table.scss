@@ -1,0 +1,19 @@
+.event-table {
+   @apply bg-gray-100 dark:bg-gray-800 text-sm border divide-y border-style;
+
+    &__row {
+        @apply md:flex bg-gray-50 dark:bg-gray-800 text-responsive sm:space-y-1 py-1 md:py-2 px-2 md:px-4 items-center;
+    }
+
+    &__cell-name {
+        @apply font-bold mr-5 md:w-1/4;
+    }
+
+    &__cell-value {
+        @apply break-all md:w-3/4;
+
+      .dump {
+        @apply border-0;
+      }
+    }
+}

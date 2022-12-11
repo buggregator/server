@@ -1,0 +1,13 @@
+.event-monolog {
+    &__wrap {
+        @apply text-xs break-all;
+    }
+
+    &__snippet {
+        @apply border-b-0 mt-0;
+    }
+
+    &__payloads {
+        @apply border-b-0;
+    }
+}

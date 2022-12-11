@@ -1,0 +1,7 @@
+{
+    "name": "RoadRunner Birddog",
+    "scripts": {
+        "dev": "cd frontend && npm run dev",
+        "generate": "cd frontend && npm run generate"
+    }
+}

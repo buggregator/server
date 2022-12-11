@@ -1,0 +1,17 @@
+.page {
+  > main {
+    @apply m-3;
+  }
+
+  &_title {
+    @apply text-2xl font-bold mb-3;
+  }
+
+  > header {
+    @apply flex justify-between;
+
+    .buttons-bar {
+      @apply my-3;
+    }
+  }
+}

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Events\Domain\Events;
 
-use App\Application\Broadcasting\Channel\EventChannel;
+use App\Application\Broadcasting\Channel\EventsChannel;
 use App\Application\Broadcasting\ShouldBroadcastInterface;
 
 class EventsWasClear implements ShouldBroadcastInterface
@@ -28,6 +28,6 @@ class EventsWasClear implements ShouldBroadcastInterface
 
     public function getBroadcastTopics(): iterable|string|\Stringable
     {
-        return new EventChannel();
+        return new EventsChannel();
     }
 }

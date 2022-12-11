@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Api\Centrifugo;
+namespace App\Interfaces\Centrifugo;
 
 use RoadRunner\Centrifugo\Payload\SubscribeResponse;
 use RoadRunner\Centrifugo\Request;

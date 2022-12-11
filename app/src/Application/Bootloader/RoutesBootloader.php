@@ -9,15 +9,21 @@ use Spiral\Bootloader\Http\RoutesBootloader as BaseRoutesBootloader;
 use Spiral\Core\Container\Autowire;
 use Spiral\Http\Middleware\ErrorHandlerMiddleware;
 use Spiral\Http\Middleware\JsonPayloadMiddleware;
+use Spiral\Router\Bootloader\AnnotatedRoutesBootloader;
+use Spiral\Router\GroupRegistry;
 use Spiral\Router\Loader\Configurator\RoutingConfigurator;
 
 final class RoutesBootloader extends BaseRoutesBootloader
 {
+    protected const DEPENDENCIES = [
+        AnnotatedRoutesBootloader::class,
+    ];
+
     protected function globalMiddleware(): array
     {
         return [
             ErrorHandlerMiddleware::class,
-            JsonPayloadMiddleware::class,
+            //JsonPayloadMiddleware::class,
         ];
     }
 
@@ -25,12 +31,16 @@ final class RoutesBootloader extends BaseRoutesBootloader
     {
         return [
             'api' => [
-                new Autowire(AuthTransportMiddleware::class, ['transportName' => 'header']),
+                //new Autowire(AuthTransportMiddleware::class, ['transportName' => 'header']),
             ],
         ];
     }
 
-    protected function defineRoutes(RoutingConfigurator $routes): void
+    /**
+     * Override this method to configure route groups
+     */
+    protected function configureRouteGroups(GroupRegistry $groups): void
     {
+        $groups->getGroup('api')->setPrefix('api/');
     }
 }

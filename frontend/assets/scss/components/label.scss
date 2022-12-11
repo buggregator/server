@@ -1,0 +1,74 @@
+.label {
+    @apply font-bold px-2 rounded-full text-2xs inline-flex items-center cursor-help transition-colors;
+
+    &.active {
+        @apply bg-blue-500 text-white;
+    }
+
+    &.gray {
+        @apply bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-50 border dark:border-gray-600;
+
+        &:hover {
+            @apply bg-gray-100 dark:bg-gray-500;
+        }
+
+        &.active {
+            @apply bg-gray-700 text-white dark:bg-gray-900;
+        }
+    }
+
+    &.blue {
+        @apply bg-blue-50 dark:bg-blue-700 text-blue-800 dark:text-blue-50 border dark:border-blue-600;
+
+        &:hover {
+            @apply bg-blue-100 dark:bg-blue-500;
+        }
+    }
+
+    &.red {
+        @apply bg-red-50 dark:bg-red-700 text-red-800 dark:text-red-50 border dark:border-red-600;
+
+        &:hover {
+            @apply bg-red-100 dark:bg-red-500;
+        }
+    }
+
+    &.orange {
+        @apply bg-orange-50 dark:bg-orange-700 text-orange-800 dark:text-orange-50 border dark:border-orange-600;
+
+        &:hover {
+            @apply bg-orange-100 dark:bg-orange-500;
+        }
+    }
+
+    &.green {
+        @apply bg-green-50 dark:bg-green-700 text-green-800 dark:text-green-50 border dark:border-green-600;
+
+        &:hover {
+            @apply bg-green-100 dark:bg-green-500;
+        }
+    }
+
+    &.pink {
+        @apply bg-pink-50 dark:bg-pink-700 text-pink-800 dark:text-pink-50 border dark:border-pink-600;
+
+        &:hover {
+            @apply bg-pink-100 dark:bg-pink-500;
+        }
+    }
+
+    &.purple {
+        @apply bg-purple-50 dark:bg-purple-700 text-purple-800 dark:text-purple-50 border dark:border-purple-600;
+        &:hover {
+            @apply bg-purple-100 dark:bg-purple-500;
+        }
+    }
+
+    &.pink {
+        @apply bg-pink-50 dark:bg-pink-700 text-pink-800 dark:text-pink-50 border dark:border-pink-600;
+
+        &:hover {
+            @apply bg-pink-100 dark:bg-pink-500;
+        }
+    }
+}

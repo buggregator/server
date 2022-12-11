@@ -11,9 +11,11 @@ use Spiral\Router\Annotation\Route;
 
 final class DeleteEventAction
 {
-    #[Route(route: '/event/{uuid}', name: 'event.delete', group: 'api')]
+    #[Route(route: 'event/<uuid>', name: 'event.delete', methods: 'DELETE', group: 'api')]
     public function __invoke(CommandBusInterface $bus, Uuid $uuid): void
     {
-        $bus->dispatch(new DeleteEvent($uuid));
+        $bus->dispatch(
+            new DeleteEvent($uuid)
+        );
     }
 }

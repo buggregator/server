@@ -48,7 +48,6 @@ final class StoreEventHandler
                 type: $command->type,
                 payload: $command->payload,
                 timestamp: $command->timestamp,
-                sendToConsole: $command->sendToConsole,
                 projectId: $projectId,
             )
         );

@@ -29,7 +29,7 @@
         "phpunit/phpunit": "^9.5",
         "qossmic/deptrac-shim": "^1.0",
         "spiral/testing": "^2.2",
-        "vimeo/psalm": "dev-master"
+        "vimeo/psalm": "^4.1"
     },
     "autoload": {
         "psr-4": {

@@ -11,13 +11,15 @@ use Spiral\Cqrs\QueryBusInterface;
 use Spiral\Http\Exception\ClientException\NotFoundException;
 use Spiral\Router\Annotation\Route;
 
-class ShowJsonAction
+class ShowAction
 {
-    #[Route(route: '/event/{uuid}/json', name: 'event.show.json', group: 'api')]
-    public function __invoke(QueryBusInterface $bus, Uuid $uuid)
+    #[Route(route: 'event/<uuid>', name: 'event.show', methods: 'GET', group: 'api')]
+    public function __invoke(QueryBusInterface $bus, Uuid $uuid): EventResource
     {
         try {
-            return $bus->ask(new FindEventByUuid($uuid));
+            return new EventResource(
+                $bus->ask(new FindEventByUuid($uuid))
+            );
         } catch (EntityNotFoundException $e) {
             throw new NotFoundException($e->getMessage());
         }
