@@ -1,0 +1,45 @@
+.event-profiler {
+  &__footer {
+    @apply flex flex-col sm:flex-row sm:justify-between sm:items-center mt-3 text-xs text-gray-400;
+  }
+
+  &__cards {
+    @apply border dark:bg-gray-800;
+  }
+
+  &-cards {
+    @apply pt-5 pb-4 px-4 md:px-5 border-b border-style flex flex-col sm:flex-row justify-between items-start divide-y sm:divide-y-0 sm:divide-x;
+
+    &__item {
+      @apply w-full sm:w-1/4 pb-5 sm:pb-0 sm:px-10;
+    }
+
+    &__item-name {
+      @apply text-muted font-bold text-2xs mb-1 uppercase;
+    }
+
+    &__item-value {
+      @apply text-xs sm:text-sm;
+    }
+
+    &__item-label {
+      @apply px-3 py-1 text-white rounded text-2xs font-bold;
+    }
+  }
+}
+
+.flamechart {
+  .frame {
+    @apply cursor-pointer flex content-center;
+
+    &:hover > rect {
+      @apply fill-blue-900;
+    }
+  }
+
+  .d3-flame-graph-label {
+    font-size: 80%;
+    @apply px-2;
+  }
+
+}

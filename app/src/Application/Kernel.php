@@ -7,6 +7,7 @@ namespace App\Application;
 use App\Application\Bootloader\AppBootloader;
 use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
+use Modules\Profiler\Application\ProfilerBootloader;
 use Modules\Sentry\Application\SentryBootloader;
 use Psr\Log\LoggerInterface;
 use Spiral\Boot\Bootloader\Bootloader as SpiralBootloader;
@@ -92,6 +93,7 @@ class Kernel extends \Spiral\Framework\Kernel
         return [
             AppBootloader::class,
             SentryBootloader::class,
+            ProfilerBootloader::class,
             MongoDBBootloader::class,
             PersistenceBootloader::class,
         ];

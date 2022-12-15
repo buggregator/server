@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Sentry\Application;
+namespace App\Application\HTTP;
 
 use GuzzleHttp\Psr7\Stream;
 use Http\Message\Encoding\GzipDecodeStream;
@@ -13,6 +13,7 @@ final class GzippedStreamFactory
     public function createFromRequest(ServerRequestInterface $request): GzippedStream
     {
         $content = (string)$request->getBody();
+
         $resource = fopen('php://temp', 'r+');
         fwrite($resource, $content);
         rewind($resource);

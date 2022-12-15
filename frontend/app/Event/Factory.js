@@ -4,6 +4,7 @@ import MonologEvent from "./Monolog";
 import SmtpEvent from "./Smtp";
 import VarDumpEvent from "./VarDump";
 import InspectorEvent from "./Inspector";
+import ProfilerEvent from "./Profiler";
 
 const eventTypes = {
   ray: ({json, store}) => {
@@ -16,6 +17,7 @@ const eventTypes = {
   monolog: ({json}) => new MonologEvent(json.payload, json.uuid, json.timestamp),
   smtp: ({json}) => new SmtpEvent(json.payload, json.uuid, json.timestamp),
   inspector: ({json}) => new InspectorEvent(json.payload, json.uuid, json.timestamp),
+  profiler: ({json}) => new ProfilerEvent(json.payload, json.uuid, json.timestamp),
   'var-dump': ({json}) => new VarDumpEvent(json.payload, json.uuid, json.timestamp)
 }
 

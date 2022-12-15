@@ -1,5 +1,5 @@
 <template>
-  <section class="py-5 px-4 md:px-6 lg:px-8 border-b">
+  <section class="py-5 px-4 md:px-6 lg:px-8 border-b" v-if="hasBreadcrumbs">
     <h3 class="text-muted font-bold uppercase text-sm mb-5">breadcrumbs</h3>
 
     <div style="height: 400px;" class="flex flex-col border border-purple-300 dark:border-purple-700 rounded">
@@ -51,6 +51,11 @@ export default {
   methods: {
     date(timestamp) {
       return this.$moment.unix(timestamp)
+    }
+  },
+  computed: {
+    hasBreadcrumbs() {
+      return this.event.breadcrumbs.length > 0
     }
   }
 }

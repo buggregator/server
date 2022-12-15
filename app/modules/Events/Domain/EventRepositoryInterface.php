@@ -11,7 +11,7 @@ use Cycle\ORM\RepositoryInterface;
  */
 interface EventRepositoryInterface extends RepositoryInterface
 {
-    public function findAll(array $scope = [], array $orderBy = []): iterable;
+    public function findAll(array $scope = [], array $orderBy = [], int $limit = 30, int $offset = 0): iterable;
 
     public function countAll(array $scope = []): int;
 

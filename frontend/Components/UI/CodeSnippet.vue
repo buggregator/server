@@ -2,7 +2,8 @@
   <div class="code-snippet">
     <pre :language="language" v-html="highlightCode"/>
     <button type="button" @click="doCopy" class="code-snippet__btn-copy" :class="{'active': copied}">
-      <CopyIcon class="w-2 h-2 "/>copy
+      <CopyIcon class="w-2 h-2 "/>
+      copy
     </button>
   </div>
 </template>
@@ -16,7 +17,9 @@ const hljs = require('highlight.js')
 export default {
   components: {CopyIcon},
   props: {
-    code: String,
+    code: {
+      required: true
+    },
     language: {
       type: String,
       default: () => null
@@ -28,8 +31,15 @@ export default {
     }
   },
   computed: {
+    strignifiedCode() {
+      if (typeof this.code === 'string') {
+        return this.code
+      }
+
+      return JSON.stringify(this.code, null, 2)
+    },
     highlightCode() {
-      return hljs.highlight(this.code, {language: this.language}).value
+      return hljs.highlight(this.strignifiedCode, {language: this.language}).value
     }
   },
   methods: {
@@ -37,12 +47,7 @@ export default {
       this.copied = true
       setTimeout(() => this.copied = false, 100)
 
-      let text = '';
-      this.$slots.default().forEach(vnode => {
-        text += vnode.children
-      })
-
-      copyText(text, undefined, (error, event) => {
+      copyText(this.strignifiedCode, undefined, (error, event) => {
 
       })
     }

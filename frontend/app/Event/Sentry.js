@@ -79,10 +79,18 @@ export default class extends Event {
   }
 
   get exceptions() {
+    if (!this.event.exception) {
+      return []
+    }
+
     return this.event.exception.values || []
   }
 
   get breadcrumbs() {
+    if (!this.event.breadcrumbs) {
+      return []
+    }
+
     return this.event.breadcrumbs.values || []
   }
 

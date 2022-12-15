@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sentry\Interfaces\Http\Controllers;
 
-use Modules\Sentry\Application\GzippedStreamFactory;
+use App\Application\HTTP\GzippedStreamFactory;
 use Psr\Http\Message\ServerRequestInterface;
 use Spiral\Router\Annotation\Route;
 

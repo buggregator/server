@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Modules\Sentry\Interfaces\Http\Controllers;
+namespace Modules\Profiler\Interfaces\Http\Controllers;
 
 use App\Application\Commands\HandleReceivedEvent;
 use App\Application\HTTP\GzippedStreamFactory;
-use Modules\Sentry\Application\EventHandlerInterface;
+use Modules\Profiler\Application\EventHandlerInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\Cqrs\QueryBusInterface;
@@ -20,17 +20,19 @@ final class StoreEventAction
     ) {
     }
 
-    #[Route(route: '<projectId>/store', name: 'sentry.event.store', methods: ['POST'], group: 'api')]
+    #[Route(route: 'profiler/store', name: 'profiler.event.store', methods: ['POST'], group: 'api')]
     public function __invoke(
         ServerRequestInterface $request,
         CommandBusInterface $commands,
-        QueryBusInterface $queryBus,
-        int $projectId,
+        QueryBusInterface $queryBus
     ): void {
-        $payload = $this->gzippedStreamFactory->createFromRequest($request)->getPayload();
+        //$payload = $this->gzippedStreamFactory->createFromRequest($request)->getPayload();
+        $payload = \json_decode((string) $request->getBody(), true);
+
+        var_dump($payload);
         $event = $this->handler->handle($payload);
         $commands->dispatch(
-            new HandleReceivedEvent(type: 'sentry', payload: $event)
+            new HandleReceivedEvent(type: 'profiler', payload: $event)
         );
     }
 }

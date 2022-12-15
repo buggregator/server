@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Sentry\Application;
+namespace App\Application\HTTP;
 
 use Psr\Http\Message\StreamInterface;
 

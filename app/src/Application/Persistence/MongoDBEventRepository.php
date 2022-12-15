@@ -48,10 +48,12 @@ final class MongoDBEventRepository implements EventRepositoryInterface
         return $this->collection->countDocuments($scope);
     }
 
-    public function findAll(array $scope = [], array $orderBy = []): iterable
+    public function findAll(array $scope = [], array $orderBy = [], int $limit = 30, int $offset = 0): iterable
     {
         $cursor = $this->collection->find($scope, [
             'sort' => $this->mapOrderBy($orderBy),
+            'limit' => $limit,
+            'skip' => $offset,
         ]);
 
         foreach ($cursor as $document) {

@@ -65,9 +65,8 @@ export default {
   async asyncData({params, redirect, $api}) {
     const json = await $api.events.show(params.uuid)
     const event = new SentryEvent(json.payload, json.uuid, json.timestamp)
-    console.log(event)
     if (!event) {
-      //redirect('/sentry')
+      redirect('/sentry')
     }
 
     return {event}

@@ -1,11 +1,13 @@
 <template>
   <div class="events-page">
     <header class="events-page__header">
-      <Labels/>
+      <div><Labels/></div>
 
-      <button @click="clearEvents" class="events__btn-clear">
-        Clear screen
-      </button>
+      <div class="events-page__filters" v-if="hasEvents">
+        <button @click="clearEvents" class="events__btn-clear">
+          Clear screen
+        </button>
+      </div>
     </header>
 
     <main v-if="hasEvents" class="events-page__events">
@@ -35,6 +37,7 @@ import SmtpEvent from "@/app/Event/Smtp"
 import VarDumpEvent from "@/app/Event/VarDump"
 import MonologEvent from "@/app/Event/Monolog"
 import InspectorEvent from "@/app/Event/Inspector"
+import ProfilerEvent from "@/app/Event/Profiler"
 
 // import RayComponent from "@/Components/Events/Event"
 import SentryComponent from "@/Components/Events/Sentry/Event"
@@ -42,12 +45,13 @@ import SmtpComponent from "@/Components/Events/Smtp/Event"
 import VarDumpComponent from "@/Components/Events/VarDump/Event"
 import MonologComponent from "@/Components/Events/Monolog/Event"
 import InspectorComponent from "@/Components/Events/Inspector/Event"
+import ProfilerComponent from "@/Components/Events/Profiler/Event"
 
 export default {
   components: {
     Labels, WsConnectionStatus, Tips,
     SentryComponent, SmtpComponent, VarDumpComponent,
-    MonologComponent, InspectorComponent,
+    MonologComponent, InspectorComponent, ProfilerComponent
   },
   mounted() {
     this.$store.dispatch('events/fetch')
@@ -63,7 +67,7 @@ export default {
 
   methods: {
     clearEvents() {
-      this.$store.commit('events/clear')
+      this.$store.dispatch('events/clear')
     },
     eventComponent(event) {
       if (event instanceof SentryEvent) {
@@ -76,6 +80,8 @@ export default {
         return 'MonologComponent'
       } else if (event instanceof InspectorEvent) {
         return 'InspectorComponent'
+      } else if (event instanceof ProfilerEvent) {
+        return 'ProfilerComponent'
       } else if (event instanceof RayEvent) {
         return 'RayComponent'
       }

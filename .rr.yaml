@@ -33,6 +33,11 @@ tcp:
       addr: 127.0.0.1:9912
       delimiter: "\n"
 
+kv:
+  events:
+    driver: memory
+    config: {}
+
 jobs:
   consume: [ "default", "events" ]
   pipelines:

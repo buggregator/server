@@ -54,8 +54,8 @@ final class CycleOrmEventRepository extends Repository implements EventRepositor
         return $this->select()->where($scope)->count();
     }
 
-    public function findAll(array $scope = [], array $orderBy = []): iterable
+    public function findAll(array $scope = [], array $orderBy = [], int $limit = 30, int $offset = 0): iterable
     {
-        return $this->select()->where($scope)->orderBy($orderBy)->fetchAll();
+        return $this->select()->where($scope)->orderBy($orderBy)->limit($limit)->offset($offset)->fetchAll();
     }
 }
