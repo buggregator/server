@@ -1,0 +1,11 @@
+api:
+  dashboard: true
+
+entryPoints:
+  web:
+    address: 127.0.0.1:8000
+
+providers:
+  file:
+    directory: traefik
+    filename: routers.yaml

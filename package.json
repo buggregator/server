@@ -1,5 +1,5 @@
 {
-    "name": "RoadRunner Birddog",
+    "name": "buggregator",
     "scripts": {
         "dev": "cd frontend && npm run dev",
         "generate": "cd frontend && npm run generate"

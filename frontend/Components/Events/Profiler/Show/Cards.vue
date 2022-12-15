@@ -27,6 +27,13 @@
         <span v-if="cost.p_mu">- {{ cost.p_mu }}%</span>
       </strong>
     </div>
+    <div class="event-profiler-cards__item pt-5 sm:pt-0">
+      <h4 class="event-profiler-cards__item-name">Peak PHP memory usage</h4>
+      <strong class="event-profiler-cards__item-value md:text-md">
+        {{ pmu }}
+        <span v-if="cost.p_pmu">- {{ cost.p_pmu }}%</span>
+      </strong>
+    </div>
   </section>
 </template>
 

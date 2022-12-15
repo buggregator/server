@@ -7,6 +7,7 @@ namespace App\Application\Bootloader;
 use Spiral\Auth\Middleware\AuthTransportMiddleware;
 use Spiral\Bootloader\Http\RoutesBootloader as BaseRoutesBootloader;
 use Spiral\Core\Container\Autowire;
+use Spiral\Filter\ValidationHandlerMiddleware;
 use Spiral\Http\Middleware\ErrorHandlerMiddleware;
 use Spiral\Http\Middleware\JsonPayloadMiddleware;
 use Spiral\Router\Bootloader\AnnotatedRoutesBootloader;
@@ -23,6 +24,7 @@ final class RoutesBootloader extends BaseRoutesBootloader
     {
         return [
             ErrorHandlerMiddleware::class,
+            ValidationHandlerMiddleware::class,
             //JsonPayloadMiddleware::class,
         ];
     }

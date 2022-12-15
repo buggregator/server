@@ -15,14 +15,19 @@
           <CallsList :event="event" />
         </PerfectScrollbar>
       </div>
-      <div class="w-2/3 overflow-x-hidden">
+      <div class="w-2/3">
         <section>
           <Cards class="w-full dark:bg-gray-800 mb-5" :cost="event.peaks" />
         </section>
 
-        <section class="p-5 bg-gray-800">
+        <section class="p-5 bg-gray-800 mb-5">
           <h1 class="text-lg font-bold mb-3">Flamechart</h1>
           <Flamegraph :event="event" :width="width" />
+        </section>
+
+        <section class="p-5 bg-gray-800">
+          <h1 class="text-lg font-bold mb-3">Call graph</h1>
+          <Graph :event="event" />
         </section>
       </div>
     </main>
@@ -37,9 +42,11 @@ import JsonChip from "@/Components/UI/JsonChip"
 import ProfilerEvent from "../../app/Event/Profiler"
 import Flamegraph from "@/Components/Events/Profiler/Show/Flamegraph"
 import CallsList from "@/Components/Events/Profiler/Show/CallsList"
+import Graph from "@/Components/Events/Profiler/Show/Graph"
 
 export default {
   components: {
+    Graph,
     CallsList,
     Flamegraph, Cards,
     JsonChip, ImageExport,
@@ -76,7 +83,7 @@ export default {
     },
     calculateMenuHeight() {
       const headerHeight = this.$refs.header ? parseInt(this.$refs.header.offsetHeight) : 0
-      this.menuHeight = (window.innerHeight - headerHeight - 2) + 'px'
+      this.menuHeight = (this.$el.clientHeight - headerHeight - 2) + 'px'
     }
   },
   computed: {

@@ -1,0 +1,29 @@
+http:
+  routers:
+#    dashboard:
+#      rule:  (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
+#      service: api@internal
+    api:
+      rule: "PathPrefix(`/api/`)"
+      service: backend
+    ws:
+      rule: "PathPrefix(`/connection/`)"
+      service: centrifugo
+    frontend:
+      rule: "PathPrefix(`/`)"
+      service: fileserver
+  services:
+    backend:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "http://127.0.0.1:8082/"
+    centrifugo:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "http://127.0.0.1:8089/"
+    fileserver:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8083/"

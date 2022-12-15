@@ -8,10 +8,10 @@ server:
   relay: pipes
 
 logs:
-  level: error
+  level: info
 
 http:
-  address: 0.0.0.0:8082
+  address: 127.0.0.1:8082
   middleware: [ "headers" ]
   headers:
     cors:
@@ -32,33 +32,20 @@ tcp:
     var-dumper:
       addr: 127.0.0.1:9912
       delimiter: "\n"
+  pool:
+    num_workers: 2
 
 kv:
   events:
     driver: memory
-    config: {}
-
-jobs:
-  consume: [ "default", "events" ]
-  pipelines:
-    default:
-      driver: memory
-      config: { }
-    events:
-      driver: memory
-      config: { }
-  pool:
-    num_workers: 2
+    config: { }
 
 service:
-  frontend:
+  reverse-proxy:
     service_name_in_log: true
     remain_after_exit: true
     restart_sec: 1
-    command: "npm run dev"
-    env:
-      API_URL: http://127.0.0.1:8082
-      WS_URL: ws://127.0.0.1:8089/connection/websocket
+    command: "./bin/traefik --configFile=traefik.yaml"
   centrifuge:
     service_name_in_log: true
     remain_after_exit: true
@@ -70,4 +57,12 @@ centrifuge:
   grpc_api_address: "tcp://127.0.0.1:10000"
   pool:
     reset_timeout: 10
-    num_workers: 5
+    num_workers: 2
+
+fileserver:
+  address: 127.0.0.1:8083
+  stream_request_body: true
+  serve:
+    - prefix: "/"
+      root: "frontend/dist"
+      compress: true

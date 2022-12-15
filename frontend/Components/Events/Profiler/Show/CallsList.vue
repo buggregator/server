@@ -7,6 +7,9 @@
       <div class="w-24 border-r border-gray-600">
         % CPU
       </div>
+      <div class="w-24 border-r border-gray-600">
+        CPU
+      </div>
       <div class="w-12">
         Calls
       </div>
@@ -22,6 +25,9 @@
         </div>
         <div class="h-full bg-gray-800 text-sm" :style="{width: `${edge.cost.p_cpu}%`}">
         </div>
+      </div>
+      <div class="w-12 text-center text-xs py-1">
+        {{ edge.cost.cpu }}
       </div>
       <div class="w-12 text-center text-xs py-1">
         {{ edge.cost.ct }}
