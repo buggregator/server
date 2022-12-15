@@ -1,0 +1,43 @@
+name: Docker Image CI
+
+on:
+  release:
+    types:
+      - created
+
+jobs:
+  build-release:
+    if: "!github.event.release.prerelease"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: 'Get Previous tag'
+        id: previoustag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+        with:
+          fallback: v0.1
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_LOGIN }}
+          password: ${{ secrets.GHCR_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v3
+        with:
+          context: ./
+          file: ./docker/Dockerfile
+          push: true
+          build-args:
+            APP_VERSION=${{ steps.previoustag.outputs.tag }}
+          tags:
+            ghcr.io/buggregator/app:latest, ghcr.io/buggregator/app:${{ steps.previoustag.outputs.tag }}

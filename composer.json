@@ -12,7 +12,6 @@
         "php": ">=8.1",
         "ext-mbstring": "*",
         "doctrine/collections": "^1.8",
-        "mongodb/mongodb": "^1.11",
         "nesbot/carbon": "^2.64",
         "php-http/message": "^1.11",
         "spiral-packages/cqrs": "^2.0",
@@ -27,6 +26,7 @@
         "zbateson/mail-mime-parser": "^2.0"
     },
     "require-dev": {
+        "mongodb/mongodb": "^1.11",
         "phpunit/phpunit": "^9.5",
         "qossmic/deptrac-shim": "^1.0",
         "spiral/testing": "^2.2",
