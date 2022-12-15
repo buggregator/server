@@ -30,7 +30,7 @@
 </template>
 
 <script>
-import {PerfectScrollbar} from 'vue3-perfect-scrollbar'
+import {PerfectScrollbar} from 'vue2-perfect-scrollbar'
 import NavItem from "@/Components/Events/Smtp/NavItem"
 import Info from "@/Components/Events/Smtp/Info"
 

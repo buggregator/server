@@ -19,8 +19,8 @@ final class ProfilerBootloader extends Bootloader
     public function eventHandler(ContainerInterface $container): EventHandlerInterface
     {
         return new EventHandler($container, [
-            PrepareEdges::class,
             PreparePeaks::class,
+            PrepareEdges::class,
             CleanupEvent::class,
         ]);
     }

@@ -8,7 +8,7 @@
   }
 
   &-cards {
-    @apply pt-5 pb-4 px-4 md:px-5 border-b border-style flex flex-col sm:flex-row justify-between items-start divide-y sm:divide-y-0 sm:divide-x;
+    @apply pt-5 pb-4 px-4 md:px-5 border-style flex flex-col sm:flex-row justify-between items-start sm:divide-x;
 
     &__item {
       @apply w-full sm:w-1/4 pb-5 sm:pb-0 sm:px-10;
@@ -35,6 +35,8 @@
     &:hover > rect {
       @apply fill-blue-900;
     }
+
+    stroke: rgba(255, 158, 44, .2);
   }
 
   .d3-flame-graph-label {

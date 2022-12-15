@@ -1,5 +1,5 @@
 .left-sidebar {
-  @apply bg-gray-200 dark:bg-gray-800 border-r border-style flex flex-col justify-between;
+  @apply bg-gray-200 dark:bg-gray-800 border-r border-style flex flex-col justify-between z-50;
 
   &__nav {
     @apply divide-y divide-gray-300 dark:divide-gray-600;

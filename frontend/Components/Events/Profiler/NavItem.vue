@@ -1,7 +1,7 @@
 <template>
   <div>
     <NuxtLink :to="event.route.show" class="event-profiler__link">
-      <Cards :event="event" class="event-profiler__cards"/>
+      <Cards :cost="event.peaks" class="event-profiler__cards"/>
     </NuxtLink>
   </div>
 </template>

@@ -17,6 +17,12 @@ final class PrepareEdges implements EventHandlerInterface
         $id = 1;
         foreach ($data as $name => $values) {
             [$parent, $func] = $this->splitName($name);
+            $values = \array_merge($values, [
+                'p_cpu' => round($values['cpu'] > 0 ? ($values['cpu'] / $event['peaks']['cpu'] * 100) : 0, 2),
+                'p_mu' => round($values['mu'] > 0 ? ($values['mu'] / $event['peaks']['mu'] * 100) : 0, 2),
+                'p_pmu' => round($values['pmu'] > 0 ? ($values['pmu'] / $event['peaks']['pmu'] * 100) : 0, 2),
+                'p_wt' => round($values['wt'] > 0 ? ($values['wt'] / $event['peaks']['wt'] * 100) : 0, 2),
+            ]);
             $event['edges']['e' . $id] = [
                 'caller' => $parent,
                 'callee' => $func,
