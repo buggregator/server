@@ -27,10 +27,32 @@ RUN npm run generate
 RUN rm -rf node_modules
 
 # Configure PHP project
-FROM spiralscout/php81-grpc:1.0.0
+FROM php:8.1.3-cli-alpine3.15 as backend
+
+RUN apk add --no-cache \
+        curl \
+        libcurl \
+        wget \
+        libzip-dev \
+        libmcrypt-dev \
+        libxslt-dev \
+        libxml2-dev \
+        icu-dev \
+        zip
+
+RUN docker-php-ext-install \
+        opcache \
+        zip \
+        xsl \
+        dom \
+        exif \
+        intl \
+        pcntl \
+        bcmath \
+        sockets
+
 COPY --from=frontend /app /app
 COPY --from=rr /usr/bin/rr /app
-
 
 ARG APP_VERSION=v1.0
 ENV COMPOSER_ALLOW_SUPERUSER=1
@@ -46,6 +68,9 @@ RUN curl -s https://getcomposer.org/installer | php -- --install-dir=/usr/local/
 
 RUN composer config --no-plugins allow-plugins.spiral/composer-publish-plugin false
 RUN composer install --no-dev
+
+RUN docker-php-source delete \
+        && apk del ${BUILD_DEPENDS}
 
 WORKDIR /app
 
@@ -66,7 +91,6 @@ ENV MONOLOG_DEFAULT_LEVEL=ERROR
 ENV APP_ENV=production
 ENV DEBUG=false
 ENV ENCRYPTER_KEY=def00000232ae92c8e8ec0699093fa06ce014cd48d39c3c62c279dd947db084e56ee48b5c91cebc1c5abe53f7755021d09043757561c244c1c0c765cfeb5db33eb45a903
-
 
 LABEL org.opencontainers.image.source=$REPOSITORY
 LABEL org.opencontainers.image.description="Buggregator"
