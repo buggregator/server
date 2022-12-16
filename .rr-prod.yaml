@@ -32,6 +32,8 @@ tcp:
     var-dumper:
       addr: :9912
       delimiter: "\n"
+    smtp:
+      addr: :1025
   pool:
     num_workers: 2
 
@@ -41,11 +43,11 @@ kv:
     config: { }
 
 service:
-  reverse-proxy:
+  nginx:
     service_name_in_log: true
     remain_after_exit: true
     restart_sec: 1
-    command: "./bin/traefik --configFile=traefik.yaml"
+    command: "/usr/sbin/nginx"
   centrifuge:
     service_name_in_log: true
     remain_after_exit: true

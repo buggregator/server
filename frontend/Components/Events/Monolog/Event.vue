@@ -25,7 +25,8 @@ export default {
       return this.event.fields
     },
     hasPayloads() {
-      return !_.isEmpty(this.event.payloads)
+      return this.event.payloads.constructor === Object &&
+      Object.keys(this.event.payloads).length > 0
     },
     hasFields() {
       return this.fields.length > 0

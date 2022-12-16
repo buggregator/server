@@ -32,6 +32,8 @@ tcp:
     var-dumper:
       addr: 127.0.0.1:9912
       delimiter: "\n"
+    smtp:
+      addr: 127.0.0.1:1025
 
 kv:
   events:
