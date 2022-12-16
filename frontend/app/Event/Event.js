@@ -17,7 +17,7 @@ export class Event {
     return {
       index: '/',
       show: `/${this.app}/${this.id}`,
-      json: `/event/${this.id}`,
+      json: `/api/event/${this.id}`,
     }
   }
 

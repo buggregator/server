@@ -11,7 +11,7 @@ logs:
   level: error
 
 http:
-  address: 0.0.0.0:8082
+  address: 127.0.0.1:8082
   middleware: [ "headers" ]
   headers:
     cors:
@@ -37,6 +37,9 @@ tcp:
 
 kv:
   events:
+    driver: memory
+    config: {}
+  local:
     driver: memory
     config: {}
 

@@ -74,6 +74,7 @@ export default {
   methods: {
     async deleteEvent() {
       await this.$store.dispatch('events/delete', this.event)
+      this.$router.push('/sentry')
     }
   },
   computed: {

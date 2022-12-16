@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="h-full flex flex-col">
     <div class="flex flex-col flex-reverse md:flex-row justify-between items-center">
       <h2 class="text-sm sm:text-base md:text-lg lg:text-2xl">{{ event.subject }}</h2>
       <JsonChip :href="event.route.json" class="mb-2 ml-1.5 mr-auto"/>
@@ -37,74 +37,73 @@
 
       <div class="flex border border-purple-300 rounded items-center mr-3 mb-2" v-for="email in event.event.bcc">
         <div class="px-3 py-1 border-r">BCC</div>
-        <div class="px-3 py-1 bg-purple-800 text-white font-semibold rounded-r">{{ email.name }} [{{ email.email }}]</div>
+        <div class="px-3 py-1 bg-purple-800 text-white font-semibold rounded-r">{{ email.name }} [{{
+            email.email
+          }}]
+        </div>
       </div>
 
       <div class="flex border border-purple-300 rounded items-center mr-3 mb-2" v-for="email in event.event.reply_to">
         <div class="px-3 py-1 border-r">Reply to</div>
-        <div class="px-3 py-1 bg-green-800 text-white font-semibold rounded-r">{{ email.name }} [{{ email.email }}]</div>
+        <div class="px-3 py-1 bg-green-800 text-white font-semibold rounded-r">{{ email.name }} [{{
+            email.email
+          }}]
+        </div>
       </div>
     </div>
 
-    <TabGroup>
-      <TabList class="flex justify-start mt-3 border-b">
-        <Tab>Preview</Tab>
-        <Tab>HTML</Tab>
-        <Tab>Raw</Tab>
-        <Tab>Tech Info</Tab>
-      </TabList>
-      <TabPanels class="flex-grow mt-3">
-        <TabPanel class="h-full">
-          <HtmlPreview>
-            <iframe :src="route('smtp.show.html', event.uuid)"/>
-          </HtmlPreview>
-        </TabPanel>
-        <TabPanel>
-          <CodeSnippet language="html" class="max-w-full" :code="event.event.html"/>
-        </TabPanel>
-        <TabPanel>
-          <CodeSnippet language="html" :code="event.event.raw"/>
-        </TabPanel>
-        <TabPanel>
-          <div>
-            <h3 class="mb-3 font-bold">Email Headers</h3>
-            <Table>
-              <TableRow title="Id">
-                {{ event.event.id }}
-              </TableRow>
-              <TableRow title="Subject">
-                {{ event.subject }}
-              </TableRow>
-              <TableRow title="From">
-                <Addresses :addresses="event.event.from"/>
-              </TableRow>
-              <TableRow title="To">
-                <Addresses :addresses="event.event.to"/>
-              </TableRow>
-              <TableRow v-if="event.event.cc.length" title="Cc">
-                <Addresses :addresses="event.event.cc"/>
-              </TableRow>
-              <TableRow v-if="event.event.bcc.length" title="Bcc">
-                <Addresses :addresses="event.event.bcc"/>
-              </TableRow>
-              <TableRow v-if="event.event.reply_to.length" title="Reply to">
-                <Addresses :addresses="event.event.reply_to"/>
-              </TableRow>
-              <TableRow v-if="event.event.attachments.length" title="Attachments">
-                <div class="flex flex-col space-y-2">
-                  <div v-for="(attachment, i) in event.event.attachments">
-                    <span>{{ i + 1 }}.</span> {{ attachment.name }}
-                  </div>
+
+    <Tabs class="flex-1">
+      <Tab title="Preview" class="h-full">
+        <HtmlPreview>
+          <iframe :src="htmlLink"/>
+        </HtmlPreview>
+      </Tab>
+      <Tab title="HTML">
+        <CodeSnippet language="html" class="max-w-full" :code="event.event.html"/>
+      </Tab>
+      <Tab title="Raw">
+        <CodeSnippet language="html" :code="event.event.raw"/>
+      </Tab>
+      <Tab title="Tech Info">
+        <div>
+          <h3 class="mb-3 font-bold">Email Headers</h3>
+          <Table>
+            <TableRow title="Id">
+              {{ event.event.id }}
+            </TableRow>
+            <TableRow title="Subject">
+              {{ event.subject }}
+            </TableRow>
+            <TableRow title="From">
+              <Addresses :addresses="event.event.from"/>
+            </TableRow>
+            <TableRow title="To">
+              <Addresses :addresses="event.event.to"/>
+            </TableRow>
+            <TableRow v-if="event.event.cc.length" title="Cc">
+              <Addresses :addresses="event.event.cc"/>
+            </TableRow>
+            <TableRow v-if="event.event.bcc.length" title="Bcc">
+              <Addresses :addresses="event.event.bcc"/>
+            </TableRow>
+            <TableRow v-if="event.event.reply_to.length" title="Reply to">
+              <Addresses :addresses="event.event.reply_to"/>
+            </TableRow>
+            <TableRow v-if="event.event.attachments.length" title="Attachments">
+              <div class="flex flex-col space-y-2">
+                <div v-for="(attachment, i) in event.event.attachments">
+                  <span>{{ i + 1 }}.</span> {{ attachment.name }}
                 </div>
-              </TableRow>
-              <TableRow title="Content-Type">
-                {{ event.event.content_type }}
-              </TableRow>
-            </Table>
-          </div>
-        </TabPanel>
-      </TabPanels>
-    </TabGroup>
+              </div>
+            </TableRow>
+            <TableRow title="Content-Type">
+              {{ event.event.content_type }}
+            </TableRow>
+          </Table>
+        </div>
+      </Tab>
+    </Tabs>
   </div>
 </template>
 
@@ -115,32 +114,31 @@ import TableRow from "@/Components/UI/TableRow"
 import Dump from "@/Components/UI/Dump"
 import Collapsed from "@/Components/UI/Collapsed"
 import HtmlPreview from "@/Components/UI/HtmlPreview"
-import Tab from "@/Components/UI/TabGroup/Tab"
-import {TabGroup, TabList, TabPanels, TabPanel} from '@headlessui/vue'
 import Addresses from "./Addresses"
 import JsonChip from "@/Components/UI/JsonChip"
+import Tab from "./Show/Tab"
+import Tabs from "./Show/Tabs"
 
 export default {
   components: {
+    Tab,
     JsonChip,
     CodeSnippet, Dump, Collapsed, HtmlPreview,
-    TabGroup, TabList, Tab, TabPanels, TabPanel, Table, TableRow, Addresses
+    Table, TableRow, Addresses, Tabs, Tab
   },
   props: {
     event: Object
   },
   methods: {
     async deleteEvent() {
-      try {
-        await this.$api.events.delete(this.event.uuid)
-        // todo redirect to smtp index
-        // window.location = route('smtp')
-      } catch (e) {
-
-      }
+      await this.$store.dispatch('events/delete', this.event)
+      this.$router.push('/smtp')
     }
   },
   computed: {
+    htmlLink() {
+      return `/api/smtp/${this.event.uuid}/html`
+    },
     date() {
       return this.event.date.format('DD.MM.YYYY HH:mm:ss')
     },

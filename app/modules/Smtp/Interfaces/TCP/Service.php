@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Modules\Smtp\Interfaces\TCP;
 
 use App\Application\Commands\HandleReceivedEvent;
+use Carbon\Carbon;
 use Modules\Smtp\Application\Mail\Parser;
 use Psr\SimpleCache\CacheInterface;
+use Spiral\Cache\CacheStorageProviderInterface;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpWorkerInterface;
@@ -15,23 +17,26 @@ use Spiral\RoadRunnerBridge\Tcp\Response\RespondMessage;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
 use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
 
-final class TcpHandler implements ServiceInterface
+final class Service implements ServiceInterface
 {
     private const READY = 220;
     public const OK = 250;
     public const CLOSING = 221;
     public const START_MAIL_INPUT = 354;
 
+    private readonly CacheInterface $cache;
+
     public function __construct(
         private readonly CommandBusInterface $commands,
-        private readonly CacheInterface $cache,
+        CacheStorageProviderInterface $provider,
     ) {
+        $this->cache = $provider->storage('local');
     }
 
     public function handle(Request $request): ResponseInterface
     {
         if ($request->event === TcpWorkerInterface::EVENT_CONNECTED) {
-            return $this->send(static::READY, 'mailamie');
+            return $this->send(self::READY, 'mailamie');
         }
 
         $cacheKey = 'smtp:'.$request->connectionUuid;
@@ -44,18 +49,18 @@ final class TcpHandler implements ServiceInterface
 
             return new CloseConnection();
         } elseif (\preg_match('/^(EHLO|HELO|MAIL FROM:)/', $request->body)) {
-            $response = $this->send(static::OK);
+            $response = $this->send(self::OK);
         } elseif (\preg_match('/^RCPT TO:<(.*)>/', $request->body, $matches)) {
             $message['recipients'][] = $matches[0];
-            $response = $this->send(static::OK);
+            $response = $this->send(self::OK);
         } elseif (\str_starts_with($request->body, 'QUIT')) {
-            $response = $this->send(static::CLOSING, null, true);
+            $response = $this->send(self::CLOSING, null, true);
         } elseif ($request->body === "DATA\r\n") {
-            $response = $this->send(static::START_MAIL_INPUT);
+            $response = $this->send(self::START_MAIL_INPUT);
             $message['collecting'] = true;
         } elseif ($message['collecting'] ?? false) {
             $content = $message['content'] ?? '';
-            $response = $this->send(static::OK);
+            $response = $this->send(self::OK);
             $content .= \preg_replace("/^(\.\.)/m", '.', $request->body);
 
             if ($this->endOfContentDetected($request->body)) {
@@ -65,14 +70,17 @@ final class TcpHandler implements ServiceInterface
                     $this->dispatchMessage($content);
                 } elseif (! empty($messages[1])) {
                     $this->dispatchMessage($messages[0]);
-                    $response = $this->send(static::CLOSING, null, true);
                 }
             }
 
             $message['content'] = $content;
         }
 
-        $this->cache->set($cacheKey, $message);
+        $this->cache->set(
+            $cacheKey,
+            $message,
+            Carbon::now()->addMinutes(5)->diffAsCarbonInterval()
+        );
 
         return $response;
     }
@@ -80,8 +88,9 @@ final class TcpHandler implements ServiceInterface
     private function dispatchMessage(string $message): void
     {
         $data = (new Parser())->parse($message)->jsonSerialize();
+
         $this->commands->dispatch(
-            $command = new HandleReceivedEvent(type: 'smtp', payload: $data)
+            new HandleReceivedEvent(type: 'smtp', payload: $data)
         );
     }
 

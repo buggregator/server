@@ -8,13 +8,16 @@ export default class extends Event {
   constructor(event, id, timestamp) {
     super(event, id, timestamp)
 
-    this._payload = event.exception.values[0] || {
+    const def = {
       type: 'Unknown',
       value: 'Something went wrong',
       stacktrace: {
         frames: []
       }
     }
+
+    this._payload = event.exception ? event.exception.values[0] || def : def
+
     this._stacktrace = this._payload.stacktrace.frames.reverse()
     this._contexts = event.contexts || {
       os: {},
@@ -24,9 +27,9 @@ export default class extends Event {
 
   get route() {
     return {
-      index: '/sentry',
+      index: `/${this.app}`,
       show: `/${this.app}/${this.id}`,
-      json: `/event/${this.id}`,
+      json: `/api/event/${this.id}`,
     }
   }
 

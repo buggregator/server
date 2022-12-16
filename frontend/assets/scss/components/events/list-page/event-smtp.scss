@@ -1,8 +1,9 @@
 .event-smtp {
+
     &__link {
-       @apply block border-b text-sm hover:bg-white dark:hover:bg-gray-900 flex items-stretch dark:border-gray-600;
+       @apply block border-b dark:bg-gray-800 text-sm hover:bg-white dark:hover:bg-gray-900 flex items-stretch dark:border-gray-600;
         &.active {
-            @apply bg-gray-50 dark:bg-gray-800;
+            @apply bg-gray-50 dark:bg-gray-900;
         }
     }
     &__nav-item {
@@ -15,7 +16,7 @@
         }
     }
     &__link-body {
-        @apply flex-grow p-3 dark:bg-gray-800;
+        @apply flex-grow p-3;
     }
     &__link-title {
         @apply font-semibold;

@@ -30,9 +30,7 @@ final class PersistenceBootloader extends Bootloader
     private function createCacheEventRepository(
         CacheStorageProviderInterface $provider,
     ): EventRepositoryInterface {
-        return new CacheEventRepository(
-            $provider->storage('events')
-        );
+        return new CacheEventRepository($provider);
     }
 
     private function createRepository(

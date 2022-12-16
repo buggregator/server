@@ -11,9 +11,9 @@ export default class extends Event {
 
   get route() {
     return {
-      index: '/profiler',
+      index: `/${this.app}`,
       show: `/${this.app}/${this.id}`,
-      json: `/event/${this.id}`,
+      json: `/api/event/${this.id}`,
     }
   }
 

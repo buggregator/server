@@ -12,6 +12,7 @@ use Doctrine\Common\Collections\Criteria;
 use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Psr\SimpleCache\CacheInterface;
+use Spiral\Cache\CacheStorageProviderInterface;
 
 /**
  * @phpstan-type TDocument array{
@@ -25,11 +26,13 @@ use Psr\SimpleCache\CacheInterface;
 final class CacheEventRepository implements EventRepositoryInterface
 {
     private const EVENT_IDS_KEY = 'ids';
+    private readonly CacheInterface $cache;
 
     public function __construct(
-        private readonly CacheInterface $cache,
+        CacheStorageProviderInterface $provider,
         private readonly int $ttl = 60 * 60 * 2
     ) {
+        $this->cache = $provider->storage('events');
     }
 
     public function findAll(array $scope = [], array $orderBy = [], int $limit = 30, int $offset = 0): iterable
@@ -54,18 +57,18 @@ final class CacheEventRepository implements EventRepositoryInterface
         $ids = $this->getEventIds();
         $ids[$id] = [
             'type' => $event->getType(),
-            'date' => microtime(true),
+            'date' => \microtime(true),
         ];
 
-        $this->cache->set($id, [
+        $this->cache->set(self::EVENT_IDS_KEY, $ids);
+
+        return $this->cache->set($id, [
             'id' => $id,
             'type' => $event->getType(),
             'project_id' => $event->getProjectId(),
             'date' => $event->getDate()->getTimestamp(),
             'payload' => $event->getPayload()->jsonSerialize(),
         ], Carbon::now()->addSeconds($this->ttl)->diffAsCarbonInterval());
-
-        return $this->cache->set(self::EVENT_IDS_KEY, $ids);
     }
 
     public function deleteAll(array $scope = []): void

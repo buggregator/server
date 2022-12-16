@@ -7,9 +7,9 @@
     <div class="event-smtp__link-body">
       <h3 class="event-smtp__link-title" :class="{ 'font-bold': isActive }">{{ event.event.subject }}</h3>
       <div class="event-smtp__link-text">
-                <span>
-                    <strong>To:</strong> {{ event.event.to[0].email }}
-                </span>
+        <span>
+            <strong>To:</strong> {{ event.event.to[0].email }}
+        </span>
         <span>{{ date }}</span>
       </div>
     </div>
@@ -30,8 +30,11 @@ export default {
       return this.event.date.fromNow()
     },
     isActive() {
-      const url = new URL(this.url)
-      return this.$page.url.startsWith(url.pathname)
+      if (!this.$route.params.uuid) {
+        return false
+      }
+
+      return this.$route.params.uuid === this.event.uuid
     }
   }
 }
