@@ -1,4 +1,9 @@
-# Clone the repository
+ARG ROAD_RUNNER_IMAGE=latest
+
+# Build rr binary
+FROM spiralscout/roadrunner:$ROAD_RUNNER_IMAGE as rr
+
+# Clone the project
 FROM alpine/git as git
 
 ARG REPOSITORY=https://github.com/buggregator/spiral-app
@@ -24,6 +29,8 @@ RUN rm -rf node_modules
 # Configure PHP project
 FROM spiralscout/php81-grpc:1.0.0
 COPY --from=frontend /app /app
+COPY --from=rr /usr/bin/rr /app
+
 
 ARG APP_VERSION=v1.0
 ENV COMPOSER_ALLOW_SUPERUSER=1
@@ -39,9 +46,6 @@ RUN curl -s https://getcomposer.org/installer | php -- --install-dir=/usr/local/
 
 RUN composer config --no-plugins allow-plugins.spiral/composer-publish-plugin false
 RUN composer install --no-dev
-
-RUN echo "Download RoadRunner"
-RUN ./vendor/bin/rr get-binary
 
 WORKDIR /app
 
