@@ -40,4 +40,4 @@ jobs:
           build-args:
             APP_VERSION=${{ steps.previoustag.outputs.tag }}
           tags:
-            ghcr.io/buggregator/app:latest, ghcr.io/buggregator/app:${{ steps.previoustag.outputs.tag }}
+            ghcr.io/buggregator/server:latest, ghcr.io/buggregator/server:${{ steps.previoustag.outputs.tag }}

@@ -27,10 +27,10 @@ http:
 tcp:
   servers:
     monolog:
-      addr: 127.0.0.1:9913
+      addr: :9913
       delimiter: "\n"
     var-dumper:
-      addr: 127.0.0.1:9912
+      addr: :9912
       delimiter: "\n"
   pool:
     num_workers: 2
