@@ -26,7 +26,6 @@
         "zbateson/mail-mime-parser": "^2.0"
     },
     "require-dev": {
-        "mongodb/mongodb": "^1.11",
         "phpunit/phpunit": "^9.5",
         "qossmic/deptrac-shim": "^1.0",
         "spiral/testing": "^2.2",
@@ -41,22 +40,6 @@
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests"
-        }
-    },
-    "extra": {
-        "publish-cmd": "php app.php publish",
-        "spiral": {
-            "application-type": 0,
-            "packages": [
-                "ext-mbstring",
-                "spiral/roadrunner-bridge",
-                "spiral/nyholm-bridge",
-                "spiral/sapi-bridge",
-                "spiral/cycle-bridge",
-                "doctrine/collections",
-                "spiral/validator",
-                "spiral-packages/league-event"
-            ]
         }
     },
     "config": {

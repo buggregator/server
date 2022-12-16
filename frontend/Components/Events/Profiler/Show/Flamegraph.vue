@@ -1,11 +1,6 @@
 <template>
   <div class="flex flex-col">
     <div class="flamechart" ref="flamechart"></div>
-
-    <div v-if="details" class="border border-gray-600 bg-gray-800">
-      <h4 class="px-4 pt-4 pb-0 font-bold">{{ details.name }}</h4>
-      <Cards v-if="details.cost" :cost="details.cost" />
-    </div>
   </div>
 </template>
 
@@ -20,11 +15,6 @@ export default {
     event: Object,
     width: Number,
   },
-  data() {
-    return {
-      details: null,
-    }
-  },
   watch: {
     width(width) {
       this.chart
@@ -36,14 +26,14 @@ export default {
     const el = this.$refs.flamechart
     this.chart = flamegraph()
       .onHover((d) => {
-        this.details = {
+        this.$emit('hover', {
           name: d.data.name,
           cost: d.data.cost,
-        }
+        })
       })
       .setDetailsHandler((d) => {
         if (d === null) {
-          this.details = d
+          this.$emit('hide')
         }
       })
       .sort(false)

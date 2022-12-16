@@ -54,7 +54,7 @@ final class CacheEventRepository implements EventRepositoryInterface
         $ids = $this->getEventIds();
         $ids[$id] = [
             'type' => $event->getType(),
-            'date' => $event->getDate()->getTimestamp(),
+            'date' => microtime(true),
         ];
 
         $this->cache->set($id, [

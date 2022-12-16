@@ -12,8 +12,13 @@
     <main class="flex h-full">
       <div class="w-1/3 border-r border-gray-600" ref="calls">
         <PerfectScrollbar :style="{height: menuHeight}">
-          <CallsList :event="event" />
+          <CallsList :event="event" @hover="showEdge" @hide="hideEdge" />
         </PerfectScrollbar>
+
+        <div v-if="edge" class="bg-gray-800 mb-5">
+          <h4 class="px-4 pt-4 pb-0 font-bold">{{ edge.name }}</h4>
+          <Cards v-if="edge.cost" :cost="edge.cost"/>
+        </div>
       </div>
       <div class="w-2/3">
         <section>
@@ -22,12 +27,12 @@
 
         <section class="p-5 bg-gray-800 mb-5">
           <h1 class="text-lg font-bold mb-3">Flamechart</h1>
-          <Flamegraph :event="event" :width="width" />
+          <Flamegraph :event="event" :width="width" @hover="showEdge" @hide="hideEdge" />
         </section>
 
         <section class="p-5 bg-gray-800">
           <h1 class="text-lg font-bold mb-3">Call graph</h1>
-          <Graph :event="event" />
+          <Graph :event="event" @hover="showEdge" @hide="hideEdge" />
         </section>
       </div>
     </main>
@@ -57,6 +62,7 @@ export default {
       exportableEl: null,
       menuHeight: 0,
       width: 0,
+      edge: null
     }
   },
   async asyncData({params, redirect, $api}) {
@@ -78,6 +84,12 @@ export default {
     });
   },
   methods: {
+    showEdge(edge) {
+      this.edge = edge
+    },
+    hideEdge() {
+      this.edge = null
+    },
     async deleteEvent() {
       await this.$store.dispatch('events/delete', this.event)
     },

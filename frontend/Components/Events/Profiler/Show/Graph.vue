@@ -1,66 +1,89 @@
 <template>
-  <div class="flex justify-items-stretch items-stretch bg-white" style="height: 500px">
+  <div
+    class="flex justify-items-stretch items-stretch bg-white rounded"
+    style="height: 500px"
+  >
   </div>
 </template>
 
 <script>
 import {wasmFolder} from "@hpcc-js/wasm";
-import {select} from "d3-selection"
+import {select, selectAll} from "d3-selection"
 import {graphviz} from "d3-graphviz"
 import {humanFileSize, formatDuration} from "@/Utils/converters"
 
+import DigraphBuilder from "@/app/Profiler/DigraphBuilder"
+
 wasmFolder("https://cdn.jsdelivr.net/npm/@hpcc-js/wasm/dist");
 
-const labelsStrigifier = function (labels) {
-  return Object.entries(labels).map(([label, value]) => {
-    return `${label}="${value}"`
-  }).join(' ')
+function attributer(datum, index, nodes) {
+  if (datum.tag == "svg") {
+    // datum.attributes.fill = ''
+  } else if (datum.tag == "g" && datum.attributes.class === 'node') {
+    datum.attributes.style = 'cursor: pointer'
+  }
 }
 
 export default {
   props: {
     event: Object
   },
+  data() {
+    return {
+      metric: 'p_cpu',
+      threshold: 1
+    }
+  },
+  watch: {
+    threshold() {
+      this.renderGraph()
+    },
+    metric() {
+      this.renderGraph()
+    }
+  },
   methods: {
-    buildDigram() {
-      let digram = `
-digraph xhprof {
-    rankdir="TB";
-    splines=true;
-    overlap=false;
-    nodesep="0.2";
-    ranksep="0.4";
-    labelloc="t";
-    node [ shape="box" style="filled" fontname="Arial" margin=0.2 ]
-    edge [ fontname="Arial" ]
-`
-      const edges = Object.entries(this.event.edges)
-      const peak = this.event.peaks
+    buildDigraph() {
+      const builder = new DigraphBuilder(this.event.edges)
 
-      for (const [key, edge] of edges) {
-        let parent = edge.caller || ''
-        let func = edge.callee || ''
+      return builder.build(this.metric, this.threshold)
+    },
+    findEdge(name) {
+      return Object.entries(this.event.edges)
+        .find(([k, v]) => v.callee === name)[1] || null
+    },
+    nodeHandler() {
+      selectAll("g.node").on("mouseover", (e, tag) => {
+        const el = e.target.parentNode
 
-        let labels = {label: ` CPU: ${edge.cost.p_cpu}% [${edge.cost.ct}x]`}
-        if (edge.cost.pmu > 0) {
-          labels['label'] = labels['label'] + ' PMU: ' + edge.cost.pmu + '%'
-        }
+        el.classList.add("my-class")
+        const edge = this.findEdge(tag.key)
+        this.$emit('hover', {
+          name: edge.callee,
+          cost: edge.cost,
+        });
+      }).on("mouseout", (e) => {
+        const el = e.target.parentNode
 
-        if (edge.cost.pmu > 0 || edge.cost.p_cpu >= 1) {
-          digram += `    "${parent}" -> "${func}" [ ${labelsStrigifier(labels)} ]\n`
-        }
-      }
-
-      return `${digram} }`
+        el.classList.remove("my-class")
+        this.$emit('hide')
+      })
+    },
+    renderGraph() {
+      this.graph = select(this.$el)
+        .graphviz()
+        .width('100%')
+        .height('100%')
+        .attributer(attributer)
+        .fit(true)
+        .renderDot(this.buildDigraph(), this.nodeHandler)
     }
   },
   mounted() {
-    select(this.$el)
-      .graphviz()
-      .width('100%')
-      .height('100%')
-      .fit(true)
-      .renderDot(this.buildDigram());
+    this.renderGraph()
+  },
+  beforeDestroy() {
+    this.graph.destroy()
   }
 }
 </script>

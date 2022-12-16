@@ -5,9 +5,6 @@
         Function calls
       </div>
       <div class="w-24 border-r border-gray-600">
-        % CPU
-      </div>
-      <div class="w-24 border-r border-gray-600">
         CPU
       </div>
       <div class="w-12">
@@ -15,38 +12,29 @@
       </div>
     </div>
 
-    <div class="flex items-stretch border-b border-gray-600" v-for="edge in sortedEdges">
-      <div class="text-sm flex-1 py-1 text-right pr-2 truncate border-r border-gray-600">
-        {{ edge.callee }}
-      </div>
-      <div class="w-24 text-center text-xs relative border-r border-gray-600">
-        <div class="absolute inset-0 py-1">
-          {{ edge.cost.p_cpu }}%
-        </div>
-        <div class="h-full bg-gray-800 text-sm" :style="{width: `${edge.cost.p_cpu}%`}">
-        </div>
-      </div>
-      <div class="w-12 text-center text-xs py-1">
-        {{ edge.cost.cpu }}
-      </div>
-      <div class="w-12 text-center text-xs py-1">
-        {{ edge.cost.ct }}
-      </div>
-    </div>
+    <CallsItem v-for="(edge, key) in sortedEdges"
+               :key="key"
+               :edge="edge"
+               @hover="$emit('hover', $event)"
+               @hide="$emit('hide')"
+    />
   </div>
 </template>
 
 <script>
+import CallsItem from "./CallsItem"
+
 export default {
-    props: {
-        event: Object,
-    },
+  components: {CallsItem},
+  props: {
+    event: Object,
+  },
   computed: {
-      sortedEdges() {
-          return Object.entries(this.event.edges)
-            .sort(([,a],[,b]) => b.cost.p_cpu - a.cost.p_cpu)
-            .reduce((r, [k, v]) => ({ ...r, [k]: v }), {});
-      }
+    sortedEdges() {
+      return Object.entries(this.event.edges)
+        .sort(([, a], [, b]) => b.cost.p_cpu - a.cost.p_cpu)
+        .reduce((r, [k, v]) => ({...r, [k]: v}), {});
+    }
   }
 }
 </script>
