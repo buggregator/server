@@ -6,7 +6,7 @@ use Spiral\Cache\Storage\ArrayStorage;
 use Spiral\Cache\Storage\FileStorage;
 
 return [
-    'default' => env('CACHE_STORAGE', 'local'),
+    'default' => env('CACHE_STORAGE', 'events'),
     'storages' => [
         'events' => [
             'type' => 'roadrunner',

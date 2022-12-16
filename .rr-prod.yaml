@@ -8,7 +8,7 @@ server:
   relay: pipes
 
 logs:
-  level: info
+  level: ${RR_LOG_LEVEL}
 
 http:
   address: 127.0.0.1:8082
@@ -22,7 +22,7 @@ http:
       exposed_headers: "Cache-Control,Content-Language,Content-Type,Expires,Last-Modified,Pragma"
       max_age: 600
   pool:
-    num_workers: 2
+    num_workers: ${RR_HTTP_NUM_WORKERS}
 
 tcp:
   servers:
@@ -35,7 +35,7 @@ tcp:
     smtp:
       addr: :1025
   pool:
-    num_workers: 2
+    num_workers: ${RR_TCP_NUM_WORKERS}
 
 kv:
   events:
@@ -55,11 +55,10 @@ service:
     command: "./bin/centrifugo --config=centrifugo.json"
 
 centrifuge:
-  proxy_address: "tcp://127.0.0.1:10001"
-  grpc_api_address: "tcp://127.0.0.1:10000"
-  pool:
-    reset_timeout: 10
-    num_workers: 2
+  proxy_address: ${RR_CENTRIFUGE_PROXY_ADDRESS}
+  grpc_api_address: ${RR_CENTRIFUGE_GRPC_API_ADDRESS}
+  poll:
+    num_workers: ${RR_CENTRIFUGE_NUM_WORKERS}
 
 fileserver:
   address: 127.0.0.1:8083
