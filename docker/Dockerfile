@@ -28,13 +28,14 @@ COPY --from=frontend /app /app
 ARG APP_VERSION=v1.0
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
+WORKDIR /app
+
 RUN apk add --no-cache nginx
-RUN cp nginx/nginx.conf /etc/nginx/nginx.conf
+RUN cp docker/nginx/nginx.conf /etc/nginx/nginx.conf
 RUN [ -d /etc/nginx/conf.d ] ||  mkdir /etc/nginx/conf.d
-RUN cp nginx/default.conf /etc/nginx/conf.d/default.conf
+RUN cp docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 
 RUN curl -s https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin/ --filename=composer
-WORKDIR /app
 
 RUN composer config --no-plugins allow-plugins.spiral/composer-publish-plugin false
 RUN composer install --no-dev
