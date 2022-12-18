@@ -78,13 +78,3 @@
     @apply flex flex-col;
   }
 }
-
-.ws-connection {
-  @apply flex flex-col text-center md:flex-row gap-4 items-center justify-center;
-  &__icon {
-    @apply h-8 w-8;
-  }
-  &__text {
-    @apply text-responsive text-muted font-semibold;
-  }
-}

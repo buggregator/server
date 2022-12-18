@@ -19,3 +19,17 @@ export default {
     }
 }
 </script>
+
+<style lang="scss">
+.host {
+  @apply inline-flex items-center justify-start space-x-2 py-1 text-gray-600 dark:text-gray-300;
+
+  &__icon {
+    @apply w-4 h-4;
+  }
+
+  &__name {
+    @apply flex-initial font-bold text-xs;
+  }
+}
+</style>

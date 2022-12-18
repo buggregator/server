@@ -1,7 +1,7 @@
 <template>
   <div class="events-page">
     <header class="events-page__header">
-      <div><Labels/></div>
+      <div><Fiilters/></div>
 
       <div class="events-page__filters" v-if="hasEvents">
         <button @click="clearEvents" class="events__btn-clear">
@@ -29,7 +29,7 @@
 
 <script>
 import WsConnectionStatus from "./_partials/WsConnectionStatus"
-import Labels from "./_partials/Labels"
+import Fiilters from "./_partials/Fiilters"
 import Tips from "./_partials/Tips"
 
 import SentryEvent from "@/app/Event/Sentry"
@@ -49,7 +49,7 @@ import ProfilerComponent from "@/Components/Events/Profiler/Event"
 
 export default {
   components: {
-    Labels, WsConnectionStatus, Tips,
+    Fiilters, WsConnectionStatus, Tips,
     SentryComponent, SmtpComponent, VarDumpComponent,
     MonologComponent, InspectorComponent, ProfilerComponent
   },

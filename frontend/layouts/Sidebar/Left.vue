@@ -81,3 +81,37 @@ export default {
   }
 }
 </script>
+
+<style lang="scss">
+.left-sidebar {
+  @apply bg-gray-200 dark:bg-gray-800 border-r border-gray-300 dark:border-gray-500 flex flex-col justify-between z-50;
+
+  &__nav {
+    @apply divide-y divide-gray-300 dark:divide-gray-600;
+  }
+
+  &__link {
+    @apply text-blue-500 p-3 md:p-4 lg:p-5 block hover:bg-blue-500 hover:text-white relative;
+
+    &.active {
+      @apply bg-blue-700 text-blue-200;
+    }
+
+    &-icon {
+      @apply fill-current;
+    }
+  }
+
+  &__info {
+    @apply divide-y divide-gray-300;
+
+    &-item {
+      @apply p-2 md:p-3 lg:p-4;
+    }
+  }
+
+  &__supIcon {
+    @apply absolute top-2 w-2 h-2 bg-red-600 right-2 rounded-full transition transition-all duration-300;
+  }
+}
+</style>

@@ -6,9 +6,9 @@
         <Label :color="event.color">
           {{ date }}
         </Label>
-        <Label :color="event.color">
-          {{ event.app }}
-        </Label>
+<!--        <Label :color="event.color">-->
+<!--          {{ event.app }}-->
+<!--        </Label>-->
         <Label v-if="hasLabels" v-for="label in labels" :key="label" :color="event.color">
           {{ label }}
         </Label>

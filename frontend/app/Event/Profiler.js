@@ -1,7 +1,7 @@
 import {Event} from "./Event"
 
 export default class extends Event {
-  labels = []
+  labels = ['profiler']
   color = 'purple'
   app = 'profiler'
 

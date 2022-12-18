@@ -28,3 +28,15 @@ export default {
     }
 }
 </script>
+
+<style lang="scss">
+.logout {
+  &__btn-submit {
+    @apply block p-3 md:p-4 lg:p-5 hover:bg-blue-500 hover:text-white text-gray-500;
+
+    > span > svg {
+      @apply w-full h-full;
+    }
+  }
+}
+</style>

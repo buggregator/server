@@ -1,17 +1,24 @@
 <template>
-  <div class="events-page__filters filters" v-if="hasLabels">
-    <div class="filters__label-list">
-      <Label @click="toggle(label)"
-             v-for="label in labels"
-             :key="label"
-             class="filters__label-item"
-             :class="{'active': selectedLabels.includes(label)}"
-      >
+  <div class="events-page__filters" v-if="hasLabels">
+    <span @click="toggleFilter(label)"
+          v-for="label in labels"
+          :key="label"
+          class="label item"
+          :class="{'active': selectedLabels.includes(label)}">
         {{ label }}
-      </Label>
-    </div>
+    </span>
   </div>
 </template>
+
+<style lang="scss">
+.events-page__filters {
+  @apply flex flex-row flex-wrap gap-2 items-center justify-center;
+
+  > item {
+    @apply cursor-pointer;
+  }
+}
+</style>
 
 <script>
 import Label from "@/Components/UI/Label"
@@ -19,7 +26,8 @@ import Label from "@/Components/UI/Label"
 export default {
   components: {Label},
   methods: {
-    toggle(label) {
+    toggleFilter(label) {
+      console.log(label)
       this.$store.commit('events/selectLabel', label)
     }
   },
