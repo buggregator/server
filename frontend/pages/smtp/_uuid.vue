@@ -2,10 +2,11 @@
   <div class="flex flex-col h-full flex-grow py-5 px-4 md:px-6 lg:px-8">
     <div class="flex flex-col flex-reverse md:flex-row justify-between items-center">
       <h2 class="text-sm sm:text-base md:text-lg lg:text-2xl">{{ event.subject }}</h2>
-      <JsonChip :href="event.route.json" class="mb-2 ml-1.5 mr-auto"/>
 
-      <div class="flex items-center space-x-3">
+      <div class="flex items-center align-center space-x-3">
         <span class="text-sm font-semibold text-muted">{{ date }}</span>
+
+        <JsonChip :href="event.route.json" />
         <button class="h-5 w-5" @click="deleteEvent">
           <svg class="fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
             <path

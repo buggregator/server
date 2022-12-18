@@ -1,5 +1,5 @@
 <template>
-  <button @click="copy" @click.right="download" class="button button__copy">
+  <button @click="copy" @click.right.prevent="download" class="button button__copy">
     <CopyIcon/>
   </button>
 </template>

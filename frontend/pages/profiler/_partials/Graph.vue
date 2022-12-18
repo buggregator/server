@@ -6,6 +6,26 @@
 .graphviz {
   @apply flex justify-items-stretch items-stretch bg-white rounded;
   height: 500px;
+
+  .node {
+    @apply cursor-pointer fill-gray-200;
+
+    > text {
+      @apply font-bold text-sm;
+    }
+
+    &:hover > polygon {
+      @apply fill-gray-300;
+    }
+
+    > path {
+      stroke-width: 3px;
+    }
+
+    > polygon {
+      @apply fill-gray-200;
+    }
+  }
 }
 </style>
 
@@ -22,8 +42,6 @@ wasmFolder("https://cdn.jsdelivr.net/npm/@hpcc-js/wasm/dist");
 function attributer(datum, index, nodes) {
   if (datum.tag == "svg") {
     // datum.attributes.fill = ''
-  } else if (datum.tag == "g" && datum.attributes.class === 'node') {
-    datum.attributes.style = 'cursor: pointer'
   }
 }
 
@@ -58,8 +76,6 @@ export default {
     nodeHandler() {
       selectAll("g.node").on("mouseover", (e, tag) => {
         const el = e.target.parentNode
-
-        el.classList.add("my-class")
         const edge = this.findEdge(tag.key)
         this.$emit('hover', {
           name: edge.callee,
@@ -71,8 +87,6 @@ export default {
         });
       }).on("mouseout", (e) => {
         const el = e.target.parentNode
-
-        el.classList.remove("my-class")
         this.$emit('hide')
       })
     },

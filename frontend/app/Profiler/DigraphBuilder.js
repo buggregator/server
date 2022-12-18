@@ -44,7 +44,6 @@ const generateNode = function (edge, metric) {
 
   let labels = {
     label: ` ${metricName(metric)} - ${formatValue(edge.cost[metric], metric)} [${edge.cost.ct}x]`,
-    fontsize: '10px'
   }
 
   return `    "${parent}" -> "${func}" [ ${labelsStrigifier(labels)} ]\n`
@@ -60,7 +59,7 @@ export default class {
 digraph xhprof {
     splines=true;
     overlap=false;
-    node [ shape="box" style="filled" fontname="Arial" margin=0.2 ]
+    node [ shape="box" style="filled" fontname="Arial" margin=0.3 ]
     edge [ fontname="Arial" ]
 `
 
@@ -92,6 +91,10 @@ digraph xhprof {
     const edges = Object.entries(this.edges)
 
     for (const [key, edge] of edges) {
+      if (!edge.caller || edge.caller.length === 0) {
+        continue
+      }
+
       if (edge.cost.pmu > 0) {
         types.pmu.nodes.push([edge, 'pmu'])
       } else if (edge.cost[metric] >= threshold) {
