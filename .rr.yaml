@@ -8,7 +8,7 @@ server:
   relay: pipes
 
 logs:
-  level: error
+  level: info
 
 http:
   address: 127.0.0.1:8082

@@ -1,7 +1,7 @@
 <template>
   <Event :event="event" class="event--monolog">
     <div class="event-monolog__wrap">
-      <CodeSnippet class="event-monolog__snippet text-white mt-0" :code="event.text"/>
+      <CodeSnippet class="event-monolog__snippet" :code="event.text"/>
       <CodeSnippet v-if="hasPayloads" language="json" class="event-monolog__payloads" :code="event.payloads"/>
       <CodeSnippet v-if="hasFields" :title="field.title" v-for="field in fields" :key="field.title"
                    :code="field.value"/>
@@ -26,7 +26,7 @@ export default {
     },
     hasPayloads() {
       return this.event.payloads.constructor === Object &&
-      Object.keys(this.event.payloads).length > 0
+        Object.keys(this.event.payloads).length > 0
     },
     hasFields() {
       return this.fields.length > 0
@@ -34,3 +34,19 @@ export default {
   },
 }
 </script>
+
+<style lang="scss">
+.event-monolog {
+  &__wrap {
+    @apply text-xs break-all;
+  }
+
+  &__snippet {
+    @apply border-b-0 mt-0 text-white mt-0;
+  }
+
+  &__payloads {
+    @apply border-b-0;
+  }
+}
+</style>

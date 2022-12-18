@@ -3,6 +3,12 @@
   <div v-else v-html="cleanHtml" class="dump" :class="{'active': dumpId}"></div>
 </template>
 
+<style lang="scss">
+.dump {
+  @apply border-gray-300 dark:border-gray-500 divide-gray-300 dark:divide-gray-500 font-mono p-2 md:px-3 lg:px-4 border bg-gray-200 dark:bg-gray-800 text-blue-700 dark:text-white text-sm break-all text-2xs sm:text-xs md:text-sm lg:text-base;
+}
+</style>
+
 <script>
 import CodeSnippet from "@/Components/UI/CodeSnippet"
 

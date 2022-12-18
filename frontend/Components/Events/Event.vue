@@ -2,6 +2,7 @@
   <div class="event" ref="event" :id="event.id" :class="{'collapsed': event.collapsed, 'open': !event.collapsed}">
     <div class="event__sidebar sidebar">
       <div class="event__labels">
+        <JsonChip :href="event.route.json"/>
         <Label :color="event.color">
           {{ date }}
         </Label>
@@ -13,7 +14,6 @@
         </Label>
       </div>
       <div class="sidebar__container" v-if="!isScreenshot">
-        <!--        <JsonChip :href="event.route.json"/>-->
         <ImageExport v-if="exportableEl" :name="`${event.app}-${event.id}`" :el="exportableEl"/>
         <button @click="toggle" class="button button__collapse" :class="color">
           <PlusIcon v-if="event.collapsed"/>
@@ -27,6 +27,12 @@
     <div class="event__body" ref="event_body">
       <slot></slot>
     </div>
+    <div class="event__origin" v-if="hasOrigin || hasServerName">
+      <div class="event__origin-tags">
+        <span v-if="hasOrigin && value" v-for="(value, tag) in event.origin"><strong>{{ tag }}: </strong>{{ value }}</span>
+      </div>
+      <Host v-if="hasServerName" :name="event.serverName" class="event__origin-host"/>
+    </div>
   </div>
 </template>
 
@@ -37,9 +43,12 @@ import MinusIcon from "@/Components/UI/Icons/MinusIcon"
 import TimesIcon from "@/Components/UI/Icons/TimesIcon"
 import JsonChip from "@/Components/UI/JsonChip"
 import ImageExport from "@/Components/UI/ImageExport"
+import Host from "@/Components/UI/Host"
 
 export default {
-  components: {MinusIcon, PlusIcon, TimesIcon, Label, JsonChip, ImageExport},
+  components: {
+    MinusIcon, PlusIcon, TimesIcon, Label, JsonChip, ImageExport, Host
+  },
   props: {
     event: Object
   },
@@ -82,6 +91,12 @@ export default {
     },
     hasLabels() {
       return this.labels.length > 0
+    },
+    hasOrigin() {
+      return this.event.origin && Object.entries(this.event.origin).length > 0
+    },
+    hasServerName() {
+      return this.event.serverName !== null
     }
   }
 }

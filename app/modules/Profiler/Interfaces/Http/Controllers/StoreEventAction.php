@@ -29,7 +29,6 @@ final class StoreEventAction
         //$payload = $this->gzippedStreamFactory->createFromRequest($request)->getPayload();
         $payload = \json_decode((string) $request->getBody(), true);
 
-        var_dump($payload);
         $event = $this->handler->handle($payload);
         $commands->dispatch(
             new HandleReceivedEvent(type: 'profiler', payload: $event)

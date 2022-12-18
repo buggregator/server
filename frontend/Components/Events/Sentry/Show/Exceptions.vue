@@ -6,11 +6,10 @@
 </template>
 
 <script>
-import File from "../UI/File";
-import Exception from "./Exception";
+import Exception from "./Exception"
 
 export default {
-    components: {File, Exception},
+    components: {Exception},
     props: {
         exceptions: Array
     },

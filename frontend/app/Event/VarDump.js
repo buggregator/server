@@ -2,7 +2,7 @@ import {Event} from "./Event"
 
 export default class extends Event {
   labels = []
-  color = 'gray'
+  color = 'red'
   app = 'var-dump'
 
   get type() {

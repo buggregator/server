@@ -1,14 +1,5 @@
 <template>
   <div>
-    <nav ref="header" class="breadcrumbs">
-      <NuxtLink class="text-muted" :to="event.route.index">Sentry</NuxtLink>
-      <div class="h-1 w-1">
-        <svg class="fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 330">
-          <path d="M251 154 101 4a15 15 0 1 0-22 22l140 139L79 304a15 15 0 0 0 22 22l150-150a15 15 0 0 0 0-22z"/>
-        </svg>
-      </div>
-      <span>Event - {{ event.id }}</span>
-    </nav>
     <main class="flex flex-col flex-grow">
       <header class="bg-gray-50 dark:bg-gray-900 py-5 px-4 md:px-6 lg:px-8 border-b">
         <div class="flex justify-between items-center">
@@ -42,7 +33,6 @@
 </template>
 
 <script>
-import File from "@/Components/Events/Sentry/UI/File"
 import Tags from "@/Components/Events/Sentry/Show/Tags"
 import Breadcrumbs from "@/Components/Events/Sentry/Show/Breadcrumbs"
 import User from "@/Components/Events/Sentry/Show/User"
@@ -57,7 +47,6 @@ import SentryEvent from "../../app/Event/Sentry"
 export default {
   components: {
     JsonChip,
-    File,
     Tags, Breadcrumbs, Request,
     App, Device, OS,
     User, Exceptions

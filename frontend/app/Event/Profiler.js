@@ -27,9 +27,12 @@ export default class extends Event {
 
   get origin() {
     return {
-      tags: this.event.tags,
       app: this.event.app_name,
-      hostname: this.event.hostname
+      ...this.event.tags,
     }
+  }
+
+  get serverName() {
+    return this.event.hostname
   }
 }

@@ -28,9 +28,9 @@
 </template>
 
 <script>
-import WsConnectionStatus from "@/Components/UI/WsConnectionStatus"
-import Labels from "@/Components/Events/Labels"
-import Tips from "@/Components/UI/Tips"
+import WsConnectionStatus from "./_partials/WsConnectionStatus"
+import Labels from "./_partials/Labels"
+import Tips from "./_partials/Tips"
 
 import SentryEvent from "@/app/Event/Sentry"
 import SmtpEvent from "@/app/Event/Smtp"

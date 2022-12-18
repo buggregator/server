@@ -8,9 +8,6 @@
 
     <div class="main-layout__content">
       <div class="smtp-page page">
-        <div ref="header" class="breadcrumbs">
-          <div class="breadcrumbs_item current">Mailbox</div>
-        </div>
         <main>
           <div class="smtp-page_sidebar">
             <PerfectScrollbar :style="{height: menuHeight}" v-if="hasEvents">
@@ -36,12 +33,11 @@
 <script>
 import LeftSidebar from './Sidebar/Left'
 import {PerfectScrollbar} from 'vue2-perfect-scrollbar'
-import NavItem from "@/Components/Events/Smtp/NavItem"
-import Info from "@/Components/Events/Smtp/Info"
+import NavItem from "@/pages/smtp/_partials/NavItem"
 
 export default {
   components: {
-    NavItem, PerfectScrollbar, Info, LeftSidebar
+    NavItem, PerfectScrollbar, LeftSidebar
   },
   data() {
     return {
@@ -65,8 +61,7 @@ export default {
   },
   methods: {
     calculateMenuHeight() {
-      const headerHeight = this.$refs.header ? parseInt(this.$refs.header.offsetHeight) : 0
-      this.menuHeight = (window.innerHeight - headerHeight - 1) + 'px'
+      this.menuHeight = (window.screen.height - 1) + 'px'
     }
   }
 }

@@ -1,0 +1,31 @@
+.event-smtp {
+    &__link {
+       @apply block border-b dark:bg-gray-800 text-sm hover:bg-white dark:hover:bg-gray-900 flex items-stretch dark:border-gray-600;
+        &.active {
+            @apply bg-gray-50 dark:bg-gray-900;
+        }
+    }
+    &__nav-item {
+        @apply border;
+    }
+    &__left {
+        @apply w-1 self-stretch flex-none rounded-r;
+        &.active {
+            @apply bg-blue-500 dark:bg-blue-100;
+        }
+    }
+    &__link-body {
+        @apply flex-grow p-5;
+    }
+    &__link-title {
+        @apply font-semibold mb-2;
+    }
+    &__link-text {
+        @apply flex justify-between text-xs text-muted;
+    }
+    &__json {
+       @apply text-right;
+       margin-top: 0 !important;
+       margin-bottom: -15px !important;
+    }
+}

@@ -1,65 +1,72 @@
 <template>
-  <div>
-    <nav ref="header" class="breadcrumbs">
-      <NuxtLink class="text-muted" :to="event.route.index">Profiler</NuxtLink>
-      <div class="h-1 w-1">
-        <svg class="fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 330">
-          <path d="M251 154 101 4a15 15 0 1 0-22 22l140 139L79 304a15 15 0 0 0 22 22l150-150a15 15 0 0 0 0-22z"/>
-        </svg>
-      </div>
-      <span>Event - {{ event.id }}</span>
-    </nav>
-    <main class="flex h-full">
-      <div class="w-1/3 border-r border-gray-600" ref="calls">
+  <div class="page-profiler">
+    <main ref="main">
+      <section class="call-stack__wrapper" ref="calls">
         <PerfectScrollbar :style="{height: menuHeight}">
-          <CallsList :event="event" @hover="showEdge" @hide="hideEdge" />
+          <CallsList :event="event" @hover="showEdge" @hide="hideEdge"/>
         </PerfectScrollbar>
-
-        <div v-if="edge" class="bg-gray-800 mb-5">
-          <h4 class="px-4 pt-4 pb-0 font-bold">{{ edge.name }}</h4>
-          <Cards v-if="edge.cost" :cost="edge.cost"/>
-        </div>
-      </div>
-      <div class="w-2/3">
-        <section>
-          <Cards class="w-full dark:bg-gray-800 mb-5" :cost="event.peaks" />
+      </section>
+      <div class="info__wrapper">
+        <section class="p-5 bg-gray-200  bg-gray-800">
+          <Cards :cost="event.peaks"/>
         </section>
 
-        <section class="p-5 bg-gray-800 mb-5">
+        <section class="p-5 bg-gray-200  bg-gray-800">
           <h1 class="text-lg font-bold mb-3">Flamechart</h1>
-          <Flamegraph :event="event" :width="width" @hover="showEdge" @hide="hideEdge" />
+          <FlameGraph :event="event" :width="width" @hover="showEdge" @hide="hideEdge"/>
         </section>
 
-        <section class="p-5 bg-gray-800">
+        <section class="p-5 bg-gray-200 bg-gray-800">
           <h1 class="text-lg font-bold mb-3">Call graph</h1>
-          <Graph :event="event" @hover="showEdge" @hide="hideEdge" />
+          <Graph :event="event" @hover="showEdge" @hide="hideEdge"/>
         </section>
       </div>
     </main>
+
+    <CallInfo v-if="edge" :edge="edge" />
   </div>
 </template>
+
+<style lang="scss">
+.page-profiler {
+  @apply relative;
+
+  > main {
+    @apply flex flex-col md:flex-row;
+  }
+
+  .call-stack__wrapper {
+    @apply w-full md:w-1/3 border-r border-gray-300 dark:border-gray-500;
+  }
+
+  .info__wrapper {
+    @apply w-full md:w-2/3 divide-y divide-gray-300 dark:divide-gray-500;
+  }
+}
+</style>
 
 <script>
 import {PerfectScrollbar} from 'vue2-perfect-scrollbar'
 import ImageExport from "@/Components/UI/ImageExport"
-import Cards from "@/Components/Events/Profiler/Show/Cards"
 import JsonChip from "@/Components/UI/JsonChip"
-import ProfilerEvent from "../../app/Event/Profiler"
-import Flamegraph from "@/Components/Events/Profiler/Show/Flamegraph"
-import CallsList from "@/Components/Events/Profiler/Show/CallsList"
-import Graph from "@/Components/Events/Profiler/Show/Graph"
+import ProfilerEvent from "@/app/Event/Profiler"
+import FlameGraph from "./_partials/Flamegraph"
+import CallsList from "./_partials/CallsList"
+import Graph from "./_partials/Graph"
+import CallInfo from "./_partials/CallInfo"
+import Cards from "@/Components/Events/Profiler/_partials/Cards"
 
 export default {
   components: {
+    CallInfo,
     Graph,
     CallsList,
-    Flamegraph, Cards,
+    FlameGraph, Cards,
     JsonChip, ImageExport,
     PerfectScrollbar
   },
   data() {
     return {
-      exportableEl: null,
       menuHeight: 0,
       width: 0,
       edge: null
@@ -75,7 +82,6 @@ export default {
     return {event}
   },
   mounted() {
-    this.exportableEl = this.$el
     this.calculateMenuHeight()
     this.width = document.documentElement.clientWidth - this.$refs.calls.offsetWidth - 63 - 20 - 120
     window.addEventListener('resize', (event) => {
@@ -94,8 +100,7 @@ export default {
       await this.$store.dispatch('events/delete', this.event)
     },
     calculateMenuHeight() {
-      const headerHeight = this.$refs.header ? parseInt(this.$refs.header.offsetHeight) : 0
-      this.menuHeight = (this.$el.clientHeight - headerHeight - 2) + 'px'
+      this.menuHeight = (this.$refs.main.offsetHeight - 2) + 'px'
     }
   },
   computed: {

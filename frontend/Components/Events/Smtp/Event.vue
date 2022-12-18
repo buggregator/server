@@ -6,7 +6,7 @@
 
 <script>
 import Event from "../Event";
-import NavItem from "./NavItem"
+import NavItem from "@/pages/smtp/_partials/NavItem"
 
 export default {
     components: {

@@ -1,0 +1,90 @@
+.events-page {
+  &__header {
+    @apply md:sticky md:top-0 z-50 bg-white dark:bg-gray-900 border-b border-style flex justify-between items-center px-2;
+  }
+
+  &__filters {
+    @apply flex flex-col py-2 md:flex-row justify-center md:justify-between items-center gap-2 border-style;
+  }
+
+  &__events {
+    @apply flex flex-col divide-y border-style;
+  }
+
+  &__welcome-block {
+    @apply flex-1 p-4 flex flex-col justify-center items-center bg-gray-50 dark:bg-gray-800;
+  }
+}
+
+.events__btn-clear {
+  @apply px-3 py-1 text-xs bg-red-800 text-white rounded-sm hover:bg-red-700 transition transition-all duration-300;
+}
+
+.event {
+  @apply flex-grow flex flex-col p-3 lg:p-5 transition-colors md:dark:bg-gray-700;
+
+  &__origin {
+    @apply flex flex-col sm:flex-row sm:justify-between sm:items-center mt-3 text-xs text-gray-400;
+
+    &-tags {
+      @apply flex flex-wrap items-center space-x-4;
+    }
+
+    &-host {
+
+    }
+  }
+
+  &:hover {
+    @apply md:bg-gray-50 dark:bg-gray-900;
+  }
+
+  &.collapsed {
+    @apply overflow-hidden shadow-bottom h-20 md:h-12 lg:h-16;
+  }
+
+  &.open {
+  }
+
+  .sidebar {
+    @apply w-full flex justify-between pb-3;
+
+    &__container {
+      @apply flex items-center space-x-2;
+
+      .button {
+        @apply w-5 h-5 md:w-4 md:h-4 rounded-full opacity-90 hover:opacity-100 transition transition-all hover:ring-4 ring-offset-1;
+
+        svg {
+          @apply p-1
+        }
+
+        &__collapse {
+          @apply text-white;
+        }
+
+        &__delete {
+          @apply text-red-700 bg-white hover:bg-red-700 hover:text-white;
+        }
+      }
+    }
+  }
+
+  &__labels {
+    @apply flex flex-wrap gap-3
+  }
+
+  &__body {
+    @apply flex flex-col;
+  }
+}
+
+.ws-connection {
+  @apply flex flex-col text-center md:flex-row gap-4 items-center justify-center;
+  &__icon {
+    @apply h-8 w-8;
+  }
+  &__text {
+    @apply text-responsive text-muted font-semibold;
+  }
+}

@@ -11,7 +11,7 @@
 </template>
 
 <script>
-import File from "../UI/File";
+import File from "../_partials/File";
 
 export default {
     components: {File},

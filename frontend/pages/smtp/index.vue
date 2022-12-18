@@ -1,8 +1,7 @@
 <template>
   <section>
     <h2>SMTP Settings</h2>
-    <p class="smtp-page_description">Use these settings to send messages directly from your email client or mail
-      transfer agent.</p>
+    <p class="smtp-page_description">Use these settings to send messages directly from your email client or mail transfer agent.</p>
 
     <div v-if="hasEvents" class="my-3">
       <button @click="clearEvents" class="events__btn-clear">Clear events</button>

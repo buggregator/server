@@ -13,6 +13,9 @@ export class Event {
     this.id = id
   }
 
+  /**
+   * @returns {Object}
+   */
   get route() {
     return {
       index: '/',
@@ -21,8 +24,18 @@ export class Event {
     }
   }
 
+  /**
+   * @returns {Object}
+   */
+  origin() {
+    return {}
+  }
+
+  /**
+   * @returns {String|null}
+   */
   get serverName() {
-    return 'unknown'
+    return null
   }
 
   disable() {

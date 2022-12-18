@@ -33,6 +33,13 @@ export default class extends Event {
     }
   }
 
+  get origin() {
+    return {
+      logger: this.logger,
+      env: this.environment
+    }
+  }
+
   get serverName() {
     return this.event.server_name
   }
