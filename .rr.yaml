@@ -43,18 +43,6 @@ kv:
     driver: memory
     config: {}
 
-jobs:
-  consume: [ "default", "events" ]
-  pipelines:
-    default:
-      driver: memory
-      config: { }
-    events:
-      driver: memory
-      config: { }
-  pool:
-    num_workers: 2
-
 service:
   frontend:
     service_name_in_log: true

@@ -40,7 +40,10 @@ tcp:
 kv:
   events:
     driver: memory
-    config: { }
+    config: {}
+  local:
+    driver: memory
+    config: {}
 
 service:
   nginx:
