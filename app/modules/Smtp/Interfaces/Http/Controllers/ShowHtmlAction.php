@@ -15,7 +15,7 @@ use Spiral\Router\Annotation\Route;
 
 final class ShowHtmlAction
 {
-    #[Route(route: 'mail/<uuid>/html', name: 'smtp.show.html', group: 'api')]
+    #[Route(route: 'smtp/<uuid>/html', name: 'smtp.show.html', group: 'api')]
     public function __invoke(QueryBusInterface $bus, Uuid $uuid): ?string
     {
         try {
