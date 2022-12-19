@@ -16,7 +16,6 @@ final class StoreEventAction
     public function __invoke(
         ServerRequestInterface $request,
         CommandBusInterface $commands,
-        int $projectId,
     ): void {
         $data = \json_decode(\base64_decode((string)$request->getBody()), true)
             ?? throw new ClientException\BadRequestException('Invalid data');

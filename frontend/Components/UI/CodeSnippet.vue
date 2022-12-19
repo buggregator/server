@@ -17,7 +17,11 @@
   @apply relative bg-gray-200 dark:bg-gray-800 p-3;
 
   &__btn-copy {
-    @apply flex items-center gap-x-1 absolute top-2 right-2 px-1 bg-white dark:bg-gray-900 hover:bg-blue-500 border text-blue-500 dark:text-blue-200 hover:text-white transition-all text-xs font-bold;
+    @apply flex rounded-full items-center gap-x-1 absolute top-2 right-2 px-2 bg-white dark:bg-gray-900 border text-gray-600 transition-all text-xs font-bold border-gray-600;
+
+    &:hover {
+      @apply border-gray-200 text-white ;
+    }
 
     &.active {
       @apply transform scale-110 bg-green-500 hover:bg-green-500;
@@ -26,6 +30,10 @@
     > svg {
       @apply w-2 h-2;
     }
+  }
+
+  & + & {
+    @apply border-t border-gray-600;
   }
 }
 </style>
@@ -44,7 +52,7 @@ export default {
     },
     language: {
       type: String,
-      default: () => null
+      default: () => 'plaintext'
     }
   },
   data() {

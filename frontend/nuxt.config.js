@@ -49,6 +49,10 @@ export default {
     '@nuxtjs/axios',
   ],
 
+  router: {
+    mode: 'hash'
+  },
+
   // Build Configuration: https://go.nuxtjs.dev/config-build
   build: {
     postcss: {
@@ -58,5 +62,4 @@ export default {
       },
     },
   },
-
 }

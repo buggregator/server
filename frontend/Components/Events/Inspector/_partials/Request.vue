@@ -2,12 +2,12 @@
   <section class="inspector-request">
     <h3 class="text-muted font-bold uppercase text-sm mb-5">Request</h3>
     <Table class="mt-3">
-      <TableRow :title="name" v-for="(value, name) in event.process.http.request">
+      <TableRow :title="name" :key="name" v-for="(value, name) in event.process.http.request">
         <template v-if="typeof value==='string'">
           {{ value }}
         </template>
         <template v-else-if="!Array.isArray(value)">
-          <TableRow :title="n" v-for="(v, n) in value">
+          <TableRow :title="n" :key="n" v-for="(v, n) in value">
             {{ v }}
           </TableRow>
         </template>

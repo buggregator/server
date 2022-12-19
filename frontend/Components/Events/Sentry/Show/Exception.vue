@@ -5,7 +5,7 @@
         </h3>
         <pre class="text-muted text-sm break-all mb-5" v-html="exception.value" />
         <div class="border border-purple-200 text-muted">
-            <File :file="file" v-for="(file, i) in exception.stacktrace.frames" :key="file.filename" :collapsed="i !== 0"/>
+            <File :file="file" v-for="(file, i) in exception.stacktrace.frames" :key="`file-${i}-${file.filename}`" :collapsed="i !== 0"/>
         </div>
     </div>
 </template>
