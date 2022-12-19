@@ -36,11 +36,11 @@
   }
 
   .call-stack__wrapper {
-    @apply w-full md:w-1/3 border-r border-gray-300 dark:border-gray-500;
+    @apply w-full md:w-1/6 border-r border-gray-300 dark:border-gray-500;
   }
 
   .info__wrapper {
-    @apply w-full md:w-2/3 divide-y divide-gray-300 dark:divide-gray-500;
+    @apply w-full md:w-5/6 divide-y divide-gray-300 dark:divide-gray-500;
   }
 }
 </style>

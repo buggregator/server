@@ -1,10 +1,10 @@
 <template>
   <div class="event--profiler__callitem" @mouseover="onHover($event, edge)" @mouseout="$emit('hide')">
-    <div class="callee">{{ edge.callee }}</div>
+<!--    <div class="callee">{{ edge.callee }}</div>-->
     <div class="usage">
       <div class="usage--cpu" :style="{width: `${p_cpu}%`}"/>
       <div class="usage--memory" :style="{width: `${p_mu}%`}"/>
-      <div class="usage--title">{{ edge.cost.p_cpu }}%</div>
+      <div class="usage--title">{{ edge.cost.p_cpu }}% / {{ edge.cost.p_mu }}%</div>
     </div>
     <div class="calls">{{ edge.cost.ct }}</div>
   </div>
@@ -59,7 +59,7 @@ export default {
   }
 
   > .usage {
-    @apply w-24 text-center text-xs relative border-r border-gray-600;
+    @apply flex-1 text-center text-xs relative border-r border-gray-600;
   }
 
   .usage {
