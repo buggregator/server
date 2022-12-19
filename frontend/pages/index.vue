@@ -1,7 +1,9 @@
 <template>
   <div class="events-page">
     <header class="events-page__header">
-      <div><Fiilters/></div>
+      <div>
+        <Fiilters/>
+      </div>
 
       <div class="events-page__filters" v-if="hasEvents">
         <button @click="clearEvents" class="events__btn-clear">
@@ -53,6 +55,14 @@ export default {
     SentryComponent, SmtpComponent, VarDumpComponent,
     MonologComponent, InspectorComponent, ProfilerComponent
   },
+  head() {
+    let title = `Buggregator - Waiting for events`
+    if (this.hasEvents) {
+      title = `Events [${this.events.length}] | Buggregator`
+    }
+
+    return {title}
+  },
   mounted() {
     this.$store.dispatch('events/fetch')
   },
@@ -64,7 +74,6 @@ export default {
       return this.$store.getters['events/filtered']
     },
   },
-
   methods: {
     clearEvents() {
       this.$store.dispatch('events/clear')

@@ -13,6 +13,11 @@
 
 export default {
   layout: 'smtp',
+  head() {
+    return {
+      title: `SMTP [${this.events.length}] | Buggregator`
+    }
+  },
   methods: {
     clearEvents() {
       this.$store.dispatch('events/clear', 'smtp')

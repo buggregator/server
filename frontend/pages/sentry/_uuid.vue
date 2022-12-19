@@ -51,6 +51,11 @@ export default {
     App, Device, OS,
     User, Exceptions
   },
+  head() {
+    return {
+      title: `Sentry > ${this.event.uuid} | Buggregator`
+    }
+  },
   async asyncData({params, redirect, $api}) {
     const json = await $api.events.show(params.uuid)
     const event = new SentryEvent(json.payload, json.uuid, json.timestamp)

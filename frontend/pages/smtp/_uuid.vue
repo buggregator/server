@@ -120,6 +120,11 @@ import Tabs from "@/Components/UI/Tabs"
 
 export default {
   layout: 'smtp',
+  head() {
+    return {
+      title: `SMTP > ${this.event.uuid} | Buggregator`
+    }
+  },
   components: {
     CodeSnippet, Table, TableRow, Dump, Collapsed,
     HtmlPreview, Addresses, JsonChip, Tab, Tabs

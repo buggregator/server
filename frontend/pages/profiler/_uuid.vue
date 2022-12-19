@@ -65,6 +65,11 @@ export default {
     JsonChip, ImageExport,
     PerfectScrollbar
   },
+  head() {
+    return {
+      title: `Profiler > ${this.event.uuid} | Buggregator`
+    }
+  },
   data() {
     return {
       menuHeight: 0,

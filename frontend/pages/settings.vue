@@ -42,6 +42,9 @@
 
 <script>
 export default {
+  head: {
+    title: 'Settings | Buggregator',
+  },
   methods: {
     toggle() {
       this.$store.commit('theme/toggle', !this.darkMode)

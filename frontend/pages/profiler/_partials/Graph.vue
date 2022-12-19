@@ -7,23 +7,49 @@
   @apply flex justify-items-stretch items-stretch bg-white rounded;
   height: 500px;
 
+  .graph {
+    > polygon {
+      @apply fill-transparent;
+    }
+  }
+
   .node {
-    @apply cursor-pointer fill-gray-200;
+    @apply cursor-pointer;
+
+    &.pmu {
+      > text {
+        @apply fill-white;
+      }
+
+      > polygon {
+        @apply fill-red-600 stroke-red-800;
+      }
+
+      &:hover > polygon {
+        @apply fill-red-800;
+      }
+    }
+
+    &.default {
+      > text {
+        @apply fill-gray-800;
+      }
+
+      > polygon {
+        @apply fill-gray-200 stroke-gray-400;
+      }
+
+      &:hover > polygon {
+        @apply fill-gray-300;
+      }
+    }
 
     > text {
       @apply font-bold text-sm;
     }
 
-    &:hover > polygon {
-      @apply fill-gray-300;
-    }
-
     > path {
       stroke-width: 3px;
-    }
-
-    > polygon {
-      @apply fill-gray-200;
     }
   }
 }

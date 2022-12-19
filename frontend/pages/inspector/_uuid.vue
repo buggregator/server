@@ -42,6 +42,11 @@ export default {
   components: {
     JsonChip, Request, Url, TimelineChart, Cards
   },
+  head() {
+    return {
+      title: `Inspector > ${this.event.uuid} | Buggregator`
+    }
+  },
   async asyncData({params, redirect, $api}) {
     const json = await $api.events.show(params.uuid)
     const event = new InspectorEvent(json.payload, json.uuid, json.timestamp)

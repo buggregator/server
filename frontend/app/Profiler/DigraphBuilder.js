@@ -17,7 +17,7 @@ const metricName = function (metric) {
     case 'p_mu':
       return 'Memory'
     case 'pmu':
-      return 'Memory leak'
+      return 'Memory change'
   }
 }
 
@@ -26,6 +26,7 @@ const formatValue = function (value, metric) {
     case 'p_mu':
     case 'p_pmu':
     case 'p_cpu':
+    case 'p_wt':
       return `${value}%`
     case 'mu':
     case 'pmu':
@@ -66,8 +67,7 @@ digraph xhprof {
     let types = {
       pmu: {
         node: {
-          color: '#891d1d',
-          fontcolor: '#FFFFFF'
+          class: 'pmu',
         },
         edge: {
           fontcolor: '#891d1d',
@@ -78,8 +78,7 @@ digraph xhprof {
 
       default: {
         node: {
-          color: '#EEEEEE',
-          fontcolor: '#666666'
+          class: 'default',
         },
         edge: {
           color: '#999999',
@@ -96,7 +95,7 @@ digraph xhprof {
       }
 
       if (edge.cost.pmu > 0) {
-        types.pmu.nodes.push([edge, 'pmu'])
+        types.pmu.nodes.push([edge, metric])
       } else if (edge.cost[metric] >= threshold) {
         types.default.nodes.push([edge, metric])
       }

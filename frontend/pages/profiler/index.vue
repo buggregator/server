@@ -4,6 +4,11 @@ import EventsPage from "@/mixins/EventsPage"
 
 export default {
   components: {Event},
+  head() {
+    return {
+      title: `Profiler [${this.events.length}] | Buggregator`
+    }
+  },
   extends: EventsPage,
   data() {
     return {
