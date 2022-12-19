@@ -1,7 +1,7 @@
 <template>
   <Event :event="event" class="event--monolog">
     <div class="event-monolog__wrap">
-      <CodeSnippet class="event-monolog__snippet" :code="event.text"/>
+      <CodeSnippet class="event-monolog__snippet break-words" :code="event.text"/>
       <CodeSnippet v-if="hasPayloads" language="json" class="event-monolog__payloads" :code="event.payloads"/>
       <CodeSnippet v-if="hasFields" :title="field.title" v-for="field in fields" :key="field.title"
                    :code="field.value"/>

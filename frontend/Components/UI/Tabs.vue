@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col">
-    <div class="flex justify-start mt-3 border-b">
+    <div class="flex justify-start mt-3 border-b border-gray-600">
       <div v-for="(tab, index) in tabs" :key="tab.title" @click="selectTab(index)"
            class="cursor-pointer p-3"
            :class="{'active border-b border-b-4 font-bold': tab.isActive}"

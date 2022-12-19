@@ -16,6 +16,7 @@ const metricName = function (metric) {
     case 'mu':
     case 'p_mu':
       return 'Memory'
+    case 'p_pmu':
     case 'pmu':
       return 'Memory change'
   }
@@ -39,9 +40,13 @@ const formatValue = function (value, metric) {
   return value
 }
 
+const addSlashes = function (str) {
+  return str.replace(/\\/g,'\\\\');
+}
+
 const generateNode = function (edge, metric) {
-  let parent = edge.caller || ''
-  let func = edge.callee || ''
+  let parent = addSlashes(edge.caller || '')
+  let func = addSlashes(edge.callee || '')
 
   let labels = {
     label: ` ${metricName(metric)} - ${formatValue(edge.cost[metric], metric)} [${edge.cost.ct}x]`,
@@ -94,7 +99,7 @@ digraph xhprof {
         continue
       }
 
-      if (edge.cost.pmu > 0) {
+      if (edge.cost.p_pmu > 10) {
         types.pmu.nodes.push([edge, metric])
       } else if (edge.cost[metric] >= threshold) {
         types.default.nodes.push([edge, metric])

@@ -1,11 +1,124 @@
 <template>
-  <div class="graphviz"></div>
+  <div class="graphviz--wrapper" :class="{fullscreen: isFullscreen}">
+    <div class="graphviz" ref="graphviz"></div>
+    <div class="graphviz--toolbar">
+      <button @click="isFullscreen = !isFullscreen" title="Full screen">
+        <FullscreenIcon class="w-4 h-4 fill-blue-500" />
+      </button>
+    </div>
+  </div>
 </template>
+
+<script>
+import {wasmFolder} from "@hpcc-js/wasm";
+import {select, selectAll} from "d3-selection"
+import {graphviz} from "d3-graphviz"
+
+import DigraphBuilder from "@/app/Profiler/DigraphBuilder"
+import FullscreenIcon from "@/Components/UI/Icons/FullscreenIcon"
+
+wasmFolder("https://cdn.jsdelivr.net/npm/@hpcc-js/wasm/dist");
+
+function attributer(datum, index, nodes) {
+  if (datum.tag == "svg") {
+    // datum.attributes.fill = ''
+  }
+}
+
+export default {
+  components: {FullscreenIcon},
+  props: {
+    event: Object,
+    metric: {
+      type: String,
+      default: 'p_cpu'
+    },
+    threshold: {
+      type: Number,
+      default: 1
+    }
+  },
+  data() {
+    return {
+      isFullscreen: false,
+    }
+  },
+  watch: {
+    threshold() {
+      this.renderGraph()
+    },
+    metric() {
+      this.renderGraph()
+    }
+  },
+  methods: {
+    buildDigraph() {
+      const builder = new DigraphBuilder(this.event.edges)
+
+      return builder.build(this.metric, this.threshold)
+    },
+    findEdge(name) {
+      return Object.entries(this.event.edges)
+        .find(([k, v]) => v.callee === name)[1] || null
+    },
+    nodeHandler() {
+      selectAll("g.node").on("mouseover", (e, tag) => {
+        const el = e.target.parentNode
+        const edge = this.findEdge(tag.key)
+        this.$emit('hover', {
+          name: edge.callee,
+          cost: edge.cost,
+          position: {
+            x: e.pageX,
+            y: e.pageY,
+          }
+        });
+      }).on("mouseout", (e) => {
+        const el = e.target.parentNode
+        this.$emit('hide')
+      })
+    },
+    renderGraph() {
+      this.graph = select(this.$refs.graphviz)
+        .graphviz()
+        .width('100%')
+        .height('100%')
+        .attributer(attributer)
+        .fit(true)
+        .renderDot(this.buildDigraph(), this.nodeHandler)
+    }
+  },
+  mounted() {
+    this.renderGraph()
+  },
+  beforeDestroy() {
+    this.graph.destroy()
+  }
+}
+</script>
 
 <style lang="scss">
 .graphviz {
-  @apply flex justify-items-stretch items-stretch bg-white rounded;
-  height: 500px;
+  @apply flex-1 justify-items-stretch items-stretch bg-white rounded;
+
+  &--wrapper {
+    @apply relative flex;
+    height: 600px;
+
+    &.fullscreen {
+      z-index: 9998;
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+  }
+
+  &--toolbar {
+    @apply absolute top-5 right-5 flex flex-col bg-gray-200 p-2 rounded;
+    z-index: 9999;
+  }
 
   .graph {
     > polygon {
@@ -54,83 +167,3 @@
   }
 }
 </style>
-
-<script>
-import {wasmFolder} from "@hpcc-js/wasm";
-import {select, selectAll} from "d3-selection"
-import {graphviz} from "d3-graphviz"
-import {humanFileSize, formatDuration} from "@/Utils/converters"
-
-import DigraphBuilder from "@/app/Profiler/DigraphBuilder"
-
-wasmFolder("https://cdn.jsdelivr.net/npm/@hpcc-js/wasm/dist");
-
-function attributer(datum, index, nodes) {
-  if (datum.tag == "svg") {
-    // datum.attributes.fill = ''
-  }
-}
-
-export default {
-  props: {
-    event: Object
-  },
-  data() {
-    return {
-      metric: 'p_cpu',
-      threshold: 1
-    }
-  },
-  watch: {
-    threshold() {
-      this.renderGraph()
-    },
-    metric() {
-      this.renderGraph()
-    }
-  },
-  methods: {
-    buildDigraph() {
-      const builder = new DigraphBuilder(this.event.edges)
-
-      return builder.build(this.metric, this.threshold)
-    },
-    findEdge(name) {
-      return Object.entries(this.event.edges)
-        .find(([k, v]) => v.callee === name)[1] || null
-    },
-    nodeHandler() {
-      selectAll("g.node").on("mouseover", (e, tag) => {
-        const el = e.target.parentNode
-        const edge = this.findEdge(tag.key)
-        this.$emit('hover', {
-          name: edge.callee,
-          cost: edge.cost,
-          position: {
-            x: e.pageX,
-            y: e.pageY,
-          }
-        });
-      }).on("mouseout", (e) => {
-        const el = e.target.parentNode
-        this.$emit('hide')
-      })
-    },
-    renderGraph() {
-      this.graph = select(this.$el)
-        .graphviz()
-        .width('100%')
-        .height('100%')
-        .attributer(attributer)
-        .fit(true)
-        .renderDot(this.buildDigraph(), this.nodeHandler)
-    }
-  },
-  mounted() {
-    this.renderGraph()
-  },
-  beforeDestroy() {
-    this.graph.destroy()
-  }
-}
-</script>

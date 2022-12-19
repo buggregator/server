@@ -7,11 +7,16 @@
 <script>
 import {select} from "d3-selection"
 import {flamegraph} from "d3-flame-graph";
+import FlamegraphBuilder from "@/app/Profiler/FlamegraphBuilder"
 
 export default {
   props: {
     event: Object,
     width: Number,
+    cellHeight: {
+      type: Number,
+      default: 20
+    }
   },
   data() {
     return {
@@ -23,88 +28,58 @@ export default {
   },
   watch: {
     width(width) {
-      this.chart
-        .width(width)
-        .update()
+      this.chart.width(width).update()
     }
   },
   methods: {
     trackMousePosition(e) {
-      this.position.x = e.clientX;
-      this.position.y = e.clientY;
+      this.position.x = e.pageX;
+      this.position.y = e.pageY;
+    },
+    onSpanHover(d) {
+      this.$emit('hover', {
+        name: d.data.name,
+        cost: d.data.cost,
+        position: this.position
+      })
+    },
+    detailsHandler(d) {
+      if (d === null) {
+        this.$emit('hide')
+      }
+    },
+    colorMapper(d, originalColor) {
+      if (d.data.name === 'main()') {
+        return '#333333'
+      }
+
+      if (d.data.cost.p_cpu >= 60) {
+        return '#6C0000'
+      }
+
+      if (d.data.cost.p_cpu <= 10) {
+        return '#009348'
+      }
+
+      return '#1f2937';
     }
   },
   mounted() {
     const el = this.$refs.flamegraph
+    const builder = new FlamegraphBuilder(this.event.edges)
+
     this.chart = flamegraph()
-      .onHover((d) => {
-        this.$emit('hover', {
-          name: d.data.name,
-          cost: d.data.cost,
-          position: this.position
-        })
-      })
-      .setDetailsHandler((d) => {
-        if (d === null) {
-          this.$emit('hide')
-        }
-      })
+      .onHover(this.onSpanHover)
+      .setDetailsHandler(this.detailsHandler)
       .sort(false)
       .inverted(true)
       .computeDelta(true)
-      .setColorMapper(function (d, originalColor) {
-        if (d.data.name === 'main()') {
-          return '#333333'
-        }
-
-        if (d.data.cost.p_cpu >= 60) {
-          return '#6C0000'
-        }
-
-        if (d.data.cost.p_cpu <= 10) {
-          return '#009348'
-        }
-
-        return '#1f2937';
-      })
-      .cellHeight(25)
+      .setColorMapper(this.colorMapper)
+      .cellHeight(this.cellHeight)
       .width(this.width)
 
-    let datum = {
-      0: {name: '_', value: 0, children: []}
-    }
-
-    const edges = Object.entries(this.event.edges)
-
-    for (const [key, edge] of edges) {
-      let parent = edge.caller || null
-      let func = edge.callee || null
-
-      let value = edge.cost.cpu || 0
-
-      if (!datum.hasOwnProperty(func)) {
-        datum[func] = {
-          name: func,
-          value: value,
-          cost: edge.cost,
-          children: []
-        }
-      }
-
-      if (parent && !datum.hasOwnProperty(parent)) {
-        datum[parent] = {
-          name: parent,
-          value: value,
-          cost: edge.cost,
-          children: []
-        }
-      }
-
-      datum[parent || 0].children.push(datum[func])
-    }
-
     select(el)
-      .datum(datum['main()'])
+      .datum(builder.build())
       .call(this.chart)
   },
   destroyed() {

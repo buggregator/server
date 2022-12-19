@@ -2,28 +2,45 @@
   <div class="page-profiler">
     <main ref="main">
       <section class="call-stack__wrapper" ref="calls">
-        <PerfectScrollbar :style="{height: menuHeight}">
+        <PerfectScrollbar :style="{height: callStackHeight}">
           <CallsList :event="event" @hover="showEdge" @hide="hideEdge"/>
         </PerfectScrollbar>
       </section>
-      <div class="info__wrapper">
+      <div class="info__wrapper" ref="info">
         <section class="p-5 bg-gray-200  bg-gray-800">
           <Cards :cost="event.peaks"/>
         </section>
 
-        <section class="p-5 bg-gray-200  bg-gray-800">
-          <h1 class="text-lg font-bold mb-3">Flamechart</h1>
-          <FlameGraph :event="event" :width="width" @hover="showEdge" @hide="hideEdge"/>
-        </section>
-
         <section class="p-5 bg-gray-200 bg-gray-800">
-          <h1 class="text-lg font-bold mb-3">Call graph</h1>
-          <Graph :event="event" @hover="showEdge" @hide="hideEdge"/>
+          <Tabs>
+            <Tab title="Call graph">
+              <div class="my-3">
+                <div class="flex gap-x-5">
+                  <button class="text-xs uppercase text-gray-600" @click="graphMetric = 'p_cpu'"
+                          :class="{'text-gray-200': graphMetric == 'p_cpu'}">
+                    CPU
+                  </button>
+                  <button class="text-xs uppercase text-gray-600" @click="graphMetric = 'p_pmu'"
+                          :class="{'text-gray-200': graphMetric == 'p_pmu'}">
+                    Memory change
+                  </button>
+                  <button class="text-xs uppercase text-gray-600" @click="graphMetric = 'p_mu'"
+                          :class="{'text-gray-200': graphMetric == 'p_mu'}">
+                    Memory usage
+                  </button>
+                </div>
+              </div>
+              <Graph :event="event" :metric="graphMetric" @hover="showEdge" @hide="hideEdge"/>
+            </Tab>
+            <Tab title="Flamechart">
+              <FlameGraph :event="event" :width="width" @hover="showEdge" @hide="hideEdge"/>
+            </Tab>
+          </Tabs>
         </section>
       </div>
     </main>
 
-    <CallInfo v-if="edge" :edge="edge" />
+    <CallInfo v-if="edge" :edge="edge"/>
   </div>
 </template>
 
@@ -55,6 +72,8 @@ import CallsList from "./_partials/CallsList"
 import Graph from "./_partials/Graph"
 import CallInfo from "./_partials/CallInfo"
 import Cards from "@/Components/Events/Profiler/_partials/Cards"
+import Tab from "@/Components/UI/Tab"
+import Tabs from "@/Components/UI/Tabs"
 
 export default {
   components: {
@@ -63,7 +82,8 @@ export default {
     CallsList,
     FlameGraph, Cards,
     JsonChip, ImageExport,
-    PerfectScrollbar
+    PerfectScrollbar,
+    Tab, Tabs
   },
   head() {
     return {
@@ -72,8 +92,9 @@ export default {
   },
   data() {
     return {
-      menuHeight: 0,
+      callStackHeight: 0,
       width: 0,
+      graphMetric: 'p_cpu',
       edge: null
     }
   },
@@ -87,11 +108,11 @@ export default {
     return {event}
   },
   mounted() {
-    this.calculateMenuHeight()
-    this.width = document.documentElement.clientWidth - this.$refs.calls.offsetWidth - 63 - 20 - 120
+    this.calculateCallStackHeight()
+    this.calculateFlamechartWidth()
     window.addEventListener('resize', (event) => {
-      this.calculateMenuHeight()
-      this.width = document.documentElement.clientWidth - this.$refs.calls.offsetWidth - 63 - 120 - 20
+      this.calculateCallStackHeight()
+      this.calculateFlamechartWidth()
     });
   },
   methods: {
@@ -104,8 +125,11 @@ export default {
     async deleteEvent() {
       await this.$store.dispatch('events/delete', this.event)
     },
-    calculateMenuHeight() {
-      this.menuHeight = (this.$refs.main.offsetHeight - 2) + 'px'
+    calculateFlamechartWidth() {
+      this.width = document.documentElement.clientWidth - this.$refs.calls.offsetWidth - 63 - 120 - 20
+    },
+    calculateCallStackHeight() {
+      this.callStackHeight = Math.max(window.innerHeight - 2) + 'px'
     }
   },
   computed: {

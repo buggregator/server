@@ -8,6 +8,7 @@
 <style lang="scss">
 .call-information__wrapper {
   @apply bg-gray-800 absolute border border-gray-300 dark:border-gray-600;
+  z-index: 9999;
 
   > h4 {
     @apply px-4 pt-4 pb-0 font-bold truncate;
