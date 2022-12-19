@@ -1,8 +1,5 @@
 <template>
   <div class="settings-page page">
-    <section ref="header" class="breadcrumbs">
-      <div class="breadcrumbs_item current">Settings</div>
-    </section>
     <main>
       <header>
         <h2 class="page-title">Settings</h2>
