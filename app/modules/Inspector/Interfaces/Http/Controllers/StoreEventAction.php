@@ -21,13 +21,12 @@ final class StoreEventAction
             ?? throw new ClientException\BadRequestException('Invalid data');
 
         $type = $data[0]['type'] ?? 'unknown';
-
         if ($type !== 'request') {
             throw new ClientException\BadRequestException('Invalid data');
         }
 
         $commands->dispatch(
-            new HandleReceivedEvent(type: 'sentry', payload: $data)
+            new HandleReceivedEvent(type: 'inspector', payload: $data)
         );
     }
 }

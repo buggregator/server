@@ -1,11 +1,9 @@
 <template>
   <Event :event="event" class="event--inspector">
-    <h1 class="event-inspector__title">
-      <span>{{ event.process.name }}</span>
-    </h1>
+    <h3 class="event-0inspector__title">{{ event.process.name }} </h3>
 
-    <NuxtLink :to="event.route.show" class="event-inspector__link">
-      <Cards :event="event" class="event-inspector__cards"/>
+    <NuxtLink :to="event.route.show" class="event-0inspector__link">
+      <Cards :event="event" class="event--inspector__cards"/>
     </NuxtLink>
   </Event>
 </template>
@@ -32,11 +30,11 @@ export default {
 <style lang="scss">
 .event--inspector {
   &__title {
-    @apply font-semibold text-black dark:text-gray-100 mb-2 flex justify-between items-center;
+    @apply mb-3 font-semibold;
   }
 
   &__cards {
-    @apply border dark:bg-gray-800;
+    @apply dark:bg-gray-800 mt-5;
   }
 
   &__link {

@@ -33,10 +33,10 @@
 <script>
 import JsonChip from "@/Components/UI/JsonChip"
 import InspectorEvent from "@/app/Event/Inspector"
-import TimelineChart from "@/Components/Events/Inspector/_partials/Timeline"
+import TimelineChart from "./_partials/Timeline"
 import Cards from "@/Components/Events/Inspector/_partials/Cards"
-import Request from "@/Components/Events/Inspector/_partials/Request"
-import Url from "@/Components/Events/Inspector/_partials/Url"
+import Request from "./_partials/Request"
+import Url from "./_partials/Url"
 
 export default {
   components: {
