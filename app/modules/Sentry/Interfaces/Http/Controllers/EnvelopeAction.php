@@ -15,7 +15,7 @@ final class EnvelopeAction
     ) {
     }
 
-    #[Route(route: '<projectId>/envelope', name: 'sentry.event.envelope', methods: ['POST'], group: 'api')]
+    #[Route(route: '<projectId>/envelope', name: 'sentry.event.envelope', methods: ['POST'], group: 'api', priority: 100)]
     public function __invoke(int $projectId, ServerRequestInterface $request): void
     {
         $data = $this->gzippedStreamFactory->createFromRequest($request)->getEnvelopePayload();

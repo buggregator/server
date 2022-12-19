@@ -20,7 +20,7 @@ final class StoreEventAction
     ) {
     }
 
-    #[Route(route: '<projectId>/store', name: 'sentry.event.store', methods: ['POST'], group: 'api')]
+    #[Route(route: '<projectId>/store', name: 'sentry.event.store', methods: ['POST'], group: 'api', priority: 100)]
     public function __invoke(
         ServerRequestInterface $request,
         CommandBusInterface $commands,

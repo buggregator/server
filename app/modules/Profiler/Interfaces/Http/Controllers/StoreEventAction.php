@@ -20,7 +20,7 @@ final class StoreEventAction
     ) {
     }
 
-    #[Route(route: 'profiler/store', name: 'profiler.event.store', methods: ['POST'], group: 'api')]
+    #[Route(route: 'profiler/store', name: 'profiler.event.store', methods: ['POST'], group: 'api', priority: 80)]
     public function __invoke(
         ServerRequestInterface $request,
         CommandBusInterface $commands,
