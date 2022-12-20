@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Profiler\Application;
 
+use Modules\Profiler\Application\Handlers\CalculateDiffsBetweenEdges;
 use Modules\Profiler\Application\Handlers\CleanupEvent;
 use Modules\Profiler\Application\Handlers\PrepareEdges;
 use Modules\Profiler\Application\Handlers\PreparePeaks;
@@ -20,6 +21,7 @@ final class ProfilerBootloader extends Bootloader
     {
         return new EventHandler($container, [
             PreparePeaks::class,
+            CalculateDiffsBetweenEdges::class,
             PrepareEdges::class,
             CleanupEvent::class,
         ]);

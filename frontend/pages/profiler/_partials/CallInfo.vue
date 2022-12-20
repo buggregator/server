@@ -34,7 +34,7 @@ export default {
   },
   computed: {
     position() {
-      if ((this.width + this.edge.position.x) > window.innerWidth - 40) {
+      if ((this.width + this.edge.position.x) > window.innerWidth - 80) {
         const deltaX = (this.width + this.edge.position.x) - window.innerWidth + 100
         this.edge.position.x -= deltaX;
       }

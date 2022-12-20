@@ -11,6 +11,7 @@
       <strong class="item--value">
         {{ cpu }}
         <div v-if="cost.p_cpu">{{ cost.p_cpu }}%</div>
+<!--        <div v-if="cost.d_cpu">{{ d_cpu }}</div>-->
       </strong>
     </div>
     <div class="item">
@@ -25,6 +26,7 @@
       <strong class="item--value">
         {{ mu }}
         <div v-if="cost.p_mu">{{ cost.p_mu }}%</div>
+<!--        <div v-if="cost.d_mu">{{ d_mu }}</div>-->
       </strong>
     </div>
     <div class="item">
@@ -32,6 +34,7 @@
       <strong class="item--value">
         {{ pmu }}
         <div v-if="cost.p_pmu">{{ cost.p_pmu }}%</div>
+<!--        <div v-if="cost.d_pmu">{{ d_pmu }}</div>-->
       </strong>
     </div>
   </section>
@@ -48,14 +51,23 @@ export default {
     cpu() {
       return formatDuration(this.cost.cpu || 0);
     },
+    d_cpu() {
+      return formatDuration(this.cost.d_cpu || 0);
+    },
     wt() {
       return formatDuration(this.cost.wt || 0);
     },
     mu() {
       return humanFileSize(this.cost.mu || 0);
     },
+    d_mu() {
+      return humanFileSize(this.cost.d_mu || 0);
+    },
     pmu() {
       return humanFileSize(this.cost.pmu || 0);
+    },
+    d_pmu() {
+      return humanFileSize(this.cost.d_pmu || 0);
     }
   }
 }

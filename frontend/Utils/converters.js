@@ -35,6 +35,6 @@ export const formatDuration = ms => {
   };
   return Object.entries(time)
     .filter(val => val[1] !== 0)
-    .map(val => val[1] + ' ' + (val[1] !== 1 ? val[0] : val[0]))
+    .map(val => val[1].toFixed(4) + ' ' + (val[1] !== 1 ? val[0] : val[0]))
     .join(', ');
 };

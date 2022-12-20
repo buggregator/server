@@ -5,6 +5,18 @@
       <button @click="isFullscreen = !isFullscreen" title="Full screen">
         <FullscreenIcon class="w-4 h-4 fill-blue-500"/>
       </button>
+      <button class="text-xs uppercase text-gray-600" @click="metric = 'cpu'"
+              :class="{'font-bold': metric == 'cpu'}">
+        CPU
+      </button>
+      <button class="text-xs uppercase text-gray-600" @click="metric = 'pmu'"
+              :class="{'font-bold': metric == 'pmu'}">
+        Memory change
+      </button>
+      <button class="text-xs uppercase text-gray-600" @click="metric = 'mu'"
+              :class="{'font-bold': metric == 'mu'}">
+        Memory usage
+      </button>
     </div>
   </div>
 </template>
@@ -23,10 +35,6 @@ export default {
   components: {FullscreenIcon},
   props: {
     event: Object,
-    metric: {
-      type: String,
-      default: 'p_cpu'
-    },
     threshold: {
       type: Number,
       default: 1
@@ -35,6 +43,7 @@ export default {
   data() {
     return {
       isFullscreen: false,
+      metric: 'cpu'
     }
   },
   watch: {
@@ -117,29 +126,40 @@ export default {
   }
 
   &--toolbar {
-    @apply absolute top-5 right-5 flex flex-col bg-gray-200 p-2 rounded;
+    @apply absolute top-5 left-5 flex bg-gray-200 p-2 rounded gap-x-5;
     z-index: 9999;
   }
 
   .graph {
-    > polygon {
+    > path {
       @apply fill-transparent;
+    }
+  }
+
+  .edge {
+    > path {
+      stroke-width: 2px;
     }
   }
 
   .node {
     @apply cursor-pointer;
 
+    > path {
+      @apply rounded;
+      stroke-width: 1;
+    }
+
     &.pmu {
       > text {
         @apply fill-white;
       }
 
-      > polygon {
+      > path {
         @apply fill-red-600 stroke-red-800;
       }
 
-      &:hover > polygon {
+      &:hover > path {
         @apply fill-red-800;
       }
     }
@@ -149,21 +169,17 @@ export default {
         @apply fill-gray-800;
       }
 
-      > polygon {
+      > path {
         @apply fill-gray-200 stroke-gray-400;
       }
 
-      &:hover > polygon {
+      &:hover > path {
         @apply fill-gray-300;
       }
     }
 
     > text {
       @apply font-bold text-sm;
-    }
-
-    > path {
-      stroke-width: 3px;
     }
   }
 }

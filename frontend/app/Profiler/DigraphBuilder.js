@@ -10,14 +10,17 @@ const metricName = function (metric) {
   switch (metric) {
     case 'cpu':
     case 'p_cpu':
+    case 'd_cpu':
       return 'CPU'
     case 'wt':
       return 'Wall time'
     case 'mu':
     case 'p_mu':
+    case 'd_mu':
       return 'Memory'
     case 'p_pmu':
     case 'pmu':
+    case 'd_pmu':
       return 'Memory change'
   }
 }
@@ -30,10 +33,14 @@ const formatValue = function (value, metric) {
     case 'p_wt':
       return `${value}%`
     case 'mu':
+    case 'd_mu':
     case 'pmu':
+    case 'd_pmu':
       return humanFileSize(value)
     case 'cpu':
+    case 'd_cpu':
     case 'wt':
+    case 'd_wt':
       return formatDuration(value)
   }
 
@@ -41,15 +48,20 @@ const formatValue = function (value, metric) {
 }
 
 export const addSlashes = function (str) {
-  return str.replace(/\\/g,'\\\\');
+  return str.replace(/\\/g, '\\\\');
 }
 
 const generateNode = function (edge, metric) {
   let parent = addSlashes(edge.caller || '')
   let func = addSlashes(edge.callee || '')
 
+  let label = formatValue(edge.cost[metric.field], metric.label)
+  if (edge.cost.ct > 1) {
+    label += ` - ${edge.cost.ct}x`
+  }
+
   let labels = {
-    label: ` ${metricName(metric)} - ${formatValue(edge.cost[metric], metric)} [${edge.cost.ct}x]`,
+    label: label,
   }
 
   return `    "${parent}" -> "${func}" [ ${labelsStrigifier(labels)} ]\n`
@@ -60,14 +72,22 @@ export class DigraphBuilder {
     this.edges = edges
   }
 
-  build(metric = "p_cpu", threshold = 1) {
+  build(metric = "cpu", threshold = 1) {
     let digram = `
 digraph xhprof {
     splines=true;
     overlap=false;
-    node [ shape="box" style="filled" fontname="Arial" margin=0.3 ]
+    node [ shape="box" style="rounded" fontname="Arial" margin=0.3 ]
     edge [ fontname="Arial" ]
 `
+
+    let metricProps = {field: 'p_cpu', label: 'p_cpu'}
+    switch (metric) {
+      case 'pmu':
+        metricProps = {field: 'p_pmu', label: 'p_pmu'}
+      case 'mu':
+        metricProps = {field: 'p_mu', label: 'p_mu'}
+    }
 
     let types = {
       pmu: {
@@ -100,9 +120,9 @@ digraph xhprof {
       }
 
       if (edge.cost.p_pmu > 10) {
-        types.pmu.nodes.push([edge, metric])
-      } else if (edge.cost[metric] >= threshold) {
-        types.default.nodes.push([edge, metric])
+        types.pmu.nodes.push([edge, metricProps])
+      } else if (edge.cost[metricProps.field] >= threshold) {
+        types.default.nodes.push([edge, metricProps])
       }
     }
 

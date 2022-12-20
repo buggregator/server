@@ -7,32 +7,16 @@
         </PerfectScrollbar>
       </section>
       <div class="info__wrapper" ref="info">
-        <section class="p-5 bg-gray-200  bg-gray-800">
+        <section class="p-5 bg-gray-200 bg-gray-800">
           <Cards :cost="event.peaks"/>
         </section>
 
-        <section class="p-5 bg-gray-200 bg-gray-800">
-          <Tabs>
-            <Tab title="Call graph">
-              <div class="my-3">
-                <div class="flex gap-x-5">
-                  <button class="text-xs uppercase text-gray-600" @click="graphMetric = 'p_cpu'"
-                          :class="{'text-gray-200': graphMetric == 'p_cpu'}">
-                    CPU
-                  </button>
-                  <button class="text-xs uppercase text-gray-600" @click="graphMetric = 'p_pmu'"
-                          :class="{'text-gray-200': graphMetric == 'p_pmu'}">
-                    Memory change
-                  </button>
-                  <button class="text-xs uppercase text-gray-600" @click="graphMetric = 'p_mu'"
-                          :class="{'text-gray-200': graphMetric == 'p_mu'}">
-                    Memory usage
-                  </button>
-                </div>
-              </div>
-              <Graph :event="event" :metric="graphMetric" @hover="showEdge" @hide="hideEdge"/>
+        <section class="p-5 bg-gray-200 flex-1 flex flex-col bg-gray-800">
+          <Tabs class="flex-1">
+            <Tab title="Call graph" class="flex-1">
+              <Graph :event="event" @hover="showEdge" @hide="hideEdge"/>
             </Tab>
-            <Tab title="Flamechart">
+            <Tab title="Flamechart" class="flex-1">
               <FlameGraph :event="event" :width="width" @hover="showEdge" @hide="hideEdge"/>
             </Tab>
           </Tabs>
@@ -57,7 +41,7 @@
   }
 
   .info__wrapper {
-    @apply w-full md:w-5/6 divide-y divide-gray-300 dark:divide-gray-500;
+    @apply w-full h-full flex flex-col md:w-5/6 divide-y divide-gray-300 dark:divide-gray-500;
   }
 }
 </style>
@@ -94,7 +78,6 @@ export default {
     return {
       callStackHeight: 0,
       width: 0,
-      graphMetric: 'p_cpu',
       edge: null
     }
   },
