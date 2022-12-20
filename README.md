@@ -273,7 +273,7 @@ $log->error('Bar');
 Buggregator can be used to receive Inspector events from your application. It's a lightweight alternative for
 local development. Just configure Inspector client URL to send data to Buggregator.
 
-![inspector](https://user-images.githubusercontent.com/773481/208730276-db0fab8e-5b57-44b2-905f-2dddd2bdab3e.png)
+![inspector](https://user-images.githubusercontent.com/773481/208734651-e8dca2bf-6674-4aed-b6fc-601bc877f7ce.png)
 
 ### Laravel settings
 
