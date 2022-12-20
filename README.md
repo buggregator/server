@@ -54,7 +54,10 @@ pecl install xhprof
 
 If you are using Spiral Framework you just need t install
 the [spiral/profiler](https://github.com/spiral/profiler/tree/3.0) package.
-`composer require --dev spiral/profiler:^3.0`
+
+```bash
+composer require --dev spiral/profiler:^3.0
+```
 
 ### Configuration
 
@@ -75,7 +78,9 @@ used to collect all the dumped data.
 
 ### Installation
 
-`composer require --dev symfony/var-dumper`
+```bash
+composer require --dev symfony/var-dumper
+```
 
 ### Configuration
 
@@ -237,7 +242,11 @@ LOG_SOCKET_URL=127.0.0.1:9913
 
 ### Other PHP frameworks
 
-Install monolog `composer require monolog/monolog`
+Install monolog
+
+```bash
+composer require monolog/monolog
+```
 
 ```php
 <?php
