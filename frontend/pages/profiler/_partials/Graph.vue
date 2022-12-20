@@ -3,7 +3,7 @@
     <div class="graphviz" ref="graphviz"></div>
     <div class="graphviz--toolbar">
       <button @click="isFullscreen = !isFullscreen" title="Full screen">
-        <FullscreenIcon class="w-4 h-4 fill-blue-500" />
+        <FullscreenIcon class="w-4 h-4 fill-blue-500"/>
       </button>
     </div>
   </div>
@@ -14,16 +14,10 @@ import {wasmFolder} from "@hpcc-js/wasm";
 import {select, selectAll} from "d3-selection"
 import {graphviz} from "d3-graphviz"
 
-import DigraphBuilder from "@/app/Profiler/DigraphBuilder"
+import {addSlashes, DigraphBuilder} from "@/app/Profiler/DigraphBuilder"
 import FullscreenIcon from "@/Components/UI/Icons/FullscreenIcon"
 
 wasmFolder("https://cdn.jsdelivr.net/npm/@hpcc-js/wasm/dist");
-
-function attributer(datum, index, nodes) {
-  if (datum.tag == "svg") {
-    // datum.attributes.fill = ''
-  }
-}
 
 export default {
   components: {FullscreenIcon},
@@ -58,13 +52,22 @@ export default {
       return builder.build(this.metric, this.threshold)
     },
     findEdge(name) {
-      return Object.entries(this.event.edges)
-        .find(([k, v]) => v.callee === name)[1] || null
+      const found = Object.entries(this.event.edges)
+        .find(([k, v]) => addSlashes(v.callee) === name)
+
+      if (!found || found.length === 0) {
+        return null
+      }
+
+      return found[1] || null
     },
     nodeHandler() {
       selectAll("g.node").on("mouseover", (e, tag) => {
-        const el = e.target.parentNode
         const edge = this.findEdge(tag.key)
+        if (!edge) {
+          return
+        }
+
         this.$emit('hover', {
           name: edge.callee,
           cost: edge.cost,
@@ -74,7 +77,6 @@ export default {
           }
         });
       }).on("mouseout", (e) => {
-        const el = e.target.parentNode
         this.$emit('hide')
       })
     },
@@ -83,7 +85,6 @@ export default {
         .graphviz()
         .width('100%')
         .height('100%')
-        .attributer(attributer)
         .fit(true)
         .renderDot(this.buildDigraph(), this.nodeHandler)
     }

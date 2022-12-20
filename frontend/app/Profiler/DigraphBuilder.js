@@ -40,7 +40,7 @@ const formatValue = function (value, metric) {
   return value
 }
 
-const addSlashes = function (str) {
+export const addSlashes = function (str) {
   return str.replace(/\\/g,'\\\\');
 }
 
@@ -55,7 +55,7 @@ const generateNode = function (edge, metric) {
   return `    "${parent}" -> "${func}" [ ${labelsStrigifier(labels)} ]\n`
 }
 
-export default class {
+export class DigraphBuilder {
   constructor(edges) {
     this.edges = edges
   }
