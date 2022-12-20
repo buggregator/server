@@ -12,7 +12,7 @@
     <div v-if="series.length > 0" class="overflow-x-scroll border border-gray-50 dark:border-gray-600">
       <div
         class="grid grid-cols-6 divide-x divide-gray-50 dark:divide-gray-600 border-b border-gray-50 dark:border-gray-600 font-bold text-left text-2xs sm:text-xs md:text-sm">
-        <div v-for="segment in grid.segments" class="py-2 pl-3">{{ segment }} ms</div>
+        <div v-for="segment in grid.segments" :key="segment" class="py-2 pl-3">{{ segment }} ms</div>
       </div>
       <div
         :style="{'background-image': 'linear-gradient(to right, whitesmoke 1px, transparent 1px)', 'background-size': `${grid.widthPercent}% 20%`}">
@@ -70,7 +70,7 @@ export default {
     },
     segmentTypes() {
       return [...new Set(this.event.segments.map(data => data.type))].map(type => {
-        return {color: `bg-${this.event.segmentColor(type)}-400`, type}
+        return {color: `bg-${this.event.segmentColor(type)}-600`, type}
       })
     },
     series() {
@@ -84,7 +84,7 @@ export default {
           widthPercent,
           marginPercent,
           segment,
-          color: `bg-${this.event.segmentColor(segment.type)}-400`
+          color: `bg-${this.event.segmentColor(segment.type)}-600`
         }
       })
     }
