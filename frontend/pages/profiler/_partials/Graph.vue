@@ -109,10 +109,16 @@ export default {
 
 <style lang="scss">
 .graphviz {
-  @apply flex-1 justify-items-stretch items-stretch bg-white rounded;
+  @apply flex-1 justify-items-stretch items-stretch bg-gray-700 rounded border border-gray-900;
+
+  .graph {
+    > polygon {
+      @apply fill-gray-700;
+    }
+  }
 
   &--wrapper {
-    @apply relative flex;
+    @apply relative flex mt-5;
     height: 600px;
 
     &.fullscreen {
@@ -140,6 +146,10 @@ export default {
     > path {
       stroke-width: 2px;
     }
+
+    > text {
+      @apply fill-white ml-2;
+    }
   }
 
   .node {
@@ -166,7 +176,7 @@ export default {
 
     &.default {
       > text {
-        @apply fill-gray-800;
+        @apply fill-gray-700;
       }
 
       > path {

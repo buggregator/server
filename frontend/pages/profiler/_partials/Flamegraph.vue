@@ -93,6 +93,8 @@ export default {
   @apply flex flex-col;
 
   .flamegraph {
+    @apply mt-5 p-5 bg-gray-700 rounded border border-gray-900;
+
     .frame {
       @apply cursor-pointer flex content-center;
 

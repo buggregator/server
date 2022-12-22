@@ -95,7 +95,7 @@ digraph xhprof {
           class: 'pmu',
         },
         edge: {
-          fontcolor: '#891d1d',
+          // fontcolor: '#891d1d',
           color: '#ED96AC',
         },
         nodes: []
