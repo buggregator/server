@@ -39,7 +39,11 @@ import DocsIcon from "@/Components/UI/Icons/DocsIcon";
 export default {
   components: {DocsIcon, InspectorIcon, SentryIcon, GithubIcon},
   setup() {
-    const [host, port] = window.location.host.split(':')
+    let [host, port] = window.location.host.split(':')
+
+    if (!port) {
+      port = 80
+    }
 
     const sentryDsn = computed(() => `http://sentry@${host}:${port}/1`)
     const inspectorUrl = computed(() => `http://${host}:${port}/inspector`)
