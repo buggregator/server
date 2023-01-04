@@ -384,9 +384,9 @@ would be great if you help a community solving them.
 ### Installation
 
 1. Clone repository `git clone https://github.com/buggregator/spiral-app.git`
-2. Run composer `composer install`
+2. Install backend dependencies `composer install`
 3. Download RoadRunner binary `vendor/bin/rr get-binary`
-4. Run composer `cd frontend && yarn install`
+4. Install frontend dependencies `cd frontend && yarn install`
 5. Run RoadRunner server `./rr serve`
 
 ---
