@@ -360,57 +360,27 @@
       "url": "http://buggregator.dev/",
       "method": "POST",
       "headers": {
-        "host": [
-          "buggregator.dev"
-        ],
-        "connection": [
-          "close"
-        ],
-        "content-length": [
-          "26"
-        ],
+        "host": ["buggregator.dev"],
+        "connection": ["close"],
+        "content-length": ["26"],
         "sec-ch-ua": [
           "\"Chromium\";v=\"110\", \"Not A(Brand\";v=\"24\", \"Google Chrome\";v=\"110\""
         ],
-        "sec-ch-ua-platform": [
-          "\"Windows\""
-        ],
-        "sec-ch-ua-mobile": [
-          "?0"
-        ],
+        "sec-ch-ua-platform": ["\"Windows\""],
+        "sec-ch-ua-mobile": ["?0"],
         "user-agent": [
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
         ],
-        "content-type": [
-          "application/json"
-        ],
-        "accept": [
-          "*/*"
-        ],
-        "origin": [
-          "https://buggregator.dev"
-        ],
-        "sec-fetch-site": [
-          "same-origin"
-        ],
-        "sec-fetch-mode": [
-          "cors"
-        ],
-        "sec-fetch-dest": [
-          "empty"
-        ],
-        "referer": [
-          "https://buggregator.dev/"
-        ],
-        "accept-encoding": [
-          "gzip, deflate, br"
-        ],
-        "accept-language": [
-          "en-US,en;q=0.9,ru-RU;q=0.8,ru;q=0.7,ka;q=0.6"
-        ],
-        "cookie": [
-          "[Filtered]"
-        ]
+        "content-type": ["application/json"],
+        "accept": ["*/*"],
+        "origin": ["https://buggregator.dev"],
+        "sec-fetch-site": ["same-origin"],
+        "sec-fetch-mode": ["cors"],
+        "sec-fetch-dest": ["empty"],
+        "referer": ["https://buggregator.dev/"],
+        "accept-encoding": ["gzip, deflate, br"],
+        "accept-language": ["en-US,en;q=0.9,ru-RU;q=0.8,ru;q=0.7,ka;q=0.6"],
+        "cookie": ["[Filtered]"]
       },
       "data": {
         "action": "sentry:report"
@@ -436,9 +406,7 @@
                   ""
                 ],
                 "context_line": "require_once __DIR__.'/public/index.php';",
-                "post_context": [
-                  ""
-                ]
+                "post_context": [""]
               },
               {
                 "filename": "/public/index.php",
@@ -1008,11 +976,7 @@
                   ""
                 ],
                 "context_line": "        return $next($request);",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ],
+                "post_context": ["    }", "}", ""],
                 "vars": {
                   "request": "Object Illuminate\\Http\\Request",
                   "next": "Lambda Illuminate\\Pipeline\\{closure} [mixed|null passable]"
@@ -1430,11 +1394,7 @@
                   ""
                 ],
                 "context_line": "        return $next($request);",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ],
+                "post_context": ["    }", "}", ""],
                 "vars": {
                   "request": "Object Illuminate\\Http\\Request",
                   "next": "Lambda Illuminate\\Pipeline\\{closure} [mixed|null passable]"
@@ -1481,11 +1441,7 @@
                   ""
                 ],
                 "context_line": "        return $next($request);",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ],
+                "post_context": ["    }", "}", ""],
                 "vars": {
                   "request": "Object Illuminate\\Http\\Request",
                   "next": "Lambda Illuminate\\Pipeline\\{closure} [mixed|null passable]"
@@ -1641,9 +1597,7 @@
                 ],
                 "vars": {
                   "method": "__invoke",
-                  "parameters": [
-                    "Object Illuminate\\Http\\Request"
-                  ]
+                  "parameters": ["Object Illuminate\\Http\\Request"]
                 }
               },
               {

@@ -176,9 +176,7 @@
         "db": {
           "connection": "sqlite",
           "query": "select * from sqlite_master where type = 'table' and name = ?",
-          "bindings": [
-            "migrations"
-          ]
+          "bindings": ["migrations"]
         }
       },
       "duration": 0.1
@@ -228,9 +226,7 @@
         "db": {
           "connection": "sqlite",
           "query": "select * from sqlite_master where type = 'table' and name = ?",
-          "bindings": [
-            "migrations"
-          ]
+          "bindings": ["migrations"]
         }
       },
       "duration": 0.05
@@ -380,10 +376,7 @@
         "db": {
           "connection": "sqlite",
           "query": "insert into \"migrations\" (\"migration\", \"batch\") values (?, ?)",
-          "bindings": [
-            "2014_10_12_000000_create_users_table",
-            1
-          ]
+          "bindings": ["2014_10_12_000000_create_users_table", 1]
         }
       },
       "duration": 0.05
@@ -458,10 +451,7 @@
         "db": {
           "connection": "sqlite",
           "query": "insert into \"migrations\" (\"migration\", \"batch\") values (?, ?)",
-          "bindings": [
-            "2014_10_12_100000_create_password_resets_table",
-            1
-          ]
+          "bindings": ["2014_10_12_100000_create_password_resets_table", 1]
         }
       },
       "duration": 0.33
@@ -536,10 +526,7 @@
         "db": {
           "connection": "sqlite",
           "query": "insert into \"migrations\" (\"migration\", \"batch\") values (?, ?)",
-          "bindings": [
-            "2019_08_19_000000_create_failed_jobs_table",
-            1
-          ]
+          "bindings": ["2019_08_19_000000_create_failed_jobs_table", 1]
         }
       },
       "duration": 0.04

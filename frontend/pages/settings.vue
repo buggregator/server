@@ -1,12 +1,12 @@
 <template>
   <main class="settings-page">
-    <page-header>
-      <nuxt-link to="/">Home</nuxt-link>&nbsp; /&nbsp;Settings
-    </page-header>
+    <PageHeader>
+      <NuxtLink to="/">Home</NuxtLink>&nbsp; /&nbsp;Settings
+    </PageHeader>
 
     <section class="settings-page__content">
       <div class="settings-page__radio">
-        <icon-svg
+        <IconSvg
           name="sun"
           class="settings-page__radio-icon"
           :class="{ 'settings-page__radio-icon--dark': isDarkMode }"
@@ -20,7 +20,7 @@
           <span class="settings-page__radio-button-in" />
         </button>
 
-        <icon-svg
+        <IconSvg
           class="settings-page__radio-icon"
           name="moon"
           :class="{ 'settings-page__radio-icon--dark': !isDarkMode }"

@@ -1,10 +1,10 @@
 <template>
   <main class="smtp-event">
-    <page-header button-title="Delete event" @delete="onDelete">
-      <nuxt-link to="/">Home</nuxt-link>&nbsp;/
-      <nuxt-link to="/smtp">Smtp</nuxt-link>&nbsp;/
-      <nuxt-link :disabled="true">{{ eventId }}</nuxt-link>
-    </page-header>
+    <PageHeader button-title="Delete event" @delete="onDelete">
+      <NuxtLink to="/">Home</NuxtLink>&nbsp;/
+      <NuxtLink to="/smtp">Smtp</NuxtLink>&nbsp;/
+      <NuxtLink :disabled="true">{{ eventId }}</NuxtLink>
+    </PageHeader>
 
     <div v-if="pending && !event" class="smtp-event__loading">
       <div></div>
@@ -12,7 +12,7 @@
       <div></div>
     </div>
 
-    <page-smtp v-if="event" :event="event" :html-source="html" />
+    <SmtpPage v-if="event" :event="event" :html-source="html" />
   </main>
 </template>
 
@@ -21,12 +21,12 @@ import { defineComponent } from "vue";
 import { EventId } from "~/config/types";
 import { useFetch, useNuxtApp, useRoute, useRouter } from "#app";
 import { normalizeSMTPEvent } from "~/utils/normalize-event";
-import PageSmtp from "~/components/PageSmtp/PageSmtp.vue";
+import SmtpPage from "~/components/SmtpPage/SmtpPage.vue";
 import PageHeader from "~/components/PageHeader/PageHeader.vue";
 import { REST_API_URL } from "~/utils/events-transport";
 
 export default defineComponent({
-  components: { PageSmtp, PageHeader },
+  components: { SmtpPage, PageHeader },
   async setup() {
     const route = useRoute();
     const router = useRouter();

@@ -1,7 +1,7 @@
 <template>
   <div class="main-layout">
     <div class="main-layout__sidebar-wrap">
-      <layout-sidebar :is-connected="isConnected" />
+      <LayoutSidebar :is-connected="isConnected" />
     </div>
 
     <div class="main-layout__content">
@@ -11,7 +11,7 @@
 </template>
 
 <script lang="ts">
-import LayoutSidebar from "~/layouts/LayoutSidebar/LayoutSidebar.vue";
+import LayoutSidebar from "~/components/LayoutSidebar/LayoutSidebar.vue";
 import { defineComponent } from "vue";
 import { THEME_MODES, useThemeStore } from "~/stores/theme";
 import { storeToRefs } from "pinia";

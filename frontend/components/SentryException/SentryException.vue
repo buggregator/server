@@ -5,25 +5,31 @@
         {{ exception.type }}
       </h3>
 
-      <pre class="sentry-exception__text" v-html="exception.value"/>
+      <pre class="sentry-exception__text" v-html="exception.value" />
     </slot>
 
     <div v-if="exceptionFrames.length" class="sentry-exception__frames">
-      <template v-for="(frame, i) in exceptionFrames" :key="frame.context_line">
-        <sentry-frame :frame="frame" :is-open="isVisibleFrame(i)"/>
+      <template
+        v-for="(frame, index) in exceptionFrames"
+        :key="frame.context_line"
+      >
+        <SentryExceptionFrame :frame="frame" :is-open="index === 0" />
       </template>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import {defineComponent, PropType} from "vue";
-import {SentryException, SentryFrame as SentryFrameType} from "~/config/types";
-import SentryFrame from "./SentryFrame.vue";
+import { defineComponent, PropType } from "vue";
+import {
+  SentryException,
+  SentryFrame as SentryFrameType,
+} from "~/config/types";
+import SentryExceptionFrame from "~/components/SentryExceptionFrame/SentryExceptionFrame.vue";
 
 export default defineComponent({
   components: {
-    SentryFrame,
+    SentryExceptionFrame,
   },
   props: {
     exception: {
@@ -33,11 +39,11 @@ export default defineComponent({
     maxFrames: {
       type: Number,
       default: 0,
-    }
+    },
   },
   computed: {
     exceptionFrames(): SentryFrameType[] {
-      const frames = (this.exception.stacktrace.frames || []);
+      const frames = this.exception.stacktrace.frames || [];
 
       if (this.maxFrames > 0) {
         return frames.reverse().slice(0, this.maxFrames);

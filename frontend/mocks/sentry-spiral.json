@@ -209,9 +209,7 @@
         "DOCUMENT_ROOT": "",
         "REQUEST_TIME_FLOAT": 1678272163.848606,
         "REQUEST_TIME": 1678272163,
-        "argv": [
-          "app.php"
-        ],
+        "argv": ["app.php"],
         "argc": 1,
         "APP_ENV": "local",
         "DEBUG": true,
@@ -238,45 +236,23 @@
         "PROFILER_APP_NAME": "My super app"
       },
       "headers": {
-        "Host": [
-          "127.0.0.1:8080"
-        ],
-        "Connection": [
-          "keep-alive"
-        ],
-        "Sec-Fetch-Site": [
-          "none"
-        ],
-        "Sec-Fetch-Mode": [
-          "navigate"
-        ],
-        "Sec-Fetch-User": [
-          "?1"
-        ],
+        "Host": ["127.0.0.1:8080"],
+        "Connection": ["keep-alive"],
+        "Sec-Fetch-Site": ["none"],
+        "Sec-Fetch-Mode": ["navigate"],
+        "Sec-Fetch-User": ["?1"],
         "Sec-Ch-Ua": [
           "\"Chromium\";v=\"110\", \"Not A(Brand\";v=\"24\", \"Google Chrome\";v=\"110\""
         ],
-        "Sec-Ch-Ua-Platform": [
-          "\"Windows\""
-        ],
-        "Sec-Fetch-Dest": [
-          "document"
-        ],
+        "Sec-Ch-Ua-Platform": ["\"Windows\""],
+        "Sec-Fetch-Dest": ["document"],
         "Accept": [
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
         ],
-        "Accept-Encoding": [
-          "gzip, deflate, br"
-        ],
-        "Accept-Language": [
-          "en-US,en;q=0.9,ru-RU;q=0.8,ru;q=0.7,ka;q=0.6"
-        ],
-        "Sec-Ch-Ua-Mobile": [
-          "?0"
-        ],
-        "Upgrade-Insecure-Requests": [
-          "1"
-        ],
+        "Accept-Encoding": ["gzip, deflate, br"],
+        "Accept-Language": ["en-US,en;q=0.9,ru-RU;q=0.8,ru;q=0.7,ka;q=0.6"],
+        "Sec-Ch-Ua-Mobile": ["?0"],
+        "Upgrade-Insecure-Requests": ["1"],
         "User-Agent": [
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
         ],
@@ -323,10 +299,7 @@
                   ""
                 ],
                 "context_line": "$code = (int)$app->serve();",
-                "post_context": [
-                  "exit($code);",
-                  ""
-                ]
+                "post_context": ["exit($code);", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Boot/src/AbstractKernel.php",
@@ -504,11 +477,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -548,11 +517,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -691,11 +656,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -735,11 +696,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -901,11 +858,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -945,11 +898,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -1111,11 +1060,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -1155,11 +1100,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -1321,11 +1262,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -1365,11 +1302,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -1485,11 +1418,7 @@
                   "            static fn (): Response => $handler->handle($request)"
                 ],
                 "context_line": "        );",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -1529,12 +1458,7 @@
                   "            [Request::class => $request],"
                 ],
                 "context_line": "            static fn (): Response => $handler->handle($request)",
-                "post_context": [
-                  "        );",
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["        );", "    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Router/src/Router.php",
@@ -1597,11 +1521,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -1641,11 +1561,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -1830,11 +1746,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -1874,11 +1786,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -2040,11 +1948,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -2084,11 +1988,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -2250,11 +2150,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -2294,11 +2190,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -2414,11 +2306,7 @@
                   "            static fn (): Response => $handler->handle($request)"
                 ],
                 "context_line": "        );",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -2458,12 +2346,7 @@
                   "            [Request::class => $request],"
                 ],
                 "context_line": "            static fn (): Response => $handler->handle($request)",
-                "post_context": [
-                  "        );",
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["        );", "    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Http/src/Pipeline.php",
@@ -2480,11 +2363,7 @@
                   "            static fn (): Response => $handler->handle($request)"
                 ],
                 "context_line": "        );",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -2524,12 +2403,7 @@
                   "            [Request::class => $request],"
                 ],
                 "context_line": "            static fn (): Response => $handler->handle($request)",
-                "post_context": [
-                  "        );",
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["        );", "    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Http/src/Pipeline.php",
@@ -2546,11 +2420,7 @@
                   "            static fn (): Response => $handler->handle($request)"
                 ],
                 "context_line": "        );",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -2590,12 +2460,7 @@
                   "            [Request::class => $request],"
                 ],
                 "context_line": "            static fn (): Response => $handler->handle($request)",
-                "post_context": [
-                  "        );",
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["        );", "    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Router/src/CoreHandler.php",
@@ -2704,11 +2569,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -2748,11 +2609,7 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
@@ -2845,11 +2702,7 @@
                   "    {"
                 ],
                 "context_line": "        return $this->pipeline->withCore($this->core)->callAction($controller, $action, $parameters);",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Hmvc/src/InterceptorPipeline.php",
@@ -2912,11 +2765,7 @@
                   ""
                 ],
                 "context_line": "        return $this->core->callAction($controller, $action, $parameters);",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Hmvc/src/AbstractCore.php",
@@ -2933,11 +2782,7 @@
                   "            static fn () => $method->invokeArgs($container->get($controller), $args)"
                 ],
                 "context_line": "        );",
-                "post_context": [
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["    }", "}", ""]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/ContainerScope.php",
@@ -2977,12 +2822,7 @@
                   "            $container,"
                 ],
                 "context_line": "            static fn () => $method->invokeArgs($container->get($controller), $args)",
-                "post_context": [
-                  "        );",
-                  "    }",
-                  "}",
-                  ""
-                ]
+                "post_context": ["        );", "    }", "}", ""]
               },
               {
                 "filename": "[internal]",

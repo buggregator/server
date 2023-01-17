@@ -1,10 +1,10 @@
 <template>
   <main class="inspector-event">
-    <page-header button-title="Delete event" @delete="onDelete">
-      <nuxt-link to="/">Home</nuxt-link>&nbsp;/
-      <nuxt-link to="/inspector">Inspector</nuxt-link>&nbsp;/
-      <nuxt-link :disabled="true">{{ event.id }}</nuxt-link>
-    </page-header>
+    <PageHeader button-title="Delete event" @delete="onDelete">
+      <NuxtLink to="/">Home</NuxtLink>&nbsp;/
+      <NuxtLink to="/inspector">Inspector</NuxtLink>&nbsp;/
+      <NuxtLink :disabled="true">{{ event.id }}</NuxtLink>
+    </PageHeader>
 
     <div v-if="pending && !event" class="inspector-event__loading">
       <div></div>
@@ -12,7 +12,7 @@
       <div></div>
     </div>
 
-    <page-inspector v-if="event" :event="event" />
+    <InspectorPage v-if="event" :event="event" />
   </main>
 </template>
 
@@ -21,11 +21,11 @@ import { defineComponent } from "vue";
 import { EventId } from "~/config/types";
 import { useFetch, useNuxtApp, useRoute, useRouter } from "#app";
 import { normalizeInspectorEvent } from "~/utils/normalize-event";
-import PageInspector from "~/components/PageInspector/PageInspector.vue";
+import InspectorPage from "~/components/InspectorPage/InspectorPage.vue";
 import PageHeader from "~/components/PageHeader/PageHeader.vue";
 
 export default defineComponent({
-  components: { PageInspector, PageHeader },
+  components: { InspectorPage, PageHeader },
 
   async setup() {
     const route = useRoute();
