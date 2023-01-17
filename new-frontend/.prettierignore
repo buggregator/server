@@ -1,0 +1,6 @@
+# Ignore artifacts:
+.nuxt
+.output
+node-modules
+package-lock.json
+storybook-static
