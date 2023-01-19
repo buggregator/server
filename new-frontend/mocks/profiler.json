@@ -1,0 +1,2545 @@
+{
+  "uuid": "349b5ec0-4d89-49b6-a454-76dcb8b65f49",
+  "type": "profiler",
+  "payload": {
+    "tags": {
+      "php": "8.1.2-1ubuntu2.8",
+      "dispatcher": "Spiral\\RoadRunnerBridge\\Http\\Dispatcher",
+      "method": "GET",
+      "url": "http://127.0.0.1:8080/",
+      "route": null,
+      "uri": "http://127.0.0.1:8080/"
+    },
+    "app_name": "My super app",
+    "hostname": "ButschsterLpp",
+    "date": 1673266493,
+    "peaks": { "ct": 1, "wt": 36259, "cpu": 33469, "mu": 89784, "pmu": 0 },
+    "edges": {
+      "e1": {
+        "caller": null,
+        "callee": "main()",
+        "cost": {
+          "ct": 1,
+          "wt": 36259,
+          "cpu": 33469,
+          "mu": 89784,
+          "pmu": 0,
+          "p_cpu": 100,
+          "p_mu": 100,
+          "p_pmu": 0,
+          "p_wt": 100
+        }
+      },
+      "e2": {
+        "caller": "main()",
+        "callee": "Nyholm\\Psr7\\ServerRequest::getAttribute",
+        "cost": {
+          "d_cpu": 33468,
+          "d_wt": 36258,
+          "d_mu": 89232,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 552,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.61,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e3": {
+        "caller": "main()",
+        "callee": "Spiral\\Debug\\State::getTags",
+        "cost": {
+          "d_cpu": 33468,
+          "d_wt": 36258,
+          "d_mu": 89248,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 536,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.6,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e4": {
+        "caller": "main()",
+        "callee": "Spiral\\Bootloader\\DebugBootloader::state",
+        "cost": {
+          "d_cpu": 33375,
+          "d_wt": 36157,
+          "d_mu": 75000,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 102,
+          "cpu": 94,
+          "mu": 14784,
+          "pmu": 0,
+          "p_cpu": 0.28,
+          "p_mu": 16.47,
+          "p_pmu": 0,
+          "p_wt": 0.28
+        }
+      },
+      "e5": {
+        "caller": "Spiral\\Bootloader\\DebugBootloader::state",
+        "callee": "Spiral\\Debug\\StateCollector\\HttpCollector::populate",
+        "cost": {
+          "d_cpu": 74,
+          "d_wt": 82,
+          "d_mu": 7416,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 20,
+          "cpu": 20,
+          "mu": 7368,
+          "pmu": 0,
+          "p_cpu": 0.06,
+          "p_mu": 8.21,
+          "p_pmu": 0,
+          "p_wt": 0.06
+        }
+      },
+      "e6": {
+        "caller": "Spiral\\Debug\\StateCollector\\HttpCollector::populate",
+        "callee": "Nyholm\\Psr7\\ServerRequest::getParsedBody",
+        "cost": {
+          "d_cpu": 19,
+          "d_wt": 19,
+          "d_mu": 6768,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e7": {
+        "caller": "Spiral\\Debug\\StateCollector\\HttpCollector::populate",
+        "callee": "Nyholm\\Psr7\\ServerRequest::getQueryParams",
+        "cost": {
+          "d_cpu": 19,
+          "d_wt": 19,
+          "d_mu": 6768,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e8": {
+        "caller": "Spiral\\Debug\\StateCollector\\HttpCollector::populate",
+        "callee": "Spiral\\Debug\\State::setVariable",
+        "cost": {
+          "d_cpu": 19,
+          "d_wt": 19,
+          "d_mu": 6784,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 584,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.65,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e9": {
+        "caller": "Spiral\\Debug\\StateCollector\\HttpCollector::populate",
+        "callee": "Spiral\\Debug\\State::setTag",
+        "cost": {
+          "d_cpu": 19,
+          "d_wt": 18,
+          "d_mu": 6784,
+          "d_pmu": 0,
+          "ct": 2,
+          "wt": 2,
+          "cpu": 1,
+          "mu": 584,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.65,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e10": {
+        "caller": "Spiral\\Bootloader\\DebugBootloader::state",
+        "callee": "Spiral\\Debug\\StateCollector\\LogCollector::populate",
+        "cost": {
+          "d_cpu": 90,
+          "d_wt": 98,
+          "d_mu": 13536,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 4,
+          "cpu": 4,
+          "mu": 1248,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.39,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e11": {
+        "caller": "Spiral\\Debug\\StateCollector\\LogCollector::populate",
+        "callee": "Spiral\\Debug\\State::addLogEvent",
+        "cost": {
+          "d_cpu": 2,
+          "d_wt": 3,
+          "d_mu": 664,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 2,
+          "mu": 584,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.65,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e12": {
+        "caller": "Spiral\\Bootloader\\DebugBootloader::state",
+        "callee": "Spiral\\Debug\\StateCollector\\EnvironmentCollector::populate",
+        "cost": {
+          "d_cpu": 37,
+          "d_wt": 41,
+          "d_mu": 9456,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 61,
+          "cpu": 57,
+          "mu": 5328,
+          "pmu": 0,
+          "p_cpu": 0.17,
+          "p_mu": 5.93,
+          "p_pmu": 0,
+          "p_wt": 0.17
+        }
+      },
+      "e13": {
+        "caller": "Spiral\\Debug\\StateCollector\\EnvironmentCollector::populate",
+        "callee": "Spiral\\Debug\\State::setVariable",
+        "cost": {
+          "d_cpu": 56,
+          "d_wt": 60,
+          "d_mu": 4352,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 976,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 1.09,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e14": {
+        "caller": "Spiral\\Debug\\StateCollector\\EnvironmentCollector::populate",
+        "callee": "Spiral\\Debug\\State::setTag",
+        "cost": {
+          "d_cpu": 56,
+          "d_wt": 60,
+          "d_mu": 4368,
+          "d_pmu": 0,
+          "ct": 2,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 960,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 1.07,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e15": {
+        "caller": "main()",
+        "callee": "Spiral\\Telemetry\\Span::setStatus",
+        "cost": {
+          "d_cpu": 33466,
+          "d_wt": 36255,
+          "d_mu": 88504,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 4,
+          "cpu": 3,
+          "mu": 1280,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.43,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e16": {
+        "caller": "Spiral\\Telemetry\\Span::setStatus",
+        "callee": "Spiral\\Telemetry\\Span\\Status::__construct",
+        "cost": {
+          "d_cpu": 2,
+          "d_wt": 4,
+          "d_mu": 696,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 0,
+          "cpu": 1,
+          "mu": 584,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.65,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e17": {
+        "caller": "main()",
+        "callee": "Nyholm\\Psr7\\Stream::getSize",
+        "cost": {
+          "d_cpu": 33457,
+          "d_wt": 36246,
+          "d_mu": 86192,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 13,
+          "cpu": 12,
+          "mu": 3592,
+          "pmu": 0,
+          "p_cpu": 0.04,
+          "p_mu": 4,
+          "p_pmu": 0,
+          "p_wt": 0.04
+        }
+      },
+      "e18": {
+        "caller": "Nyholm\\Psr7\\Stream::getSize",
+        "callee": "Nyholm\\Psr7\\Stream::getUri",
+        "cost": {
+          "d_cpu": 7,
+          "d_wt": 8,
+          "d_mu": 2352,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 5,
+          "cpu": 5,
+          "mu": 1240,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.38,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e19": {
+        "caller": "Nyholm\\Psr7\\Stream::getUri",
+        "callee": "Nyholm\\Psr7\\Stream::getMetadata",
+        "cost": {
+          "d_cpu": 2,
+          "d_wt": 3,
+          "d_mu": -64,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 2,
+          "cpu": 3,
+          "mu": 1304,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.45,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e20": {
+        "caller": "main()",
+        "callee": "Nyholm\\Psr7\\Response::getBody",
+        "cost": {
+          "d_cpu": 33468,
+          "d_wt": 36259,
+          "d_mu": 89248,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 0,
+          "cpu": 1,
+          "mu": 536,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.6,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e21": {
+        "caller": "main()",
+        "callee": "Nyholm\\Psr7\\Response::getHeaderLine",
+        "cost": {
+          "d_cpu": 33464,
+          "d_wt": 36254,
+          "d_mu": 88600,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 5,
+          "cpu": 5,
+          "mu": 1184,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.32,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e22": {
+        "caller": "Nyholm\\Psr7\\Response::getHeaderLine",
+        "callee": "Nyholm\\Psr7\\Response::getHeader",
+        "cost": {
+          "d_cpu": 3,
+          "d_wt": 3,
+          "d_mu": 576,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 2,
+          "cpu": 2,
+          "mu": 608,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.68,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e23": {
+        "caller": "main()",
+        "callee": "Nyholm\\Psr7\\Response::getStatusCode",
+        "cost": {
+          "d_cpu": 33468,
+          "d_wt": 36259,
+          "d_mu": 89232,
+          "d_pmu": 0,
+          "ct": 2,
+          "wt": 0,
+          "cpu": 1,
+          "mu": 552,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.61,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e24": {
+        "caller": "main()",
+        "callee": "Spiral\\Router\\CoreHandler::handle",
+        "cost": {
+          "d_cpu": 233,
+          "d_wt": 254,
+          "d_mu": 20864,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 36005,
+          "cpu": 33236,
+          "mu": 68920,
+          "pmu": 0,
+          "p_cpu": 99.3,
+          "p_mu": 76.76,
+          "p_pmu": 0,
+          "p_wt": 99.3
+        }
+      },
+      "e25": {
+        "caller": "Spiral\\Router\\CoreHandler::handle",
+        "callee": "Spiral\\Router\\CoreHandler::wrapResponse",
+        "cost": {
+          "d_cpu": 33204,
+          "d_wt": 35972,
+          "d_mu": 64856,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 33,
+          "cpu": 32,
+          "mu": 4064,
+          "pmu": 0,
+          "p_cpu": 0.1,
+          "p_mu": 4.53,
+          "p_pmu": 0,
+          "p_wt": 0.09
+        }
+      },
+      "e26": {
+        "caller": "Spiral\\Router\\CoreHandler::wrapResponse",
+        "callee": "Nyholm\\Psr7\\Stream::write",
+        "cost": {
+          "d_cpu": 28,
+          "d_wt": 29,
+          "d_mu": 3304,
+          "d_pmu": 0,
+          "ct": 2,
+          "wt": 4,
+          "cpu": 4,
+          "mu": 760,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.85,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e27": {
+        "caller": "Spiral\\Router\\CoreHandler::wrapResponse",
+        "callee": "Nyholm\\Psr7\\Response::getBody",
+        "cost": {
+          "d_cpu": 11,
+          "d_wt": 11,
+          "d_mu": 1472,
+          "d_pmu": 0,
+          "ct": 2,
+          "wt": 22,
+          "cpu": 21,
+          "mu": 2592,
+          "pmu": 0,
+          "p_cpu": 0.06,
+          "p_mu": 2.89,
+          "p_pmu": 0,
+          "p_wt": 0.06
+        }
+      },
+      "e28": {
+        "caller": "Nyholm\\Psr7\\Response::getBody",
+        "callee": "Nyholm\\Psr7\\Stream::create",
+        "cost": {
+          "d_cpu": 4,
+          "d_wt": 3,
+          "d_mu": -104,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 19,
+          "cpu": 17,
+          "mu": 2696,
+          "pmu": 0,
+          "p_cpu": 0.05,
+          "p_mu": 3,
+          "p_pmu": 0,
+          "p_wt": 0.05
+        }
+      },
+      "e29": {
+        "caller": "Nyholm\\Psr7\\Stream::create",
+        "callee": "Nyholm\\Psr7\\Stream::__construct",
+        "cost": {
+          "d_cpu": 15,
+          "d_wt": 19,
+          "d_mu": 2128,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 0,
+          "cpu": 2,
+          "mu": 568,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.63,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e30": {
+        "caller": "Spiral\\Router\\CoreHandler::handle",
+        "callee": "Spiral\\Router\\CoreHandler::Spiral\\Router\\{closure}",
+        "cost": {
+          "d_cpu": 78,
+          "d_wt": 84,
+          "d_mu": 12560,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 35921,
+          "cpu": 33158,
+          "mu": 56360,
+          "pmu": 0,
+          "p_cpu": 99.07,
+          "p_mu": 62.77,
+          "p_pmu": 0,
+          "p_wt": 99.07
+        }
+      },
+      "e31": {
+        "caller": "Spiral\\Router\\CoreHandler::Spiral\\Router\\{closure}",
+        "callee": "Spiral\\Router\\CoreHandler::Spiral\\Router\\{closure}@1",
+        "cost": {
+          "d_cpu": 23,
+          "d_wt": 25,
+          "d_mu": 272,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 35896,
+          "cpu": 33135,
+          "mu": 56088,
+          "pmu": 0,
+          "p_cpu": 99,
+          "p_mu": 62.47,
+          "p_pmu": 0,
+          "p_wt": 99
+        }
+      },
+      "e32": {
+        "caller": "Spiral\\Router\\CoreHandler::Spiral\\Router\\{closure}@1",
+        "callee": "Spiral\\Core\\InterceptableCore::callAction",
+        "cost": {
+          "d_cpu": 4,
+          "d_wt": 5,
+          "d_mu": 696,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 35891,
+          "cpu": 33131,
+          "mu": 55392,
+          "pmu": 0,
+          "p_cpu": 98.99,
+          "p_mu": 61.69,
+          "p_pmu": 0,
+          "p_wt": 98.99
+        }
+      },
+      "e33": {
+        "caller": "Spiral\\Core\\InterceptableCore::callAction",
+        "callee": "Spiral\\Core\\InterceptorPipeline::callAction",
+        "cost": {
+          "d_cpu": 7,
+          "d_wt": 6,
+          "d_mu": 1312,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 35885,
+          "cpu": 33124,
+          "mu": 54080,
+          "pmu": 0,
+          "p_cpu": 98.97,
+          "p_mu": 60.23,
+          "p_pmu": 0,
+          "p_wt": 98.97
+        }
+      },
+      "e34": {
+        "caller": "Spiral\\Core\\InterceptorPipeline::callAction",
+        "callee": "Spiral\\Filters\\Interceptor\\FilterInterceptor::process",
+        "cost": {
+          "d_cpu": 3,
+          "d_wt": 5,
+          "d_mu": 648,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 35880,
+          "cpu": 33121,
+          "mu": 53432,
+          "pmu": 0,
+          "p_cpu": 98.96,
+          "p_mu": 59.51,
+          "p_pmu": 0,
+          "p_wt": 98.95
+        }
+      },
+      "e35": {
+        "caller": "Spiral\\Filters\\Interceptor\\FilterInterceptor::process",
+        "callee": "Spiral\\Core\\InterceptorPipeline::callAction@1",
+        "cost": {
+          "d_cpu": 17,
+          "d_wt": 18,
+          "d_mu": 1360,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 35862,
+          "cpu": 33104,
+          "mu": 52072,
+          "pmu": 0,
+          "p_cpu": 98.91,
+          "p_mu": 58,
+          "p_pmu": 0,
+          "p_wt": 98.91
+        }
+      },
+      "e36": {
+        "caller": "Spiral\\Core\\InterceptorPipeline::callAction@1",
+        "callee": "Spiral\\Core\\AbstractCore::callAction",
+        "cost": {
+          "d_cpu": 5,
+          "d_wt": 6,
+          "d_mu": -1888,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 35856,
+          "cpu": 33099,
+          "mu": 53960,
+          "pmu": 0,
+          "p_cpu": 98.89,
+          "p_mu": 60.1,
+          "p_pmu": 0,
+          "p_wt": 98.89
+        }
+      },
+      "e37": {
+        "caller": "Spiral\\Core\\AbstractCore::callAction",
+        "callee": "Spiral\\Core\\AbstractCore::Spiral\\Core\\{closure}",
+        "cost": {
+          "d_cpu": 33079,
+          "d_wt": 35834,
+          "d_mu": 52472,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 22,
+          "cpu": 20,
+          "mu": 1488,
+          "pmu": 0,
+          "p_cpu": 0.06,
+          "p_mu": 1.66,
+          "p_pmu": 0,
+          "p_wt": 0.06
+        }
+      },
+      "e38": {
+        "caller": "Spiral\\Core\\AbstractCore::Spiral\\Core\\{closure}",
+        "callee": "App\\Controller\\HomeController::index",
+        "cost": {
+          "d_cpu": 14,
+          "d_wt": 16,
+          "d_mu": 648,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 6,
+          "cpu": 6,
+          "mu": 840,
+          "pmu": 0,
+          "p_cpu": 0.02,
+          "p_mu": 0.94,
+          "p_pmu": 0,
+          "p_wt": 0.02
+        }
+      },
+      "e39": {
+        "caller": "Spiral\\Core\\AbstractCore::callAction",
+        "callee": "Spiral\\Bootloader\\Security\\FiltersBootloader::createInjection",
+        "cost": {
+          "d_cpu": 88,
+          "d_wt": 94,
+          "d_mu": 1536,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 35762,
+          "cpu": 33011,
+          "mu": 52424,
+          "pmu": 0,
+          "p_cpu": 98.63,
+          "p_mu": 58.39,
+          "p_pmu": 0,
+          "p_wt": 98.63
+        }
+      },
+      "e40": {
+        "caller": "Spiral\\Bootloader\\Security\\FiltersBootloader::createInjection",
+        "callee": "Spiral\\Models\\AbstractEntity::__destruct",
+        "cost": {
+          "d_cpu": 33008,
+          "d_wt": 35759,
+          "d_mu": 51144,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 3,
+          "cpu": 3,
+          "mu": 1280,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.43,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e41": {
+        "caller": "Spiral\\Models\\AbstractEntity::__destruct",
+        "callee": "Spiral\\Models\\AbstractEntity::flushFields",
+        "cost": {
+          "d_cpu": 2,
+          "d_wt": 2,
+          "d_mu": 696,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 584,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.65,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e42": {
+        "caller": "Spiral\\Bootloader\\Security\\FiltersBootloader::createInjection",
+        "callee": "Spiral\\Filters\\Model\\FilterProvider::createFilter",
+        "cost": {
+          "d_cpu": 22,
+          "d_wt": 24,
+          "d_mu": -6784,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 35738,
+          "cpu": 32989,
+          "mu": 59208,
+          "pmu": 0,
+          "p_cpu": 98.57,
+          "p_mu": 65.94,
+          "p_pmu": 0,
+          "p_wt": 98.56
+        }
+      },
+      "e43": {
+        "caller": "Spiral\\Filters\\Model\\FilterProvider::createFilter",
+        "callee": "Spiral\\Core\\InterceptableCore::callAction@1",
+        "cost": {
+          "d_cpu": 32958,
+          "d_wt": 35705,
+          "d_mu": 51808,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 33,
+          "cpu": 31,
+          "mu": 7400,
+          "pmu": 0,
+          "p_cpu": 0.09,
+          "p_mu": 8.24,
+          "p_pmu": 0,
+          "p_wt": 0.09
+        }
+      },
+      "e44": {
+        "caller": "Spiral\\Core\\InterceptableCore::callAction@1",
+        "callee": "Spiral\\Core\\InterceptorPipeline::callAction@2",
+        "cost": {
+          "d_cpu": 6,
+          "d_wt": 6,
+          "d_mu": 1312,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 27,
+          "cpu": 25,
+          "mu": 6088,
+          "pmu": 0,
+          "p_cpu": 0.07,
+          "p_mu": 6.78,
+          "p_pmu": 0,
+          "p_wt": 0.07
+        }
+      },
+      "e45": {
+        "caller": "Spiral\\Core\\InterceptorPipeline::callAction@2",
+        "callee": "Spiral\\Filters\\Model\\Interceptor\\PopulateDataFromEntityInterceptor::process",
+        "cost": {
+          "d_cpu": 4,
+          "d_wt": 5,
+          "d_mu": 664,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 22,
+          "cpu": 21,
+          "mu": 5424,
+          "pmu": 0,
+          "p_cpu": 0.06,
+          "p_mu": 6.04,
+          "p_pmu": 0,
+          "p_wt": 0.06
+        }
+      },
+      "e46": {
+        "caller": "Spiral\\Filters\\Model\\Interceptor\\PopulateDataFromEntityInterceptor::process",
+        "callee": "Spiral\\Core\\InterceptorPipeline::callAction@3",
+        "cost": {
+          "d_cpu": 12,
+          "d_wt": 12,
+          "d_mu": 2736,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 10,
+          "cpu": 9,
+          "mu": 2688,
+          "pmu": 0,
+          "p_cpu": 0.03,
+          "p_mu": 2.99,
+          "p_pmu": 0,
+          "p_wt": 0.03
+        }
+      },
+      "e47": {
+        "caller": "Spiral\\Core\\InterceptorPipeline::callAction@3",
+        "callee": "Spiral\\Filters\\Model\\Interceptor\\ValidateFilterInterceptor::process",
+        "cost": {
+          "d_cpu": 2,
+          "d_wt": 3,
+          "d_mu": 696,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 7,
+          "cpu": 7,
+          "mu": 1992,
+          "pmu": 0,
+          "p_cpu": 0.02,
+          "p_mu": 2.22,
+          "p_pmu": 0,
+          "p_wt": 0.02
+        }
+      },
+      "e48": {
+        "caller": "Spiral\\Filters\\Model\\Interceptor\\ValidateFilterInterceptor::process",
+        "callee": "Spiral\\Core\\InterceptorPipeline::callAction@4",
+        "cost": {
+          "d_cpu": 3,
+          "d_wt": 3,
+          "d_mu": 696,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 4,
+          "cpu": 4,
+          "mu": 1296,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.44,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e49": {
+        "caller": "Spiral\\Core\\InterceptorPipeline::callAction@4",
+        "callee": "Spiral\\Filters\\Model\\Interceptor\\Core::callAction",
+        "cost": {
+          "d_cpu": 2,
+          "d_wt": 3,
+          "d_mu": 696,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 2,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e50": {
+        "caller": "Spiral\\Filters\\Model\\Interceptor\\PopulateDataFromEntityInterceptor::process",
+        "callee": "Spiral\\Filters\\Model\\Filter::setData",
+        "cost": {
+          "d_cpu": 19,
+          "d_wt": 20,
+          "d_mu": 4792,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 2,
+          "cpu": 2,
+          "mu": 632,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.7,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e51": {
+        "caller": "Spiral\\Filters\\Model\\Interceptor\\PopulateDataFromEntityInterceptor::process",
+        "callee": "Spiral\\Models\\AbstractEntity::toArray",
+        "cost": {
+          "d_cpu": 17,
+          "d_wt": 18,
+          "d_mu": 4144,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 4,
+          "cpu": 4,
+          "mu": 1280,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.43,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e52": {
+        "caller": "Spiral\\Models\\AbstractEntity::toArray",
+        "callee": "Spiral\\Models\\AbstractEntity::getValue",
+        "cost": {
+          "d_cpu": 2,
+          "d_wt": 3,
+          "d_mu": 696,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 2,
+          "mu": 584,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.65,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e53": {
+        "caller": "Spiral\\Core\\InterceptableCore::callAction@1",
+        "callee": "Spiral\\Core\\InterceptorPipeline::withCore",
+        "cost": {
+          "d_cpu": 28,
+          "d_wt": 30,
+          "d_mu": 6704,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 3,
+          "cpu": 3,
+          "mu": 696,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.78,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e54": {
+        "caller": "Spiral\\Filters\\Model\\FilterProvider::createFilter",
+        "callee": "Spiral\\Filters\\Model\\FilterBag::__construct",
+        "cost": {
+          "d_cpu": 32986,
+          "d_wt": 35736,
+          "d_mu": 58608,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 2,
+          "cpu": 3,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e55": {
+        "caller": "Spiral\\Filters\\Model\\FilterProvider::createFilter",
+        "callee": "Spiral\\Models\\SchematicEntity::__construct",
+        "cost": {
+          "d_cpu": 32984,
+          "d_wt": 35734,
+          "d_mu": 57960,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 4,
+          "cpu": 5,
+          "mu": 1248,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.39,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e56": {
+        "caller": "Spiral\\Models\\SchematicEntity::__construct",
+        "callee": "Spiral\\Models\\AbstractEntity::__construct",
+        "cost": {
+          "d_cpu": 4,
+          "d_wt": 3,
+          "d_mu": 664,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 584,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.65,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e57": {
+        "caller": "Spiral\\Filters\\Model\\FilterProvider::createFilter",
+        "callee": "Spiral\\Filters\\Model\\Schema\\InputMapper::map",
+        "cost": {
+          "d_cpu": 17183,
+          "d_wt": 18615,
+          "d_mu": 57584,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 17123,
+          "cpu": 15806,
+          "mu": 1624,
+          "pmu": 0,
+          "p_cpu": 47.23,
+          "p_mu": 1.81,
+          "p_pmu": 0,
+          "p_wt": 47.22
+        }
+      },
+      "e58": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\InputMapper::map",
+        "callee": "Spiral\\Filter\\InputScope::getValue",
+        "cost": {
+          "d_cpu": 43,
+          "d_wt": 54,
+          "d_mu": 1040,
+          "d_pmu": 0,
+          "ct": 16,
+          "wt": 17069,
+          "cpu": 15763,
+          "mu": 584,
+          "pmu": 0,
+          "p_cpu": 47.1,
+          "p_mu": 0.65,
+          "p_pmu": 0,
+          "p_wt": 47.08
+        }
+      },
+      "e59": {
+        "caller": "Spiral\\Filters\\Model\\FilterProvider::createFilter",
+        "callee": "Spiral\\Filters\\Model\\Schema\\Builder::makeSchema",
+        "cost": {
+          "d_cpu": 32947,
+          "d_wt": 35694,
+          "d_mu": 50664,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 44,
+          "cpu": 42,
+          "mu": 8544,
+          "pmu": 0,
+          "p_cpu": 0.13,
+          "p_mu": 9.52,
+          "p_pmu": 0,
+          "p_wt": 0.12
+        }
+      },
+      "e60": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\Builder::makeSchema",
+        "callee": "Spiral\\Filters\\Model\\Schema\\Builder::parseDefinition",
+        "cost": {
+          "d_cpu": 23,
+          "d_wt": 27,
+          "d_mu": 1360,
+          "d_pmu": 0,
+          "ct": 16,
+          "wt": 17,
+          "cpu": 19,
+          "mu": 7184,
+          "pmu": 0,
+          "p_cpu": 0.06,
+          "p_mu": 8,
+          "p_pmu": 0,
+          "p_wt": 0.05
+        }
+      },
+      "e61": {
+        "caller": "Spiral\\Filters\\Model\\FilterProvider::createFilter",
+        "callee": "Spiral\\Filters\\Model\\Schema\\InputMapper::__construct",
+        "cost": {
+          "d_cpu": 32988,
+          "d_wt": 35737,
+          "d_mu": 58576,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 632,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.7,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e62": {
+        "caller": "Spiral\\Filters\\Model\\FilterProvider::createFilter",
+        "callee": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::map",
+        "cost": {
+          "d_cpu": 16072,
+          "d_wt": 17412,
+          "d_mu": 21704,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 18326,
+          "cpu": 16917,
+          "mu": 37504,
+          "pmu": 0,
+          "p_cpu": 50.55,
+          "p_mu": 41.77,
+          "p_pmu": 0,
+          "p_wt": 50.54
+        }
+      },
+      "e63": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::map",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Server::getSchema",
+        "cost": {
+          "d_cpu": 16914,
+          "d_wt": 18324,
+          "d_mu": 36200,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 2,
+          "cpu": 3,
+          "mu": 1304,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.45,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e64": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Server::getSchema",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\AbstractInput::getKey",
+        "cost": {
+          "d_cpu": 2,
+          "d_wt": 2,
+          "d_mu": 704,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 0,
+          "cpu": 1,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e65": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::map",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Server::getValue",
+        "cost": {
+          "d_cpu": 15914,
+          "d_wt": 17240,
+          "d_mu": 26928,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1086,
+          "cpu": 1003,
+          "mu": 10576,
+          "pmu": 0,
+          "p_cpu": 3,
+          "p_mu": 11.78,
+          "p_pmu": 0,
+          "p_wt": 3
+        }
+      },
+      "e66": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Server::getValue",
+        "callee": "Spiral\\Filter\\InputScope::getValue",
+        "cost": {
+          "d_cpu": 4,
+          "d_wt": 4,
+          "d_mu": 1328,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1082,
+          "cpu": 999,
+          "mu": 9248,
+          "pmu": 0,
+          "p_cpu": 2.98,
+          "p_mu": 10.3,
+          "p_pmu": 0,
+          "p_wt": 2.98
+        }
+      },
+      "e67": {
+        "caller": "Spiral\\Http\\Request\\InputManager::__call",
+        "callee": "Spiral\\Http\\Request\\ServerBag::get",
+        "cost": {
+          "d_cpu": -1885,
+          "d_wt": -2041,
+          "d_mu": -7872,
+          "d_pmu": 0,
+          "ct": 2,
+          "wt": 2041,
+          "cpu": 1885,
+          "mu": 7872,
+          "pmu": 0,
+          "p_cpu": 5.63,
+          "p_mu": 8.77,
+          "p_pmu": 0,
+          "p_wt": 5.63
+        }
+      },
+      "e68": {
+        "caller": "Spiral\\Http\\Request\\ServerBag::get",
+        "callee": "Spiral\\Http\\Request\\InputBag::get",
+        "cost": {
+          "d_cpu": 16,
+          "d_wt": 18,
+          "d_mu": 6928,
+          "d_pmu": 0,
+          "ct": 2,
+          "wt": 2023,
+          "cpu": 1869,
+          "mu": 944,
+          "pmu": 0,
+          "p_cpu": 5.58,
+          "p_mu": 1.05,
+          "p_pmu": 0,
+          "p_wt": 5.58
+        }
+      },
+      "e69": {
+        "caller": "Spiral\\Http\\Request\\ServerBag::get",
+        "callee": "Spiral\\Http\\Request\\ServerBag::normalize",
+        "cost": {
+          "d_cpu": 1875,
+          "d_wt": 2032,
+          "d_mu": 1592,
+          "d_pmu": 0,
+          "ct": 2,
+          "wt": 9,
+          "cpu": 10,
+          "mu": 6280,
+          "pmu": 0,
+          "p_cpu": 0.03,
+          "p_mu": 6.99,
+          "p_pmu": 0,
+          "p_wt": 0.02
+        }
+      },
+      "e70": {
+        "caller": "Spiral\\Http\\Request\\InputManager::bag",
+        "callee": "Nyholm\\Psr7\\ServerRequest::getServerParams",
+        "cost": {
+          "d_cpu": -1,
+          "d_wt": -1,
+          "d_mu": -584,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 584,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.65,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e71": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Server::getValue",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\AbstractInput::getKey",
+        "cost": {
+          "d_cpu": 1002,
+          "d_wt": 1085,
+          "d_mu": 9976,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e72": {
+        "caller": "Spiral\\Attributes\\Internal\\AttributeReader::getPropertyMetadata",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Server::__construct",
+        "cost": {
+          "d_cpu": -1,
+          "d_wt": -1,
+          "d_mu": -632,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 632,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.7,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e73": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::map",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Route::getSchema",
+        "cost": {
+          "d_cpu": 16914,
+          "d_wt": 18323,
+          "d_mu": 36192,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 3,
+          "cpu": 3,
+          "mu": 1312,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.46,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e74": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Route::getSchema",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\AbstractInput::getKey",
+        "cost": {
+          "d_cpu": 2,
+          "d_wt": 2,
+          "d_mu": 712,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e75": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::map",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Route::getValue",
+        "cost": {
+          "d_cpu": 15878,
+          "d_wt": 17202,
+          "d_mu": 35216,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1124,
+          "cpu": 1039,
+          "mu": 2288,
+          "pmu": 0,
+          "p_cpu": 3.1,
+          "p_mu": 2.55,
+          "p_pmu": 0,
+          "p_wt": 3.1
+        }
+      },
+      "e76": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Route::getValue",
+        "callee": "Spiral\\Filter\\InputScope::getValue",
+        "cost": {
+          "d_cpu": 5,
+          "d_wt": 3,
+          "d_mu": 1328,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1121,
+          "cpu": 1034,
+          "mu": 960,
+          "pmu": 0,
+          "p_cpu": 3.09,
+          "p_mu": 1.07,
+          "p_pmu": 0,
+          "p_wt": 3.09
+        }
+      },
+      "e77": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Route::getValue",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\AbstractInput::getKey",
+        "cost": {
+          "d_cpu": 1038,
+          "d_wt": 1124,
+          "d_mu": 1688,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 0,
+          "cpu": 1,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e78": {
+        "caller": "Spiral\\Attributes\\Internal\\AttributeReader::getPropertyMetadata",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Route::__construct",
+        "cost": {
+          "d_cpu": -2,
+          "d_wt": -1,
+          "d_mu": -632,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 2,
+          "mu": 632,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.7,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e79": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::map",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Attribute::getSchema",
+        "cost": {
+          "d_cpu": 16914,
+          "d_wt": 18323,
+          "d_mu": 36168,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 3,
+          "cpu": 3,
+          "mu": 1336,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.49,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e80": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Attribute::getSchema",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\AbstractInput::getKey",
+        "cost": {
+          "d_cpu": 2,
+          "d_wt": 2,
+          "d_mu": 704,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 632,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.7,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e81": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::map",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Attribute::getValue",
+        "cost": {
+          "d_cpu": 15920,
+          "d_wt": 17247,
+          "d_mu": 34456,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1079,
+          "cpu": 997,
+          "mu": 3048,
+          "pmu": 0,
+          "p_cpu": 2.98,
+          "p_mu": 3.39,
+          "p_pmu": 0,
+          "p_wt": 2.98
+        }
+      },
+      "e82": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Attribute::getValue",
+        "callee": "Spiral\\Filter\\InputScope::getValue",
+        "cost": {
+          "d_cpu": 4,
+          "d_wt": 4,
+          "d_mu": 1360,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1075,
+          "cpu": 993,
+          "mu": 1688,
+          "pmu": 0,
+          "p_cpu": 2.97,
+          "p_mu": 1.88,
+          "p_pmu": 0,
+          "p_wt": 2.96
+        }
+      },
+      "e83": {
+        "caller": "Spiral\\Http\\Request\\InputManager::bag",
+        "callee": "Nyholm\\Psr7\\ServerRequest::getAttributes",
+        "cost": {
+          "d_cpu": -1,
+          "d_wt": 0,
+          "d_mu": -584,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 0,
+          "cpu": 1,
+          "mu": 584,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.65,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e84": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Attribute::getValue",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\AbstractInput::getKey",
+        "cost": {
+          "d_cpu": 996,
+          "d_wt": 1078,
+          "d_mu": 2416,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 632,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.7,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e85": {
+        "caller": "Spiral\\Attributes\\Internal\\AttributeReader::getPropertyMetadata",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Attribute::__construct",
+        "cost": {
+          "d_cpu": -1,
+          "d_wt": -1,
+          "d_mu": -632,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 632,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.7,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e86": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::map",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Query::getSchema",
+        "cost": {
+          "d_cpu": 16890,
+          "d_wt": 18300,
+          "d_mu": 35856,
+          "d_pmu": 0,
+          "ct": 12,
+          "wt": 26,
+          "cpu": 27,
+          "mu": 1648,
+          "pmu": 0,
+          "p_cpu": 0.08,
+          "p_mu": 1.84,
+          "p_pmu": 0,
+          "p_wt": 0.07
+        }
+      },
+      "e87": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Query::getSchema",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\AbstractInput::getKey",
+        "cost": {
+          "d_cpu": 17,
+          "d_wt": 20,
+          "d_mu": 1048,
+          "d_pmu": 0,
+          "ct": 12,
+          "wt": 6,
+          "cpu": 10,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0.03,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0.02
+        }
+      },
+      "e88": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::map",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Query::getValue",
+        "cost": {
+          "d_cpu": 5492,
+          "d_wt": 5953,
+          "d_mu": 29688,
+          "d_pmu": 0,
+          "ct": 12,
+          "wt": 12373,
+          "cpu": 11425,
+          "mu": 7816,
+          "pmu": 0,
+          "p_cpu": 34.14,
+          "p_mu": 8.71,
+          "p_pmu": 0,
+          "p_wt": 34.12
+        }
+      },
+      "e89": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Query::getValue",
+        "callee": "Spiral\\Filter\\InputScope::getValue",
+        "cost": {
+          "d_cpu": 36,
+          "d_wt": 38,
+          "d_mu": 1328,
+          "d_pmu": 0,
+          "ct": 12,
+          "wt": 12335,
+          "cpu": 11389,
+          "mu": 6488,
+          "pmu": 0,
+          "p_cpu": 34.03,
+          "p_mu": 7.23,
+          "p_pmu": 0,
+          "p_wt": 34.02
+        }
+      },
+      "e90": {
+        "caller": "Spiral\\Http\\Request\\InputManager::bag",
+        "callee": "Nyholm\\Psr7\\ServerRequest::getQueryParams",
+        "cost": {
+          "d_cpu": -2,
+          "d_wt": -1,
+          "d_mu": -584,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 2,
+          "mu": 584,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.65,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e91": {
+        "caller": "Spiral\\Http\\Request\\InputManager::hasBag",
+        "callee": "Spiral\\Http\\Request\\InputManager::findBagDefinition",
+        "cost": {
+          "d_cpu": -6,
+          "d_wt": -5,
+          "d_mu": -600,
+          "d_pmu": 0,
+          "ct": 3,
+          "wt": 5,
+          "cpu": 6,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0.02,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e92": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Query::getValue",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\AbstractInput::getKey",
+        "cost": {
+          "d_cpu": 11415,
+          "d_wt": 12370,
+          "d_mu": 7216,
+          "d_pmu": 0,
+          "ct": 12,
+          "wt": 3,
+          "cpu": 10,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0.03,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e93": {
+        "caller": "Spiral\\Attributes\\Internal\\AttributeReader::getPropertyMetadata",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Query::__construct",
+        "cost": {
+          "d_cpu": -12,
+          "d_wt": -7,
+          "d_mu": -632,
+          "d_pmu": 0,
+          "ct": 12,
+          "wt": 7,
+          "cpu": 12,
+          "mu": 632,
+          "pmu": 0,
+          "p_cpu": 0.04,
+          "p_mu": 0.7,
+          "p_pmu": 0,
+          "p_wt": 0.02
+        }
+      },
+      "e94": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::map",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Post::getSchema",
+        "cost": {
+          "d_cpu": 16914,
+          "d_wt": 18323,
+          "d_mu": 36208,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 3,
+          "cpu": 3,
+          "mu": 1296,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.44,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e95": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Post::getSchema",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\AbstractInput::getKey",
+        "cost": {
+          "d_cpu": 2,
+          "d_wt": 3,
+          "d_mu": 696,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 0,
+          "cpu": 1,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e96": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::map",
+        "callee": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::setValue",
+        "cost": {
+          "d_cpu": 16289,
+          "d_wt": 17652,
+          "d_mu": 31384,
+          "d_pmu": 0,
+          "ct": 16,
+          "wt": 674,
+          "cpu": 628,
+          "mu": 6120,
+          "pmu": 0,
+          "p_cpu": 1.88,
+          "p_mu": 6.82,
+          "p_pmu": 0,
+          "p_wt": 1.86
+        }
+      },
+      "e97": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::setValue",
+        "callee": "Spiral\\Attributes\\Reader::firstPropertyMetadata",
+        "cost": {
+          "d_cpu": 34,
+          "d_wt": 37,
+          "d_mu": 696,
+          "d_pmu": 0,
+          "ct": 16,
+          "wt": 637,
+          "cpu": 594,
+          "mu": 5424,
+          "pmu": 0,
+          "p_cpu": 1.77,
+          "p_mu": 6.04,
+          "p_pmu": 0,
+          "p_wt": 1.76
+        }
+      },
+      "e98": {
+        "caller": "Spiral\\Attributes\\Reader::firstPropertyMetadata",
+        "callee": "Spiral\\Attributes\\Composite\\Composite::getPropertyMetadata",
+        "cost": {
+          "d_cpu": 25,
+          "d_wt": 31,
+          "d_mu": 664,
+          "d_pmu": 0,
+          "ct": 16,
+          "wt": 606,
+          "cpu": 569,
+          "mu": 4760,
+          "pmu": 0,
+          "p_cpu": 1.7,
+          "p_mu": 5.3,
+          "p_pmu": 0,
+          "p_wt": 1.67
+        }
+      },
+      "e99": {
+        "caller": "Spiral\\Attributes\\Internal\\Decorator::getPropertyMetadata",
+        "callee": "Spiral\\Attributes\\Internal\\DoctrineAnnotationReader::getPropertyMetadata",
+        "cost": {
+          "d_cpu": -263,
+          "d_wt": -276,
+          "d_mu": -12768,
+          "d_pmu": 0,
+          "ct": 16,
+          "wt": 276,
+          "cpu": 263,
+          "mu": 12768,
+          "pmu": 0,
+          "p_cpu": 0.79,
+          "p_mu": 14.22,
+          "p_pmu": 0,
+          "p_wt": 0.76
+        }
+      },
+      "e100": {
+        "caller": "Spiral\\Attributes\\Internal\\DoctrineAnnotationReader::getPropertyMetadata",
+        "callee": "Spiral\\Attributes\\Internal\\DoctrineAnnotationReader::Spiral\\Attributes\\Internal\\{closure}",
+        "cost": {
+          "d_cpu": 46,
+          "d_wt": 47,
+          "d_mu": 9400,
+          "d_pmu": 0,
+          "ct": 16,
+          "wt": 229,
+          "cpu": 217,
+          "mu": 3368,
+          "pmu": 0,
+          "p_cpu": 0.65,
+          "p_mu": 3.75,
+          "p_pmu": 0,
+          "p_wt": 0.63
+        }
+      },
+      "e101": {
+        "caller": "Spiral\\Attributes\\Internal\\DoctrineAnnotationReader::Spiral\\Attributes\\Internal\\{closure}",
+        "callee": "Doctrine\\Common\\Annotations\\AnnotationReader::getPropertyAnnotations",
+        "cost": {
+          "d_cpu": 34,
+          "d_wt": 44,
+          "d_mu": -1832,
+          "d_pmu": 0,
+          "ct": 16,
+          "wt": 185,
+          "cpu": 183,
+          "mu": 5200,
+          "pmu": 0,
+          "p_cpu": 0.55,
+          "p_mu": 5.79,
+          "p_pmu": 0,
+          "p_wt": 0.51
+        }
+      },
+      "e102": {
+        "caller": "Doctrine\\Common\\Annotations\\AnnotationReader::getPropertyAnnotations",
+        "callee": "Doctrine\\Common\\Annotations\\AnnotationReader::getPropertyImports",
+        "cost": {
+          "d_cpu": 129,
+          "d_wt": 136,
+          "d_mu": 3032,
+          "d_pmu": 0,
+          "ct": 16,
+          "wt": 49,
+          "cpu": 54,
+          "mu": 2168,
+          "pmu": 0,
+          "p_cpu": 0.16,
+          "p_mu": 2.41,
+          "p_pmu": 0,
+          "p_wt": 0.14
+        }
+      },
+      "e103": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::map",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Post::getValue",
+        "cost": {
+          "d_cpu": 15776,
+          "d_wt": 17091,
+          "d_mu": 41456,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1235,
+          "cpu": 1141,
+          "mu": -3952,
+          "pmu": 0,
+          "p_cpu": 3.41,
+          "p_mu": 0,
+          "p_pmu": 0,
+          "p_wt": 3.41
+        }
+      },
+      "e104": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Post::getValue",
+        "callee": "Spiral\\Filter\\InputScope::getValue",
+        "cost": {
+          "d_cpu": 5,
+          "d_wt": 5,
+          "d_mu": 1328,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1230,
+          "cpu": 1136,
+          "mu": -5280,
+          "pmu": 0,
+          "p_cpu": 3.39,
+          "p_mu": 0,
+          "p_pmu": 0,
+          "p_wt": 3.39
+        }
+      },
+      "e105": {
+        "caller": "Spiral\\Filter\\InputScope::getValue",
+        "callee": "Spiral\\Http\\Request\\InputManager::__call",
+        "cost": {
+          "d_cpu": -30020,
+          "d_wt": -32510,
+          "d_mu": -14088,
+          "d_pmu": 0,
+          "ct": 32,
+          "wt": 33740,
+          "cpu": 31156,
+          "mu": 8808,
+          "pmu": 0,
+          "p_cpu": 93.09,
+          "p_mu": 9.81,
+          "p_pmu": 0,
+          "p_wt": 93.05
+        }
+      },
+      "e106": {
+        "caller": "Spiral\\Http\\Request\\InputManager::__call",
+        "callee": "Spiral\\Http\\Request\\InputBag::get",
+        "cost": {
+          "d_cpu": 2443,
+          "d_wt": 2650,
+          "d_mu": -8688,
+          "d_pmu": 0,
+          "ct": 30,
+          "wt": 31090,
+          "cpu": 28713,
+          "mu": 17496,
+          "pmu": 0,
+          "p_cpu": 85.79,
+          "p_mu": 19.49,
+          "p_pmu": 0,
+          "p_wt": 85.74
+        }
+      },
+      "e107": {
+        "caller": "Spiral\\Http\\Request\\InputBag::get",
+        "callee": "Spiral\\Http\\Request\\InputBag::dotGet",
+        "cost": {
+          "d_cpu": -1566,
+          "d_wt": -1669,
+          "d_mu": -10638560,
+          "d_pmu": 0,
+          "ct": 32,
+          "wt": 32759,
+          "cpu": 30279,
+          "mu": 10656056,
+          "pmu": 0,
+          "p_cpu": 90.47,
+          "p_mu": 11868.55,
+          "p_pmu": 0,
+          "p_wt": 90.35
+        }
+      },
+      "e108": {
+        "caller": "Spiral\\Http\\Request\\InputManager::__call",
+        "callee": "Spiral\\Http\\Request\\InputManager::bag",
+        "cost": {
+          "d_cpu": 30678,
+          "d_wt": 33237,
+          "d_mu": 26144,
+          "d_pmu": 0,
+          "ct": 32,
+          "wt": 503,
+          "cpu": 478,
+          "mu": -17336,
+          "pmu": 0,
+          "p_cpu": 1.43,
+          "p_mu": 0,
+          "p_pmu": 0,
+          "p_wt": 1.39
+        }
+      },
+      "e109": {
+        "caller": "Spiral\\Http\\Request\\InputManager::bag",
+        "callee": "Spiral\\Http\\Request\\InputBag::__construct",
+        "cost": {
+          "d_cpu": 474,
+          "d_wt": 498,
+          "d_mu": -17920,
+          "d_pmu": 0,
+          "ct": 4,
+          "wt": 5,
+          "cpu": 4,
+          "mu": 584,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.65,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e110": {
+        "caller": "Spiral\\Http\\Request\\InputManager::bag",
+        "callee": "Nyholm\\Psr7\\ServerRequest::getParsedBody",
+        "cost": {
+          "d_cpu": 477,
+          "d_wt": 502,
+          "d_mu": -17920,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 584,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.65,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e111": {
+        "caller": "Spiral\\Http\\Request\\InputManager::bag",
+        "callee": "Spiral\\Http\\Request\\InputManager::findBagDefinition",
+        "cost": {
+          "d_cpu": 471,
+          "d_wt": 497,
+          "d_mu": -17936,
+          "d_pmu": 0,
+          "ct": 4,
+          "wt": 6,
+          "cpu": 7,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0.02,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0.02
+        }
+      },
+      "e112": {
+        "caller": "Spiral\\Http\\Request\\InputManager::bag",
+        "callee": "Spiral\\Http\\Request\\InputManager::request",
+        "cost": {
+          "d_cpu": 95,
+          "d_wt": 100,
+          "d_mu": 5248,
+          "d_pmu": 0,
+          "ct": 36,
+          "wt": 403,
+          "cpu": 383,
+          "mu": -22584,
+          "pmu": 0,
+          "p_cpu": 1.14,
+          "p_mu": 0,
+          "p_pmu": 0,
+          "p_wt": 1.11
+        }
+      },
+      "e113": {
+        "caller": "Spiral\\Filter\\InputScope::getValue",
+        "callee": "Spiral\\Http\\Request\\InputManager::hasBag",
+        "cost": {
+          "d_cpu": 1097,
+          "d_wt": 1199,
+          "d_mu": -6528,
+          "d_pmu": 0,
+          "ct": 32,
+          "wt": 31,
+          "cpu": 39,
+          "mu": 1248,
+          "pmu": 0,
+          "p_cpu": 0.12,
+          "p_mu": 1.39,
+          "p_pmu": 0,
+          "p_wt": 0.09
+        }
+      },
+      "e114": {
+        "caller": "Spiral\\Filters\\Attribute\\Input\\Post::getValue",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\AbstractInput::getKey",
+        "cost": {
+          "d_cpu": 1140,
+          "d_wt": 1233,
+          "d_mu": -4552,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 2,
+          "cpu": 1,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e115": {
+        "caller": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::map",
+        "callee": "Spiral\\Attributes\\Composite\\Composite::getPropertyMetadata",
+        "cost": {
+          "d_cpu": 16346,
+          "d_wt": 17718,
+          "d_mu": 22960,
+          "d_pmu": 0,
+          "ct": 16,
+          "wt": 608,
+          "cpu": 571,
+          "mu": 14544,
+          "pmu": 0,
+          "p_cpu": 1.71,
+          "p_mu": 16.2,
+          "p_pmu": 0,
+          "p_wt": 1.68
+        }
+      },
+      "e116": {
+        "caller": "Spiral\\Attributes\\Composite\\Composite::getPropertyMetadata",
+        "callee": "Spiral\\Attributes\\Internal\\AttributeReader::getPropertyMetadata",
+        "cost": {
+          "d_cpu": 59,
+          "d_wt": 61,
+          "d_mu": -9624,
+          "d_pmu": 0,
+          "ct": 48,
+          "wt": 547,
+          "cpu": 512,
+          "mu": 24168,
+          "pmu": 0,
+          "p_cpu": 1.53,
+          "p_mu": 26.92,
+          "p_pmu": 0,
+          "p_wt": 1.51
+        }
+      },
+      "e117": {
+        "caller": "Spiral\\Attributes\\Internal\\AttributeReader::getPropertyMetadata",
+        "callee": "Spiral\\Filters\\Attribute\\Input\\Post::__construct",
+        "cost": {
+          "d_cpu": 510,
+          "d_wt": 546,
+          "d_mu": 22896,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 2,
+          "mu": 1272,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.42,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e118": {
+        "caller": "Spiral\\Attributes\\Internal\\AttributeReader::getPropertyMetadata",
+        "callee": "Spiral\\Attributes\\Internal\\NativeAttributeReader::getPropertyAttributes",
+        "cost": {
+          "d_cpu": 454,
+          "d_wt": 491,
+          "d_mu": -3760,
+          "d_pmu": 0,
+          "ct": 32,
+          "wt": 56,
+          "cpu": 58,
+          "mu": 27928,
+          "pmu": 0,
+          "p_cpu": 0.17,
+          "p_mu": 31.11,
+          "p_pmu": 0,
+          "p_wt": 0.15
+        }
+      },
+      "e119": {
+        "caller": "Spiral\\Attributes\\Composite\\Composite::getPropertyMetadata",
+        "callee": "Spiral\\Attributes\\Composite\\Composite::Spiral\\Attributes\\Composite\\{closure}",
+        "cost": {
+          "d_cpu": 136,
+          "d_wt": 151,
+          "d_mu": -20160,
+          "d_pmu": 0,
+          "ct": 48,
+          "wt": 457,
+          "cpu": 435,
+          "mu": 34704,
+          "pmu": 0,
+          "p_cpu": 1.3,
+          "p_mu": 38.65,
+          "p_pmu": 0,
+          "p_wt": 1.26
+        }
+      },
+      "e120": {
+        "caller": "Spiral\\Attributes\\Composite\\Composite::Spiral\\Attributes\\Composite\\{closure}",
+        "callee": "Spiral\\Attributes\\Internal\\Decorator::getPropertyMetadata",
+        "cost": {
+          "d_cpu": 101,
+          "d_wt": 109,
+          "d_mu": 728,
+          "d_pmu": 0,
+          "ct": 48,
+          "wt": 348,
+          "cpu": 334,
+          "mu": 33976,
+          "pmu": 0,
+          "p_cpu": 1,
+          "p_mu": 37.84,
+          "p_pmu": 0,
+          "p_wt": 0.96
+        }
+      },
+      "e121": {
+        "caller": "Spiral\\Filters\\Model\\FilterProvider::createFilter",
+        "callee": "Spiral\\Filters\\Model\\FilterProvider::createFilterInstance",
+        "cost": {
+          "d_cpu": 32986,
+          "d_wt": 35735,
+          "d_mu": 58160,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 3,
+          "cpu": 3,
+          "mu": 1048,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.17,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e122": {
+        "caller": "Spiral\\Filters\\Model\\FilterProvider::createFilter",
+        "callee": "Spiral\\Filters\\Model\\Schema\\AttributeMapper::__construct",
+        "cost": {
+          "d_cpu": 32988,
+          "d_wt": 35737,
+          "d_mu": 58576,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 632,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 0.7,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e123": {
+        "caller": "Spiral\\Filters\\Interceptor\\FilterInterceptor::process",
+        "callee": "Spiral\\Filters\\Interceptor\\FilterInterceptor::getDeclaredFilters",
+        "cost": {
+          "d_cpu": 33118,
+          "d_wt": 35877,
+          "d_mu": 52480,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 3,
+          "cpu": 3,
+          "mu": 952,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.06,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e124": {
+        "caller": "Spiral\\Core\\InterceptableCore::callAction",
+        "callee": "Spiral\\Core\\InterceptorPipeline::withCore",
+        "cost": {
+          "d_cpu": 33128,
+          "d_wt": 35888,
+          "d_mu": 54320,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 3,
+          "cpu": 3,
+          "mu": 1072,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.19,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e125": {
+        "caller": "Spiral\\Router\\CoreHandler::handle",
+        "callee": "Spiral\\Router\\CoreHandler::getAction",
+        "cost": {
+          "d_cpu": 33235,
+          "d_wt": 36004,
+          "d_mu": 68016,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 1,
+          "mu": 904,
+          "pmu": 0,
+          "p_cpu": 0,
+          "p_mu": 1.01,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e126": {
+        "caller": "Spiral\\Router\\CoreHandler::handle",
+        "callee": "Spiral\\Nyholm\\ResponseFactory::createResponse",
+        "cost": {
+          "d_cpu": 33208,
+          "d_wt": 35976,
+          "d_mu": 62136,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 29,
+          "cpu": 28,
+          "mu": 6784,
+          "pmu": 0,
+          "p_cpu": 0.08,
+          "p_mu": 7.56,
+          "p_pmu": 0,
+          "p_wt": 0.08
+        }
+      },
+      "e127": {
+        "caller": "Spiral\\Nyholm\\ResponseFactory::createResponse",
+        "callee": "Nyholm\\Psr7\\Response::withAddedHeader",
+        "cost": {
+          "d_cpu": 18,
+          "d_wt": 18,
+          "d_mu": 3576,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 11,
+          "cpu": 10,
+          "mu": 3208,
+          "pmu": 0,
+          "p_cpu": 0.03,
+          "p_mu": 3.57,
+          "p_pmu": 0,
+          "p_wt": 0.03
+        }
+      },
+      "e128": {
+        "caller": "Nyholm\\Psr7\\Response::withAddedHeader",
+        "callee": "Nyholm\\Psr7\\Response::setHeaders",
+        "cost": {
+          "d_cpu": 3,
+          "d_wt": 3,
+          "d_mu": 808,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 8,
+          "cpu": 7,
+          "mu": 2400,
+          "pmu": 0,
+          "p_cpu": 0.02,
+          "p_mu": 2.67,
+          "p_pmu": 0,
+          "p_wt": 0.02
+        }
+      },
+      "e129": {
+        "caller": "Nyholm\\Psr7\\Response::setHeaders",
+        "callee": "Nyholm\\Psr7\\Response::validateAndTrimHeader",
+        "cost": {
+          "d_cpu": 3,
+          "d_wt": 4,
+          "d_mu": 1440,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 4,
+          "cpu": 4,
+          "mu": 960,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 1.07,
+          "p_pmu": 0,
+          "p_wt": 0.01
+        }
+      },
+      "e130": {
+        "caller": "Spiral\\Nyholm\\ResponseFactory::createResponse",
+        "callee": "Spiral\\Http\\Config\\HttpConfig::getBaseHeaders",
+        "cost": {
+          "d_cpu": 26,
+          "d_wt": 28,
+          "d_mu": 6184,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 2,
+          "mu": 600,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.67,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      },
+      "e131": {
+        "caller": "Spiral\\Nyholm\\ResponseFactory::createResponse",
+        "callee": "Nyholm\\Psr7\\Factory\\Psr17Factory::createResponse",
+        "cost": {
+          "d_cpu": 18,
+          "d_wt": 19,
+          "d_mu": 4424,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 10,
+          "cpu": 10,
+          "mu": 2360,
+          "pmu": 0,
+          "p_cpu": 0.03,
+          "p_mu": 2.63,
+          "p_pmu": 0,
+          "p_wt": 0.03
+        }
+      },
+      "e132": {
+        "caller": "Nyholm\\Psr7\\Factory\\Psr17Factory::createResponse",
+        "callee": "Nyholm\\Psr7\\Response::__construct",
+        "cost": {
+          "d_cpu": 3,
+          "d_wt": 3,
+          "d_mu": 824,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 7,
+          "cpu": 7,
+          "mu": 1536,
+          "pmu": 0,
+          "p_cpu": 0.02,
+          "p_mu": 1.71,
+          "p_pmu": 0,
+          "p_wt": 0.02
+        }
+      },
+      "e133": {
+        "caller": "Nyholm\\Psr7\\Response::__construct",
+        "callee": "Nyholm\\Psr7\\Response::setHeaders",
+        "cost": {
+          "d_cpu": 5,
+          "d_wt": 6,
+          "d_mu": 648,
+          "d_pmu": 0,
+          "ct": 1,
+          "wt": 1,
+          "cpu": 2,
+          "mu": 888,
+          "pmu": 0,
+          "p_cpu": 0.01,
+          "p_mu": 0.99,
+          "p_pmu": 0,
+          "p_wt": 0
+        }
+      }
+    }
+  },
+  "timestamp": 1673266493,
+  "project_id": null
+}
