@@ -8,6 +8,8 @@ export const EVENT_TYPES = {
   RAY: "ray",
 };
 
+
+// TODO: colors should depends on level for some tools
 export const EVENT_STATUS_COLOR_MAP = {
   CRITICAL: "red",
   ERROR: "red",
@@ -18,9 +20,4 @@ export const EVENT_STATUS_COLOR_MAP = {
   NOTICE: "blue",
   DEBUG: "gray",
   SUCCESS: "green",
-};
-
-export const COPY_TYPE = {
-  CODE: "code",
-  IMAGE: "image",
 };
