@@ -1,6 +1,6 @@
 import { action } from '@storybook/addon-actions'
-import EventHeader from './EventHeader.vue';
 import { EVENT_TYPES } from '~/config/constants';
+import EventHeader from './EventHeader.vue';
 
 export default {
   title: "Event/EventHeader",
