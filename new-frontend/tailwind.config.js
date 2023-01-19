@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 const defaultColors = require("tailwindcss/colors");
 const defaultFontFamily = require("tailwindcss/defaultTheme").fontFamily.sans;
 

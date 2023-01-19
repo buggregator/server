@@ -1,7 +1,23 @@
 {
   "extends": [
+    "airbnb/base",
+    "airbnb-typescript/base",
     "plugin:vue/vue3-recommended",
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
     "@nuxtjs/eslint-config-typescript",
     "prettier"
-  ]
+  ],
+  "parser": "vue-eslint-parser",
+  "plugins": ["@typescript-eslint"],
+  "root": true,
+  "ignorePatterns": ["package.json"],
+  "parserOptions": {
+    "project": "./tsconfig.json",
+    "extraFileExtensions": [".vue"],
+    "parser": {
+      "ts": "@typescript-eslint/parser",
+      "<template>": "espree"
+    }
+  }
 }
