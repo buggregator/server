@@ -10,7 +10,7 @@
     "prepare": "cd ../ && npx husky install"
   },
   "lint-staged": {
-    "*.{js,ts,json}": [
+    "*.{js,ts}": [
       "eslint --fix"
     ],
     "*.{vue,html}": [
