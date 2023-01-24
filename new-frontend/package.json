@@ -49,11 +49,13 @@
     "vue-eslint-parser": "^9.1.0"
   },
   "dependencies": {
+    "@highlightjs/vue-plugin": "^2.1.0",
     "@storybook/addon-actions": "^6.5.15",
     "downloadjs": "^1.4.7",
     "html-to-image": "^1.11.4",
     "nuxt": "^3.0.0",
     "tailwindcss": "^3.2.4",
-    "vue": "^3.2.45"
+    "vue": "^3.2.45",
+    "vue3-clipboard": "^1.0.0"
   }
 }
