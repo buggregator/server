@@ -42,7 +42,7 @@ export default defineComponent({
 });
 </script>
 
-<style scoped lang="scss">
+<style lang="scss" scoped>
 .event-footer {
   @apply w-full flex justify-between;
 }
