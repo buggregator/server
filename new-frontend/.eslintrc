@@ -19,8 +19,5 @@
       "ts": "@typescript-eslint/parser",
       "<template>": "espree"
     }
-  },
-  "rules": {
-    "@typescript-eslint/prefer-optional-chain": "warn"
   }
 }
