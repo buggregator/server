@@ -14,7 +14,6 @@
 </template>
 
 <script lang="ts">
-import { copyText } from "vue3-clipboard";
 import IconSvg from "~/components/IconSvg/IconSvg.vue";
 import hljs from "highlight.js/lib/common";
 import hljsVuePlugin from "@highlightjs/vue-plugin";
@@ -42,14 +41,19 @@ export default {
     };
   },
   methods: {
-    copyCode() {
+    copyCode(): Promise<void> {
       this.isCopied = true;
 
-      copyText(this.code, undefined, () => {
-        setTimeout(() => {
-          this.isCopied = false;
-        }, 200);
-      });
+      navigator.clipboard
+        .writeText(this.code)
+        .then(() => {
+          setTimeout(() => {
+            this.isCopied = false;
+          }, 200);
+        })
+        .catch((e) => {
+          console.error(e);
+        });
     },
   },
 };
@@ -57,7 +61,7 @@ export default {
 
 <style lang="scss" scoped>
 .code-snippet {
-  @apply relative bg-gray-200 dark:bg-gray-800 p-3;
+  @apply relative bg-gray-200 dark:bg-gray-800;
 }
 
 .code-snippet__copy {
