@@ -8,7 +8,7 @@
       <div class="event-smtp__link-text">
         <span> <strong>To:</strong> {{ event.payload.to[0].email }} </span>
 
-        <span>{{ fromNowDate }}</span>
+        <span>{{ dateFormat }}</span>
       </div>
     </NuxtLink>
   </event-card>
@@ -31,7 +31,7 @@ export default defineComponent({
     },
   },
   computed: {
-    fromNowDate() {
+    dateFormat() {
       return moment(this.event.date).fromNow();
     },
     eventLink() {
