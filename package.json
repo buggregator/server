@@ -3,8 +3,5 @@
     "scripts": {
         "dev": "cd frontend && npm run dev",
         "generate": "cd frontend && npm run generate"
-    },
-    "devDependencies": {
-        "lint-staged": "^13.1.0"
     }
 }
