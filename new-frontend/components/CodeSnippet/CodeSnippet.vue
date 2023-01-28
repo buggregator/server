@@ -15,10 +15,10 @@
 
 <script lang="ts">
 import IconSvg from "~/components/IconSvg/IconSvg.vue";
-import hljs from "highlight.js/lib/common";
 import hljsVuePlugin from "@highlightjs/vue-plugin";
+import { defineComponent } from "vue";
 
-export default {
+export default defineComponent({
   components: {
     IconSvg,
     highlightjs: hljsVuePlugin.component,
@@ -34,25 +34,23 @@ export default {
     },
   },
   data() {
-    this.hljs = hljs;
-
     return {
       isCopied: false,
     };
   },
   computed: {
-    normalizedCode(): String {
+    normalizedCode(): string {
       return typeof this.code === "string"
         ? this.code
         : JSON.stringify(this.code, null, " ");
     },
   },
   methods: {
-    copyCode(): Promise<void> {
+    copyCode(): void {
       this.isCopied = true;
 
       navigator.clipboard
-        .writeText(this.code)
+        .writeText(this.normalizedCode)
         .then(() => {
           setTimeout(() => {
             this.isCopied = false;
@@ -63,7 +61,7 @@ export default {
         });
     },
   },
-};
+});
 </script>
 
 <style lang="scss" scoped>
@@ -72,7 +70,7 @@ export default {
 }
 
 .code-snippet__copy {
-  @apply flex rounded-full items-center gap-x-1 absolute top-2 right-2 px-2 bg-white dark:bg-gray-900 border text-gray-600 transition-all text-xs font-bold border-gray-600;
+  @apply flex rounded-full items-center gap-x-1 absolute top-3 right-3 px-2 bg-white dark:bg-gray-900 border text-gray-600 transition-all text-xs font-bold border-gray-600;
 
   &:hover {
     @apply border-gray-200 text-white bg-gray-900 dark:bg-white;

@@ -1,5 +1,6 @@
 import { EVENT_TYPES } from "~/config/constants";
 import { Meta, Story } from "@storybook/vue3";
+import timeFormat from "~/utils/timeFormat";
 import CodeSnippet from "./CodeSnippet.vue";
 
 export default {
