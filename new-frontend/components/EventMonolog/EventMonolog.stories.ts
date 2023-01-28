@@ -5,12 +5,7 @@ import monologEventMock from '../../mocks/monolog.json'
 
 export default {
   title: "Event/EventMonolog",
-  component: EventMonolog,
-  argTypes: {
-    eventType: {
-      control: { type: 'object' },
-    },
-  }
+  component: EventMonolog
 } as Meta<typeof EventMonolog>;
 
 const Template: Story = (args) => ({

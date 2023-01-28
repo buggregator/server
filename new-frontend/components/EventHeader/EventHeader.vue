@@ -68,9 +68,8 @@ export default defineComponent({
     },
     eventType: {
       type: String,
-      validator: (val: OneOfValues<typeof EVENT_TYPES>) => {
-        return Object.values(EVENT_TYPES).includes(val);
-      },
+      validator: (val: OneOfValues<typeof EVENT_TYPES>) =>
+        Object.values(EVENT_TYPES).includes(val),
       required: true,
     },
     eventId: {
@@ -205,7 +204,7 @@ $eventTypeColorsMap: (
   }
 }
 
-.event-header__button--copy,
+//.event-header__button--copy,
 .event-header__button--collapse {
   @apply text-white;
 }
