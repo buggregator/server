@@ -11,7 +11,7 @@
   "parser": "vue-eslint-parser",
   "plugins": ["@typescript-eslint"],
   "root": true,
-  "ignorePatterns": ["package.json"],
+  "ignorePatterns": ["package.json", "tailwind.config.js"],
   "parserOptions": {
     "project": "./tsconfig.json",
     "extraFileExtensions": [".vue"],

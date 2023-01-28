@@ -204,7 +204,6 @@ $eventTypeColorsMap: (
   }
 }
 
-//.event-header__button--copy,
 .event-header__button--collapse {
   @apply text-white;
 }

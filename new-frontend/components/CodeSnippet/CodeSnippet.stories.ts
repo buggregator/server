@@ -1,6 +1,5 @@
 import { EVENT_TYPES } from "~/config/constants";
 import { Meta, Story } from "@storybook/vue3";
-import timeFormat from "~/utils/timeFormat";
 import CodeSnippet from "./CodeSnippet.vue";
 
 export default {
@@ -28,7 +27,7 @@ Default.args = {
       one: 1,
       two: 2,
     },
-    date: timeFormat(new Date(1673266869 * 1000)),
+    date: new Date(1673266869 * 1000),
     labels: ['Monolog', '200' ]
   },
   language: 'javascript'
