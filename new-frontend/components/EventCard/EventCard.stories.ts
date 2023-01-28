@@ -1,10 +1,9 @@
 import { EVENT_TYPES } from "~/config/constants";
-import timeFormat from "~/utils/timeFormat"
 import EventCard from "./EventCard.vue";
 
 export default {
   title: "Event/EventCard",
-  component: EventCard,
+  component: EventCard
 };
 
 const Template = (args: typeof Object) => ({
@@ -27,7 +26,7 @@ Default.args = {
       one: 1,
       two: 2,
     },
-    date: timeFormat(new Date(1673266869 * 1000)),
+    date: new Date(1673266869 * 1000),
     labels: ['Monolog', '200' ]
   },
 };

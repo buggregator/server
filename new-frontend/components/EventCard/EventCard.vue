@@ -39,6 +39,7 @@ import download from "downloadjs";
 import EventFooter from "~/components/EventFooter/EventFooter.vue";
 import EventHeader from "~/components/EventHeader/EventHeader.vue";
 import { NormalizedEvent } from "~/config/types";
+import timeFormat from "~/utils/timeFormat";
 
 export default defineComponent({
   components: {
@@ -59,7 +60,11 @@ export default defineComponent({
   },
   computed: {
     normalizedTags(): string[] {
-      return [String(this.event.date), this.event.type, ...this.event.labels];
+      return [
+        timeFormat(this.event.date),
+        this.event.type,
+        ...this.event.labels,
+      ];
     },
     normalizedOrigin(): Object | null {
       return Object.keys(this.event.origin || {}).length > 0

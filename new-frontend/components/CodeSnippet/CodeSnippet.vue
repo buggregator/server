@@ -1,6 +1,6 @@
 <template>
   <div class="code-snippet">
-    <highlightjs :language="language" :code="code" />
+    <highlightjs :language="language" :code="normalizedCode" />
     <button
       type="button"
       class="code-snippet__copy"
@@ -25,7 +25,7 @@ export default {
   },
   props: {
     code: {
-      type: String,
+      type: [String, Object],
       required: true,
     },
     language: {
@@ -39,6 +39,13 @@ export default {
     return {
       isCopied: false,
     };
+  },
+  computed: {
+    normalizedCode(): String {
+      return typeof this.code === "string"
+        ? this.code
+        : JSON.stringify(this.code, null, " ");
+    },
   },
   methods: {
     copyCode(): Promise<void> {
