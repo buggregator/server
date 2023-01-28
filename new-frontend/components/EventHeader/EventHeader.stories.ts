@@ -1,5 +1,6 @@
 import { action } from '@storybook/addon-actions'
 import { EVENT_TYPES } from '~/config/constants';
+import { Meta, Story } from "@storybook/vue3";
 import EventHeader from './EventHeader.vue';
 
 export default {
@@ -12,9 +13,9 @@ export default {
       mapping: EVENT_TYPES
     },
   }
-};
+} as Meta<typeof EventHeader>;
 
-const Template = (args: typeof Object) => ({
+const Template: Story = (args) => ({
   components: { EventHeader },
   methods: {
     action

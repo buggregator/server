@@ -1,11 +1,13 @@
+import { EVENT_TYPES } from "~/config/constants";
+import { Meta, Story } from "@storybook/vue3";
 import CodeSnippet from "./CodeSnippet.vue";
 
 export default {
   title: "Components/CodeSnippet",
   component: CodeSnippet,
-};
+} as Meta<typeof CodeSnippet>;
 
-const Template = (args: typeof Object) => ({
+const Template: Story = (args) => ({
   components: { CodeSnippet },
   setup() {
     return {
@@ -17,8 +19,7 @@ const Template = (args: typeof Object) => ({
 
 export const Default = Template.bind({});
 Default.args = {
-  code: `
-  {
+  code: {
     id: 'da076402-6f98-4ada-bae2-d77d405cf427',
     type: EVENT_TYPES.MONOLOG,
     serverName: "My server",
@@ -28,7 +29,6 @@ Default.args = {
     },
     date: timeFormat(new Date(1673266869 * 1000)),
     labels: ['Monolog', '200' ]
-  }
-  `,
+  },
   language: 'javascript'
 };

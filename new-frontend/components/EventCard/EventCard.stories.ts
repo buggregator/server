@@ -1,12 +1,13 @@
 import { EVENT_TYPES } from "~/config/constants";
+import { Meta, Story } from "@storybook/vue3";
 import EventCard from "./EventCard.vue";
 
 export default {
   title: "Event/EventCard",
   component: EventCard
-};
+}as Meta<typeof EventCard>;
 
-const Template = (args: typeof Object) => ({
+const Template: Story = (args) => ({
   components: { EventCard },
   setup() {
     return {
