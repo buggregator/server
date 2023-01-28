@@ -48,9 +48,9 @@
     "vue-eslint-parser": "^9.1.0"
   },
   "dependencies": {
-    "@storybook/vue3": "^6.5.16",
     "@highlightjs/vue-plugin": "^2.1.0",
     "@storybook/addon-actions": "^6.5.15",
+    "@storybook/vue3": "^6.5.16",
     "downloadjs": "^1.4.7",
     "highlight.js": "^11.7.0",
     "html-to-image": "^1.11.4",

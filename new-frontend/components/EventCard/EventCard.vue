@@ -60,11 +60,7 @@ export default defineComponent({
   },
   computed: {
     normalizedTags(): string[] {
-      return [
-        timeFormat(this.event.date),
-        this.event.type,
-        ...this.event.labels,
-      ];
+      return [timeFormat(this.event.date), ...this.event.labels];
     },
     normalizedOrigin(): Object | null {
       return Object.keys(this.event.origin || {}).length > 0
@@ -73,6 +69,9 @@ export default defineComponent({
     },
     eventUrl(): string {
       return `/api/event/${this.event.id}`;
+    },
+    fileName(): string {
+      return `${this.event.type}-${this.event.id}.png`;
     },
   },
   methods: {
@@ -87,11 +86,9 @@ export default defineComponent({
     },
     downloadImage() {
       this.changeVisibleControls(false);
-      const fileName = `${this.event.type}-${this.event.id}`;
-
       toPng(this.$refs.event as HTMLInputElement)
         .then((dataUrl) => {
-          download(dataUrl, `${fileName}.png`);
+          download(dataUrl, this.fileName);
         })
         .finally(() => {
           this.changeVisibleControls(true);
@@ -109,6 +106,7 @@ export default defineComponent({
               ]);
             }
           })
+          .catch((e) => console.error(e))
           .finally(() => {
             this.changeVisibleControls(true);
           });
