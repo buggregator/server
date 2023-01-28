@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/dot-notation */
-import defaultColors from "tailwindcss/colors";
-import { fontFamily, fontWeight } from "tailwindcss/defaultTheme";
+import defaultColors from "tailwindcss/colors.js";
+import defaultTheme from "tailwindcss/defaultTheme.js";
 
-module.exports = {
+export default {
   darkMode: "class",
   content: [
     "./assets/**/*.{scss,css}",
@@ -24,7 +23,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Nunito", fontFamily.sans],
+        sans: ["Nunito", defaultTheme.fontFamily.sans],
       },
       transitionProperty: {
         height: "height",
@@ -37,7 +36,7 @@ module.exports = {
       },
     },
     fontWeight: {
-      ...fontWeight,
+      ...defaultTheme.fontWeight,
     },
     colors: {
       ...defaultColors,

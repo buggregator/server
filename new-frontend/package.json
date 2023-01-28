@@ -9,6 +9,7 @@
     "postinstall": "nuxi prepare",
     "prepare": "cd ../ && npx husky install"
   },
+  "type": "module",
   "lint-staged": {
     "*.{js,ts}": [
       "eslint --fix"
