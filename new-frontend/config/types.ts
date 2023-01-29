@@ -34,6 +34,26 @@ export interface SMTP {
   attachments: unknown[]
 }
 
+export interface Sentry {
+  event_id: string,
+  timestamp: number,
+  platform: string,
+  sdk: {
+    name: string,
+    version: string,
+  },
+  logger: string,
+  server_name: string,
+  environment: string,
+  modules: object,
+  extra: unknown,
+  tags: object,
+  contexts: object,
+  exception: {
+    values: unknown[]
+  }
+}
+
 export interface ServerEvent<T> {
   uuid: EventId,
   type: string,
@@ -49,6 +69,5 @@ export interface NormalizedEvent {
   origin: object | null,
   serverName: string,
   date: Date,
-  payload: Monolog | SMTP | unknown
+  payload: Monolog | SMTP | Sentry | unknown
 }
-

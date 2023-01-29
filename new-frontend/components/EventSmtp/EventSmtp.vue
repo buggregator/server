@@ -42,9 +42,7 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-@mixin text-muted {
-  @apply text-gray-600 dark:text-gray-300;
-}
+@import "assets/mixins";
 
 .event-smtp {
 }

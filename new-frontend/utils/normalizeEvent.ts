@@ -1,4 +1,4 @@
-import { NormalizedEvent, ServerEvent, Monolog } from "~/config/types";
+import { NormalizedEvent, ServerEvent, Monolog, SMTP, Sentry } from "~/config/types";
 import { EVENT_TYPES } from "~/config/constants";
 
 const normalizeObjectValue = (object: object | unknown[]): object =>
@@ -24,7 +24,20 @@ export const normalizeMonologEvent = (event: ServerEvent<Monolog>): NormalizedEv
 })
 
 export const normalizeProfilerEvent = () => {}
-export const normalizeSentryEvent = () => {}
+
+export const normalizeSentryEvent = (event: ServerEvent<Sentry>): NormalizedEvent => ({
+    id: event.uuid,
+    type: EVENT_TYPES.SENTRY,
+    labels: [EVENT_TYPES.SENTRY, 'exception'],
+    origin: {
+      logger: event.payload.logger,
+      environment: event.payload.environment
+    },
+    serverName: event.payload.server_name,
+    date: new Date(event.timestamp * 1000),
+    payload: event.payload
+  })
+
 export const normalizeSMTPEvent = (event: ServerEvent<SMTP>): NormalizedEvent => ({
   id: event.uuid,
   type: EVENT_TYPES.SMTP,
