@@ -1,31 +1,26 @@
 <template>
   <event-card class="event-monolog" :event="event">
-    <div class="event-monolog__in">
-      <CodeSnippet
-        class="event-monolog__snippet"
-        :code="event.payload.message"
-      />
+    <CodeSnippet class="event-monolog__snippet" :code="event.payload.message" />
 
-      <CodeSnippet
-        v-if="event.payload.context"
-        class="event-monolog__snippet"
-        language="json"
-        :code="event.payload.context"
-      />
+    <CodeSnippet
+      v-if="event.payload.context"
+      class="event-monolog__snippet"
+      language="json"
+      :code="event.payload.context"
+    />
 
-      <CodeSnippet
-        v-for="(field, key) in event.payload.extra"
-        :key="key"
-        class="event-monolog__snippet"
-        :code="{ [key]: field }"
-      />
-    </div>
+    <CodeSnippet
+      v-for="(field, key) in event.payload.extra"
+      :key="key"
+      class="event-monolog__snippet"
+      :code="{ [key]: field }"
+    />
   </event-card>
 </template>
 
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
-import { MonologEvent } from "~/config/types";
+import { NormalizedEvent } from "~/config/types";
 import EventCard from "~/components/EventCard/EventCard.vue";
 import CodeSnippet from "~/components/CodeSnippet/CodeSnippet.vue";
 
@@ -36,7 +31,7 @@ export default defineComponent({
   },
   props: {
     event: {
-      type: Object as PropType<MonologEvent>,
+      type: Object as PropType<NormalizedEvent>,
       required: true,
     },
   },
@@ -45,9 +40,6 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .event-monolog {
-}
-
-.event-monolog__in {
   @apply text-xs break-all;
 }
 

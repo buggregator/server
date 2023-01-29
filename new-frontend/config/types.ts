@@ -10,7 +10,7 @@ type SMTPUser = {
   email: Email;
 }
 
-export interface MonologPayload {
+export interface Monolog {
   message: string,
   context: Object,
   level: StatusCode,
@@ -20,34 +20,26 @@ export interface MonologPayload {
   extra: Object,
 }
 
-export interface SMTPPayload {
-  "id": string,
-  "from": SMTPUser[],
-  "reply_to": SMTPUser[],
-  "subject": string,
-  "to": SMTPUser[],
-  "cc": SMTPUser[],
-  "bcc": SMTPUser[],
-  "text": string,
-  "html": string,
-  "raw": string,
-  "attachments": unknown[]
+export interface SMTP {
+  id: string,
+  from: SMTPUser[],
+  reply_to: SMTPUser[],
+  subject: string,
+  to: SMTPUser[],
+  cc: SMTPUser[],
+  bcc: SMTPUser[],
+  text: string,
+  html: string,
+  raw: string,
+  attachments: unknown[]
 }
 
-export interface ServerEvent {
+export interface ServerEvent<T> {
   uuid: EventId,
   type: string,
-  payload: unknown,
+  payload: T,
   project_id: string|null,
   timestamp: number
-}
-
-export interface MonologEvent extends ServerEvent {
-  payload: MonologPayload,
-}
-
-export interface SMTPEvent extends ServerEvent {
-  payload: SMTPPayload,
 }
 
 export interface NormalizedEvent {
@@ -57,6 +49,6 @@ export interface NormalizedEvent {
   origin: Object | null,
   serverName: string,
   date: Date,
-  payload: MonologPayload | SMTPEvent | unknown
+  payload: Monolog | SMTP | unknown
 }
 

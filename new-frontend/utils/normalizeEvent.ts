@@ -1,4 +1,4 @@
-import { NormalizedEvent, MonologEvent, SMTPEvent } from "~/config/types";
+import { NormalizedEvent, ServerEvent, Monolog } from "~/config/types";
 import { EVENT_TYPES } from "~/config/constants";
 
 const normalizeObjectValue = (object: Object | unknown[]): Object =>
@@ -9,7 +9,7 @@ const normalizeObjectValue = (object: Object | unknown[]): Object =>
 
 export const normalizeInspectorEvent = () => {}
 
-export const normalizeMonologEvent = (event: MonologEvent): NormalizedEvent => ({
+export const normalizeMonologEvent = (event: ServerEvent<Monolog>): NormalizedEvent => ({
   id: event.uuid,
   type: EVENT_TYPES.MONOLOG,
   labels: [EVENT_TYPES.MONOLOG, event.payload.level_name],
@@ -25,7 +25,7 @@ export const normalizeMonologEvent = (event: MonologEvent): NormalizedEvent => (
 
 export const normalizeProfilerEvent = () => {}
 export const normalizeSentryEvent = () => {}
-export const normalizeSMTPEvent = (event: SMTPEvent): NormalizedEvent => ({
+export const normalizeSMTPEvent = (event: ServerEvent<SMTP>): NormalizedEvent => ({
   id: event.uuid,
   type: EVENT_TYPES.SMTP,
   labels: [EVENT_TYPES.SMTP],
