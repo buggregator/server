@@ -8,11 +8,8 @@
       <pre class="event-sentry__text" v-html="exception.value" />
     </NuxtLink>
 
-    <div v-if="exception.stacktrace.frames.length" class="event-sentry__files">
-      <template
-        v-for="(frame, i) in exception.stacktrace.frames"
-        :key="`${frame.filename}-${frame.lineno}-${i}`"
-      >
+    <div v-if="exceptionFrames.length" class="event-sentry__files">
+      <template v-for="(frame, i) in exceptionFrames" :key="frame.context_line">
         <event-sentry-frame
           class="event-sentry__file"
           :frame="frame"
@@ -45,7 +42,7 @@ export default defineComponent({
       return `/sentry/${this.event.id}}`;
     },
     exception() {
-      const defaultException = {
+      const defaultException: object = {
         type: "Unknown",
         value: "Something went wrong",
         stacktrace: {
@@ -59,9 +56,12 @@ export default defineComponent({
         ? eventExceptionValues[0]
         : defaultException;
     },
+    exceptionFrames(): object[] {
+      return this.exception.stacktrace.frames || [];
+    },
   },
   methods: {
-    isVisibleFrame(index) {
+    isVisibleFrame(index): boolean {
       return index === 0;
     },
   },

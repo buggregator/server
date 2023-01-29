@@ -94,7 +94,7 @@ export default defineComponent({
     };
   },
   methods: {
-    toggleOpen() {
+    toggleOpen(): void {
       this.open = !this.open;
     },
   },
