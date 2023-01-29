@@ -3,9 +3,10 @@
     "airbnb/base",
     "airbnb-typescript/base",
     "plugin:vue/vue3-recommended",
+    "@nuxtjs/eslint-config-typescript",
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
-    "@nuxtjs/eslint-config-typescript",
+    "plugin:@typescript-eslint/eslint-recommended",
     "prettier"
   ],
   "parser": "vue-eslint-parser",
