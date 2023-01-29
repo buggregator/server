@@ -1,8 +1,8 @@
 import { NormalizedEvent, ServerEvent, Monolog } from "~/config/types";
 import { EVENT_TYPES } from "~/config/constants";
 
-const normalizeObjectValue = (object: Object | unknown[]): Object =>
-  Object.entries(object).reduce((acc: Object, [key, value]) => ({
+const normalizeObjectValue = (object: object | unknown[]): object =>
+  Object.entries(object).reduce((acc: object, [key, value]) => ({
     ...acc,
     [key]: value
   }), {})

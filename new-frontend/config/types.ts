@@ -12,12 +12,12 @@ type SMTPUser = {
 
 export interface Monolog {
   message: string,
-  context: Object,
+  context: object,
   level: StatusCode,
   level_name: string,
   channel: string,
   datetime: string,
-  extra: Object,
+  extra: object,
 }
 
 export interface SMTP {
@@ -46,7 +46,7 @@ export interface NormalizedEvent {
   id: EventId,
   type: OneOfValues<typeof EVENT_TYPES>,
   labels: string[],
-  origin: Object | null,
+  origin: object | null,
   serverName: string,
   date: Date,
   payload: Monolog | SMTP | unknown
