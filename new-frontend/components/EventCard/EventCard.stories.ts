@@ -1,6 +1,6 @@
-import { EVENT_TYPES } from "~/config/constants";
 import { Meta, Story } from "@storybook/vue3";
-import EventCard from "./EventCard.vue";
+import { EVENT_TYPES } from "~/config/constants";
+import EventCard from "~/components/EventCard/EventCard.vue";
 
 export default {
   title: "Event/EventCard",

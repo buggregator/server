@@ -1,7 +1,7 @@
-import { normalizeSMTPEvent } from "~/utils/normalizeEvent";
 import { Meta, Story } from "@storybook/vue3";
-import EventSmtp from './EventSmtp.vue';
-import smtpEventMock from '../../mocks/smtp.json'
+import { normalizeSMTPEvent } from "~/utils/normalizeEvent";
+import EventSmtp from '~/components/EventSmtp/EventSmtp.vue';
+import smtpEventMock from '~/mocks/smtp.json'
 
 export default {
   title: "Event/EventSMTP",

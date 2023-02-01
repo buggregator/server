@@ -1,7 +1,7 @@
-import { normalizeVarDumpEvent } from "~/utils/normalizeEvent";
 import { Meta, Story } from "@storybook/vue3";
-import EventVarDump from './EventVarDump.vue';
-import varDumpEventMock from '../../mocks/var-dump.json'
+import { normalizeVarDumpEvent } from "~/utils/normalizeEvent";
+import EventVarDump from '~/components/EventVarDump/EventVarDump.vue';
+import varDumpEventMock from '~/mocks/var-dump.json'
 
 export default {
   title: "Event/EventVarDump",

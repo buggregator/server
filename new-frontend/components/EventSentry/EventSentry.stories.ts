@@ -1,7 +1,7 @@
-import { normalizeSentryEvent } from "~/utils/normalizeEvent";
 import { Meta, Story } from "@storybook/vue3";
-import EventSentry from './EventSentry.vue';
-import sentryEventMock from '../../mocks/sentry.json'
+import { normalizeSentryEvent } from "~/utils/normalizeEvent";
+import EventSentry from '~/components/EventSentry/EventSentry.vue';
+import sentryEventMock from '~/mocks/sentry.json'
 
 export default {
   title: "Event/EventSentry",

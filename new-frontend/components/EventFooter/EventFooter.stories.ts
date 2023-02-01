@@ -1,11 +1,12 @@
-import EventFooter from "./EventFooter.vue";
+import { Meta, Story } from "@storybook/vue3";
+import EventFooter from "~/components/EventFooter/EventFooter.vue";
 
 export default {
   title: "Event/EventFooter",
   component: EventFooter,
-};
+}as Meta<typeof EventFooter>;
 
-const Template = (args: typeof Object) => ({
+const Template: Story = (args: typeof Object) => ({
   components: { EventFooter },
   setup() {
     return {

@@ -16,9 +16,9 @@
 
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
+import moment from "moment";
 import { NormalizedEvent } from "~/config/types";
 import EventCard from "~/components/EventCard/EventCard.vue";
-import moment from "moment";
 
 export default defineComponent({
   components: {

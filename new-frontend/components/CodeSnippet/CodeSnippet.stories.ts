@@ -1,6 +1,6 @@
-import { EVENT_TYPES } from "~/config/constants";
 import { Meta, Story } from "@storybook/vue3";
-import CodeSnippet from "./CodeSnippet.vue";
+import { EVENT_TYPES } from "~/config/constants";
+import CodeSnippet from "~/components/CodeSnippet/CodeSnippet.vue";
 
 export default {
   title: "Components/CodeSnippet",

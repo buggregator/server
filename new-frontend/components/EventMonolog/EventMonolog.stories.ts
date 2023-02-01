@@ -1,7 +1,7 @@
-import { normalizeMonologEvent } from "~/utils/normalizeEvent";
 import { Meta, Story } from "@storybook/vue3";
-import EventMonolog from './EventMonolog.vue';
-import monologEventMock from '../../mocks/monolog.json'
+import { normalizeMonologEvent } from "~/utils/normalizeEvent";
+import EventMonolog from '~/components/EventMonolog/EventMonolog.vue';
+import monologEventMock from '~/mocks/monolog.json'
 
 export default {
   title: "Event/EventMonolog",
