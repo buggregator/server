@@ -54,6 +54,26 @@ export interface Sentry {
   }
 }
 
+export interface VarDump {
+  payload: {
+    type: string,
+    value: string
+  },
+  context: {
+    timestamp: number,
+    cli: {
+      command_line: string,
+      identifier: string
+    },
+    source: {
+      name: string,
+      file: string,
+      line: number,
+      file_excerpt: boolean
+    }
+  }
+}
+
 export interface ServerEvent<T> {
   uuid: EventId,
   type: string,
@@ -69,5 +89,5 @@ export interface NormalizedEvent {
   origin: object | null,
   serverName: string,
   date: Date,
-  payload: Monolog | SMTP | Sentry | unknown
+  payload: Monolog | SMTP | Sentry | VarDump | unknown
 }

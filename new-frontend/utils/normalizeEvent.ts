@@ -1,4 +1,4 @@
-import { NormalizedEvent, ServerEvent, Monolog, SMTP, Sentry } from "~/config/types";
+import { NormalizedEvent, ServerEvent, Monolog, SMTP, Sentry, VarDump } from "~/config/types";
 import { EVENT_TYPES } from "~/config/constants";
 
 const normalizeObjectValue = (object: object | unknown[]): object =>
@@ -48,4 +48,16 @@ export const normalizeSMTPEvent = (event: ServerEvent<SMTP>): NormalizedEvent =>
   payload: event.payload
 })
 
-export const normalizeVarDumpEvent = () => {}
+export const normalizeVarDumpEvent = (event: ServerEvent<VarDump>): NormalizedEvent => ({
+  id: event.uuid,
+  type: EVENT_TYPES.VAR_DUMP,
+  labels: [EVENT_TYPES.VAR_DUMP],
+  origin: {
+    file: event.payload.context.source.file,
+    name: event.payload.context.source.name,
+    line_number: event.payload.context.source.line,
+  },
+  serverName: "",
+  date: new Date(event.timestamp * 1000),
+  payload: event.payload
+})

@@ -1,5 +1,6 @@
 .idea
 vendor
+!*/vendor
 runtime
 rr*
 protoc-gen-php-grpc*
