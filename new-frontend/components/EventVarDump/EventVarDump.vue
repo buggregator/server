@@ -18,8 +18,8 @@
 import { defineComponent, PropType } from "vue";
 import { NormalizedEvent } from "~/config/types";
 import EventCard from "~/components/EventCard/EventCard.vue";
+import CodeSnippet from "~/components/CodeSnippet/CodeSnippet.vue";
 import Sfdump from "~/vendor/dumper";
-import CodeSnippet from "./CodeSnippet.vue";
 
 export default defineComponent({
   components: {
