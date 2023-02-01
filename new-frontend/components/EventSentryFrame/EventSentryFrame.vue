@@ -1,5 +1,9 @@
 <template>
-  <div class="event-sentry-frame" @click="toggleOpen">
+  <div
+    class="event-sentry-frame"
+    :class="{ 'event-sentry-frame--empty': !hasBody }"
+    @click="toggleOpen"
+  >
     <div class="event-sentry-frame__head">
       <div class="event-sentry-frame__head-title">
         {{ frame.filename }}
@@ -17,7 +21,7 @@
       />
     </div>
 
-    <div v-if="open" class="event-sentry-frame__body">
+    <div v-if="open && hasBody" class="event-sentry-frame__body">
       <template v-if="frame.pre_context">
         <div
           v-for="(line, i) in frame.pre_context"
@@ -93,9 +97,20 @@ export default defineComponent({
       open: this.isOpen,
     };
   },
+  computed: {
+    hasBody() {
+      return (
+        this.frame.context_line ||
+        this.frame.post_context ||
+        this.frame.pre_context
+      );
+    },
+  },
   methods: {
     toggleOpen(): void {
-      this.open = !this.open;
+      if (this.hasBody) {
+        this.open = !this.open;
+      }
     },
   },
 });
@@ -110,6 +125,10 @@ export default defineComponent({
 
 .event-sentry-frame__head {
   @apply bg-purple-50 dark:bg-gray-800 py-2 px-3 flex space-x-2 justify-between items-start cursor-pointer;
+
+  .event-sentry-frame--empty & {
+    @apply cursor-default;
+  }
 }
 
 .event-sentry-frame__head-title {
