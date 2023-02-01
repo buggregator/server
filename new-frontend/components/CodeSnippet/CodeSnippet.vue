@@ -17,6 +17,8 @@
 import IconSvg from "~/components/IconSvg/IconSvg.vue";
 import hljsVuePlugin from "@highlightjs/vue-plugin";
 import { defineComponent } from "vue";
+// eslint-disable-next-line vue/prefer-import-from-vue
+import { escapeHtml } from "@vue/shared";
 
 export default defineComponent({
   components: {
@@ -41,7 +43,7 @@ export default defineComponent({
   computed: {
     normalizedCode(): string {
       return typeof this.code === "string"
-        ? this.code
+        ? escapeHtml(this.code)
         : JSON.stringify(this.code, null, " ");
     },
   },
