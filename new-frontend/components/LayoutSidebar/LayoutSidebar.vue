@@ -21,12 +21,7 @@
         <IconSvg class="sidebar__link-icon" name="inspector" />
       </NuxtLink>
 
-      <NuxtLink
-        to="/settings"
-        title="Settings"
-        class="sidebar__link"
-        :class="{ 'sidebar__link--active': isActive(link) }"
-      >
+      <NuxtLink to="/settings" title="Settings" class="sidebar__link">
         <IconSvg class="sidebar__link-icon" name="settings" />
       </NuxtLink>
     </nav>
