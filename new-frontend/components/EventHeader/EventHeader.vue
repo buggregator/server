@@ -131,12 +131,13 @@ export default defineComponent({
 <style lang="scss" scoped>
 $eventTypeColorsMap: (
   "var-dump" "red",
-  "Smtp" "orange",
-  "Sentry" "pink",
+  "smtp" "orange",
+  "sentry" "pink",
   "profiler" "purple",
   "monolog" "gray",
   "inspector" "gray",
-  "ray" "gray"
+  "ray" "gray",
+  "unknown" "gray"
 );
 
 .event-header {
@@ -205,7 +206,7 @@ $eventTypeColorsMap: (
 }
 
 .event-header__button--collapse {
-  @apply text-white;
+  @apply text-white bg-gray-600 ring-gray-300;
 }
 
 .event-header__button--delete {

@@ -9,7 +9,7 @@ const normalizeObjectValue = (object: object | unknown[]): object =>
 
 export const normalizeFallbackEvent = (event: ServerEvent<unknown>): NormalizedEvent => ({
   id: event.uuid,
-  type: event.type,
+  type: 'unknown',
   labels: [event.type],
   origin: null,
   serverName: "",
