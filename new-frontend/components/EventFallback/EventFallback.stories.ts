@@ -9,15 +9,13 @@ export default {
 } as Meta<typeof EventFallback>;
 
 const Template: Story = (args) => ({
-  components: { Event },
+  components: { EventFallback },
   setup() {
     return {
       args,
     };
   },
-  template: `
-    <event-fallback v-bind="args" />
-  `,
+  template: `<event-fallback v-bind="args" />`,
 });
 
 export const Default = Template.bind({});
