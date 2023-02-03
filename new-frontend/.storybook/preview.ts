@@ -1,5 +1,5 @@
 import "../assets/index.css";
-import 'highlight.js/lib/common';
+import "../assets/index"
 
 export const parameters = {
   actions: { argTypesRegex: "^on[A-Z].*" },

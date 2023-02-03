@@ -19,7 +19,6 @@ import { defineComponent, PropType } from "vue";
 import { NormalizedEvent, VarDump } from "~/config/types";
 import EventCard from "~/components/EventCard/EventCard.vue";
 import CodeSnippet from "~/components/CodeSnippet/CodeSnippet.vue";
-import Sfdump from "~/vendor/dumper";
 
 export default defineComponent({
   components: {
@@ -60,8 +59,12 @@ export default defineComponent({
     },
   },
   mounted() {
-    if (this.varDumpId) {
-      Sfdump(this.varDumpId);
+    if (
+      this.varDumpId &&
+      window.Sfdump &&
+      typeof window.Sfdump === "function"
+    ) {
+      window.Sfdump(this.varDumpId);
     }
   },
 });

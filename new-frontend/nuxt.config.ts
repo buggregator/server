@@ -16,6 +16,7 @@ export default defineNuxtConfig({
       link: [
         { rel: "icon", type: "image/x-icon", href: "/favicon/favicon.ico" },
       ],
+      script: [{ src: '~/assets/index.ts'}]
     },
   },
   postcss: {

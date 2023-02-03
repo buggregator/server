@@ -1,3 +1,7 @@
 @mixin text-muted {
   @apply text-gray-600 dark:text-gray-300;
 }
+
+@mixin border-style {
+  @apply border-gray-300 dark:border-gray-500 divide-gray-300 dark:divide-gray-500;
+}

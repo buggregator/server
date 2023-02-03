@@ -49,7 +49,7 @@
     "vue-eslint-parser": "^9.1.0"
   },
   "dependencies": {
-    "@highlightjs/vue-plugin": "^2.1.0",
+    "@highlightjs/vue-plugin": "^2.1.2",
     "@storybook/addon-actions": "^6.5.15",
     "@storybook/vue3": "^6.5.16",
     "@vue/shared": "^3.2.45",
