@@ -7,7 +7,20 @@ const normalizeObjectValue = (object: object | unknown[]): object =>
     [key]: value
   }), {})
 
-export const normalizeInspectorEvent = () => {}
+export const normalizeFallbackEvent = (event: ServerEvent<unknown>): NormalizedEvent => ({
+  id: event.uuid,
+  type: event.type,
+  labels: [event.type],
+  origin: null,
+  serverName: "",
+  date: new Date(event.timestamp * 1000),
+  payload: event.payload
+})
+
+// TODO: need to update normalize fn
+export const normalizeInspectorEvent = normalizeFallbackEvent
+// TODO: need to update normalize fn
+export const normalizeProfilerEvent = normalizeFallbackEvent
 
 export const normalizeMonologEvent = (event: ServerEvent<Monolog>): NormalizedEvent => ({
   id: event.uuid,
@@ -23,7 +36,6 @@ export const normalizeMonologEvent = (event: ServerEvent<Monolog>): NormalizedEv
   }
 })
 
-export const normalizeProfilerEvent = () => {}
 
 export const normalizeSentryEvent = (event: ServerEvent<Sentry>): NormalizedEvent => ({
     id: event.uuid,

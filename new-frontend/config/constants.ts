@@ -1,7 +1,7 @@
 export const EVENT_TYPES = {
   VAR_DUMP: "var-dump",
-  SMTP: "Smtp",
-  SENTRY: "Sentry",
+  SMTP: "smtp",
+  SENTRY: "sentry",
   PROFILER: "profiler",
   MONOLOG: "monolog",
   INSPECTOR: "inspector",

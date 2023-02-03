@@ -76,7 +76,7 @@ export interface VarDump {
 
 export interface ServerEvent<T> {
   uuid: EventId,
-  type: string,
+  type: OneOfValues<typeof EVENT_TYPES>,
   payload: T,
   project_id: string|null,
   timestamp: number
