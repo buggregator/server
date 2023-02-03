@@ -16,7 +16,7 @@
 
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
-import { NormalizedEvent } from "~/config/types";
+import { NormalizedEvent, VarDump } from "~/config/types";
 import EventCard from "~/components/EventCard/EventCard.vue";
 import CodeSnippet from "~/components/CodeSnippet/CodeSnippet.vue";
 import Sfdump from "~/vendor/dumper";
@@ -34,11 +34,11 @@ export default defineComponent({
   },
   computed: {
     eventValue(): unknown {
-      return this.event.payload.payload.value;
+      return (this.event.payload as VarDump).payload.value;
     },
     isBooleanValue(): boolean {
       return (
-        this.event.payload.payload.type === "boolean" ||
+        (this.event.payload as VarDump).payload.type === "boolean" ||
         this.eventValue === true ||
         this.eventValue === false
       );
