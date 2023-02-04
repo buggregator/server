@@ -10,11 +10,7 @@
 
     <div v-if="exceptionFrames.length" class="event-sentry__files">
       <template v-for="(frame, i) in exceptionFrames" :key="frame.context_line">
-        <event-sentry-frame
-          class="event-sentry__file"
-          :frame="frame"
-          :is-open="isVisibleFrame(i)"
-        />
+        <event-sentry-frame :frame="frame" :is-open="isVisibleFrame(i)" />
       </template>
     </div>
   </event-card>
@@ -90,9 +86,5 @@ export default defineComponent({
 
 .event-sentry__files {
   @apply border border-purple-200 dark:border-gray-600 flex-col justify-center w-full;
-}
-
-.event-sentry__file {
-  @apply cursor-pointer;
 }
 </style>

@@ -2,9 +2,8 @@
   <div
     class="event-sentry-frame"
     :class="{ 'event-sentry-frame--empty': !hasBody }"
-    @click="toggleOpen"
   >
-    <div class="event-sentry-frame__head">
+    <div class="event-sentry-frame__head" @click="toggleOpen">
       <div class="event-sentry-frame__head-title">
         {{ frame.filename }}
 
@@ -161,7 +160,7 @@ export default defineComponent({
 
 .event-sentry-frame__body-line-position {
   @include text-muted;
-  @apply w-12;
+  @apply w-12 select-none;
 
   .event-sentry-frame__body-line--selection & {
     @apply text-white;
