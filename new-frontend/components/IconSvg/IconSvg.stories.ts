@@ -1,7 +1,7 @@
 import { Meta, Story } from "@storybook/vue3";
 import IconSvg from "~/components/IconSvg/IconSvg.vue";
 
-const componentNames = ((import.meta.env.STORYBOOK_ICON_SVG_NAMES as string) || '').split(',');
+const iconNames = ((import.meta.env.STORYBOOK_ICON_SVG_NAMES as string) || '').split(',');
 
 export default {
   title: "Components/IconSvg",
@@ -9,7 +9,7 @@ export default {
   argTypes: {
     name: {
       control: { type: 'select' },
-      options: componentNames,
+      options: iconNames,
     },
   }
 }as Meta<typeof IconSvg>;
@@ -36,7 +36,7 @@ export const AllIcons: Story = () => ({
   components: { IconSvg },
   setup() {
     return {
-      names: componentNames,
+      names: iconNames,
     };
   },
   template: `
