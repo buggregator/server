@@ -29,7 +29,7 @@
         @click="onCopyButtonClick"
         @click.right.prevent="onCopyButtonRightClick"
       >
-        <IconSvg name="copy" class="event-header__button-icon" />
+        <icon-svg name="copy" class="event-header__button-icon" />
       </button>
 
       <button
@@ -37,15 +37,23 @@
         :class="`event-header__button--${eventType}`"
         @click="changeView"
       >
-        <IconSvg v-if="isOpen" name="minus" class="event-header__button-icon" />
-        <IconSvg v-if="!isOpen" name="plus" class="event-header__button-icon" />
+        <icon-svg
+          v-if="isOpen"
+          name="minus"
+          class="event-header__button-icon"
+        />
+        <icon-svg
+          v-if="!isOpen"
+          name="plus"
+          class="event-header__button-icon"
+        />
       </button>
 
       <button
         class="event-header__button event-header__button--delete"
         @click="onDeleteButtonClick"
       >
-        <IconSvg name="times" class="event-header__button-icon" />
+        <icon-svg name="times" class="event-header__button-icon" />
       </button>
     </div>
   </div>

@@ -1,3 +1,4 @@
+const fs = require("fs");
 const path = require('path');
 const postcss = require('postcss');
 
@@ -42,4 +43,20 @@ module.exports = {
       },
     };
   },
+  env: (config) => {
+    const iconComponentFolder = path.resolve(__dirname, '../components/IconSvg');
+    const allIconNamesList = !fs.existsSync(iconComponentFolder)
+      ? []
+      : fs
+        .readdirSync(iconComponentFolder, { withFileTypes: true })
+        .filter(Boolean)
+        .filter((dirent) => dirent.isFile())
+        .map((dirent) => path.parse(dirent.name).name)
+        .filter((name) => !String(name).includes('IconSvg'))
+        .join();
+
+    return {
+      ...config,
+      STORYBOOK_ICON_SVG_NAMES: allIconNamesList,
+    }},
 };

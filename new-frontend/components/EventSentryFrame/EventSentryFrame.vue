@@ -12,7 +12,7 @@
         {{ frame.lineno }}
       </div>
 
-      <IconSvg
+      <icon-svg
         v-if="frame.pre_context"
         class="event-sentry-frame__head-title-dd"
         :class="{ 'event-sentry-frame__head-title-dd--visible': open }"

@@ -2,34 +2,34 @@
   <aside class="sidebar">
     <nav class="sidebar__nav">
       <NuxtLink to="/" title="Events" class="sidebar__link">
-        <IconSvg class="sidebar__link-icon" name="events" />
+        <icon-svg class="sidebar__link-icon" name="events" />
       </NuxtLink>
 
       <NuxtLink to="/sentry" title="Sentry logs" class="sidebar__link">
-        <IconSvg class="sidebar__link-icon" name="sentry" />
+        <icon-svg class="sidebar__link-icon" name="sentry" />
       </NuxtLink>
 
       <NuxtLink to="/profiler" title="Profiler" class="sidebar__link">
-        <IconSvg class="sidebar__link-icon" name="profiler" />
+        <icon-svg class="sidebar__link-icon" name="profiler" />
       </NuxtLink>
 
       <NuxtLink to="/smtp" title="SMTP mails" class="sidebar__link">
-        <IconSvg class="sidebar__link-icon" name="smtp" />
+        <icon-svg class="sidebar__link-icon" name="smtp" />
       </NuxtLink>
 
       <NuxtLink to="/inspector" title="Inspector logs" class="sidebar__link">
-        <IconSvg class="sidebar__link-icon" name="inspector" />
+        <icon-svg class="sidebar__link-icon" name="inspector" />
       </NuxtLink>
 
       <NuxtLink to="/settings" title="Settings" class="sidebar__link">
-        <IconSvg class="sidebar__link-icon" name="settings" />
+        <icon-svg class="sidebar__link-icon" name="settings" />
       </NuxtLink>
     </nav>
 
     <div class="sidebar__info">
       <div class="sidebar__info-item" :title="title">
-        <IconSvg v-if="isConnected" name="connected" />
-        <IconSvg v-if="!isConnected" name="disconnected" />
+        <icon-svg v-if="isConnected" name="connected" />
+        <icon-svg v-if="!isConnected" name="disconnected" />
       </div>
     </div>
   </aside>

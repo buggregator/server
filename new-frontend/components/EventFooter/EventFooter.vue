@@ -9,7 +9,7 @@
     </div>
 
     <div v-if="serverName" class="event-footer__host">
-      <IconSvg name="host" class="event-footer__host-icon" />
+      <icon-svg name="host" class="event-footer__host-icon" />
       <span class="event-footer__host-name">
         {{ serverName }}
       </span>

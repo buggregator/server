@@ -2,7 +2,7 @@
   <div class="layout-tips">
     <ul class="layout-tips__list">
       <li class="layout-tips__item">
-        <IconSvg name="github" class="layout-tips__icon" />
+        <icon-svg name="github" class="layout-tips__icon" />
 
         <span>
           Bugregator&nbsp;
@@ -17,7 +17,7 @@
       </li>
 
       <li class="layout-tips__item">
-        <IconSvg
+        <icon-svg
           name="sentry"
           class="layout-tips__icon layout-tips__icon--sentry"
         />
@@ -35,7 +35,7 @@
       </li>
 
       <li class="layout-tips__item">
-        <IconSvg
+        <icon-svg
           name="inspector"
           class="layout-tips__icon layout-tips__icon--profilers"
         />
@@ -52,7 +52,7 @@
         </span>
       </li>
       <li class="layout-tips__item">
-        <IconSvg
+        <icon-svg
           name="docs"
           class="layout-tips__icon layout-tips__icon--profilers"
         />
@@ -69,7 +69,7 @@
         </span>
       </li>
       <li class="layout-tips__item">
-        <IconSvg
+        <icon-svg
           name="docs"
           class="layout-tips__icon layout-tips__icon--profilers"
         />
