@@ -1,6 +1,7 @@
 import { defineNuxtConfig } from "nuxt/config";
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+
   app: {
     head: {
       title: "Buggregator",
@@ -16,8 +17,12 @@ export default defineNuxtConfig({
       link: [
         { rel: "icon", type: "image/x-icon", href: "/favicon/favicon.ico" },
       ],
-      script: [{ src: '~/assets/index.ts'}]
+      script: [{ src: '~/assets/index.ts'}],
+
     },
+  },
+  dir: {
+    static: 'static',
   },
   postcss: {
     plugins: {
