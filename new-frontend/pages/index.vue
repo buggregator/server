@@ -26,10 +26,22 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import EventMapper from "~/components/EventMapper/EventMapper.vue";
+import { storeToRefs } from "pinia";
+import { useThemeStore, THEME_MODES } from "~/stores/theme";
 
 export default defineComponent({
   components: {
     EventMapper,
+  },
+  setup() {
+    const themeStore = useThemeStore();
+    const { themeChange } = themeStore;
+    const { themeType } = storeToRefs(themeStore);
+
+    return {
+      themeType,
+      themeChange,
+    };
   },
   computed: {
     events() {
@@ -38,10 +50,16 @@ export default defineComponent({
     },
   },
   mounted() {
+    if (this.themeType === THEME_MODES.DARK) {
+      document?.documentElement?.classList?.add(THEME_MODES.DARK);
+    } else {
+      document?.documentElement?.classList?.remove(THEME_MODES.DARK);
+    }
     // this.$store.dispatch('events/fetch')
   },
   methods: {
     clearEvents() {
+      console.info("click clear event");
       // this.$store.dispatch('events/clear')
     },
   },

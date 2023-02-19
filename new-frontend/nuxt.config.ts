@@ -1,7 +1,6 @@
 import { defineNuxtConfig } from "nuxt/config";
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-
   app: {
     head: {
       title: "Buggregator",
@@ -24,6 +23,11 @@ export default defineNuxtConfig({
   dir: {
     static: 'static',
   },
+  imports: {
+    dirs: [
+      'composables/**'
+    ]
+  },
   postcss: {
     plugins: {
       tailwindcss: {},
@@ -32,7 +36,8 @@ export default defineNuxtConfig({
   },
   css: ["~/assets/index.css"],
   modules: [
-    '@nuxtjs/tailwindcss'
+    '@nuxtjs/tailwindcss',
+    '@pinia/nuxt'
   ],
   typescript: {
     strict: true,
