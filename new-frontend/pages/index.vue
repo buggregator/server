@@ -18,7 +18,7 @@
     </main>
 
     <section v-if="!events.length" class="events-page__welcome">
-      <layout-tips class="events-page__tips" />
+      <page-tips class="events-page__tips" />
     </section>
   </div>
 </template>
@@ -29,11 +29,11 @@ import EventMapper from "~/components/EventMapper/EventMapper.vue";
 import { storeToRefs } from "pinia";
 import { useThemeStore, THEME_MODES } from "~/stores/theme";
 import { useEventStore } from "~/stores/events";
-import LayoutTips from "~/components/LayoutTips/LayoutTips.vue";
+import PageTips from "~/pages/PageTips/PageTips.vue";
 
 export default defineComponent({
   components: {
-    LayoutTips,
+    PageTips,
     EventMapper,
   },
   setup() {
@@ -93,7 +93,7 @@ export default defineComponent({
 }
 
 .events-page__welcome {
-  @apply flex-1 p-4 flex flex-col justify-center items-center bg-gray-50 dark:bg-gray-800;
+  @apply flex-1 p-4 flex flex-col justify-center items-center bg-gray-50 dark:bg-gray-800 w-full h-full;
 }
 
 .events-page__btn-clear {
