@@ -15,14 +15,13 @@ const checkDarkTheme = () => {
   }
 }
 
-
 export const useThemeStore = defineStore('themeStore', {
   state: () => ({
     themeType: checkDarkTheme() ?  THEME_MODES.DARK : THEME_MODES.LIGHT
   }),
+
   actions: {
     themeChange() {
-      console.log('window?.localStorage', window.localStorage)
       const newType = this.themeType === THEME_MODES.DARK ? THEME_MODES.LIGHT : THEME_MODES.DARK;
 
       window?.localStorage.setItem('theme', newType);

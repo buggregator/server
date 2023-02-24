@@ -28,6 +28,7 @@ import { defineComponent } from "vue";
 import EventMapper from "~/components/EventMapper/EventMapper.vue";
 import { storeToRefs } from "pinia";
 import { useThemeStore, THEME_MODES } from "~/stores/theme";
+import { useEventStore } from "~/stores/events";
 
 export default defineComponent({
   components: {
@@ -35,19 +36,18 @@ export default defineComponent({
   },
   setup() {
     const themeStore = useThemeStore();
-    const { themeChange } = themeStore;
     const { themeType } = storeToRefs(themeStore);
 
+    const eventsStore = useEventStore();
+    const { removeAllEvents, removeEventByUuid } = eventsStore;
+    const { events } = storeToRefs(eventsStore);
+
     return {
+      events,
       themeType,
-      themeChange,
+      removeAllEvents,
+      removeEventByUuid,
     };
-  },
-  computed: {
-    events() {
-      return [];
-      // return this.$store.getters['events/filtered']
-    },
   },
   mounted() {
     if (this.themeType === THEME_MODES.DARK) {
@@ -55,12 +55,10 @@ export default defineComponent({
     } else {
       document?.documentElement?.classList?.remove(THEME_MODES.DARK);
     }
-    // this.$store.dispatch('events/fetch')
   },
   methods: {
     clearEvents() {
-      console.info("click clear event");
-      // this.$store.dispatch('events/clear')
+      this.removeAllEvents();
     },
   },
 });

@@ -40,6 +40,7 @@ import EventFooter from "~/components/EventFooter/EventFooter.vue";
 import EventHeader from "~/components/EventHeader/EventHeader.vue";
 import { NormalizedEvent } from "~/config/types";
 import moment from "moment";
+import { useEventStore } from "~/stores/events";
 
 export default defineComponent({
   components: {
@@ -52,6 +53,13 @@ export default defineComponent({
       required: true,
     },
   },
+  setup() {
+    const { removeEventByUuid } = useEventStore();
+
+    return {
+      deleteEventByUuid: removeEventByUuid,
+    };
+  },
   data() {
     return {
       isCollapsed: false,
@@ -62,7 +70,7 @@ export default defineComponent({
     normalizedTags(): string[] {
       return [moment(this.event.date).format("HH:mm:ss"), ...this.event.labels];
     },
-    normalizedOrigin(): Object | null {
+    normalizedOrigin(): unknown | null {
       return Object.keys(this.event.origin || {}).length > 0
         ? this.event.origin
         : null;
@@ -79,7 +87,7 @@ export default defineComponent({
       this.isCollapsed = !this.isCollapsed;
     },
     deleteEvent() {
-      // this.$store.dispatch("events/delete", this.event);
+      this.deleteEventByUuid(this.event.id);
     },
     changeVisibleControls(value = true): void {
       this.isVisibleControls = value;
