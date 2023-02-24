@@ -74,6 +74,33 @@ export interface VarDump {
   }
 }
 
+export interface ProfilerCost {
+  [key: string]: number,
+  "ct": number,
+  "wt": number,
+  "cpu": number,
+  "mu": number,
+  "pmu": number
+}
+
+export interface Profiler {
+  tags: {
+    [key: string]: string | null | number
+  },
+  app_name: string,
+  hostname: string,
+  date: number,
+  peaks: ProfilerCost,
+  edges: {
+    [key: string]: {
+      caller: unknown,
+      callee: unknown,
+      cost: ProfilerCost
+    }
+  }
+}
+
+
 export interface ServerEvent<T> {
   uuid: EventId,
   type: OneOfValues<typeof EVENT_TYPES>,
@@ -89,5 +116,5 @@ export interface NormalizedEvent {
   origin: object | null,
   serverName: string,
   date: Date,
-  payload: Monolog | SMTP | Sentry | VarDump | unknown
+  payload: Monolog | SMTP | Sentry | VarDump | Profiler | unknown
 }

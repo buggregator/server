@@ -1,4 +1,4 @@
-import { NormalizedEvent, ServerEvent, Monolog, SMTP, Sentry, VarDump } from "~/config/types";
+import { NormalizedEvent, ServerEvent, Monolog, SMTP, Sentry, VarDump, Profiler } from "~/config/types";
 import { EVENT_TYPES } from "~/config/constants";
 
 const normalizeObjectValue = (object: object | unknown[]): object =>
@@ -19,8 +19,17 @@ export const normalizeFallbackEvent = (event: ServerEvent<unknown>): NormalizedE
 
 // TODO: need to update normalize fn
 export const normalizeInspectorEvent = normalizeFallbackEvent
-// TODO: need to update normalize fn
-export const normalizeProfilerEvent = normalizeFallbackEvent
+
+export const normalizeProfilerEvent = (event: ServerEvent<Profiler>): NormalizedEvent => ({
+  id: event.uuid,
+  type: EVENT_TYPES.PROFILER,
+  labels: [EVENT_TYPES.PROFILER],
+  origin: [event.payload.app_name, event.payload.tags ],
+  serverName: event.payload.hostname,
+  date: new Date(event.timestamp * 1000),
+  payload: event.payload
+})
+
 
 export const normalizeMonologEvent = (event: ServerEvent<Monolog>): NormalizedEvent => ({
   id: event.uuid,
@@ -73,3 +82,4 @@ export const normalizeVarDumpEvent = (event: ServerEvent<VarDump>): NormalizedEv
   date: new Date(event.timestamp * 1000),
   payload: event.payload
 })
+
