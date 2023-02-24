@@ -5,6 +5,7 @@ import EventMonolog from "~/components/EventMonolog/EventMonolog.vue";
 import EventSentry from "~/components/EventSentry/EventSentry.vue";
 import EventVarDump from "~/components/EventVarDump/EventVarDump.vue";
 import EventSmtp from "~/components/EventSmtp/EventSmtp.vue";
+import EventProfiler from "~/components/EventProfiler/EventProfiler.vue";
 import EventFallback from "~/components/EventFallback/EventFallback.vue";
 import { EVENT_TYPES } from "~/config/constants";
 import {
@@ -35,7 +36,7 @@ export default defineComponent({
       [EVENT_TYPES.SMTP]: (event: ServerEvent<SMTP>) =>
         h(EventSmtp, { event: normalizeSMTPEvent(event) }),
       [EVENT_TYPES.PROFILER]: (event: ServerEvent<unknown>) =>
-        h(EventFallback, { event: normalizeProfilerEvent(event) }),
+        h(EventProfiler, { event: normalizeProfilerEvent(event) }),
       [EVENT_TYPES.INSPECTOR]: (event: ServerEvent<unknown>) =>
         h(EventFallback, { event: normalizeInspectorEvent(event) }),
     };
