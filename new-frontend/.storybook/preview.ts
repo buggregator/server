@@ -1,3 +1,5 @@
+import { createPinia } from 'pinia';
+import { app } from '@storybook/vue3';
 import "../assets/index.css";
 import "../assets/index"
 
@@ -10,3 +12,8 @@ export const parameters = {
     },
   },
 };
+
+
+const pinia = createPinia();
+
+app.use(pinia);
