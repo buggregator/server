@@ -5,13 +5,13 @@
     </div>
 
     <div class="main-layout__content">
-      <Nuxt />
+      <slot />
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import LayoutSidebar from "~/components/LayoutSidebar/LayoutSidebar.vue";
+import LayoutSidebar from "~/layouts/LayoutSidebar/LayoutSidebar.vue";
 import { defineComponent } from "vue";
 
 export default defineComponent({
@@ -21,7 +21,7 @@ export default defineComponent({
   computed: {
     isConnected() {
       // return this.$store.getters['ws/connected']
-      return true;
+      return false;
     },
   },
 });
