@@ -78,3 +78,4 @@ More information about the usage of this directory in [the documentation](https:
 - [x] add navigation and tips to main page
 - [ ] add profiler event
 - [ ] add event pages by uuid
+- [ ] move theme-type to layout lvl
