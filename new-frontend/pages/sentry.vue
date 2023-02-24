@@ -1,65 +1,32 @@
-<template>
-  <div class="events-page">
-    <header class="events-page__header">
-      <div v-if="events.length" class="events-page__filters">
-        <button class="events-page__btn-clear" @click="clearEvents">
-          Clear screen
-        </button>
-      </div>
-    </header>
-
-    <main v-if="events.length" class="events-page__events">
-      <event-mapper
-        v-for="event in events"
-        :key="event.uuid"
-        :event="event"
-        class="events-page__event"
-      />
-    </main>
-
-    <section v-if="!events.length" class="events-page__welcome">
-      <page-tips class="events-page__tips" />
-    </section>
-  </div>
-</template>
-
 <script lang="ts">
 import { defineComponent } from "vue";
 import EventMapper from "~/components/EventMapper/EventMapper.vue";
 import { storeToRefs } from "pinia";
 import { useThemeStore, THEME_MODES } from "~/stores/theme";
 import { useEventStore } from "~/stores/events";
-import PageTips from "~/pages/PageTips/PageTips.vue";
+import PageIndex from "~/pages/index.vue";
+import { EVENT_TYPES } from "~/config/constants";
 
 export default defineComponent({
-  components: {
-    PageTips,
-    EventMapper,
-  },
+  extends: PageIndex,
+  // props: {}
   setup() {
     const themeStore = useThemeStore();
     const { themeType } = storeToRefs(themeStore);
 
     const eventsStore = useEventStore();
-    const { removeAllEvents } = eventsStore;
+    const { removeEventsType } = eventsStore;
     const { events } = storeToRefs(eventsStore);
 
     return {
-      events,
+      events: events.value.filter(({ type }) => type === EVENT_TYPES.SENTRY),
       themeType,
-      removeAllEvents,
+      removeEventsType,
     };
-  },
-  mounted() {
-    if (this.themeType === THEME_MODES.DARK) {
-      document?.documentElement?.classList?.add(THEME_MODES.DARK);
-    } else {
-      document?.documentElement?.classList?.remove(THEME_MODES.DARK);
-    }
   },
   methods: {
     clearEvents() {
-      this.removeAllEvents();
+      this.removeEventsType(EVENT_TYPES.SENTRY);
     },
   },
 });
