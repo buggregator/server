@@ -1,5 +1,5 @@
 import { Meta, Story } from "@storybook/vue3";
-import LayoutSidebar from "~/components/LayoutSidebar/LayoutSidebar.vue";
+import LayoutSidebar from "~/layouts/LayoutSidebar/LayoutSidebar.vue";
 
 export default {
   title: "Layouts/LayoutSidebar",
