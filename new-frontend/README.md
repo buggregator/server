@@ -75,6 +75,6 @@ More information about the usage of this directory in [the documentation](https:
 
 - [ ] add support for events api and websockets
 - [ ] fix theme change
-- [ ] add navigation and tips to main page
+- [x] add navigation and tips to main page
 - [ ] add profiler event
 - [ ] add event pages by uuid
