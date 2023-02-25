@@ -1,7 +1,8 @@
 import { Meta, Story } from "@storybook/vue3";
 import { normalizeSentryEvent } from "~/utils/normalizeEvent";
-import EventSentryFrame from '~/components/EventSentryFrame/EventSentryFrame.vue';
+import EventSentryFrame, { SentryFrame } from '~/components/EventSentryFrame/EventSentryFrame.vue';
 import sentryEventMock from '~/mocks/sentry.json'
+import { Sentry } from "~/config/types";
 
 export default {
   title: "Event/EventSentryFrame",
@@ -22,5 +23,5 @@ export const Default = Template.bind({});
 
 Default.args = {
   isOpen: true,
-  frame: normalizeSentryEvent(sentryEventMock)?.payload?.exception?.values?.[0]?.stacktrace?.frames[1],
+  frame: (normalizeSentryEvent(sentryEventMock)?.payload as Sentry)?.exception?.values[0]?.stacktrace?.frames[1] as SentryFrame,
 };

@@ -50,7 +50,12 @@ export interface Sentry {
   tags: object,
   contexts: object,
   exception: {
-    values: unknown[]
+    values: {
+      stacktrace: {
+        frames: unknown[]
+      },
+      [key: string]: unknown
+    }[]
   }
 }
 
@@ -116,5 +121,5 @@ export interface NormalizedEvent {
   origin: object | null,
   serverName: string,
   date: Date,
-  payload: Monolog | SMTP | Sentry | VarDump | Profiler | unknown
+  payload: Monolog | SMTP | Sentry | VarDump | Profiler
 }

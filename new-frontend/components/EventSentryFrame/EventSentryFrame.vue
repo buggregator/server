@@ -67,7 +67,7 @@
 import { defineComponent, PropType } from "vue";
 import IconSvg from "~/components/IconSvg/IconSvg.vue";
 
-interface SentryFrame {
+export interface SentryFrame {
   filename: string;
   lineno: number;
   in_app: boolean;

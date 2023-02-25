@@ -2,6 +2,7 @@ import { Meta, Story } from "@storybook/vue3";
 import { normalizeProfilerEvent } from "~/utils/normalizeEvent";
 import StatBoard from '~/components/StatBoard/StatBoard.vue';
 import profilerEventMock from '~/mocks/profiler.json'
+import type { Profiler } from '~/config/types'
 
 export default {
   title: "Components/StatBoard",
@@ -21,5 +22,5 @@ const Template: Story = (args) => ({
 export const Default = Template.bind({});
 
 Default.args = {
-  cost: normalizeProfilerEvent(profilerEventMock).payload.peaks,
+  cost: (normalizeProfilerEvent(profilerEventMock).payload as Profiler)?.peaks,
 };

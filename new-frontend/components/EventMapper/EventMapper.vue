@@ -1,6 +1,13 @@
 <script lang="ts">
 import { defineComponent, PropType, h } from "vue";
-import { Monolog, Sentry, ServerEvent, VarDump, SMTP } from "~/config/types";
+import {
+  Monolog,
+  Sentry,
+  ServerEvent,
+  VarDump,
+  SMTP,
+  Profiler,
+} from "~/config/types";
 import EventMonolog from "~/components/EventMonolog/EventMonolog.vue";
 import EventSentry from "~/components/EventSentry/EventSentry.vue";
 import EventVarDump from "~/components/EventVarDump/EventVarDump.vue";
@@ -21,7 +28,9 @@ import {
 export default defineComponent({
   props: {
     event: {
-      type: Object as PropType<ServerEvent<unknown>>,
+      type: Object as PropType<
+        ServerEvent<Monolog | SMTP | Sentry | VarDump | Profiler | unknown>
+      >,
       required: true,
     },
   },
@@ -35,7 +44,7 @@ export default defineComponent({
         h(EventVarDump, { event: normalizeVarDumpEvent(event) }),
       [EVENT_TYPES.SMTP]: (event: ServerEvent<SMTP>) =>
         h(EventSmtp, { event: normalizeSMTPEvent(event) }),
-      [EVENT_TYPES.PROFILER]: (event: ServerEvent<unknown>) =>
+      [EVENT_TYPES.PROFILER]: (event: ServerEvent<Profiler>) =>
         h(EventProfiler, { event: normalizeProfilerEvent(event) }),
       [EVENT_TYPES.INSPECTOR]: (event: ServerEvent<unknown>) =>
         h(EventFallback, { event: normalizeInspectorEvent(event) }),
