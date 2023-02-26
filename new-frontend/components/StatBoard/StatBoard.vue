@@ -25,7 +25,6 @@ export default defineComponent({
   },
   computed: {
     statItems() {
-      console.log("cost", this.cost);
       return [
         {
           title: "Calls",
