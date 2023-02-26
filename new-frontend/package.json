@@ -62,6 +62,7 @@
     "pinia": "^2.0.30",
     "tailwindcss": "^3.2.4",
     "vue": "^3.2.45",
-    "vue3-perfect-scrollbar": "^1.6.1"
+    "vue3-perfect-scrollbar": "^1.6.1",
+    "vue3-tabs-component": "^1.2.0"
   }
 }

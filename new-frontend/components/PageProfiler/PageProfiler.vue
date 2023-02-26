@@ -36,14 +36,16 @@
         </section>
 
         <section class="page-profiler__stat-tabs">
-          <!--        <Tabs class="flex-1">-->
-          <!--          <Tab title="Call graph" class="flex-1">-->
-          <!--            <Graph :event="event" @hover="showEdge" @hide="hideEdge"/>-->
-          <!--          </Tab>-->
-          <!--          <Tab title="Flamechart" class="flex-1">-->
-          <!--            <FlameGraph :event="event" :width="width" @hover="showEdge" @hide="hideEdge"/>-->
-          <!--          </Tab>-->
-          <!--        </Tabs>-->
+          <Tabs :options="{ useUrlFragment: false }">
+            <Tab name="Call graph">
+              Graph
+              <!--              <Graph :event="event" @hover="showEdge" @hide="hideEdge"/>-->
+            </Tab>
+            <Tab name="Flamechart">
+              FlameGraph
+              <!--              <FlameGraph :event="event" :width="width" @hover="showEdge" @hide="hideEdge"/>-->
+            </Tab>
+          </Tabs>
         </section>
       </div>
 
@@ -68,11 +70,14 @@ import { NormalizedEvent } from "~/config/types";
 import StatBoard from "~/components/StatBoard/StatBoard.vue";
 import { PerfectScrollbar } from "vue3-perfect-scrollbar";
 import type { Profiler, ProfilerEdge } from "~/config/types";
+import { Tabs, Tab } from "vue3-tabs-component";
 
 export default defineComponent({
   components: {
     StatBoard,
     PerfectScrollbar,
+    Tabs,
+    Tab,
   },
   props: {
     event: {
@@ -168,10 +173,11 @@ export default defineComponent({
 }
 
 .page-profiler__stat-tabs {
-  @apply p-5 bg-gray-200 flex-1 flex flex-col bg-gray-800;
+  @apply p-5 bg-gray-200 flex-1 flex flex-col bg-gray-800 text-gray-300;
 }
 
 .page-profiler__callstack-items {
+  @apply flex-row;
 }
 
 .page-profiler__callstack-items-top {

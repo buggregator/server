@@ -2,3 +2,4 @@
 @import "vue3-perfect-scrollbar/dist/vue3-perfect-scrollbar.css";
 @import "tailwind.css";
 @import "symfony-var-dump.css";
+@import "./vue3-tabs-component.scss";

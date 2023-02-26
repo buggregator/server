@@ -1,0 +1,21 @@
+.tabs-component {}
+
+.tabs-component-tabs {
+  @apply flex border-b border-gray-600 ;
+}
+
+.tabs-component-tab {
+  @apply flex pr-4
+}
+
+.tabs-component-tab-a {
+  @apply cursor-pointer p-3;
+}
+
+.tabs-component-tab-a.is-active {
+  @apply border-b border-b-4 font-bold;
+}
+
+.tabs-component-panels {
+  @apply mt-5 flex flex-col mt-3;
+}
