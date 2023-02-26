@@ -88,6 +88,12 @@ export interface ProfilerCost {
   "pmu": number
 }
 
+export interface ProfilerEdge {
+  caller: unknown,
+  callee: unknown,
+  cost: ProfilerCost
+}
+
 export interface Profiler {
   tags: {
     [key: string]: string | null | number
@@ -97,11 +103,7 @@ export interface Profiler {
   date: number,
   peaks: ProfilerCost,
   edges: {
-    [key: string]: {
-      caller: unknown,
-      callee: unknown,
-      cost: ProfilerCost
-    }
+    [key: string]: ProfilerEdge
   }
 }
 
