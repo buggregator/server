@@ -2,7 +2,11 @@
   <div class="event-footer">
     <div class="event-footer__tags">
       <template v-if="originConfig">
-        <span v-for="(value, key) in originConfig" :key="key">
+        <span
+          v-for="(value, key) in originConfig"
+          :key="key"
+          class="event-footer__tag"
+        >
           <strong>{{ key }}: </strong>{{ value }}
         </span>
       </template>
@@ -48,7 +52,11 @@ export default defineComponent({
 }
 
 .event-footer__tags {
-  @apply flex flex-wrap items-center space-x-4 text-xs text-gray-400;
+  @apply flex flex-wrap items-center;
+}
+
+.event-footer__tag {
+  @apply pr-4 text-xs text-gray-400;
 }
 
 .event-footer__host {

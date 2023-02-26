@@ -9,7 +9,6 @@ import { EVENT_TYPES } from "~/config/constants";
 
 export default defineComponent({
   extends: PageIndex,
-  // props: {}
   setup() {
     const themeStore = useThemeStore();
     const { themeType } = storeToRefs(themeStore);

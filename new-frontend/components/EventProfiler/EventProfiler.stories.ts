@@ -1,7 +1,7 @@
 import { Meta, Story } from "@storybook/vue3";
-import { normalizeSentryEvent } from "~/utils/normalizeEvent";
+import { normalizeProfilerEvent } from "~/utils/normalizeEvent";
 import EventProfiler from '~/components/EventProfiler/EventProfiler.vue';
-import sentryEventMock from '~/mocks/sentry.json'
+import profilerEventMock from '~/mocks/profiler.json'
 
 export default {
   title: "Event/EventProfiler",
@@ -21,5 +21,5 @@ const Template: Story = (args) => ({
 export const Default = Template.bind({});
 
 Default.args = {
-  event: normalizeSentryEvent(sentryEventMock),
+  event: normalizeProfilerEvent(profilerEventMock),
 };

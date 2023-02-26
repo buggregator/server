@@ -71,8 +71,12 @@ export default defineComponent({
       return [moment(this.event.date).format("HH:mm:ss"), ...this.event.labels];
     },
     normalizedOrigin(): unknown | null {
-      return Object.keys(this.event.origin || {}).length > 0
-        ? this.event.origin
+      const originEntriesList = Object.entries(this.event.origin || {})
+        .map(([key, value]) => [key, String(value)])
+        .filter(([_, value]) => Boolean(value));
+
+      return originEntriesList.length > 0
+        ? Object.fromEntries(originEntriesList)
         : null;
     },
     eventUrl(): string {

@@ -24,7 +24,7 @@ export const normalizeProfilerEvent = (event: ServerEvent<Profiler>): Normalized
   id: event.uuid,
   type: EVENT_TYPES.PROFILER,
   labels: [EVENT_TYPES.PROFILER],
-  origin: [event.payload.app_name, event.payload.tags ],
+  origin: { name: event.payload.app_name, ...event.payload.tags },
   serverName: event.payload.hostname,
   date: new Date(event.timestamp * 1000),
   payload: event.payload
