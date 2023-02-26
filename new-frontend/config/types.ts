@@ -123,5 +123,5 @@ export interface NormalizedEvent {
   origin: object | null,
   serverName: string,
   date: Date,
-  payload: Monolog | SMTP | Sentry | VarDump | Profiler
+  payload: Monolog | SMTP | Sentry | VarDump | Profiler | unknown
 }
