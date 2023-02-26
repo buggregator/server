@@ -1,8 +1,7 @@
 <script lang="ts">
 import { defineComponent } from "vue";
-import EventMapper from "~/components/EventMapper/EventMapper.vue";
 import { storeToRefs } from "pinia";
-import { useThemeStore, THEME_MODES } from "~/stores/theme";
+import { useThemeStore } from "~/stores/theme";
 import { useEventStore } from "~/stores/events";
 import PageIndex from "~/pages/index.vue";
 import { EVENT_TYPES } from "~/config/constants";
