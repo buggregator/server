@@ -1,43 +1,47 @@
-import sentryEventMock from '~/mocks/sentry.json'
-import monologEventMock from '~/mocks/monolog.json'
-import smtpEventMock from '~/mocks/smtp.json'
-import profilerEventMock from '~/mocks/profiler.json'
 import { defineStore } from 'pinia';
-import { EventId, OneOfValues } from "~/config/types";
+import { EventId, OneOfValues, ServerEvent } from "~/config/types";
 import { EVENT_TYPES } from "~/config/constants";
 
-
-const getEvents = () => {
-  // TODO: api call
-  const fakeEvents = [
-    sentryEventMock,
-    monologEventMock,
-    smtpEventMock,
-    profilerEventMock
-  ]
-
-  return {
-    fakeEvents,
-  }
-}
-
-/* eslint-disable import/prefer-default-export */
 export const useEventStore = defineStore('useEventStore', {
-  state: () => getEvents(),
+  state: () => ({
+    events: [] as ServerEvent<unknown>[],
+    eventsLoading: false
+  }),
   getters: {
-    events: (state) => state.fakeEvents,
-    eventIdList: (state) => state.fakeEvents.map(({ uuid }) => uuid),
+    eventIdList: (state) => state.events.map(({ uuid }) => uuid),
   },
   actions: {
-    removeEventByUuid(eventUuid: EventId) {
-      this.fakeEvents = this.events.filter(({ uuid }) => uuid !== eventUuid)
-    },
+    getAvailableEvents() {
+      this.eventsLoading = true;
 
-    removeEventsType(eventType: OneOfValues<typeof EVENT_TYPES>) {
-      this.fakeEvents = this.fakeEvents.filter(({ type }) => type !== eventType)
+      fetch(`https://test.buggregator.dev/api/events`)
+        .then((response) => response.json())
+        .then((response) => {
+          if (response?.data?.length > 0) {
+            return response.data
+          }
+
+          throw new Error('Fetch Error')
+        })
+        .then((events: ServerEvent<unknown>[]) => {
+          this.events = events.concat(this.events);
+
+          this.eventsLoading = false
+        })
     },
-    removeAllEvents() {
-      this.fakeEvents = []
+    removeEventById(eventUuid: EventId) {
+      this.events = this.events.filter(({ uuid }) => uuid !== eventUuid)
+    },
+    removeEvents() {
+      this.events.length = 0
+    },
+    removeEventsByType(eventType: OneOfValues<typeof EVENT_TYPES>) {
+      this.events = this.events.filter(({ type }) => type !== eventType);
+    },
+    addEvents(events: ServerEvent<unknown>[]) {
+      events.forEach((event) => {
+        this.events.unshift(event)
+      })
     },
   },
 })

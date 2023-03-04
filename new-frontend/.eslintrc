@@ -20,5 +20,9 @@
       "ts": "@typescript-eslint/parser",
       "<template>": "espree"
     }
+  },
+  "rules": {
+    "import/prefer-default-export": "off",
+    "no-console": ["error", { "allow": ["info","warn", "error"] }]
   }
 }

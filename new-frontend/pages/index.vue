@@ -1,6 +1,7 @@
 <template>
   <div class="events-page">
     <header class="events-page__header">
+      {{ events.length }}
       <div v-if="events.length" class="events-page__filters">
         <button class="events-page__btn-clear" @click="clearEvents">
           Clear screen
@@ -41,13 +42,15 @@ export default defineComponent({
     const { themeType } = storeToRefs(themeStore);
 
     const eventsStore = useEventStore();
-    const { removeAllEvents } = eventsStore;
+    const { removeEvents, getAvailableEvents } = eventsStore;
     const { events } = storeToRefs(eventsStore);
+
+    getAvailableEvents();
 
     return {
       events,
       themeType,
-      removeAllEvents,
+      removeEvents,
     };
   },
   mounted() {
@@ -59,7 +62,7 @@ export default defineComponent({
   },
   methods: {
     clearEvents() {
-      this.removeAllEvents();
+      this.removeEvents();
     },
   },
 });
@@ -68,6 +71,7 @@ export default defineComponent({
 <style lang="scss" scoped>
 @import "assets/mixins";
 .events-page {
+  @apply h-full w-full;
 }
 
 .events-page__header {
