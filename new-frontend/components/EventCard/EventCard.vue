@@ -40,7 +40,7 @@ import EventFooter from "~/components/EventFooter/EventFooter.vue";
 import EventHeader from "~/components/EventHeader/EventHeader.vue";
 import { NormalizedEvent } from "~/config/types";
 import moment from "moment";
-import { useEventStore } from "~/stores/events";
+import { useNuxtApp } from "#app";
 
 export default defineComponent({
   components: {
@@ -54,10 +54,10 @@ export default defineComponent({
     },
   },
   setup() {
-    const { removeEventByUuid } = useEventStore();
+    const { $events } = useNuxtApp();
 
     return {
-      deleteEventByUuid: removeEventByUuid,
+      deleteEventById: $events.removeById,
     };
   },
   data() {
@@ -91,7 +91,7 @@ export default defineComponent({
       this.isCollapsed = !this.isCollapsed;
     },
     deleteEvent() {
-      this.deleteEventByUuid(this.event.id);
+      this.deleteEventById(this.event.id);
     },
     changeVisibleControls(value = true): void {
       this.isVisibleControls = value;

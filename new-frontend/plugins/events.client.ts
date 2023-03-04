@@ -1,7 +1,8 @@
-import { apiConnection } from '~/utils/events-transport'
+import { apiTransport } from '~/utils/events-transport'
 import { useEventStore } from "~/stores/events";
 import { EventId, OneOfValues, ServerEvent } from "~/config/types";
 import { EVENT_TYPES } from "~/config/constants";
+import { storeToRefs } from "pinia";
 
 
 export default defineNuxtPlugin(() => {
@@ -14,7 +15,7 @@ export default defineNuxtPlugin(() => {
     deleteEvent,
     deleteEventsAll,
     deleteEventsByType,
-  } = apiConnection({
+  } = apiTransport({
     onEventReceiveCb,
   });
 
@@ -33,9 +34,15 @@ export default defineNuxtPlugin(() => {
     eventsStore.removeEventsByType(type);
   }
 
+  const { getAvailableEvents, getEventsByType } = eventsStore
+  const { events } = storeToRefs(eventsStore)
+
   return {
     provide: {
       events: {
+        items: events,
+        getItemsByType: getEventsByType,
+        getAll: getAvailableEvents,
         removeAll,
         removeByType,
         removeById,

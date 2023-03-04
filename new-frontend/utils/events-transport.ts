@@ -14,7 +14,7 @@ const defaultLogger = (params: LoggerParams) => {
   console.info(`[ApiConnection logger]:Centrifuge "${params[0]}" called with params: "${JSON.stringify(params[1])}"`)
 }
 
-export const apiConnection = ({
+export const apiTransport = ({
     onEventReceiveCb,
     loggerCb = defaultLogger,
   }: ApiConnection) => {
@@ -44,11 +44,11 @@ export const apiConnection = ({
   centrifuge.connect();
 
   const deleteEvent = (eventId: EventId) => {
-    centrifuge.rpc(`delete:api/events/${eventId}`, '')
+    centrifuge.rpc(`delete:api/events/${eventId}`, undefined)
   }
 
   const deleteEventsAll = () => {
-    centrifuge.rpc(`delete:api/events`, '')
+    centrifuge.rpc(`delete:api/events`, undefined)
   }
 
   const deleteEventsByType = (type: OneOfValues<typeof EVENT_TYPES>) => {

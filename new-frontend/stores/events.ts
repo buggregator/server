@@ -7,9 +7,6 @@ export const useEventStore = defineStore('useEventStore', {
     events: [] as ServerEvent<unknown>[],
     eventsLoading: false
   }),
-  getters: {
-    eventIdList: (state) => state.events.map(({ uuid }) => uuid),
-  },
   actions: {
     getAvailableEvents() {
       this.eventsLoading = true;
@@ -43,5 +40,8 @@ export const useEventStore = defineStore('useEventStore', {
         this.events.unshift(event)
       })
     },
+    getEventsByType(type: OneOfValues<typeof EVENT_TYPES>) {
+      return this.events.filter((event) => event.type === type)
+    }
   },
 })

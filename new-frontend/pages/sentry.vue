@@ -2,9 +2,9 @@
 import { defineComponent } from "vue";
 import { storeToRefs } from "pinia";
 import { useThemeStore } from "~/stores/theme";
-import { useEventStore } from "~/stores/events";
 import PageIndex from "~/pages/index.vue";
 import { EVENT_TYPES } from "~/config/constants";
+import { useNuxtApp } from "#app";
 
 export default defineComponent({
   extends: PageIndex,
@@ -12,19 +12,17 @@ export default defineComponent({
     const themeStore = useThemeStore();
     const { themeType } = storeToRefs(themeStore);
 
-    const eventsStore = useEventStore();
-    const { removeEventsType } = eventsStore;
-    const { events } = storeToRefs(eventsStore);
+    const { $events } = useNuxtApp();
 
     return {
-      events: events.value.filter(({ type }) => type === EVENT_TYPES.SENTRY),
+      events: $events.getItemsByType(EVENT_TYPES.SENTRY),
       themeType,
-      removeEventsType,
+      removeEventsByType: $events.removeByType,
     };
   },
   methods: {
     clearEvents() {
-      this.removeEventsType(EVENT_TYPES.SENTRY);
+      this.removeEventsByType(EVENT_TYPES.SENTRY);
     },
   },
 });
@@ -33,6 +31,7 @@ export default defineComponent({
 <style lang="scss" scoped>
 @import "assets/mixins";
 .events-page {
+  @apply h-full w-full;
 }
 
 .events-page__header {

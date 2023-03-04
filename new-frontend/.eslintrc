@@ -7,7 +7,8 @@
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
     "plugin:@typescript-eslint/eslint-recommended",
-    "prettier"
+    "prettier",
+    "plugin:nuxt/recommended"
   ],
   "parser": "vue-eslint-parser",
   "plugins": ["@typescript-eslint"],

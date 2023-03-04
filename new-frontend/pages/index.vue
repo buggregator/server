@@ -29,8 +29,8 @@ import { defineComponent } from "vue";
 import EventMapper from "~/components/EventMapper/EventMapper.vue";
 import { storeToRefs } from "pinia";
 import { useThemeStore, THEME_MODES } from "~/stores/theme";
-import { useEventStore } from "~/stores/events";
 import PageTips from "~/pages/PageTips/PageTips.vue";
+import { useNuxtApp } from "#app";
 
 export default defineComponent({
   components: {
@@ -38,18 +38,23 @@ export default defineComponent({
     EventMapper,
   },
   setup() {
+    const { $events } = useNuxtApp();
     const themeStore = useThemeStore();
     const { themeType } = storeToRefs(themeStore);
 
-    const eventsStore = useEventStore();
-    const { removeEvents, getAvailableEvents } = eventsStore;
-    const { events } = storeToRefs(eventsStore);
+    let events = [];
+    let removeEvents = null;
 
-    getAvailableEvents();
+    if (process.client) {
+      events = $events.items;
+      removeEvents = $events.removeAll;
+
+      $events.getAll();
+    }
 
     return {
-      events,
       themeType,
+      events,
       removeEvents,
     };
   },
@@ -62,7 +67,7 @@ export default defineComponent({
   },
   methods: {
     clearEvents() {
-      this.removeEvents();
+      this.removeEvents?.();
     },
   },
 });

@@ -29,7 +29,7 @@
             target="_blank"
             class="page-sidebar__link"
           >
-            {{ `http://sentry@${host}:${port}/1` }}
+            {{ sentryLinkText }}
           </a>
         </span>
       </li>
@@ -47,7 +47,7 @@
             target="_blank"
             class="page-sidebar__link"
           >
-            {{ `http://${host}:${port}/inspector` }}
+            {{ inspectorLinkText }}
           </a>
         </span>
       </li>
@@ -64,7 +64,7 @@
             target="_blank"
             class="page-sidebar__link"
           >
-            {{ `tcp://${host}:9912` }}
+            {{ varDumperLinkText }}
           </a>
         </span>
       </li>
@@ -81,7 +81,7 @@
             target="_blank"
             class="page-sidebar__link"
           >
-            {{ `tcp://${host}:9913` }}
+            {{ monologLinkText }}
           </a>
         </span>
       </li>
@@ -95,20 +95,34 @@ import { defineComponent } from "vue";
 
 export default defineComponent({
   components: { IconSvg },
-  setup() {
-    const [host, port] = window.location.host.split(":");
-
-    return {
-      host,
-      port: port || 80,
-    };
+  computed: {
+    sentryLinkText() {
+      return `http://sentry@${this.getHost()}:${this.getPort()}/1`;
+    },
+    inspectorLinkText() {
+      return `http://${this.getHost()}:${this.getPort()}/inspector`;
+    },
+    varDumperLinkText() {
+      return `tcp://${this.getHost()}:9912`;
+    },
+    monologLinkText() {
+      return `tcp://${this.getHost()}:9913`;
+    },
+  },
+  methods: {
+    getPort() {
+      return "3000"; // window?.location?.host?.split(":")[1] || ''
+    },
+    getHost() {
+      return "localhost"; // window?.location?.host?.split(":")[0] || ''
+    },
   },
 });
 </script>
 
 <style lang="scss" scoped>
 .page-sidebar {
-  @apply mt-6 p-6 bg-white dark:bg-gray-900 rounded-l text-gray-600 dark:text-gray-300 border;
+  @apply p-6 bg-white dark:bg-gray-900 rounded-l text-gray-600 dark:text-gray-300 border;
 }
 
 .page-sidebar__title {
