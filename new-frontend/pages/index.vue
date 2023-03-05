@@ -48,7 +48,10 @@ export default defineComponent({
         clearEvents: $events.removeAll,
       };
     }
-    return {};
+    return {
+      events: [],
+      clearEvents: () => {},
+    };
   },
 });
 </script>
