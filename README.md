@@ -6,13 +6,16 @@
 
 ![Cover image](https://user-images.githubusercontent.com/773481/208718792-eeae35a6-c5a8-4be4-9474-2b96d222e750.png)
 
-Buggregator is a beautiful, lightweight standalone server built on Spiral Framework, NuxtJs
-and [RoadRunner](https://github.com/roadrunner-server/roadrunner) underhood. It helps debugging mostly PHP applications
-without extra packages.
+Buggregator is a lightweight, standalone server that offers a range of debugging features for PHP applications. Built
+using the reliable [Spiral Framework](https://spiral.dev/), the powerful [NuxtJs](https://nuxt.com/), and the
+speedy [RoadRunner](https://roadrunner.dev/) under the hood. It's a versatile tool that can be run on multiple
+platforms via Docker.
 
-It runs without installation on multiple platforms via docker and supports: [Xhprof](#1-compatible-with-xhprof),
-[Symfony var-dumper](#2-symfony-vardumper-server), [Monolog](#3-monolog-server), [Sentry](#4-compatible-with-sentry),
-[SMTP catcher](#5-fake-smtp-server-for-catching-mail) and [Inspector](#6-compatible-with-inspector).
+Whether you're an experienced developer or just starting, Buggregator offers essential features like
+[Xhprof](#1-compatible-with-xhprof), [Symfony var-dumper](#2-symfony-vardumper-server), [Monolog](#3-monolog-server),
+[Sentry](#4-compatible-with-sentry), [SMTP catcher](#5-fake-smtp-server-for-catching-mail),
+and[Inspector](#6-compatible-with-inspector) that make it easy to identify and resolve issues. With no additional
+packages required, it's effortless to use, making it a must-have tool in your development arsenal.
 
 #### Contents
 
@@ -30,13 +33,21 @@ It runs without installation on multiple platforms via docker and supports: [Xhp
 4. [Contributing](#contributing)
 5. [License](#license)
 
----
+# Features
+
+In this section, we'll explore the different features that Buggregator supports and how they can help you identify and
+resolve issues with your application.
 
 ## 1. Xhprof profiler
 
-XHProf is a light-weight hierarchical and instrumentation based profiler. During the data collection phase, it keeps
-track of call counts and inclusive metrics for arcs in the dynamic callgraph of a program. It computes exclusive metrics
-in the reporting/post processing phase, such as wall (elapsed) time, CPU time and memory usage.
+The Xhprof profiler is an essential feature of Buggregator that offers a lightweight and hierarchical profiling solution
+for PHP applications. It uses instrumentation to keep track of call counts and inclusive metrics for arcs in the dynamic
+callgraph of your program during the data collection phase. In the reporting and post-processing phase, the profiler
+computes exclusive metrics such as wall (elapsed) time, CPU time, and memory usage.
+
+With the Xhprof profiler, you can easily identify performance bottlenecks and optimize your application's code for
+better efficiency. So, if you're looking to fine-tune your PHP application's performance, the Xhprof profiler is the
+perfect tool for the job.
 
 ![xhprof](https://user-images.githubusercontent.com/773481/208724383-3790a3e1-9ebe-4616-8d4d-d1869f8f2b7c.png)
 
@@ -50,9 +61,9 @@ pear channel-update pear.php.net
 pecl install xhprof
 ```
 
-2. Install the xhprof package
+2. Install the package
 
-If you are using Spiral Framework you just need t install
+If you are using Spiral Framework you just need to install
 the [spiral/profiler](https://github.com/spiral/profiler/tree/3.0) package.
 
 ```bash
@@ -61,18 +72,28 @@ composer require --dev spiral/profiler:^3.0
 
 ### Configuration
 
+After installing the package, you need to configure it. The package provides predefined environment variables to
+configure the profiler.
+
 ```dotenv
 PROFILER_ENDPOINT=http://127.0.0.1:8000/api/profiler/store
 PROFILER_APP_NAME=My super app
 ```
 
-> Note: Read more about package usage in the [documentation](https://github.com/spiral/profiler/tree/3.0).
+> **Note:**
+> Read more about package usage in the [package documentation](https://github.com/spiral/profiler/tree/3.0).
 
-## 2. Symfony [VarDumper server](https://symfony.com/doc/current/components/var_dumper.html#the-dump-server)
+## 2. Symfony VarDumper server
 
-The `dump()` and `dd()` functions output its contents in the same browser window or console terminal as your own
-application. Sometimes mixing the real output with the debug output can be confusing. That’s why this Buggregator can be
-used to collect all the dumped data.
+Buggregator is fully compatible with the
+Symfony [VarDumper component](https://symfony.com/doc/current/components/var_dumper.html#the-dump-server), which is an
+essential feature for debugging PHP applications. By default, the `dump()` and `dd()` functions output their contents
+in the same browser window or console terminal as your own application. This can be confusing at times, as it mixes the
+real output with the debug output.
+
+With Buggregator, however, you can easily collect all the dumped data, making it simpler to identify and isolate issues.
+So, whether you're an experienced developer or just starting, the Symfony VarDumper server in Buggregator is an
+essential tool to have in your development arsenal.
 
 ![var-dumper](https://user-images.githubusercontent.com/773481/208727353-b8201775-c360-410b-b5c8-d83843d388ff.png)
 
@@ -100,19 +121,17 @@ $_SERVER['VAR_DUMPER_FORMAT'] = 'server';
 $_SERVER['VAR_DUMPER_SERVER'] = '127.0.0.1:9912';
 ```
 
-Or you can also define this env var as follows:
-
-```bash
-VAR_DUMPER_FORMAT=server php app.php route:list
-```
-
 ----
 
 ## 3. Fake SMTP server for catching mail
 
-Buggregator also is an email testing tool that makes it super easy to install and configure a local email server. It
-sets up a fake SMTP server, and you can configure your preferred web applications to use Buggregator’s SMTP server to
-send and receive emails. For instance, you can configure a local WordPress site to use it for email deliveries.
+Buggregator is more than just a PHP debugging tool. It also includes a powerful email testing feature that allows you to
+install and configure a local email server with ease.
+
+For example, you can configure a local WordPress site to use Buggregator's SMTP server for email deliveries. This makes
+it effortless to test email functionality during the development phase, ensuring that everything works as expected
+before deployment. So, if you're looking for a reliable and easy-to-use email testing tool, Buggregator's fake SMTP
+server is the way to go.
 
 ![smtp](https://user-images.githubusercontent.com/773481/208727862-229fda5f-3504-4377-921e-03f0ff602cb9.png)
 
@@ -134,8 +153,14 @@ MAIL_PORT=1025
 
 ## 4. Compatible with [Sentry](https://sentry.io/) reports
 
-Buggregator can be used to receive Sentry reports from your application. It's a lightweight alternative for local
-development. Just configure Sentry DSN to send data to Buggregator.
+Buggregator offers seamless integration with Sentry reports, making it a reliable tool for local development. With
+it, you can easily configure your Sentry DSN to send data directly to the server, providing you with a lightweight
+alternative for debugging your application.
+
+By using Buggregator to receive Sentry reports, you can identify and fix issues with your application before deploying
+it to production. This ensures that your application is robust and efficient, providing a smooth experience for your
+users. So, if you're looking for an easy and efficient way to receive Sentry reports during local development,
+Buggregator is the perfect tool for you.
 
 ![sentry](https://user-images.githubusercontent.com/773481/208728578-1b33174b-8d1f-411a-a6fe-180a89abf06f.png)
 
@@ -168,10 +193,15 @@ You can find out documentation on [official site](https://docs.sentry.io/platfor
 
 ## 5. [Monolog](https://github.com/Seldaek/monolog) server
 
-It can receive logs from `monolog/monolog` package via `\Monolog\Handler\SocketHandler` handler.
+Buggregator comes with a powerful Monolog server that can receive logs from the popular `monolog/monolog` package via
+the `\Monolog\Handler\SocketHandler` handler. With this feature, you can easily track and analyze the logs generated by
+your PHP application, making it easier to identify issues and improve its overall performance.
+
+By using Buggregator's Monolog server, you can gain valuable insights into your application's behavior and improve its
+overall efficiency. So, whether you're a seasoned developer or just starting, the Monolog server in Buggregator is a
+must-have tool for anyone serious about PHP development.
 
 ![monolog](https://user-images.githubusercontent.com/773481/208729325-b135870e-3a98-4841-90cb-6e507108a235.png)
-
 
 ### Spiral Framework
 
@@ -270,8 +300,9 @@ $log->error('Bar');
 
 ## 6. Compatible with [Inspector](https://inspector.dev/) reports
 
-Buggregator can be used to receive Inspector events from your application. It's a lightweight alternative for
-local development. Just configure Inspector client URL to send data to Buggregator.
+Buggregator is also compatible with Inspector reports, providing you with a lightweight alternative for local
+development. With it, you can easily configure your Inspector client URL to send data directly to the server, making it
+easier to identify and fix issues during the development phase.
 
 ![inspector](https://user-images.githubusercontent.com/773481/208734651-e8dca2bf-6674-4aed-b6fc-601bc877f7ce.png)
 
@@ -305,7 +336,8 @@ $inspector = new Inspector($configuration);
 To report to Buggregator you’ll need to use a language-specific SDK. The Inspector team builds and maintains these for
 most popular languages.
 
-> Note: You can find out documentation on [official site](https://docs.inspector.dev/)
+> **Note:**
+> You can find out documentation on [official site](https://docs.inspector.dev/)
 
 -----
 
@@ -320,9 +352,12 @@ most popular languages.
 
 ### Docker image
 
-You can run Buggregator via docker from [Github Packages](https://github.com/buggregator/spiral-app/pkgs/container/server)
+To run Buggregator using docker, you can use the docker image available 
+on [Github Packages](https://github.com/buggregator/spiral-app/pkgs/container/server)
 
 **Latest stable release**
+
+To run the latest stable release, use the following command:
 
 ```bash
 docker run --pull always -p 8000:8000 -p 1025:1025 -p 9912:9912 -p 9913:9913 ghcr.io/buggregator/server:latest
@@ -330,19 +365,25 @@ docker run --pull always -p 8000:8000 -p 1025:1025 -p 9912:9912 -p 9913:9913 ghc
 
 **Latest dev release**
 
+To run the latest development release, use the following command:
+
 ```bash
 docker run --pull always -p 8000:8000 -p 1025:1025 -p 9912:9912 -p 9913:9913 ghcr.io/buggregator/server:dev
 ```
 
-> Note: You can omit `--pull always` argument if your docker-compose doesn't support it.
+> **Note:**
+> You can omit `--pull always` argument if your docker-compose doesn't support it.
 
 **Specific version**
+
+To run a specific version of Buggregator, use the following command:
 
 ```bash
 docker run -p 8000:8000 -p 1025:1025 -p 9912:9912 -p 9913:9913 ghcr.io/buggregator/server:v1.00
 ```
 
-> Note: You can omit unused ports if you use, for example, only `var-dumper`
+> **Note:**
+> You can omit unused ports if you only use, for example, `symfony/var-dumper`.
 
 ```bash
 docker run --pull always -p 9912:9912 ghcr.io/buggregator/server:latest
@@ -350,21 +391,23 @@ docker run --pull always -p 9912:9912 ghcr.io/buggregator/server:latest
 
 ### Using buggregator with docker compose
 
-```yaml
-version: "2"
-services:
-    # ...
+You can also use Buggregator with Docker Compose. Add the following service definition to 
+your `docker-compose.yml` file:
 
-    buggregator:
-        image: ghcr.io/buggregator/server:dev
-        ports:
-            - 8000:8000
-            - 1025:1025
-            - 9912:9912
-            - 9913:9913
+```yaml
+services:
+  # ...
+
+  buggregator:
+    image: ghcr.io/buggregator/server:dev
+    ports:
+      - 8000:8000
+      - 1025:1025
+      - 9912:9912
+      - 9913:9913
 ```
 
-That's it. Now you open http://127.0.0.1:8000 url in your browser and collect dumps from your application.
+After that, you can open http://127.0.0.1:8000 in your browser and start collecting dumps from your application.
 
 Enjoy!
 
@@ -372,8 +415,11 @@ Enjoy!
 
 # Contributing
 
-There are several [issues](https://github.com/buggregator/spiral-app/issues) in this repo with unresolved issues, and it
-would be great if you help a community solving them.
+Contributing to open source projects like Buggregator can be a rewarding experience, and we welcome contributions from 
+the community. There are several [issues](https://github.com/buggregator/spiral-app/issues) in this repo with unresolved 
+issues, and it would be great if you help a community solving them.
+
+**We appreciate any contributions to help make Buggregator better!***
 
 ## Backend part
 
@@ -387,7 +433,8 @@ would be great if you help a community solving them.
 2. Install backend dependencies `composer install`
 3. Download RoadRunner binary `vendor/bin/rr get-binary`
 4. Install frontend dependencies `cd frontend && yarn install`
-5. Run RoadRunner server `./rr serve`
+5. Install Centrifugo server `cd bin && ./get-binaries.sh`
+6. Run RoadRunner server `./rr serve`
 
 ---
 
