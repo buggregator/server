@@ -35,7 +35,7 @@ export default defineComponent({
       return moment(this.event.date).fromNow();
     },
     eventLink() {
-      return `/smtp/${this.event.id}}`;
+      return `/smtp/${this.event.id}`;
     },
   },
 });

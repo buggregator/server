@@ -57,7 +57,7 @@ export default defineComponent({
     },
   },
   methods: {
-    isVisibleFrame(index): boolean {
+    isVisibleFrame(index: number): boolean {
       return index === 0;
     },
   },

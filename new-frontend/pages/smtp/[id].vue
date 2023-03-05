@@ -1,6 +1,6 @@
 <template>
   <main class="sentry-event">
-    <EventSentry v-if="event" :event="event" />
+    <EventSmtp v-if="event" :event="event" />
   </main>
 </template>
 
@@ -8,11 +8,11 @@
 import { defineComponent } from "vue";
 import { EventId, Sentry, ServerEvent } from "~/config/types";
 import { useNuxtApp, useRoute } from "#app";
-import { normalizeSentryEvent } from "~/utils/normalize-event";
-import EventSentry from "~/components/EventSentry/EventSentry.vue";
+import { normalizeSMTPEvent } from "~/utils/normalize-event";
+import EventSmtp from "~/components/EventSmtp/EventSmtp.vue";
 
 export default defineComponent({
-  components: { EventSentry },
+  components: { EventSmtp },
   setup() {
     const route = useRoute();
     const eventId = route.params.id as EventId;
@@ -24,7 +24,7 @@ export default defineComponent({
       ) as ServerEvent<Sentry> | null;
 
       return {
-        event: serverEvent ? normalizeSentryEvent(serverEvent) : null,
+        event: serverEvent ? normalizeSMTPEvent(serverEvent) : null,
         clearEvent: () => $events.removeById(eventId),
       };
     }
@@ -38,7 +38,7 @@ export default defineComponent({
     const route = useRoute();
 
     return {
-      title: `Sentry > ${route.params.id} | Buggregator`,
+      title: `SMTP > ${route.params.id} | Buggregator`,
     };
   },
 });

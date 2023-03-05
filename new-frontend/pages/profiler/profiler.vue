@@ -10,7 +10,7 @@ export default defineComponent({
     if (process.client) {
       const { $events } = useNuxtApp();
 
-      if (!$events?.items?.value.length) {
+      if (!$events?.items?.length) {
         $events.getAll();
       }
 
@@ -20,7 +20,15 @@ export default defineComponent({
       };
     }
 
-    return {};
+    return {
+      events: [],
+      clearEvents: () => {},
+    };
+  },
+  head() {
+    return {
+      title: `Profiler [${this.events.length}] | Buggregator`,
+    };
   },
 });
 </script>

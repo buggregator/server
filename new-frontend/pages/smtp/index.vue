@@ -10,7 +10,7 @@ export default defineComponent({
     if (process.client) {
       const { $events } = useNuxtApp();
 
-      if (!$events?.items?.value.length) {
+      if (!$events?.items?.length) {
         $events.getAll();
       }
 
@@ -19,7 +19,16 @@ export default defineComponent({
         clearEvents: () => $events.removeByType(EVENT_TYPES.SMTP),
       };
     }
-    return {};
+
+    return {
+      events: [],
+      clearEvents: () => {},
+    };
+  },
+  head() {
+    return {
+      title: `SMTP [${this.events.length}] | Buggregator`,
+    };
   },
 });
 </script>

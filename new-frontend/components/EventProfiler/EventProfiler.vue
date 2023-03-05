@@ -25,7 +25,7 @@ export default defineComponent({
   },
   computed: {
     eventLink() {
-      return `/profiler/${this.event.id}}`;
+      return `/profiler/${this.event.id}`;
     },
   },
 });
