@@ -54,10 +54,16 @@ export default defineComponent({
     },
   },
   setup() {
-    const { $events } = useNuxtApp();
+    if (process.client) {
+      const { $events } = useNuxtApp();
+
+      return {
+        deleteEventById: $events?.removeById,
+      };
+    }
 
     return {
-      deleteEventById: $events.removeById,
+      deleteEventById: () => {},
     };
   },
   data() {
