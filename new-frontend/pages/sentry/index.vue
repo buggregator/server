@@ -25,5 +25,10 @@ export default defineComponent({
       clearEvents: () => {},
     };
   },
+  head() {
+    return {
+      title: `Sentry [${this.events.length}] | Buggregator`,
+    };
+  },
 });
 </script>
