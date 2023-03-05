@@ -1,5 +1,5 @@
 import { Meta, Story } from "@storybook/vue3";
-import { normalizeFallbackEvent } from "~/utils/normalizeEvent";
+import { normalizeFallbackEvent } from "~/utils/normalize-event";
 import EventFallback from '~/components/EventFallback/EventFallback.vue';
 import monologEventMock from '~/mocks/monolog.json'
 

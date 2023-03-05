@@ -23,7 +23,7 @@ import {
   normalizeInspectorEvent,
   normalizeProfilerEvent,
   normalizeFallbackEvent,
-} from "~/utils/normalizeEvent";
+} from "~/utils/normalize-event";
 
 export default defineComponent({
   props: {

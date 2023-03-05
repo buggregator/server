@@ -1,5 +1,5 @@
 import { Meta, Story } from "@storybook/vue3";
-import { normalizeProfilerEvent } from "~/utils/normalizeEvent";
+import { normalizeProfilerEvent } from "~/utils/normalize-event";
 import PageProfiler from '~/components/PageProfiler/PageProfiler.vue';
 import profilerEventMock from '~/mocks/profiler.json'
 
