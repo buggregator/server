@@ -19,7 +19,10 @@ export const useEventStore = defineStore('useEventStore', {
     },
     addEvents(events: ServerEvent<unknown>[]) {
       events.forEach((event) => {
-        this.events.unshift(event)
+        const isExistedEvent = this.events.some((el) => el.uuid === event.uuid)
+        if (!isExistedEvent) {
+          this.events.unshift(event)
+        }
       })
     },
     getEventsByType(type: OneOfValues<typeof EVENT_TYPES>) {
