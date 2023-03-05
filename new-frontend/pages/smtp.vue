@@ -15,7 +15,7 @@ export default defineComponent({
       }
 
       return {
-        events: $events.getItemsByType(EVENT_TYPES.SMTP),
+        events: $events.itemsGroupByType[EVENT_TYPES.SMTP],
         clearEvents: () => $events.removeByType(EVENT_TYPES.SMTP),
       };
     }

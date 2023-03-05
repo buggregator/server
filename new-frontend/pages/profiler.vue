@@ -15,7 +15,7 @@ export default defineComponent({
       }
 
       return {
-        events: $events.getItemsByType(EVENT_TYPES.PROFILER),
+        events: $events.itemsGroupByType[EVENT_TYPES.PROFILER],
         clearEvents: () => $events.removeByType(EVENT_TYPES.PROFILER),
       };
     }

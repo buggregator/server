@@ -2,11 +2,18 @@ import { defineStore } from 'pinia';
 import { EventId, OneOfValues, ServerEvent } from "~/config/types";
 import { EVENT_TYPES } from "~/config/constants";
 
+
 export const useEventStore = defineStore('useEventStore', {
   state: () => ({
     events: [] as ServerEvent<unknown>[],
     eventsLoading: false
   }),
+  getters: {
+    sentryEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.SENTRY),
+    inspectorEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.INSPECTOR),
+    profilerEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.PROFILER),
+    smtpEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.SMTP)
+  },
   actions: {
     removeEventById(eventUuid: EventId) {
       this.events = this.events.filter(({ uuid }) => uuid !== eventUuid)
@@ -25,8 +32,8 @@ export const useEventStore = defineStore('useEventStore', {
         }
       })
     },
-    getEventsByType(type: OneOfValues<typeof EVENT_TYPES>) {
-      return this.events.filter((event) => event.type === type)
+    getEventById(id: EventId) {
+      this.events.find(({ uuid }) => String(uuid) === String(id))
     }
   },
 })

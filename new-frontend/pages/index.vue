@@ -39,7 +39,7 @@ export default defineComponent({
     if (process.client) {
       const { $events } = useNuxtApp();
 
-      if (!$events.items.length) {
+      if (!$events?.items?.length) {
         $events.getAll();
       }
 

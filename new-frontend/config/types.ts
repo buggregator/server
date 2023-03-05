@@ -110,7 +110,7 @@ export interface Profiler {
 
 export interface ServerEvent<T> {
   uuid: EventId,
-  type: OneOfValues<typeof EVENT_TYPES>,
+  type: OneOfValues<typeof EVENT_TYPES> | string,
   payload: T,
   project_id: string|null,
   timestamp: number
@@ -118,7 +118,7 @@ export interface ServerEvent<T> {
 
 export interface NormalizedEvent {
   id: EventId,
-  type: OneOfValues<typeof EVENT_TYPES>,
+  type: OneOfValues<typeof EVENT_TYPES> | string,
   labels: string[],
   origin: object | null,
   serverName: string,

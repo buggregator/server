@@ -15,7 +15,7 @@ export default defineComponent({
       }
 
       return {
-        events: $events.getItemsByType(EVENT_TYPES.INSPECTOR),
+        events: $events.itemsGroupByType[EVENT_TYPES.INSPECTOR],
         clearEvents: () => $events.removeByType(EVENT_TYPES.INSPECTOR),
       };
     }
