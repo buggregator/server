@@ -13,16 +13,33 @@
 <script lang="ts">
 import LayoutSidebar from "~/layouts/LayoutSidebar/LayoutSidebar.vue";
 import { defineComponent } from "vue";
+import { THEME_MODES, useThemeStore } from "~/stores/theme";
+import { storeToRefs } from "pinia";
 
 export default defineComponent({
   components: {
     LayoutSidebar,
+  },
+  setup() {
+    const themeStore = useThemeStore();
+    const { themeType } = storeToRefs(themeStore);
+
+    return {
+      themeType,
+    };
   },
   computed: {
     isConnected() {
       // return this.$store.getters['ws/connected']
       return false;
     },
+  },
+  mounted() {
+    if (this.themeType === THEME_MODES.DARK) {
+      document?.documentElement?.classList?.add(THEME_MODES.DARK);
+    } else {
+      document?.documentElement?.classList?.remove(THEME_MODES.DARK);
+    }
   },
 });
 </script>
@@ -37,7 +54,7 @@ export default defineComponent({
 }
 
 .main-layout__content {
-  @apply flex flex-col h-full flex-1;
+  @apply flex flex-col h-full flex-1 w-full;
 
   & > div {
     @apply flex flex-col h-full flex-1;

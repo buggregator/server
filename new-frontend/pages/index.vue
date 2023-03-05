@@ -27,8 +27,6 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import EventMapper from "~/components/EventMapper/EventMapper.vue";
-import { storeToRefs } from "pinia";
-import { useThemeStore, THEME_MODES } from "~/stores/theme";
 import PageTips from "~/pages/PageTips/PageTips.vue";
 import { useNuxtApp } from "#app";
 
@@ -38,43 +36,26 @@ export default defineComponent({
     EventMapper,
   },
   setup() {
-    const { $events } = useNuxtApp();
-    const themeStore = useThemeStore();
-    const { themeType } = storeToRefs(themeStore);
-
-    let events = [];
-    let removeEvents = null;
-
     if (process.client) {
-      events = $events.items;
-      removeEvents = $events.removeAll;
+      const { $events } = useNuxtApp();
 
-      $events.getAll();
-    }
+      if (!$events.items.length) {
+        $events.getAll();
+      }
 
-    return {
-      themeType,
-      events,
-      removeEvents,
-    };
-  },
-  mounted() {
-    if (this.themeType === THEME_MODES.DARK) {
-      document?.documentElement?.classList?.add(THEME_MODES.DARK);
-    } else {
-      document?.documentElement?.classList?.remove(THEME_MODES.DARK);
+      return {
+        events: $events.items,
+        clearEvents: $events.removeAll,
+      };
     }
-  },
-  methods: {
-    clearEvents() {
-      this.removeEvents?.();
-    },
+    return {};
   },
 });
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 @import "assets/mixins";
+
 .events-page {
   @apply h-full w-full;
 }
