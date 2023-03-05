@@ -35,6 +35,25 @@ module.exports = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, "../"),
       '~': path.resolve(__dirname, "../"),
+      '#app': path.resolve(
+        __dirname,
+        '../node_modules/nuxt/dist/app'
+      ),
+      '#head': path.resolve(
+        __dirname,
+        '../node_modules/nuxt/dist/head/runtime'
+      ),
+      '#build': path.resolve(
+        __dirname,
+        '../.nuxt'
+      ),
+      "#imports": [
+        ".nuxt/imports"
+      ],
+      "#components": path.resolve(
+        __dirname,
+        '../.nuxt/components'
+      ),
     };
 
     return {
