@@ -32,8 +32,8 @@ export const useEventStore = defineStore('useEventStore', {
         }
       })
     },
-    getEventById(id: EventId) {
-      this.events.find(({ uuid }) => String(uuid) === String(id))
+    getEventById(id: EventId): ServerEvent<unknown> | null {
+      return this.events.find(({ uuid }) => String(uuid) === String(id)) || null
     }
   },
 })

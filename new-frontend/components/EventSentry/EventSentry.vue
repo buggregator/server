@@ -35,7 +35,7 @@ export default defineComponent({
   },
   computed: {
     eventLink() {
-      return `/sentry/${this.event.id}}`;
+      return `/sentry/${this.event.id}`;
     },
     exception() {
       const defaultException: object = {
