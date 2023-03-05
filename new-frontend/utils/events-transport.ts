@@ -55,11 +55,22 @@ export const apiTransport = ({
     centrifuge.rpc(`delete:api/events`, {type})
   }
 
+  const getEventsAll = fetch(`https://test.buggregator.dev/api/events`)
+    .then((response) => response.json())
+    .then((response) => {
+      if (response?.data?.length > 0) {
+        return response.data
+      }
+
+      throw new Error('Fetch Error')
+    })
+    .then((events: ServerEvent<unknown>[]) => events)
+
+
   return {
+    getEventsAll,
     deleteEvent,
     deleteEventsAll,
     deleteEventsByType,
-    centrifuge,
-    eventsChannel
   }
 }

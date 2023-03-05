@@ -8,24 +8,6 @@ export const useEventStore = defineStore('useEventStore', {
     eventsLoading: false
   }),
   actions: {
-    getAvailableEvents() {
-      this.eventsLoading = true;
-
-      fetch(`https://test.buggregator.dev/api/events`)
-        .then((response) => response.json())
-        .then((response) => {
-          if (response?.data?.length > 0) {
-            return response.data
-          }
-
-          throw new Error('Fetch Error')
-        })
-        .then((events: ServerEvent<unknown>[]) => {
-          this.events = events.concat(this.events);
-
-          this.eventsLoading = false
-        })
-    },
     removeEventById(eventUuid: EventId) {
       this.events = this.events.filter(({ uuid }) => uuid !== eventUuid)
     },

@@ -7,16 +7,16 @@ import { storeToRefs } from "pinia";
 
 export default defineNuxtPlugin(() => {
   const eventsStore = useEventStore();
-  const onEventReceiveCb = (event: ServerEvent<unknown>) => {
-    eventsStore.addEvents([event]);
-  }
 
   const {
     deleteEvent,
     deleteEventsAll,
     deleteEventsByType,
+    getEventsAll
   } = apiTransport({
-    onEventReceiveCb,
+    onEventReceiveCb: (event: ServerEvent<unknown>) => {
+      eventsStore.addEvents([event]);
+    }
   });
 
   const removeAll = () => {
@@ -34,15 +34,18 @@ export default defineNuxtPlugin(() => {
     eventsStore.removeEventsByType(type);
   }
 
-  const { getAvailableEvents, getEventsByType } = eventsStore
-  const { events } = storeToRefs(eventsStore)
+  const getAll = () => {
+    getEventsAll.then((events: ServerEvent<unknown>[]) => {
+      eventsStore.addEvents(events);
+    })
+  }
 
   return {
     provide: {
       events: {
-        items: events,
-        getItemsByType: getEventsByType,
-        getAll: getAvailableEvents,
+        items: storeToRefs(eventsStore).events,
+        getItemsByType: eventsStore.getEventsByType,
+        getAll,
         removeAll,
         removeByType,
         removeById,
