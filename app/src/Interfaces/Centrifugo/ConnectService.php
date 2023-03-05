@@ -19,7 +19,8 @@ class ConnectService implements ServiceInterface
         try {
             $request->respond(
                 new ConnectResponse(
-                    user: (string) $request->getAttribute('user_id')
+                    user: (string) $request->getAttribute('user_id'),
+                    channels: ['events'],
                 )
             );
         } catch (\Throwable $e) {
