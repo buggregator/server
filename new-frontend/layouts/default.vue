@@ -1,0 +1,67 @@
+<template>
+  <div class="main-layout">
+    <div class="main-layout__sidebar-wrap">
+      <layout-sidebar :is-connected="isConnected" />
+    </div>
+
+    <div class="main-layout__content">
+      <slot />
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import LayoutSidebar from "~/layouts/LayoutSidebar/LayoutSidebar.vue";
+import { defineComponent } from "vue";
+import { THEME_MODES, useThemeStore } from "~/stores/theme";
+import { storeToRefs } from "pinia";
+
+export default defineComponent({
+  components: {
+    LayoutSidebar,
+  },
+  setup() {
+    const themeStore = useThemeStore();
+    const { themeType } = storeToRefs(themeStore);
+
+    return {
+      themeType,
+    };
+  },
+  computed: {
+    isConnected() {
+      // return this.$store.getters['ws/connected']
+      return false;
+    },
+  },
+  mounted() {
+    if (this.themeType === THEME_MODES.DARK) {
+      document?.documentElement?.classList?.add(THEME_MODES.DARK);
+    } else {
+      document?.documentElement?.classList?.remove(THEME_MODES.DARK);
+    }
+  },
+});
+</script>
+
+<style lang="scss" scoped>
+.main-layout {
+  @apply flex h-screen items-stretch relative;
+}
+
+.main-layout__sidebar-wrap {
+  @apply w-10 md:w-14 lg:w-16 flex-none border-r;
+}
+
+.main-layout__content {
+  @apply flex flex-col h-full flex-1 w-full;
+
+  & > div {
+    @apply flex flex-col h-full flex-1;
+  }
+}
+
+.main-layout__sidebar {
+  @apply w-10 md:w-14 lg:w-16 fixed h-screen;
+}
+</style>

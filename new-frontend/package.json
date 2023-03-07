@@ -1,0 +1,70 @@
+{
+  "private": true,
+  "scripts": {
+    "dev": "nuxi dev",
+    "build": "nuxi build",
+    "sb": "NODE_OPTIONS=--openssl-legacy-provider start-storybook -p 6006",
+    "generate": "nuxi generate",
+    "preview": "nuxi preview",
+    "postinstall": "nuxi prepare",
+    "prepare": "cd ../ && npx husky install"
+  },
+  "type": "module",
+  "lint-staged": {
+    "*.{js,ts}": [
+      "eslint --fix"
+    ],
+    "*.{vue,html}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.json": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "^12.0.0",
+    "@nuxtjs/tailwindcss": "^6.2.0",
+    "@storybook/addon-essentials": "^6.5.15",
+    "@storybook/addon-interactions": "^6.5.15",
+    "@storybook/addon-links": "^6.5.15",
+    "@storybook/addon-postcss": "^2.0.0",
+    "@storybook/builder-vite": "^0.3.0",
+    "@types/downloadjs": "^1.4.3",
+    "@typescript-eslint/eslint-plugin": "^5.48.2",
+    "@typescript-eslint/parser": "^5.48.2",
+    "@vitejs/plugin-vue": "^4.0.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.32.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-airbnb-typescript": "^17.0.0",
+    "eslint-config-prettier": "^8.6.0",
+    "eslint-plugin-nuxt": "^4.0.0",
+    "eslint-plugin-vue": "^9.9.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.1.0",
+    "postcss": "^8.3.11",
+    "prettier": "^2.8.3",
+    "sass": "^1.57.1",
+    "typescript": "^4.9.4",
+    "vue-eslint-parser": "^9.1.0"
+  },
+  "dependencies": {
+    "@highlightjs/vue-plugin": "^2.1.2",
+    "@pinia/nuxt": "^0.4.6",
+    "@storybook/addon-actions": "^6.5.15",
+    "@storybook/vue3": "^6.5.16",
+    "@vue/shared": "^3.2.45",
+    "centrifuge": "^3.1.0",
+    "downloadjs": "^1.4.7",
+    "highlight.js": "^11.7.0",
+    "html-to-image": "^1.11.4",
+    "moment": "^2.29.4",
+    "nuxt": "^3.0.0",
+    "pinia": "^2.0.30",
+    "tailwindcss": "^3.2.4",
+    "vue": "^3.2.45",
+    "vue3-perfect-scrollbar": "^1.6.1",
+    "vue3-tabs-component": "^1.2.0"
+  }
+}

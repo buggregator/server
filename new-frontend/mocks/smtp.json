@@ -1,0 +1,19 @@
+{
+  "uuid": "fa414448-6b6d-40b2-8e5c-e2d039dab404",
+  "type": "smtp",
+  "payload": {
+    "id": "8f552dc91f789b7b98dbb4ed5e1fa063@local.host",
+    "from": [{ "email": "sendit@local.host", "name": "Spiral" }],
+    "reply_to": [],
+    "subject": "I'm afraid I can't do that",
+    "to": [{ "name": "", "email": "user@site.com" }],
+    "cc": [],
+    "bcc": [],
+    "text": "",
+    "html": "    <p>I'm sorry, bar!</p>\r\n\r\n.\r\n",
+    "raw": "To: user@site.com\r\nSubject: I'm afraid I can't do that\r\nFrom: Spiral <sendit@local.host>\r\nMessage-ID: <8f552dc91f789b7b98dbb4ed5e1fa063@local.host>\r\nMIME-Version: 1.0\r\nDate: Mon, 09 Jan 2023 16:19:52 +0400\r\nContent-Type: text/html; charset=utf-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n    <p>I'm sorry, bar!</p>\r\n\r\n.\r\n",
+    "attachments": []
+  },
+  "timestamp": 1673266793,
+  "project_id": null
+}
