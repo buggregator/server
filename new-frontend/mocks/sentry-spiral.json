@@ -1,11 +1,14 @@
 {
-  "uuid": "1b341b7b-d11c-41a2-95ff-a6a4b4e1cda9",
+  "uuid": "c8a4e7db-a1c3-47b9-b33c-1c913184d0fe",
   "type": "sentry",
   "payload": {
-    "event_id": "7a7a24792347409a916263c37cd13137",
-    "timestamp": 1673266950.415307,
+    "event_id": "2dd86d0d3df846d9a0cc5a50688a6944",
+    "timestamp": 1678272249.238692,
     "platform": "php",
-    "sdk": { "name": "sentry.php.spiral", "version": "3.1.2" },
+    "sdk": {
+      "name": "sentry.php.spiral",
+      "version": "3.1.2"
+    },
     "logger": "php",
     "server_name": "ButschsterLpp",
     "environment": "production",
@@ -15,46 +18,46 @@
       "cocur/slugify": "v3.2",
       "codedungeon/php-cli-colors": "1.12.2",
       "composer/semver": "3.3.2",
-      "cycle/annotated": "v3.2.0",
-      "cycle/database": "2.2.2",
-      "cycle/migrations": "v4.0.0",
-      "cycle/orm": "v2.2.1",
-      "cycle/schema-builder": "v2.1.0",
-      "cycle/schema-migrations-generator": "3.x-dev@df0e391",
+      "cycle/annotated": "v3.2.1",
+      "cycle/database": "2.4.0",
+      "cycle/migrations": "v4.0.1",
+      "cycle/orm": "v2.2.2",
+      "cycle/schema-builder": "v2.3.0",
+      "cycle/schema-migrations-generator": "2.1.0",
       "cycle/schema-renderer": "1.2.0",
       "defuse/php-encryption": "v2.3.1",
-      "doctrine/annotations": "1.14.1",
+      "doctrine/annotations": "1.14.3",
       "doctrine/collections": "1.8.0",
       "doctrine/deprecations": "v1.0.0",
       "doctrine/inflector": "2.0.6",
-      "doctrine/instantiator": "1.4.1",
-      "doctrine/lexer": "1.2.3",
-      "egulias/email-validator": "3.2.1",
+      "doctrine/instantiator": "1.5.0",
+      "doctrine/lexer": "2.1.0",
+      "egulias/email-validator": "4.0.1",
       "filp/whoops": "2.14.6",
-      "google/common-protos": "v3.1.0",
-      "google/protobuf": "v3.21.12",
+      "google/common-protos": "v3.2.0",
+      "google/protobuf": "v3.22.0",
       "graham-campbell/result-type": "v1.1.0",
       "guzzlehttp/promises": "1.5.2",
       "guzzlehttp/psr7": "2.4.3",
       "hamcrest/hamcrest-php": "v2.0.1",
-      "illuminate/collections": "v9.44.0",
-      "illuminate/conditionable": "v9.44.0",
-      "illuminate/contracts": "v9.44.0",
-      "illuminate/macroable": "v9.44.0",
-      "illuminate/pipeline": "v9.44.0",
-      "illuminate/support": "v9.44.0",
+      "illuminate/collections": "v10.0.3",
+      "illuminate/conditionable": "v10.0.3",
+      "illuminate/contracts": "v10.0.3",
+      "illuminate/macroable": "v10.0.3",
+      "illuminate/pipeline": "v10.0.2",
+      "illuminate/support": "v10.0.2",
       "inspector-apm/inspector-php": "3.7.18",
       "jean85/pretty-package-versions": "2.0.5",
       "league/flysystem": "2.5.0",
       "league/mime-type-detection": "1.11.0",
       "mockery/mockery": "1.5.1",
-      "monolog/monolog": "2.8.0",
+      "monolog/monolog": "2.9.1",
       "myclabs/deep-copy": "1.11.0",
-      "nesbot/carbon": "2.64.0",
+      "nesbot/carbon": "2.66.0",
       "nette/php-generator": "v4.0.5",
-      "nette/utils": "v3.2.8",
-      "nikic/php-parser": "v4.15.2",
-      "nunomaduro/collision": "v6.3.1",
+      "nette/utils": "v4.0.0",
+      "nikic/php-parser": "v4.15.3",
+      "nunomaduro/collision": "v6.4.0",
       "nyholm/psr7": "1.5.1",
       "nyholm/psr7-server": "1.0.2",
       "opis/closure": "3.6.3",
@@ -63,18 +66,18 @@
       "phar-io/version": "3.2.1",
       "php-http/client-common": "2.6.0",
       "php-http/curl-client": "2.2.1",
-      "php-http/discovery": "1.14.3",
+      "php-http/discovery": "1.15.2",
       "php-http/httplug": "2.3.0",
       "php-http/message": "1.13.0",
       "php-http/message-factory": "v1.0.2",
       "php-http/promise": "1.1.0",
       "phpoption/phpoption": "1.9.0",
-      "phpunit/php-code-coverage": "9.2.22",
+      "phpunit/php-code-coverage": "9.2.24",
       "phpunit/php-file-iterator": "3.0.6",
       "phpunit/php-invoker": "3.1.1",
       "phpunit/php-text-template": "2.0.4",
       "phpunit/php-timer": "5.0.3",
-      "phpunit/phpunit": "9.5.27",
+      "phpunit/phpunit": "9.6.3",
       "psr/cache": "3.0.0",
       "psr/container": "2.0.2",
       "psr/event-dispatcher": "1.0.0",
@@ -86,8 +89,8 @@
       "psr/log": "3.0.0",
       "psr/simple-cache": "3.0.0",
       "ralouphie/getallheaders": "3.0.3",
-      "ramsey/collection": "1.2.2",
-      "ramsey/uuid": "4.6.0",
+      "ramsey/collection": "2.0.0",
+      "ramsey/uuid": "4.7.3",
       "roadrunner-php/app-logger": "1.0.0",
       "roadrunner-php/centrifugo": "1.0.0",
       "sebastian/cli-parser": "1.0.1",
@@ -96,40 +99,40 @@
       "sebastian/comparator": "4.0.8",
       "sebastian/complexity": "2.0.2",
       "sebastian/diff": "4.0.4",
-      "sebastian/environment": "5.1.4",
+      "sebastian/environment": "5.1.5",
       "sebastian/exporter": "4.0.5",
       "sebastian/global-state": "5.0.5",
       "sebastian/lines-of-code": "1.0.3",
       "sebastian/object-enumerator": "4.0.4",
       "sebastian/object-reflector": "2.0.4",
-      "sebastian/recursion-context": "4.0.4",
+      "sebastian/recursion-context": "4.0.5",
       "sebastian/resource-operations": "3.0.3",
-      "sebastian/type": "3.2.0",
+      "sebastian/type": "3.2.1",
       "sebastian/version": "3.0.2",
-      "sentry/sentry": "3.12.0",
+      "sentry/sentry": "3.13.0",
       "spatie/backtrace": "1.2.1",
-      "spatie/flare-client-php": "1.3.1",
-      "spatie/ignition": "1.4.1",
+      "spatie/flare-client-php": "1.3.5",
+      "spatie/ignition": "1.4.3",
       "spiral-packages/ignition-bridge": "1.0.1",
       "spiral-packages/profiler": "1.0.2",
       "spiral/app": "1.0.0+no-version-set@{no ref",
       "spiral/attributes": "v3.0.0",
       "spiral/composer-publish-plugin": "v1.1.2",
-      "spiral/cycle-bridge": "v2.1.0",
+      "spiral/cycle-bridge": "v2.3.0",
       "spiral/data-grid": "v3.0.0",
       "spiral/data-grid-bridge": "v3.0.1",
       "spiral/filters-bridge": "1.0.1",
-      "spiral/framework": "3.4.0",
+      "spiral/framework": "3.6.0",
       "spiral/goridge": "v3.2.0",
       "spiral/nyholm-bridge": "v1.3.0",
       "spiral/profiler": "3.0.x-dev@a060b99",
-      "spiral/roadrunner": "v2.12.1",
+      "spiral/roadrunner": "v2.12.3",
       "spiral/roadrunner-bridge": "2.3.2",
       "spiral/roadrunner-broadcast": "v2.1.0",
       "spiral/roadrunner-cli": "v2.4.0",
       "spiral/roadrunner-grpc": "v2.0.1",
       "spiral/roadrunner-http": "v2.2.0",
-      "spiral/roadrunner-jobs": "v2.6.0",
+      "spiral/roadrunner-jobs": "v2.7.0",
       "spiral/roadrunner-kv": "v3.0.0",
       "spiral/roadrunner-metrics": "v2.0.1",
       "spiral/roadrunner-tcp": "v2.0.1",
@@ -138,17 +141,17 @@
       "spiral/sentry-bridge": "v2.1.0",
       "spiral/testing": "2.2.0",
       "spiral/validator": "1.2.0",
-      "symfony/console": "v6.2.2",
+      "symfony/console": "v6.2.5",
       "symfony/deprecation-contracts": "v3.2.0",
-      "symfony/event-dispatcher": "v6.2.2",
+      "symfony/event-dispatcher": "v6.2.5",
       "symfony/event-dispatcher-contracts": "v3.2.0",
-      "symfony/finder": "v6.2.0",
-      "symfony/http-client": "v6.2.2",
-      "symfony/http-client-contracts": "v3.1.1",
-      "symfony/http-foundation": "v6.2.2",
-      "symfony/mailer": "v6.2.2",
-      "symfony/mime": "v6.2.2",
-      "symfony/options-resolver": "v6.2.0",
+      "symfony/finder": "v6.2.5",
+      "symfony/http-client": "v6.2.6",
+      "symfony/http-client-contracts": "v3.2.0",
+      "symfony/http-foundation": "v6.2.6",
+      "symfony/mailer": "v6.2.5",
+      "symfony/mime": "v6.2.5",
+      "symfony/options-resolver": "v6.2.5",
       "symfony/polyfill-ctype": "v1.27.0",
       "symfony/polyfill-intl-grapheme": "v1.27.0",
       "symfony/polyfill-intl-idn": "v1.27.0",
@@ -156,14 +159,13 @@
       "symfony/polyfill-mbstring": "v1.27.0",
       "symfony/polyfill-php72": "v1.27.0",
       "symfony/polyfill-php80": "v1.27.0",
-      "symfony/polyfill-php81": "v1.27.0",
-      "symfony/process": "v6.2.0",
+      "symfony/process": "v6.2.5",
       "symfony/service-contracts": "v3.2.0",
-      "symfony/string": "v6.2.2",
-      "symfony/translation": "v6.2.2",
+      "symfony/string": "v6.2.5",
+      "symfony/translation": "v6.2.5",
       "symfony/translation-contracts": "v3.2.0",
-      "symfony/var-dumper": "v6.2.2",
-      "symfony/yaml": "v6.2.2",
+      "symfony/var-dumper": "v6.2.5",
+      "symfony/yaml": "v6.2.5",
       "theseer/tokenizer": "1.2.1",
       "vlucas/phpdotenv": "v5.5.0",
       "voku/portable-ascii": "2.0.1",
@@ -180,7 +182,7 @@
         "LOGNAME": "root",
         "HOME": "/root",
         "LANG": "C.UTF-8",
-        "WSL_INTEROP": "/run/WSL/308_interop",
+        "WSL_INTEROP": "/run/WSL/29721_interop",
         "LS_COLORS": "rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:",
         "WAYLAND_DISPLAY": "wayland-0",
         "LESSCLOSE": "/usr/bin/lesspipe %s %s",
@@ -193,9 +195,9 @@
         "XDG_RUNTIME_DIR": "/mnt/wslg/runtime-dir",
         "WSLENV": "",
         "XDG_DATA_DIRS": "/usr/local/share:/usr/share:/var/lib/snapd/desktop",
-        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Docker/Docker/resources/bin:/mnt/c/Users/butsc/AppData/Local/Microsoft/WindowsApps:/mnt/c/Program Files/JetBrains/PhpStorm 2022.2.2/bin:/mnt/c/Users/butsc/AppData/Local/Programs/Microsoft VS Code/bin:/snap/bin",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Docker/Docker/resources/bin:/mnt/c/Program Files (x86)/NVIDIA Corporation/PhysX/Common:/mnt/c/ProgramData/ComposerSetup/bin:/mnt/c/Users/butsc/AppData/Local/Microsoft/WindowsApps:/mnt/c/Program Files/JetBrains/PhpStorm 2022.2.2/bin:/mnt/c/Users/butsc/AppData/Local/Programs/Microsoft VS Code/bin:/mnt/c/Users/butsc/Documents/PHP/8.1:/mnt/c/Users/butsc/OneDrive/PHP/composer:/mnt/c/Users/butsc/AppData/Roaming/Composer/vendor/bin:/snap/bin",
         "HOSTTYPE": "x86_64",
-        "PULSE_SERVER": "/mnt/wslg/PulseServer",
+        "PULSE_SERVER": "unix:/mnt/wslg/PulseServer",
         "_": "./rr",
         "RR_RELAY": "pipes",
         "RR_RPC": "tcp://127.0.0.1:6002",
@@ -205,12 +207,15 @@
         "SCRIPT_FILENAME": "app.php",
         "PATH_TRANSLATED": "app.php",
         "DOCUMENT_ROOT": "",
-        "REQUEST_TIME_FLOAT": 1673266946.908353,
-        "REQUEST_TIME": 1673266946,
-        "argv": ["app.php"],
+        "REQUEST_TIME_FLOAT": 1678272163.848606,
+        "REQUEST_TIME": 1678272163,
+        "argv": [
+          "app.php"
+        ],
         "argc": 1,
         "APP_ENV": "local",
         "DEBUG": true,
+        "TOKENIZER_CACHE_TARGETS": true,
         "ENCRYPTER_KEY": "def00000c7cb5691f7d052a7d4d1aea220b23db12a2a0f9d5be80c044e6cc5c2671d049decfe970c545c7d457f8e7edf2f979acefd988a926bcfa84dc042873db3a19dc6",
         "SAFE_MIGRATIONS": true,
         "QUEUE_CONNECTION": "sync",
@@ -233,32 +238,55 @@
         "PROFILER_APP_NAME": "My super app"
       },
       "headers": {
-        "Host": ["127.0.0.1:8080"],
-        "Sec-Fetch-Mode": ["navigate"],
-        "Sec-Fetch-Dest": ["document"],
-        "Accept-Encoding": ["gzip, deflate, br"],
-        "Accept-Language": ["en-US,en;q=0.9,ru-RU;q=0.8,ru;q=0.7,ka;q=0.6"],
-        "Sec-Ch-Ua-Platform": ["\"Windows\""],
-        "User-Agent": [
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
+        "Host": [
+          "127.0.0.1:8080"
         ],
-        "Sec-Ch-Ua-Mobile": ["?0"],
-        "Sec-Fetch-Site": ["none"],
-        "Sec-Fetch-User": ["?1"],
-        "Cookie": ["grafana_session=ba4107efb94c195a463e7780bcc25608"],
-        "Connection": ["keep-alive"],
-        "Upgrade-Insecure-Requests": ["1"],
+        "Connection": [
+          "keep-alive"
+        ],
+        "Sec-Fetch-Site": [
+          "none"
+        ],
+        "Sec-Fetch-Mode": [
+          "navigate"
+        ],
+        "Sec-Fetch-User": [
+          "?1"
+        ],
         "Sec-Ch-Ua": [
-          "\"Not?A_Brand\";v=\"8\", \"Chromium\";v=\"108\", \"Google Chrome\";v=\"108\""
+          "\"Chromium\";v=\"110\", \"Not A(Brand\";v=\"24\", \"Google Chrome\";v=\"110\""
+        ],
+        "Sec-Ch-Ua-Platform": [
+          "\"Windows\""
+        ],
+        "Sec-Fetch-Dest": [
+          "document"
         ],
         "Accept": [
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
         ],
-        "Cache-Control": ["max-age=0"]
+        "Accept-Encoding": [
+          "gzip, deflate, br"
+        ],
+        "Accept-Language": [
+          "en-US,en;q=0.9,ru-RU;q=0.8,ru;q=0.7,ka;q=0.6"
+        ],
+        "Sec-Ch-Ua-Mobile": [
+          "?0"
+        ],
+        "Upgrade-Insecure-Requests": [
+          "1"
+        ],
+        "User-Agent": [
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+        ],
+        "Cookie": [
+          "_ga=GA1.1.734953706.1673627847; _lfa=LF1.1.f98950321ce4fe9c.1673271587691; theme=light; _ga_TD1X69YDT5=GS1.1.1678132611.22.1.1678137856.0.0.0"
+        ]
       }
     },
     "tags": {
-      "php": "8.1.2-1ubuntu2.8",
+      "php": "8.1.2-1ubuntu2.10",
       "dispatcher": "Spiral\\RoadRunnerBridge\\Http\\Dispatcher",
       "method": "GET",
       "url": "http://127.0.0.1:8080/exception.html"
@@ -266,17 +294,20 @@
     "contexts": {
       "os": {
         "name": "Linux",
-        "version": "5.15.79.1-microsoft-standard-WSL2",
-        "build": "#1 SMP Wed Nov 23 01:01:46 UTC 2022",
-        "kernel_version": "Linux ButschsterLpp 5.15.79.1-microsoft-standard-WSL2 #1 SMP Wed Nov 23 01:01:46 UTC 2022 x86_64"
+        "version": "5.15.90.1-microsoft-standard-WSL2",
+        "build": "#1 SMP Fri Jan 27 02:56:13 UTC 2023",
+        "kernel_version": "Linux ButschsterLpp 5.15.90.1-microsoft-standard-WSL2 #1 SMP Fri Jan 27 02:56:13 UTC 2023 x86_64"
       },
-      "runtime": { "name": "php", "version": "8.1.2" }
+      "runtime": {
+        "name": "php",
+        "version": "8.1.2"
+      }
     },
     "exception": {
       "values": [
         {
           "type": "Spiral\\Core\\Exception\\Container\\NotFoundException",
-          "value": "Can't resolve `foo`: undefined class or binding `foo`.\nContainer trace list:\n- action: 'autowire'\n  alias: 'foo'\n  context: NULL",
+          "value": "Can't resolve `foo`: undefined class or binding `foo`.\nContainer trace list:\n- action: 'autowire'\n  alias: 'foo'\n  context: null",
           "stacktrace": {
             "frames": [
               {
@@ -292,11 +323,14 @@
                   ""
                 ],
                 "context_line": "$code = (int)$app->serve();",
-                "post_context": ["exit($code);", ""]
+                "post_context": [
+                  "exit($code);",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Boot/src/AbstractKernel.php",
-                "lineno": 274,
+                "lineno": 280,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Boot/src/AbstractKernel.php",
                 "function": "Spiral\\Boot\\AbstractKernel::serve",
@@ -319,7 +353,7 @@
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 160,
+                "lineno": 173,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -342,30 +376,30 @@
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/ContainerScope.php",
-                "lineno": 37,
+                "lineno": 39,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/ContainerScope.php",
                 "function": "Spiral\\Core\\ContainerScope::runScope",
                 "raw_function": "Spiral\\Core\\ContainerScope::runScope",
                 "pre_context": [
-                  "    public static function runScope(ContainerInterface $container, callable $scope): mixed",
                   "    {",
                   "        [$previous, self::$container] = [self::$container, $container];",
                   "",
-                  "        try {"
+                  "        try {",
+                  "            if (Fiber::getCurrent() === null) {"
                 ],
-                "context_line": "            return $scope(self::$container);",
+                "context_line": "                return $scope(self::$container);",
                 "post_context": [
-                  "        } finally {",
-                  "            self::$container = $previous;",
-                  "        }",
-                  "    }",
-                  "}"
+                  "            }",
+                  "",
+                  "            // Wrap scope into fiber",
+                  "            $fiber = new Fiber(static fn () => $scope(self::$container));",
+                  "            $value = $fiber->start();"
                 ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Boot/src/AbstractKernel.php",
-                "lineno": 273,
+                "lineno": 279,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Boot/src/AbstractKernel.php",
                 "function": "Spiral\\Boot\\AbstractKernel::Spiral\\Boot\\{closure}",
@@ -470,11 +504,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -510,11 +548,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 212,
+                "lineno": 275,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::invoke",
@@ -532,12 +574,12 @@
                   "",
                   "    /**",
                   "     * Bind class or class interface to the injector source (InjectorInterface).",
-                  "     */"
+                  "     *"
                 ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
-                "lineno": 73,
+                "lineno": 75,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
                 "function": "Spiral\\Core\\Internal\\Invoker::invoke",
@@ -649,11 +691,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -689,11 +735,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 212,
+                "lineno": 275,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::invoke",
@@ -711,12 +761,12 @@
                   "",
                   "    /**",
                   "     * Bind class or class interface to the injector source (InjectorInterface).",
-                  "     */"
+                  "     *"
                 ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
-                "lineno": 73,
+                "lineno": 75,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
                 "function": "Spiral\\Core\\Internal\\Invoker::invoke",
@@ -851,11 +901,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -891,11 +945,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 212,
+                "lineno": 275,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::invoke",
@@ -913,12 +971,12 @@
                   "",
                   "    /**",
                   "     * Bind class or class interface to the injector source (InjectorInterface).",
-                  "     */"
+                  "     *"
                 ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
-                "lineno": 73,
+                "lineno": 75,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
                 "function": "Spiral\\Core\\Internal\\Invoker::invoke",
@@ -971,7 +1029,7 @@
               },
               {
                 "filename": "/vendor/spiral/framework/src/Http/src/Middleware/ErrorHandlerMiddleware.php",
-                "lineno": 43,
+                "lineno": 45,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Http/src/Middleware/ErrorHandlerMiddleware.php",
                 "function": "Spiral\\Http\\Middleware\\ErrorHandlerMiddleware::process",
@@ -1053,11 +1111,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -1093,11 +1155,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 212,
+                "lineno": 275,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::invoke",
@@ -1115,12 +1181,12 @@
                   "",
                   "    /**",
                   "     * Bind class or class interface to the injector source (InjectorInterface).",
-                  "     */"
+                  "     *"
                 ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
-                "lineno": 73,
+                "lineno": 75,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
                 "function": "Spiral\\Core\\Internal\\Invoker::invoke",
@@ -1255,11 +1321,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -1295,11 +1365,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 212,
+                "lineno": 275,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::invoke",
@@ -1317,12 +1391,12 @@
                   "",
                   "    /**",
                   "     * Bind class or class interface to the injector source (InjectorInterface).",
-                  "     */"
+                  "     *"
                 ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
-                "lineno": 73,
+                "lineno": 75,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
                 "function": "Spiral\\Core\\Internal\\Invoker::invoke",
@@ -1411,11 +1485,15 @@
                   "            static fn (): Response => $handler->handle($request)"
                 ],
                 "context_line": "        );",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -1451,7 +1529,12 @@
                   "            [Request::class => $request],"
                 ],
                 "context_line": "            static fn (): Response => $handler->handle($request)",
-                "post_context": ["        );", "    }", "}", ""]
+                "post_context": [
+                  "        );",
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Router/src/Router.php",
@@ -1514,11 +1597,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -1554,11 +1641,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 212,
+                "lineno": 275,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::invoke",
@@ -1576,12 +1667,12 @@
                   "",
                   "    /**",
                   "     * Bind class or class interface to the injector source (InjectorInterface).",
-                  "     */"
+                  "     *"
                 ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
-                "lineno": 73,
+                "lineno": 75,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
                 "function": "Spiral\\Core\\Internal\\Invoker::invoke",
@@ -1739,11 +1830,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -1779,11 +1874,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 212,
+                "lineno": 275,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::invoke",
@@ -1801,12 +1900,12 @@
                   "",
                   "    /**",
                   "     * Bind class or class interface to the injector source (InjectorInterface).",
-                  "     */"
+                  "     *"
                 ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
-                "lineno": 73,
+                "lineno": 75,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
                 "function": "Spiral\\Core\\Internal\\Invoker::invoke",
@@ -1941,11 +2040,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -1981,11 +2084,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 212,
+                "lineno": 275,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::invoke",
@@ -2003,12 +2110,12 @@
                   "",
                   "    /**",
                   "     * Bind class or class interface to the injector source (InjectorInterface).",
-                  "     */"
+                  "     *"
                 ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
-                "lineno": 73,
+                "lineno": 75,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
                 "function": "Spiral\\Core\\Internal\\Invoker::invoke",
@@ -2143,11 +2250,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -2183,11 +2294,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 212,
+                "lineno": 275,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::invoke",
@@ -2205,12 +2320,12 @@
                   "",
                   "    /**",
                   "     * Bind class or class interface to the injector source (InjectorInterface).",
-                  "     */"
+                  "     *"
                 ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
-                "lineno": 73,
+                "lineno": 75,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
                 "function": "Spiral\\Core\\Internal\\Invoker::invoke",
@@ -2299,11 +2414,15 @@
                   "            static fn (): Response => $handler->handle($request)"
                 ],
                 "context_line": "        );",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -2339,7 +2458,12 @@
                   "            [Request::class => $request],"
                 ],
                 "context_line": "            static fn (): Response => $handler->handle($request)",
-                "post_context": ["        );", "    }", "}", ""]
+                "post_context": [
+                  "        );",
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Http/src/Pipeline.php",
@@ -2356,11 +2480,15 @@
                   "            static fn (): Response => $handler->handle($request)"
                 ],
                 "context_line": "        );",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -2396,7 +2524,12 @@
                   "            [Request::class => $request],"
                 ],
                 "context_line": "            static fn (): Response => $handler->handle($request)",
-                "post_context": ["        );", "    }", "}", ""]
+                "post_context": [
+                  "        );",
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Http/src/Pipeline.php",
@@ -2413,11 +2546,15 @@
                   "            static fn (): Response => $handler->handle($request)"
                 ],
                 "context_line": "        );",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -2453,7 +2590,12 @@
                   "            [Request::class => $request],"
                 ],
                 "context_line": "            static fn (): Response => $handler->handle($request)",
-                "post_context": ["        );", "    }", "}", ""]
+                "post_context": [
+                  "        );",
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Router/src/CoreHandler.php",
@@ -2480,7 +2622,7 @@
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -2562,11 +2704,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 161,
+                "lineno": 174,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::runScope",
@@ -2602,11 +2748,15 @@
                   "            TracerInterface::class => $this,"
                 ],
                 "context_line": "        ], static fn (InvokerInterface $invoker): mixed => $invoker->invoke($callback));",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 212,
+                "lineno": 275,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::invoke",
@@ -2624,12 +2774,12 @@
                   "",
                   "    /**",
                   "     * Bind class or class interface to the injector source (InjectorInterface).",
-                  "     */"
+                  "     *"
                 ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
-                "lineno": 73,
+                "lineno": 75,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Invoker.php",
                 "function": "Spiral\\Core\\Internal\\Invoker::invoke",
@@ -2695,7 +2845,11 @@
                   "    {"
                 ],
                 "context_line": "        return $this->pipeline->withCore($this->core)->callAction($controller, $action, $parameters);",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Hmvc/src/InterceptorPipeline.php",
@@ -2758,7 +2912,11 @@
                   ""
                 ],
                 "context_line": "        return $this->core->callAction($controller, $action, $parameters);",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Hmvc/src/AbstractCore.php",
@@ -2775,29 +2933,33 @@
                   "            static fn () => $method->invokeArgs($container->get($controller), $args)"
                 ],
                 "context_line": "        );",
-                "post_context": ["    }", "}", ""]
+                "post_context": [
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/ContainerScope.php",
-                "lineno": 37,
+                "lineno": 39,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/ContainerScope.php",
                 "function": "Spiral\\Core\\ContainerScope::runScope",
                 "raw_function": "Spiral\\Core\\ContainerScope::runScope",
                 "pre_context": [
-                  "    public static function runScope(ContainerInterface $container, callable $scope): mixed",
                   "    {",
                   "        [$previous, self::$container] = [self::$container, $container];",
                   "",
-                  "        try {"
+                  "        try {",
+                  "            if (Fiber::getCurrent() === null) {"
                 ],
-                "context_line": "            return $scope(self::$container);",
+                "context_line": "                return $scope(self::$container);",
                 "post_context": [
-                  "        } finally {",
-                  "            self::$container = $previous;",
-                  "        }",
-                  "    }",
-                  "}"
+                  "            }",
+                  "",
+                  "            // Wrap scope into fiber",
+                  "            $fiber = new Fiber(static fn () => $scope(self::$container));",
+                  "            $value = $fiber->start();"
                 ]
               },
               {
@@ -2815,7 +2977,12 @@
                   "            $container,"
                 ],
                 "context_line": "            static fn () => $method->invokeArgs($container->get($controller), $args)",
-                "post_context": ["        );", "    }", "}", ""]
+                "post_context": [
+                  "        );",
+                  "    }",
+                  "}",
+                  ""
+                ]
               },
               {
                 "filename": "[internal]",
@@ -2826,7 +2993,7 @@
               },
               {
                 "filename": "/app/src/Controller/HomeController.php",
-                "lineno": 75,
+                "lineno": 79,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/app/src/Controller/HomeController.php",
                 "function": "App\\Controller\\HomeController::exception",
@@ -2849,14 +3016,14 @@
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Container.php",
-                "lineno": 136,
+                "lineno": 135,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Container.php",
                 "function": "Spiral\\Core\\Container::get",
                 "raw_function": "Spiral\\Core\\Container::get",
                 "pre_context": [
                   "     *",
-                  "     * @psalm-suppress PossiblyInvalidArgument, PossiblyInvalidCast",
+                  "     * @psalm-suppress InvalidArgument, InvalidCast",
                   "     */",
                   "    public function get(string|Autowire $id, string $context = null): mixed",
                   "    {"
@@ -2872,7 +3039,7 @@
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Internal/Container.php",
-                "lineno": 55,
+                "lineno": 56,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Container.php",
                 "function": "Spiral\\Core\\Internal\\Container::get",
@@ -2895,57 +3062,86 @@
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Internal/Factory.php",
-                "lineno": 61,
+                "lineno": 68,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Factory.php",
                 "function": "Spiral\\Core\\Internal\\Factory::make",
                 "raw_function": "Spiral\\Core\\Internal\\Factory::make",
                 "pre_context": [
+                  "     * @throws \\Throwable",
+                  "     */",
+                  "    public function make(string $alias, array $parameters = [], string $context = null): mixed",
                   "    {",
-                  "        if (!isset($this->state->bindings[$alias])) {",
-                  "            $this->tracer->push(false, action: 'autowire', alias: $alias, context: $context);",
-                  "            try {",
-                  "                //No direct instructions how to construct class, make is automatically"
+                  "        if (!isset($this->state->bindings[$alias])) {"
                 ],
-                "context_line": "                return $this->autowire($alias, $parameters, $context);",
+                "context_line": "            return $this->resolveWithoutBinding($alias, $parameters, $context);",
                 "post_context": [
-                  "            } finally {",
-                  "                $this->tracer->pop(false);",
-                  "            }",
                   "        }",
-                  ""
+                  "",
+                  "        $avoidCache = $parameters !== [];",
+                  "        $binding = $this->state->bindings[$alias];",
+                  "        try {"
                 ]
               },
               {
                 "filename": "/vendor/spiral/framework/src/Core/src/Internal/Factory.php",
-                "lineno": 134,
+                "lineno": 195,
+                "in_app": true,
+                "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Factory.php",
+                "function": "Spiral\\Core\\Internal\\Factory::resolveWithoutBinding",
+                "raw_function": "Spiral\\Core\\Internal\\Factory::resolveWithoutBinding",
+                "pre_context": [
+                  "",
+                  "        $this->tracer->push(false, action: 'autowire', alias: $alias, context: $context);",
+                  "        try {",
+                  "            //No direct instructions how to construct class, make is automatically",
+                  "            return $this->autowire("
+                ],
+                "context_line": "                new Ctx(alias: $alias, class: $alias, parameter: $context),",
+                "post_context": [
+                  "                $parameters,",
+                  "            );",
+                  "        } finally {",
+                  "            $this->tracer->pop(false);",
+                  "        }"
+                ]
+              },
+              {
+                "filename": "/vendor/spiral/framework/src/Core/src/Internal/Factory.php",
+                "lineno": 220,
                 "in_app": true,
                 "abs_path": "/root/repos/spiral-apps/filters-bridge/vendor/spiral/framework/src/Core/src/Internal/Factory.php",
                 "function": "Spiral\\Core\\Internal\\Factory::autowire",
                 "raw_function": "Spiral\\Core\\Internal\\Factory::autowire",
                 "pre_context": [
-                  "     * @throws \\Throwable",
-                  "     */",
-                  "    private function autowire(string $class, array $parameters, string $context = null): object",
-                  "    {",
-                  "        if (!\\class_exists($class) && !isset($this->state->injectors[$class])) {"
+                  "            \\interface_exists($ctx->class)",
+                  "                &&",
+                  "                (isset($this->state->injectors[$ctx->class]) || $this->binder->hasInjector($ctx->class))",
+                  "        ))",
+                  "        ) {"
                 ],
                 "context_line": "            throw new NotFoundException($this->tracer->combineTraceMessage(\\sprintf(",
                 "post_context": [
                   "                'Can\\'t resolve `%s`: undefined class or binding `%s`.',",
                   "                $this->tracer->getRootAlias(),",
-                  "                $class",
+                  "                $ctx->class,",
                   "            )));",
                   "        }"
                 ]
               }
             ]
           },
-          "mechanism": { "type": "generic", "handled": true }
+          "mechanism": {
+            "type": "generic",
+            "handled": true,
+            "data": {
+              "code": 0
+            }
+          }
         }
       ]
     }
   },
-  "timestamp": 1673266950,
+  "timestamp": 1678272249,
   "project_id": null
 }

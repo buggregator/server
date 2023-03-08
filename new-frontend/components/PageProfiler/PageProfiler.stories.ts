@@ -4,7 +4,7 @@ import PageProfiler from '~/components/PageProfiler/PageProfiler.vue';
 import profilerEventMock from '~/mocks/profiler.json'
 
 export default {
-  title: "Pages/PageProfiler",
+  title: "Pages/Profiler",
   component: PageProfiler
 } as Meta<typeof PageProfiler>;
 

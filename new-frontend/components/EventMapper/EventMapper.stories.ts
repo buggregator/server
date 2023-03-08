@@ -1,9 +1,9 @@
 import { Meta, Story } from "@storybook/vue3";
 import EventMapper from '~/components/EventMapper/EventMapper.vue';
 import monologEventMock from '~/mocks/monolog.json'
-import sentryEventMock from '~/mocks/sentry.json'
-import smtpEventMock from '~/mocks/smtp.json'
-import varDumpEventMock from '~/mocks/var-dump.json'
+import sentryEventMock from '~/mocks/sentry-spiral.json'
+import smtpEventMock from '~/mocks/smtp-welcome.json'
+import varDumpEventMock from '~/mocks/var-dump-object.json'
 import profilerEventMock from '~/mocks/profiler.json'
 
 export default {

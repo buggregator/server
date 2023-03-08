@@ -1,12 +1,12 @@
 <template>
   <div
-    class="profiler-callstack-item"
-    @mouseover="onHover($event, edge)"
-    @mouseout="$emit('hide')"
+      class="profiler-callstack-item"
+      @mouseover="onHover($event, edge)"
+      @mouseout="$emit('hide')"
   >
     <div class="usage">
-      <div class="usage--cpu" :style="{ width: `${p_cpu}%` }" />
-      <div class="usage--memory" :style="{ width: `${p_mu}%` }" />
+      <div class="usage--cpu" :style="{ width: `${p_cpu}%` }"/>
+      <div class="usage--memory" :style="{ width: `${p_mu}%` }"/>
       <div class="usage--title">
         {{ edge.cost.p_cpu }}% / {{ edge.cost.p_mu }}%
       </div>
@@ -16,8 +16,8 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from "vue";
-import { ProfilerEdge } from "~/config/types";
+import {defineComponent, PropType} from "vue";
+import {ProfilerEdge} from "~/config/types";
 
 export default defineComponent({
   props: {
@@ -36,7 +36,7 @@ export default defineComponent({
     },
   },
   methods: {
-    onHover($event, edge) {
+    onHover($event: MouseEvent, edge: ProfilerEdge) {
       this.$emit("hover", {
         name: edge.callee,
         cost: edge.cost,

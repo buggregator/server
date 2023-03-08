@@ -1,7 +1,8 @@
 import { Meta, Story } from "@storybook/vue3";
 import { normalizeSentryEvent } from "~/utils/normalize-event";
 import EventSentry from '~/components/EventSentry/EventSentry.vue';
-import sentryEventMock from '~/mocks/sentry.json'
+import sentrySpiralEventMock from '~/mocks/sentry-spiral.json'
+import sentryLaravelEventMock from '~/mocks/sentry-laravel.json'
 
 export default {
   title: "Sentry",
@@ -18,8 +19,14 @@ const Template: Story = (args) => ({
   template: `<event-sentry v-bind="args" />`,
 });
 
-export const Event = Template.bind({});
+export const Spiral = Template.bind({});
 
-Event.args = {
-  event: normalizeSentryEvent(sentryEventMock),
+Spiral.args = {
+  event: normalizeSentryEvent(sentrySpiralEventMock),
+};
+
+export const Laravel = Template.bind({});
+
+Laravel.args = {
+  event: normalizeSentryEvent(sentryLaravelEventMock),
 };

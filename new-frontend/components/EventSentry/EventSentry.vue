@@ -1,30 +1,26 @@
 <template>
   <event-card class="event-sentry" :event="event">
-    <NuxtLink tag="div" :to="eventLink" class="event-sentry__link">
-      <h3 class="event-sentry__title">
-        {{ exception.type }}
-      </h3>
+    <SentryException :exception="exception">
+      <NuxtLink tag="div" :to="eventLink" class="event-sentry__link">
+        <h3 class="event-sentry__title">
+          {{ exception.type }}
+        </h3>
 
-      <pre class="event-sentry__text" v-html="exception.value" />
-    </NuxtLink>
-
-    <div v-if="exceptionFrames.length" class="event-sentry__files">
-      <template v-for="(frame, i) in exceptionFrames" :key="frame.context_line">
-        <sentry-frame :frame="frame" :is-open="isVisibleFrame(i)" />
-      </template>
-    </div>
+        <pre class="event-sentry__text" v-html="exception.value"/>
+      </NuxtLink>
+    </SentryException>
   </event-card>
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from "vue";
-import { NormalizedEvent } from "~/config/types";
+import {defineComponent, PropType} from "vue";
+import {NormalizedEvent} from "~/config/types";
 import EventCard from "~/components/EventCard/EventCard.vue";
-import SentryFrame from "./SentryFrame.vue";
+import SentryException from "~/components/SentryException/SentryException.vue";
 
 export default defineComponent({
   components: {
-    SentryFrame,
+    SentryException,
     EventCard,
   },
   props: {
@@ -32,6 +28,10 @@ export default defineComponent({
       type: Object as PropType<NormalizedEvent>,
       required: true,
     },
+    maxFrames: {
+      type: Number,
+      default: 1,
+    }
   },
   computed: {
     eventLink() {
@@ -49,11 +49,17 @@ export default defineComponent({
       const eventExceptionValues = this.event?.payload?.exception?.values;
 
       return eventExceptionValues.length
-        ? eventExceptionValues[0]
-        : defaultException;
+          ? eventExceptionValues[0]
+          : defaultException;
     },
     exceptionFrames(): object[] {
-      return this.exception.stacktrace.frames || [];
+      const frames = (this.exception.stacktrace.frames || []).reverse();
+
+      if (this.maxFrames > 0) {
+        return frames.slice(0, this.maxFrames);
+      }
+
+      return frames;
     },
   },
   methods: {
@@ -66,7 +72,6 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 @import "assets/mixins";
-
 .event-sentry {
   @apply flex flex-col;
 }
@@ -84,7 +89,7 @@ export default defineComponent({
   @apply text-sm break-all mb-3 p-3 dark:bg-gray-800;
 }
 
-.event-sentry__files {
+.event-sentry__frames {
   @apply border border-purple-200 dark:border-gray-600 flex-col justify-center w-full;
 }
 </style>

@@ -3,43 +3,23 @@
     <main class="page-profiler__main">
       <section ref="calls" class="page-profiler__callstack">
         <PerfectScrollbar :style="{ height: '100vh' }">
-          <div class="page-profiler__callstack-items">
-            <div class="page-profiler__callstack-items-top">
-              <div>CPU / Memory</div>
-              <div>Calls</div>
-            </div>
-
-            <div
-              v-for="(edge, key) in sortedEdges"
-              :key="key"
-              class="page-profiler__callstack-item"
-              @mouseover="setActiveEdge($event, edge)"
-              @mouseout="setActiveEdge(null)"
-            >
-              <div class="page-profiler__callstack-item-usage">
-                <div :style="calcStyles(edge.cost.p_cpu)" />
-                <div :style="calcStyles(edge.cost.p_mu)" />
-                <div>{{ normalizeCostValue(edge) }}</div>
-              </div>
-
-              <div class="page-profiler__callstack-item-calls">
-                {{ edge.cost.ct }}
-              </div>
-            </div>
-          </div>
+          <EventProfilerCallStack
+              :event="event.payload"
+              @hover="setActiveEdge"
+              @hide="setActiveEdge"
+          />
         </PerfectScrollbar>
       </section>
 
       <div ref="info" class="page-profiler__stat">
         <section class="page-profiler__stat-board">
-          <stat-board :cost="event.payload.peaks" />
+          <stat-board :cost="event.payload.peaks"/>
         </section>
 
         <section class="page-profiler__stat-tabs">
           <Tabs :options="{ useUrlFragment: false }">
             <Tab name="Call graph">
-              Graph
-              <!--              <Graph :event="event" @hover="showEdge" @hide="hideEdge"/>-->
+              <EventProfilerCallGraph :event="event.payload"/>
             </Tab>
             <Tab name="Flamechart">
               FlameGraph
@@ -50,31 +30,35 @@
       </div>
 
       <div
-        v-if="activeEdge"
-        class="page-profiler__edge"
-        :style="activeEdgeStyle"
+          v-if="activeEdge"
+          class="page-profiler__edge"
+          :style="activeEdgeStyle"
       >
         <h4 class="page-profiler__edge-title">
           {{ activeEdge.callee }}
         </h4>
 
-        <stat-board :cost="activeEdge.cost" />
+        <stat-board :cost="activeEdge.cost"/>
       </div>
     </main>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from "vue";
-import { NormalizedEvent } from "~/config/types";
+import {defineComponent, PropType} from "vue";
+import {NormalizedEvent} from "~/config/types";
 import StatBoard from "~/components/StatBoard/StatBoard.vue";
-import { PerfectScrollbar } from "vue3-perfect-scrollbar";
-import type { Profiler, ProfilerEdge } from "~/config/types";
-import { Tabs, Tab } from "vue3-tabs-component";
+import EventProfilerCallStack from "~/components/EventProfilerCallStack/EventProfilerCallStack.vue";
+import EventProfilerCallGraph from "~/components/EventProfilerCallGraph/EventProfilerCallGraph.vue";
+import {PerfectScrollbar} from "vue3-perfect-scrollbar";
+import type {Profiler, ProfilerEdge} from "~/config/types";
+import {Tabs, Tab} from "vue3-tabs-component";
 
 export default defineComponent({
   components: {
     StatBoard,
+    EventProfilerCallStack,
+    EventProfilerCallGraph,
     PerfectScrollbar,
     Tabs,
     Tab,
@@ -98,9 +82,9 @@ export default defineComponent({
   computed: {
     sortedEdges() {
       return Object.fromEntries(
-        Object.entries((this.event.payload as Profiler).edges).sort(
-          ([, a], [, b]) => b.cost.p_cpu - a.cost.p_cpu
-        )
+          Object.entries((this.event.payload as Profiler).edges).sort(
+              ([, a], [, b]) => b.cost.p_cpu - a.cost.p_cpu
+          )
       );
     },
     activeEdgeStyle() {
@@ -112,7 +96,7 @@ export default defineComponent({
 
       if (width + this.activeEdgePosition.x > window.innerWidth - 80) {
         const deltaX =
-          width + this.activeEdgePosition.x - window.innerWidth + 100;
+            width + this.activeEdgePosition.x - window.innerWidth + 100;
         left -= deltaX;
       }
 
@@ -128,24 +112,21 @@ export default defineComponent({
     },
   },
   methods: {
-    calcStyles(percentages: number) {
+    calcStyles(percentages: number): {width: string} {
       return {
         width: percentages
-          ? `${this.normalizePercentage(percentages)}%`
-          : `0px`,
+            ? `${this.normalizePercentage(percentages)}%`
+            : `0px`,
       };
     },
-    setActiveEdge(event: MouseEvent, edge: ProfilerEdge) {
+    setActiveEdge(edge): void {
       this.activeEdge = edge;
-      this.activeEdgePosition = {
-        x: event?.pageX || 0,
-        y: event?.pageY || 0,
-      };
+      this.activeEdgePosition = edge?.position;
     },
-    normalizePercentage(n: number) {
+    normalizePercentage(n: number): number {
       return Math.min(100, n);
     },
-    normalizeCostValue(edge: ProfilerEdge) {
+    normalizeCostValue(edge: ProfilerEdge): string {
       return `${edge.cost.p_cpu}% / ${edge.cost.p_mu}%`;
     },
   },
@@ -160,6 +141,7 @@ export default defineComponent({
 .page-profiler__main {
   @apply flex flex-col md:flex-row;
 }
+
 .page-profiler__callstack {
   @apply w-full md:w-1/6 border-r border-gray-300 dark:border-gray-500;
 }

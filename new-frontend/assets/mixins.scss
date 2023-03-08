@@ -5,3 +5,11 @@
 @mixin border-style {
   @apply border-gray-300 dark:border-gray-500 divide-gray-300 dark:divide-gray-500;
 }
+
+@mixin text-responsive {
+  @apply text-2xs sm:text-xs md:text-sm lg:text-base;
+}
+
+@mixin border-style {
+  @apply border-gray-300 dark:border-gray-500 divide-gray-300 dark:divide-gray-500;
+}
