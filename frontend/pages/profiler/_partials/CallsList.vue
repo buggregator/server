@@ -1,7 +1,6 @@
 <template>
   <div class="event--profiler__callitems">
     <header>
-<!--      <div class="callee">Function calls</div>-->
       <div class="cpu">CPU / Memory</div>
       <div class="calls">Calls</div>
     </header>

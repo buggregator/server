@@ -4,7 +4,7 @@ import EventSentry from '~/components/EventSentry/EventSentry.vue';
 import sentryEventMock from '~/mocks/sentry.json'
 
 export default {
-  title: "Event/EventSentry",
+  title: "Sentry",
   component: EventSentry
 } as Meta<typeof EventSentry>;
 
@@ -18,8 +18,8 @@ const Template: Story = (args) => ({
   template: `<event-sentry v-bind="args" />`,
 });
 
-export const Default = Template.bind({});
+export const Event = Template.bind({});
 
-Default.args = {
+Event.args = {
   event: normalizeSentryEvent(sentryEventMock),
 };

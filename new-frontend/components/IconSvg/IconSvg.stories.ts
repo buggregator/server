@@ -24,9 +24,6 @@ const Template: Story = (args) => ({
   template: '<div style="width: 50px;"><icon-svg v-bind="args" /></div>',
 });
 
-
-
-
 export const Default = Template.bind({});
 Default.args = {
   name: "github"

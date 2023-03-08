@@ -1,7 +1,6 @@
 <template>
   <div class="events-page">
     <header class="events-page__header">
-      {{ events.length }}
       <div v-if="events.length" class="events-page__filters">
         <button class="events-page__btn-clear" @click="clearEvents">
           Clear screen
@@ -85,7 +84,7 @@ export default defineComponent({
 }
 
 .events-page__welcome {
-  @apply flex-1 p-4 flex flex-col justify-center items-center bg-gray-50 dark:bg-gray-800 w-full h-full;
+  @apply flex-1 p-4 flex flex-col justify-center items-center bg-gray-50 dark:bg-gray-800 w-full h-full min-h-screen;
 }
 
 .events-page__btn-clear {

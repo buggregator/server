@@ -13,6 +13,10 @@ export const parameters = {
   },
 };
 
+export const globalTypes = {
+  darkMode: true,
+};
+
 
 const pinia = createPinia();
 

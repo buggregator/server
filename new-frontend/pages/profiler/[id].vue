@@ -46,6 +46,18 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .profiler-event {
-  @apply h-full w-full;
+  @apply relative h-full w-full;
+
+  > main {
+    @apply flex flex-col md:flex-row;
+  }
+
+  .call-stack__wrapper {
+    @apply w-full md:w-1/6 border-r border-gray-300 dark:border-gray-500;
+  }
+
+  .info__wrapper {
+    @apply w-full h-full flex flex-col md:w-5/6 divide-y divide-gray-300 dark:divide-gray-500;
+  }
 }
 </style>

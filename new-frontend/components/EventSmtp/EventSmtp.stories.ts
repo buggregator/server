@@ -4,7 +4,7 @@ import EventSmtp from '~/components/EventSmtp/EventSmtp.vue';
 import smtpEventMock from '~/mocks/smtp.json'
 
 export default {
-  title: "Event/EventSMTP",
+  title: "SMTP",
   component: EventSmtp
 } as Meta<typeof EventSmtp>;
 
@@ -18,8 +18,8 @@ const Template: Story = (args) => ({
   template: `<event-smtp v-bind="args" />`,
 });
 
-export const Default = Template.bind({});
+export const Event = Template.bind({});
 
-Default.args = {
+Event.args = {
   event: normalizeSMTPEvent(smtpEventMock),
 };

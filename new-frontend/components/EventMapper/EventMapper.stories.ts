@@ -4,6 +4,7 @@ import monologEventMock from '~/mocks/monolog.json'
 import sentryEventMock from '~/mocks/sentry.json'
 import smtpEventMock from '~/mocks/smtp.json'
 import varDumpEventMock from '~/mocks/var-dump.json'
+import profilerEventMock from '~/mocks/profiler.json'
 
 export default {
   title: "Event/EventMapper",
@@ -42,6 +43,12 @@ export const VarDump = Template.bind({});
 
 VarDump.args = {
   event: varDumpEventMock,
+};
+
+export const Profiler = Template.bind({});
+
+Profiler.args = {
+  event: profilerEventMock,
 };
 
 

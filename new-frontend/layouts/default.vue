@@ -46,7 +46,7 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .main-layout {
-  @apply flex h-screen items-stretch relative;
+  @apply flex min-h-screen items-stretch relative;
 }
 
 .main-layout__sidebar-wrap {

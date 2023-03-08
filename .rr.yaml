@@ -49,9 +49,11 @@ service:
     remain_after_exit: true
     restart_sec: 1
     command: "npm run dev"
-    env:
-      API_URL: http://127.0.0.1:8082
-      WS_URL: ws://127.0.0.1:8089/connection/websocket
+  storybook:
+    service_name_in_log: true
+    remain_after_exit: true
+    restart_sec: 1
+    command: "npm run sb"
   centrifuge:
     service_name_in_log: true
     remain_after_exit: true

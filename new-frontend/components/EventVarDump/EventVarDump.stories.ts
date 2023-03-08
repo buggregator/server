@@ -4,7 +4,7 @@ import EventVarDump from '~/components/EventVarDump/EventVarDump.vue';
 import varDumpEventMock from '~/mocks/var-dump.json'
 
 export default {
-  title: "Event/EventVarDump",
+  title: "VarDump",
   component: EventVarDump
 } as Meta<typeof EventVarDump>;
 
@@ -18,8 +18,8 @@ const Template: Story = (args) => ({
   template: `<event-var-dump v-bind="args" />`,
 });
 
-export const Default = Template.bind({});
+export const Event = Template.bind({});
 
-Default.args = {
+Event.args = {
   event: normalizeVarDumpEvent(varDumpEventMock),
 };

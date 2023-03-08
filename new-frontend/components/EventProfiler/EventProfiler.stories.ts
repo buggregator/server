@@ -4,7 +4,7 @@ import EventProfiler from '~/components/EventProfiler/EventProfiler.vue';
 import profilerEventMock from '~/mocks/profiler.json'
 
 export default {
-  title: "Event/EventProfiler",
+  title: "Profiler",
   component: EventProfiler
 } as Meta<typeof EventProfiler>;
 
@@ -18,8 +18,8 @@ const Template: Story = (args) => ({
   template: `<event-profiler v-bind="args" />`,
 });
 
-export const Default = Template.bind({});
+export const Event = Template.bind({});
 
-Default.args = {
+Event.args = {
   event: normalizeProfilerEvent(profilerEventMock),
 };

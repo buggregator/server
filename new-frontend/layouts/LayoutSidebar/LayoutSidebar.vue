@@ -29,13 +29,6 @@
         <icon-svg class="layout-sidebar__link-icon" name="settings" />
       </NuxtLink>
     </nav>
-
-    <div class="layout-sidebar__info">
-      <div class="layout-sidebar__info-item" :title="title">
-        <icon-svg v-if="isConnected" name="connected" />
-        <icon-svg v-if="!isConnected" name="disconnected" />
-      </div>
-    </div>
   </aside>
 </template>
 
@@ -51,13 +44,6 @@ export default defineComponent({
       required: true,
     },
   },
-  computed: {
-    title(): string {
-      return this.isConnected
-        ? "Websocket connected"
-        : "Websocket disconnected";
-    },
-  },
 });
 </script>
 
@@ -66,12 +52,8 @@ export default defineComponent({
   @apply bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-500 flex flex-col justify-between z-50 w-full h-full;
 }
 
-.layout-sidebar__in {
-  @apply divide-y divide-gray-300 dark:divide-gray-600;
-}
-
-.layout-sidebar__supIcon {
-  @apply absolute top-2 w-2 h-2 bg-red-600 right-2 rounded-full transition transition-all duration-300;
+.layout-sidebar__nav {
+  @apply divide-y divide-gray-300 dark:divide-gray-600 sticky top-0;
 }
 
 .layout-sidebar__link {
@@ -84,13 +66,5 @@ export default defineComponent({
 
 .layout-sidebar__link-icon {
   @apply fill-current;
-}
-
-.layout-sidebar__info {
-  @apply divide-y divide-gray-300;
-}
-
-.layout-sidebar__info-item {
-  @apply p-2 md:p-3 lg:p-4;
 }
 </style>

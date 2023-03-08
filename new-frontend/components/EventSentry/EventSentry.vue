@@ -10,7 +10,7 @@
 
     <div v-if="exceptionFrames.length" class="event-sentry__files">
       <template v-for="(frame, i) in exceptionFrames" :key="frame.context_line">
-        <event-sentry-frame :frame="frame" :is-open="isVisibleFrame(i)" />
+        <sentry-frame :frame="frame" :is-open="isVisibleFrame(i)" />
       </template>
     </div>
   </event-card>
@@ -20,11 +20,11 @@
 import { defineComponent, PropType } from "vue";
 import { NormalizedEvent } from "~/config/types";
 import EventCard from "~/components/EventCard/EventCard.vue";
-import EventSentryFrame from "~/components/EventSentryFrame/EventSentryFrame.vue";
+import SentryFrame from "./SentryFrame.vue";
 
 export default defineComponent({
   components: {
-    EventSentryFrame,
+    SentryFrame,
     EventCard,
   },
   props: {

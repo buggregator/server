@@ -6,7 +6,7 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import { EventId, Sentry, ServerEvent } from "~/config/types";
+import { EventId, SMTP, ServerEvent } from "~/config/types";
 import { useNuxtApp, useRoute } from "#app";
 import { normalizeSMTPEvent } from "~/utils/normalize-event";
 import EventSmtp from "~/components/EventSmtp/EventSmtp.vue";
@@ -21,7 +21,7 @@ export default defineComponent({
       const { $events } = useNuxtApp();
       const serverEvent = $events.getItemById(
         eventId
-      ) as ServerEvent<Sentry> | null;
+      ) as ServerEvent<SMTP> | null;
 
       return {
         event: serverEvent ? normalizeSMTPEvent(serverEvent) : null,

@@ -4,7 +4,6 @@ import { EventId, OneOfValues, ServerEvent } from "~/config/types";
 import { EVENT_TYPES } from "~/config/constants";
 import { storeToRefs } from "pinia";
 
-
 export default defineNuxtPlugin(() => {
   const eventsStore = useEventStore();
 

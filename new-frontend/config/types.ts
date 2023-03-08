@@ -89,9 +89,13 @@ export interface ProfilerCost {
 }
 
 export interface ProfilerEdge {
-  caller: unknown,
-  callee: unknown,
+  caller: string,
+  callee: string,
   cost: ProfilerCost
+}
+
+export type ProfilerEdges = {
+  [key: string]: ProfilerEdge
 }
 
 export interface Profiler {

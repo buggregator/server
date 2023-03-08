@@ -1,52 +1,57 @@
 <template>
-  <div class="event--profiler__callitem" @mouseover="onHover($event, edge)" @mouseout="$emit('hide')">
+  <div
+    class="profiler-callstack-item"
+    @mouseover="onHover($event, edge)"
+    @mouseout="$emit('hide')"
+  >
     <div class="usage">
-      <div class="usage--cpu" :style="{width: `${p_cpu}%`}"/>
-      <div class="usage--memory" :style="{width: `${p_mu}%`}"/>
-      <div class="usage--title">{{ edge.cost.p_cpu }}% / {{ edge.cost.p_mu }}%</div>
+      <div class="usage--cpu" :style="{ width: `${p_cpu}%` }" />
+      <div class="usage--memory" :style="{ width: `${p_mu}%` }" />
+      <div class="usage--title">
+        {{ edge.cost.p_cpu }}% / {{ edge.cost.p_mu }}%
+      </div>
     </div>
     <div class="calls">{{ edge.cost.ct }}</div>
   </div>
 </template>
 
-<script>
-import {humanFileSize, formatDuration} from "@/Utils/converters"
+<script lang="ts">
+import { defineComponent, PropType } from "vue";
+import { ProfilerEdge } from "~/config/types";
 
-export default {
+export default defineComponent({
   props: {
-    edge: Object,
+    edge: {
+      type: Object as PropType<ProfilerEdge>,
+      required: true,
+    },
+  },
+  emits: ["hover", "hide"],
+  computed: {
+    p_cpu(): number {
+      return Math.min(100, this.edge.cost.p_cpu);
+    },
+    p_mu(): number {
+      return Math.min(100, this.edge.cost.p_mu);
+    },
   },
   methods: {
     onHover($event, edge) {
-      this.$emit('hover', {
+      this.$emit("hover", {
         name: edge.callee,
         cost: edge.cost,
         position: {
           x: $event.pageX,
           y: $event.pageY,
-        }
+        },
       });
-    }
+    },
   },
-  computed: {
-    p_cpu() {
-      return Math.min(100, this.edge.cost.p_cpu)
-    },
-    p_mu() {
-      return Math.min(100, this.edge.cost.p_mu)
-    },
-    cpu() {
-      return formatDuration(this.edge.cost.cpu)
-    },
-    mu() {
-      return humanFileSize(this.edge.cost.mu)
-    }
-  }
-}
+});
 </script>
 
-<style lang="scss">
-.event--profiler__callitem {
+<style lang="scss" scoped>
+.profiler-callstack-item {
   @apply flex items-stretch border-b border-gray-600 hover:bg-gray-900 cursor-pointer;
 
   > .callee {

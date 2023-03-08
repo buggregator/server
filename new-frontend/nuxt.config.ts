@@ -46,4 +46,8 @@ export default defineNuxtConfig({
   typescript: {
     strict: true,
   },
+  devServer: {
+    host: '127.0.0.1',
+    url: 'http://127.0.0.1:3000',
+  }
 });

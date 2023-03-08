@@ -4,7 +4,7 @@ import EventMonolog from '~/components/EventMonolog/EventMonolog.vue';
 import monologEventMock from '~/mocks/monolog.json'
 
 export default {
-  title: "Event/EventMonolog",
+  title: "Monolog",
   component: EventMonolog
 } as Meta<typeof EventMonolog>;
 
@@ -18,8 +18,8 @@ const Template: Story = (args) => ({
   template: `<event-monolog v-bind="args" />`,
 });
 
-export const Default = Template.bind({});
+export const Event = Template.bind({});
 
-Default.args = {
+Event.args = {
   event: normalizeMonologEvent(monologEventMock),
 };

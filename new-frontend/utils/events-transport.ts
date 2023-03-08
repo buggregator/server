@@ -2,7 +2,10 @@ import {Centrifuge} from 'centrifuge'
 import { EventId, OneOfValues, ServerEvent } from "~/config/types";
 import { EVENT_TYPES } from "~/config/constants";
 
-const WS_URL = `wss://test.buggregator.dev/connection/websocket`// ||`${wsProtocol}://${host}/connection/websocket`
+const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
+
+const WS_URL = `${wsProtocol}://127.0.0.1:8089/connection/websocket`
+const API_URL = `http://127.0.0.1:8082`
 
 export type LoggerParams = [string, unknown]
 export interface ApiConnection {
@@ -20,14 +23,11 @@ export const apiTransport = ({
   }: ApiConnection) => {
   const centrifuge = new Centrifuge(WS_URL)
 
-
-  const eventsChannel = centrifuge.newSubscription('events')
-
   centrifuge.on('connected', (ctx) => {
     loggerCb(['connected', ctx]);
   });
 
-  eventsChannel.on('publication', (ctx) => {
+  centrifuge.on('publication', (ctx) => {
     loggerCb(['publication', ctx]);
     const event = ctx?.data?.data || null
 
@@ -40,7 +40,6 @@ export const apiTransport = ({
     loggerCb(['disconnected', ctx]);
   });
 
-  eventsChannel.subscribe();
   centrifuge.connect();
 
   const deleteEvent = (eventId: EventId) => {
@@ -55,7 +54,7 @@ export const apiTransport = ({
     centrifuge.rpc(`delete:api/events`, {type})
   }
 
-  const getEventsAll = fetch(`https://test.buggregator.dev/api/events`)
+  const getEventsAll = fetch(`${API_URL}/api/events`)
     .then((response) => response.json())
     .then((response) => {
       if (response?.data?.length > 0) {
