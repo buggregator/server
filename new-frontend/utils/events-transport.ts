@@ -2,10 +2,8 @@ import {Centrifuge} from 'centrifuge'
 import { EventId, OneOfValues, ServerEvent } from "~/config/types";
 import { EVENT_TYPES } from "~/config/constants";
 
-const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
-
-const WS_URL = `${wsProtocol}://127.0.0.1:8089/connection/websocket`
-const API_URL = `http://127.0.0.1:8082`
+const WS_URL = import.meta.env.VITE_EVENTS_WS_API
+const API_URL = import.meta.env.VITE_EVENTS_REST_API
 
 export type LoggerParams = [string, unknown]
 export interface ApiConnection {
