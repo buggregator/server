@@ -1,5 +1,5 @@
 import { Meta, Story } from "@storybook/vue3";
-import {HTML} from '@/mocks/mail';
+import { HTML } from '@/mocks/mail';
 import HtmlPreviewComponent from './HtmlPreview.vue';
 
 export default {

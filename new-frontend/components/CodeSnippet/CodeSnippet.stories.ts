@@ -1,7 +1,7 @@
 import { Meta, Story } from "@storybook/vue3";
 import { EVENT_TYPES } from "~/config/constants";
 import CodeSnippet from "~/components/CodeSnippet/CodeSnippet.vue";
-import {HTML} from '@/mocks/mail';
+import { HTML } from '@/mocks/mail';
 
 export default {
   title: "Components/CodeSnippet",
@@ -40,11 +40,9 @@ HTMLString.args = {
   language: 'html'
 };
 
-export const PHPString = Template.bind({});
-PHPString.args = {
-  code: `use RoadRunner\\Centrifugo\\CentrifugoApiInterface;
+const PHPCode = `use RoadRunner\\Centrifugo\\CentrifugoApiInterface;
 
-final class UserBanService 
+final class UserBanService
 {
     public function __construct(
         private readonly UserRepository $repository,
@@ -61,6 +59,10 @@ final class UserBanService
         $this->ws->disconnect($user->getId());
     }
 }
-`,
+`
+
+export const PHPString = Template.bind({});
+PHPString.args = {
+  code: PHPCode,
   language: 'php'
 };
