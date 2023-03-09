@@ -7,12 +7,14 @@ import {
   VarDump,
   SMTP,
   Profiler,
+  Inspector,
 } from "~/config/types";
 import EventMonolog from "~/components/EventMonolog/EventMonolog.vue";
 import EventSentry from "~/components/EventSentry/EventSentry.vue";
 import EventVarDump from "~/components/EventVarDump/EventVarDump.vue";
 import EventSmtp from "~/components/EventSmtp/EventSmtp.vue";
 import EventProfiler from "~/components/EventProfiler/EventProfiler.vue";
+import EventInspector from "~/components/EventInspector/EventInspector.vue";
 import EventFallback from "~/components/EventFallback/EventFallback.vue";
 import { EVENT_TYPES } from "~/config/constants";
 import {
@@ -29,7 +31,7 @@ export default defineComponent({
   props: {
     event: {
       type: Object as PropType<
-        ServerEvent<Monolog | SMTP | Sentry | VarDump | Profiler | unknown>
+        ServerEvent<Monolog | SMTP | Sentry | VarDump | Profiler | Inspector | unknown>
       >,
       required: true,
     },
@@ -46,8 +48,8 @@ export default defineComponent({
         h(EventSmtp, { event: normalizeSMTPEvent(event) }),
       [EVENT_TYPES.PROFILER]: (event: ServerEvent<Profiler>) =>
         h(EventProfiler, { event: normalizeProfilerEvent(event) }),
-      [EVENT_TYPES.INSPECTOR]: (event: ServerEvent<unknown>) =>
-        h(EventFallback, { event: normalizeInspectorEvent(event) }),
+      [EVENT_TYPES.INSPECTOR]: (event: ServerEvent<Inspector>) =>
+        h(EventInspector, { event: normalizeInspectorEvent(event) }),
     };
 
     if (Object.values(EVENT_TYPES).includes(this.event.type)) {

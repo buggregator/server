@@ -1,6 +1,6 @@
 <template>
   <event-card class="event-sentry" :event="event">
-    <SentryException :exception="exception">
+    <SentryException :exception="exception" :max-frames="maxFrames">
       <NuxtLink tag="div" :to="eventLink" class="event-sentry__link">
         <h3 class="event-sentry__title">
           {{ exception.type }}
@@ -30,7 +30,7 @@ export default defineComponent({
     },
     maxFrames: {
       type: Number,
-      default: 1,
+      default: 3,
     }
   },
   computed: {
@@ -51,15 +51,6 @@ export default defineComponent({
       return eventExceptionValues.length
           ? eventExceptionValues[0]
           : defaultException;
-    },
-    exceptionFrames(): object[] {
-      const frames = (this.exception.stacktrace.frames || []).reverse();
-
-      if (this.maxFrames > 0) {
-        return frames.slice(0, this.maxFrames);
-      }
-
-      return frames;
     },
   },
   methods: {

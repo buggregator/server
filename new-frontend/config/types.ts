@@ -1,4 +1,4 @@
-import { EVENT_TYPES } from "~/config/constants";
+import {EVENT_TYPES} from "~/config/constants";
 
 export type OneOfValues<T> = T[keyof T];
 export type EventId = string;
@@ -112,10 +112,10 @@ export interface Sentry {
   breadcrumbs: {
     values: [{
       type: string,
-        category: string,
-        level: string,
-        timestamp: number,
-        message: string,
+      category: string,
+      level: string,
+      timestamp: number,
+      message: string,
     }]
   } | unknown,
   sdk: {
@@ -161,6 +161,7 @@ export interface VarDump {
 
 export interface ProfilerCost {
   [key: string]: number,
+
   "ct": number,
   "wt": number,
   "cpu": number,
@@ -191,12 +192,71 @@ export interface Profiler {
   }
 }
 
+export interface InspectorTransaction {
+  model: string,
+  name: string,
+  type: string,
+  hash: string,
+  host: {
+    hostname: string,
+    ip: string
+    os: string,
+  },
+  http: {
+    request: {
+      method: string,
+      version: string,
+      socket: {
+        remote_address: string,
+        [key: string]: string
+      },
+      cookies: {
+        [key: string]: string
+      },
+      headers: {
+        [key: string]: string
+      }
+    },
+    url: {
+      protocol: string,
+      port: number | string,
+      path: string,
+      search: string,
+      full: string,
+    },
+  },
+  result: string,
+  timestamp: number,
+  memory_peak: number,
+  duration: number,
+}
+
+export interface InspectorSegment {
+  model: string,
+  type: string,
+  label: string,
+  host: {
+    hostname: string,
+    ip: string
+    os: string,
+  },
+  transaction: {
+    name: string,
+    timestamp: number,
+  },
+  start: number,
+  timestamp: number,
+  context: object
+  duration: number,
+}
+
+export type Inspector = InspectorTransaction[] | InspectorSegment[];
 
 export interface ServerEvent<T> {
   uuid: EventId,
   type: OneOfValues<typeof EVENT_TYPES> | string,
   payload: T,
-  project_id: string|null,
+  project_id: string | null,
   timestamp: number
 }
 
@@ -207,5 +267,5 @@ export interface NormalizedEvent {
   origin: object | null,
   serverName: string,
   date: Date,
-  payload: Monolog | SMTP | Sentry | VarDump | Profiler | unknown
+  payload: Monolog | SMTP | Sentry | VarDump | Profiler | Inspector | unknown
 }

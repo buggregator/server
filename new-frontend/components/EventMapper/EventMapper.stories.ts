@@ -5,6 +5,7 @@ import sentryEventMock from '~/mocks/sentry-spiral.json'
 import smtpEventMock from '~/mocks/smtp-welcome.json'
 import varDumpEventMock from '~/mocks/var-dump-object.json'
 import profilerEventMock from '~/mocks/profiler.json'
+import inspectorEventMock from '~/mocks/inspector.json'
 
 export default {
   title: "Event/EventMapper",
@@ -51,6 +52,11 @@ Profiler.args = {
   event: profilerEventMock,
 };
 
+export const Inspector = Template.bind({});
+
+Inspector.args = {
+  event: inspectorEventMock,
+};
 
 export const Unknown = Template.bind({});
 

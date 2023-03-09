@@ -5,6 +5,7 @@
         {{ exception.type }}
       </h3>
 
+      <pre class="sentry-exception__text" v-html="exception.value"/>
     </slot>
 
     <div v-if="exceptionFrames.length" class="sentry-exception__frames">
@@ -36,10 +37,10 @@ export default defineComponent({
   },
   computed: {
     exceptionFrames(): SentryFrameType[] {
-      const frames = (this.exception.stacktrace.frames || []).reverse();
+      const frames = (this.exception.stacktrace.frames || []);
 
       if (this.maxFrames > 0) {
-        return frames.slice(0, this.maxFrames);
+        return frames.reverse().slice(0, this.maxFrames);
       }
 
       return frames;

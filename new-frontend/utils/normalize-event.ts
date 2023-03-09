@@ -1,4 +1,14 @@
-import { NormalizedEvent, ServerEvent, Monolog, SMTP, Sentry, VarDump, Profiler } from "~/config/types";
+import {
+  NormalizedEvent,
+  ServerEvent,
+  Monolog,
+  SMTP,
+  Sentry,
+  VarDump,
+  Profiler,
+  Inspector,
+  InspectorTransaction
+} from "~/config/types";
 import { EVENT_TYPES } from "~/config/constants";
 
 const normalizeObjectValue = (object: object | unknown[]): object =>
@@ -17,8 +27,19 @@ export const normalizeFallbackEvent = (event: ServerEvent<unknown>): NormalizedE
   payload: event.payload
 })
 
-// TODO: need to update normalize fn
-export const normalizeInspectorEvent = normalizeFallbackEvent
+export const normalizeInspectorEvent = (event: ServerEvent<Inspector>): NormalizedEvent => {
+  const transaction = event.payload[0] as InspectorTransaction;
+
+  return {
+    id: event.uuid,
+    type: EVENT_TYPES.INSPECTOR,
+    labels: [EVENT_TYPES.INSPECTOR],
+    origin: { name: transaction.host.hostname, ip: transaction.host.ip, os: transaction.host.os },
+    serverName: transaction.host.hostname,
+    date: new Date(event.timestamp * 1000),
+    payload: event.payload
+  }
+}
 
 export const normalizeProfilerEvent = (event: ServerEvent<Profiler>): NormalizedEvent => ({
   id: event.uuid,
@@ -44,7 +65,6 @@ export const normalizeMonologEvent = (event: ServerEvent<Monolog>): NormalizedEv
     extra: normalizeObjectValue(event.payload.extra)
   }
 })
-
 
 export const normalizeSentryEvent = (event: ServerEvent<Sentry>): NormalizedEvent => ({
     id: event.uuid,

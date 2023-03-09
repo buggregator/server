@@ -1,7 +1,7 @@
 <template>
-  <event-card class="event-profiler" :event="event">
-    <NuxtLink tag="div" :to="eventLink" class="event-profiler__link">
-      <stat-board :cost="event.payload.peaks" />
+  <event-card class="event-inspector" :event="event">
+    <NuxtLink tag="div" :to="eventLink" class="event-inspector__link">
+      <stat-board :transaction="event.payload[0]" />
     </NuxtLink>
   </event-card>
 </template>
@@ -10,7 +10,7 @@
 import { defineComponent, PropType } from "vue";
 import { NormalizedEvent } from "~/config/types";
 import EventCard from "~/components/EventCard/EventCard.vue";
-import StatBoard from "~/components/StatBoard/StatBoard.vue";
+import StatBoard from "~/components/PageInspector/StatBoard.vue";
 
 export default defineComponent({
   components: {
@@ -25,7 +25,7 @@ export default defineComponent({
   },
   computed: {
     eventLink() {
-      return `/profiler/${this.event.id}`;
+      return `/inspector/${this.event.id}`;
     },
   },
 });
@@ -34,11 +34,11 @@ export default defineComponent({
 <style lang="scss" scoped>
 @import "assets/mixins";
 
-.event-profiler {
+.event-inspector {
   @apply flex flex-col;
 }
 
-.event-profiler__link {
+.event-inspector__link {
   @apply cursor-pointer pb-2 flex-grow;
 }
 </style>

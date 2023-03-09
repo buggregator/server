@@ -1,7 +1,8 @@
-.tabs-component {}
+.tabs-component {
+}
 
 .tabs-component-tabs {
-  @apply flex border-b border-gray-600 ;
+  @apply flex border-b border-gray-300 dark:border-gray-500 divide-gray-300 dark:divide-gray-500;
 }
 
 .tabs-component-tab {

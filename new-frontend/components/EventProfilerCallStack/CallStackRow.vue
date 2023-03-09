@@ -38,7 +38,7 @@ export default defineComponent({
   methods: {
     onHover($event: MouseEvent, edge: ProfilerEdge) {
       this.$emit("hover", {
-        name: edge.callee,
+        callee: edge.callee,
         cost: edge.cost,
         position: {
           x: $event.pageX,

@@ -5,7 +5,7 @@
         <h1 class="page-sentry__main-exception">{{ exception }}</h1>
 
         <pre class="page-sentry__main-exception-message" v-html="message"/>
-        <p class="text-muted text-sm mt-3">{{ date }}</p>
+        <p class="page-sentry__main-date">{{ date }}</p>
       </header>
 
       <Tags :event="event.payload" class="sentry-section"/>
@@ -86,8 +86,12 @@ export default defineComponent({
   @apply font-bold text-sm sm:text-base md:text-lg lg:text-2xl break-all sm:break-normal mb-3;
 }
 
-.page-sentry__main-exception-message {
+.page-sentry__main-date {
   @include text-muted;
+  @apply text-xs mt-3;
+}
+
+.page-sentry__main-exception-message {
   @apply text-sm;
 }
 

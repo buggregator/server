@@ -43,7 +43,7 @@ export default defineComponent({
   computed: {
     normalizedCode(): string {
       return typeof this.code === "string"
-        ? escapeHtml(this.code)
+        ? this.code
         : JSON.stringify(this.code, null, " ");
     },
   },
