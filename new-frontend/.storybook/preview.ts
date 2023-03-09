@@ -11,12 +11,23 @@ export const parameters = {
       date: /Date$/,
     },
   },
+  themes: {
+    clearable: false,
+    list: [
+      {
+        name: 'Light',
+        class: [],
+        color: '#ffffff',
+      },
+      {
+        name: 'Dark',
+        class: ['dark'],
+        color: '#000000',
+        default: true
+      }
+    ]
+  }
 };
-
-export const globalTypes = {
-  darkMode: true,
-};
-
 
 const pinia = createPinia();
 

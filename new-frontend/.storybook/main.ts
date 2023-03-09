@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require('path');
 const postcss = require('postcss');
 
+//storybook-tailwind-dark-mode
 module.exports = {
   stories: [
     "../stories/**/*.stories.mdx",
@@ -14,7 +15,7 @@ module.exports = {
     "@storybook/addon-links",
     "@storybook/addon-essentials",
     "@storybook/addon-interactions",
-    "storybook-tailwind-dark-mode",
+    "storybook-addon-themes",
     {
       name: "@storybook/addon-postcss",
       options: {
