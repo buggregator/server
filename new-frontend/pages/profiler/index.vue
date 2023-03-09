@@ -10,10 +10,6 @@ export default defineComponent({
     if (process.client) {
       const { $events } = useNuxtApp();
 
-      if (!$events?.items?.length) {
-        $events.getAll();
-      }
-
       return {
         events: $events.itemsGroupByType[EVENT_TYPES.PROFILER],
         clearEvents: () => $events.removeByType(EVENT_TYPES.PROFILER),

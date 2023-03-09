@@ -15,14 +15,24 @@ import LayoutSidebar from "~/layouts/LayoutSidebar/LayoutSidebar.vue";
 import { defineComponent } from "vue";
 import { THEME_MODES, useThemeStore } from "~/stores/theme";
 import { storeToRefs } from "pinia";
+import { useNuxtApp } from "#app";
 
 export default defineComponent({
   components: {
     LayoutSidebar,
   },
+
   setup() {
     const themeStore = useThemeStore();
     const { themeType } = storeToRefs(themeStore);
+
+    if (process.client) {
+      const { $events } = useNuxtApp();
+
+      if (!$events?.items?.length) {
+        $events.getAll();
+      }
+    }
 
     return {
       themeType,
