@@ -41,6 +41,7 @@ import EventHeader from "~/components/EventHeader/EventHeader.vue";
 import { NormalizedEvent } from "~/config/types";
 import moment from "moment";
 import { useNuxtApp } from "#app";
+import {REST_API_URL} from "~/utils/events-transport";
 
 export default defineComponent({
   components: {
@@ -86,7 +87,7 @@ export default defineComponent({
         : null;
     },
     eventUrl(): string {
-      return `/api/event/${this.event.id}`;
+      return `${REST_API_URL}/api/event/${this.event.id}`;
     },
     fileName(): string {
       return `${this.event.type}-${this.event.id}.png`;
