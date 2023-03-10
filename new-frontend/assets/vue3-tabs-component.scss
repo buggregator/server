@@ -1,8 +1,9 @@
 .tabs-component {
+  @apply flex flex-col h-full;
 }
 
 .tabs-component-tabs {
-  @apply flex border-b border-gray-300 dark:border-gray-400 divide-gray-300 dark:divide-gray-400;
+  @apply flex border-b border-gray-300 dark:border-gray-400 divide-gray-300 dark:divide-gray-400 flex-none;
 }
 
 .tabs-component-tab {
@@ -18,5 +19,9 @@
 }
 
 .tabs-component-panels {
-  @apply mt-5 flex flex-col mt-3;
+  @apply flex flex-col mt-3 flex-1;
+}
+
+.tabs-component-panel {
+
 }

@@ -134,8 +134,7 @@ export default defineComponent({
   }
 
   &--wrapper {
-    @apply relative flex mt-5 rounded border border-gray-900;
-    height: 600px;
+    @apply relative flex rounded border border-gray-900 h-full;
 
     &.fullscreen {
       @apply rounded-none mt-0 top-0 left-0 fixed w-full h-full;

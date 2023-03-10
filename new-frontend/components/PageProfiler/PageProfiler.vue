@@ -19,11 +19,18 @@
         <section class="page-profiler__stat-tabs">
           <Tabs :options="{ useUrlFragment: false }">
             <Tab name="Call graph">
-              <EventProfilerCallGraph :event="event.payload"/>
+              <EventProfilerCallGraph
+                  :event="event.payload"
+                  @hover="setActiveEdge"
+                  @hide="setActiveEdge"
+              />
             </Tab>
             <Tab name="Flamechart">
-              FlameGraph
-              <!--              <FlameGraph :event="event" :width="width" @hover="showEdge" @hide="hideEdge"/>-->
+              <EventProfilerFlamegraph
+                  :edges="event.payload.edges"
+                  @hover="setActiveEdge"
+                  @hide="setActiveEdge"
+              />
             </Tab>
           </Tabs>
         </section>
@@ -50,6 +57,7 @@ import {NormalizedEvent} from "~/config/types";
 import StatBoard from "~/components/StatBoard/StatBoard.vue";
 import EventProfilerCallStack from "~/components/EventProfilerCallStack/EventProfilerCallStack.vue";
 import EventProfilerCallGraph from "~/components/EventProfilerCallGraph/EventProfilerCallGraph.vue";
+import EventProfilerFlamegraph from "~/components/Flamegraph/Flamegraph.vue";
 import {PerfectScrollbar} from "vue3-perfect-scrollbar";
 import type {Profiler, ProfilerEdge} from "~/config/types";
 import {Tabs, Tab} from "vue3-tabs-component";
@@ -59,6 +67,7 @@ export default defineComponent({
     StatBoard,
     EventProfilerCallStack,
     EventProfilerCallGraph,
+    EventProfilerFlamegraph,
     PerfectScrollbar,
     Tabs,
     Tab,
@@ -95,8 +104,7 @@ export default defineComponent({
       let left = this.activeEdgePosition.x;
 
       if (width + this.activeEdgePosition.x > window.innerWidth - 80) {
-        const deltaX =
-            width + this.activeEdgePosition.x - window.innerWidth + 100;
+        const deltaX = width + this.activeEdgePosition.x - window.innerWidth + 100;
         left -= deltaX;
       }
 
@@ -112,7 +120,7 @@ export default defineComponent({
     },
   },
   methods: {
-    calcStyles(percentages: number): {width: string} {
+    calcStyles(percentages: number): { width: string } {
       return {
         width: percentages
             ? `${this.normalizePercentage(percentages)}%`
@@ -156,6 +164,10 @@ export default defineComponent({
 
 .page-profiler__stat-tabs {
   @apply p-5 bg-gray-200 flex-1 flex flex-col dark:bg-gray-800 dark:text-gray-300;
+}
+
+.page-profiler__stat-tabs .tabs-component-panel {
+  @apply h-full;
 }
 
 .page-profiler__callstack-items {

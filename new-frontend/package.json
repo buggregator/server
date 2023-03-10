@@ -62,6 +62,7 @@
     "d3-graphviz": "^5.0.0",
     "d3-selection": "^3.0.0",
     "downloadjs": "^1.4.7",
+    "flame-chart-js": "^2.3.1",
     "highlight.js": "^11.7.0",
     "html-to-image": "^1.11.4",
     "moment": "^2.29.4",
