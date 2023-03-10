@@ -22,7 +22,7 @@ export default defineComponent({
   emits: {'hover': null, 'hide': null},
   unmounted() {
     // Destroy the flamechart instance
-    this.flameChart.destroy();
+    // this.flameChart.destroy();
   },
   mounted() {
     const canvas = this.$refs.flameChartCanvas as HTMLCanvasElement;
