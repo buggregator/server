@@ -1,6 +1,11 @@
 <template>
   <main class="sentry-event">
-    <EventSmtp v-if="event" :event="event" />
+    <PageSmtp
+v-if="event"
+              :event="event"
+              :html-source="html"
+              @delete="clearEvent"
+    />
   </main>
 </template>
 
@@ -9,10 +14,11 @@ import { defineComponent } from "vue";
 import { EventId, SMTP, ServerEvent } from "~/config/types";
 import { useNuxtApp, useRoute } from "#app";
 import { normalizeSMTPEvent } from "~/utils/normalize-event";
-import EventSmtp from "~/components/EventSmtp/EventSmtp.vue";
+import PageSmtp from "~/components/PageSmtp/PageSmtp.vue";
+import {REST_API_URL} from "~/utils/events-transport";
 
 export default defineComponent({
-  components: { EventSmtp },
+  components: { PageSmtp },
   setup() {
     const route = useRoute();
     const eventId = route.params.id as EventId;
@@ -25,12 +31,14 @@ export default defineComponent({
 
       return {
         event: serverEvent ? normalizeSMTPEvent(serverEvent) : null,
+        html: `<iframe src="${REST_API_URL}/api/smtp/${eventId}/html"/>`,
         clearEvent: () => $events.removeById(eventId),
       };
     }
 
     return {
       event: null,
+      html: '',
       clearEvent: () => {},
     };
   },

@@ -24,5 +24,5 @@ const normalizeEvent = normalizeSMTPEvent(smtpEventMock)
 
 Default.args = {
   event: normalizeEvent,
-  HTML: normalizeEvent.payload.html
+  htmlSource: normalizeEvent.payload.html
 };

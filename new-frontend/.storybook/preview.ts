@@ -13,17 +13,18 @@ export const parameters = {
   },
   themes: {
     clearable: false,
+    target: 'html',
     list: [
       {
         name: 'Light',
         class: [],
         color: '#ffffff',
+        default: true,
       },
       {
         name: 'Dark',
         class: ['dark'],
-        color: '#000000',
-        default: true
+        color: '#000000'
       }
     ]
   }

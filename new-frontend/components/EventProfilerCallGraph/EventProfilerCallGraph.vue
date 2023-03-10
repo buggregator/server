@@ -125,7 +125,7 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .graphviz {
-  @apply flex-1 justify-items-stretch items-stretch bg-gray-700 rounded border border-gray-900;
+  @apply flex-1 justify-items-stretch items-stretch bg-gray-700;
 
   .graph {
     > polygon {
@@ -134,16 +134,12 @@ export default defineComponent({
   }
 
   &--wrapper {
-    @apply relative flex mt-5;
+    @apply relative flex mt-5 rounded border border-gray-900;
     height: 600px;
 
     &.fullscreen {
+      @apply rounded-none mt-0 top-0 left-0 fixed w-full h-full;
       z-index: 9998;
-      width: 100%;
-      height: 100%;
-      position: fixed;
-      top: 0;
-      left: 0;
     }
   }
 

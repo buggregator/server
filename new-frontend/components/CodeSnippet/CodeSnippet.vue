@@ -17,8 +17,6 @@
 import IconSvg from "~/components/IconSvg/IconSvg.vue";
 import hljsVuePlugin from "@highlightjs/vue-plugin";
 import { defineComponent } from "vue";
-// eslint-disable-next-line vue/prefer-import-from-vue
-import { escapeHtml } from "@vue/shared";
 
 export default defineComponent({
   components: {
@@ -72,11 +70,15 @@ export default defineComponent({
 }
 
 .code-snippet__copy {
-  @apply flex rounded-full items-center gap-x-1 absolute top-3 right-3 px-2 bg-white dark:bg-gray-900 border text-gray-600 transition-all text-xs font-bold border-gray-600;
+  @apply invisible flex rounded-full items-center gap-x-2 absolute top-3 right-3 px-2 bg-gray-800 border text-gray-100 transition-all text-xs font-bold border-gray-600;
 
   &:hover {
-    @apply border-gray-200 text-white bg-gray-900 dark:bg-white;
+    @apply border-gray-200 text-white bg-gray-900;
   }
+}
+
+.code-snippet:hover .code-snippet__copy {
+  @apply visible;
 }
 
 .code-snippet__copy--active {

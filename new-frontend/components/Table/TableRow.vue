@@ -27,15 +27,15 @@ export default defineComponent({
 .event-table {
   &__row {
     @include text-responsive;
-    @apply md:flex bg-gray-50 dark:bg-gray-800 md:space-y-1 py-1 md:py-2 px-2 md:px-4 items-center;
+    @apply md:flex bg-gray-50 dark:bg-gray-800 md:space-y-1 py-1 md:py-2 px-2 md:px-4 items-center sm:divide-x divide-gray-300 dark:divide-gray-700;
   }
 
   &__cell-name {
-    @apply font-bold mr-5 md:w-1/4;
+    @apply font-bold mr-5 md:w-1/4 sm:pr-4;
   }
 
   &__cell-value {
-    @apply break-all md:w-3/4;
+    @apply break-all md:w-3/4 sm:pl-4;
 
     .dump {
       @apply border-0;

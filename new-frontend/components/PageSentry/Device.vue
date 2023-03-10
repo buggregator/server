@@ -71,7 +71,7 @@
         {{ device.orientation }}
       </TableRow>
 
-      <TableRow v-if="device.screen_density" title="'Screen Density">
+      <TableRow v-if="device.screen_density" title="Screen Density">
         {{ parseInt(device.screen_density) }}
       </TableRow>
 

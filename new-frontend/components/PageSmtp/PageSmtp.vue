@@ -37,7 +37,7 @@
         <Tabs :options="{ useUrlFragment: false }">
           <Tab name="Preview">
             <HtmlPreview device="tablet">
-              <div v-html="HTML"/>
+              <div v-html="htmlSource"/>
             </HtmlPreview>
           </Tab>
           <Tab name="HTML">
@@ -111,7 +111,7 @@ export default defineComponent({
       type: Object as PropType<NormalizedEvent>,
       required: true,
     },
-    HTML: {
+    htmlSource: {
       type: String,
       required: true,
     }
@@ -167,24 +167,24 @@ export default defineComponent({
 }
 
 .page-smtp__header {
-  @apply flex flex-col md:flex-row justify-between items-center;
+  @apply flex flex-col md:flex-row justify-between gap-y-2;
 }
 
 .page-smtp__header-meta {
-  @apply flex flex-col md:flex-row items-center gap-x-5;
+  @apply flex flex-row items-center gap-x-5 mb-5;
 }
 
 .page-smtp__header-title {
-  @apply text-sm sm:text-base md:text-lg lg:text-2xl;
+  @apply text-lg lg:text-2xl;
 }
 
 .page-smtp__header-date {
   @include text-muted;
-  @apply text-sm font-semibold;
+  @apply text-xs md:text-sm font-semibold;
 }
 
 .page-smtp__sender {
-  @apply text-xs font-semibold mt-3 flex flex-wrap items-center;
+  @apply text-xs sm:text-sm font-semibold mt-3 flex flex-wrap items-center;
 }
 
 .page-smtp__sender-item {
@@ -192,11 +192,11 @@ export default defineComponent({
 }
 
 .page-smtp__sender-title {
-  @apply px-3 py-1 border-r;
+  @apply px-2 md:px-3 py-1 border-r font-bold;
 }
 
 .page-smtp__sender-address {
-  @apply px-3 bg-gray-800 py-1 text-white font-semibold rounded-r;
+  @apply px-2 md:px-3 bg-gray-800 py-1 text-white font-semibold rounded-r;
 }
 
 .page-smtp__sender-from .page-smtp__sender-address {
@@ -220,7 +220,7 @@ export default defineComponent({
 }
 
 .page-smtp__delete-button {
-  @apply h-5 w-5;
+  @apply h-4 sm:h-5 w-4 sm:h-5;
 }
 
 .page-smtp__delete-button svg {

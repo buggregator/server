@@ -57,12 +57,14 @@ export default defineComponent({
 @import "assets/mixins";
 
 .stat-board {
-  @apply bg-gray-200 dark:bg-gray-800 pt-5 pb-4 px-4 md:px-5 flex flex-col sm:flex-row justify-between items-start divide-y sm:divide-y-0 sm:divide-x divide-gray-300 dark:divide-gray-500;
+  @apply flex flex-col sm:flex-row sm:justify-between items-stretch sm:items-start;
+  @apply sm:pt-5 sm:pb-4 sm:px-4 md:px-5;
+  @apply bg-gray-200 dark:bg-gray-800;
+  @apply divide-y sm:divide-y-0 sm:divide-x divide-gray-300 dark:divide-gray-500;
 }
 
 .stat-board__item {
-  @apply sm:pb-0 sm:px-10 pt-5 sm:pt-0 flex-auto pb-5 sm:pb-0 sm:px-10 pt-5 sm:pt-0;
-
+  @apply pl-3 sm:px-6 py-3;
   &:first-child {
     @apply sm:pl-0;
   }

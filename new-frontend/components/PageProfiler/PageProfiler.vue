@@ -143,19 +143,19 @@ export default defineComponent({
 }
 
 .page-profiler__callstack {
-  @apply w-full md:w-1/6 border-r border-gray-300 dark:border-gray-500;
+  @apply w-full md:w-1/5 border-r border-gray-300 dark:border-gray-500;
 }
 
 .page-profiler__stat {
-  @apply w-full h-full flex flex-col md:w-5/6 divide-y divide-gray-300 dark:divide-gray-500;
+  @apply w-full flex flex-col md:w-4/5 divide-y divide-gray-300 dark:divide-gray-500;
 }
 
 .page-profiler__stat-board {
-  @apply p-5 bg-gray-200 bg-gray-800;
+  @apply bg-gray-200 dark:bg-gray-800;
 }
 
 .page-profiler__stat-tabs {
-  @apply p-5 bg-gray-200 flex-1 flex flex-col bg-gray-800 text-gray-300;
+  @apply p-5 bg-gray-200 flex-1 flex flex-col dark:bg-gray-800 dark:text-gray-300;
 }
 
 .page-profiler__callstack-items {

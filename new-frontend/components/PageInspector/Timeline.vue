@@ -3,7 +3,7 @@
     <h3 class="waterfall-title">Timeline</h3>
 
     <div v-if="segmentTypes.length > 0" class="waterfall-segment-types">
-      <div v-for="type in segmentTypes" class="waterfall-segment-type">
+      <div v-for="type in segmentTypes" :key="type.type" class="waterfall-segment-type">
         <div :class="type.color" class="waterfall-segment-type__color-box"></div>
         <span class="waterfall-segment-type__label">{{ type.type }}</span>
       </div>
@@ -18,7 +18,7 @@
         </div>
       </div>
       <div class="waterfall-series" :style="{'background-size': `${grid.widthPercent}% 20%`}">
-        <div v-for="row in series" class="waterfall-series__segment">
+        <div v-for="row in series" :key="`${row.segment.label} - ${row.segment.duration}`" class="waterfall-series__segment">
           <div
               class="waterfall-series__segment-label">
             {{ row.segment.label }} - {{ row.segment.duration }} ms
@@ -83,6 +83,7 @@ export default defineComponent({
       const widthPercent = (100 / (totalCells + 1)).toFixed(2);
 
       const segments = [duration];
+      // eslint-disable-next-line no-plusplus
       for (let i = 0; i < totalCells; i++) {
         const d = Math.abs(duration -= width)
         segments.push(Math.floor(d))
@@ -166,11 +167,11 @@ export default defineComponent({
 }
 
 .waterfall-series {
-  background-image: linear-gradient(to right, f3f3f3 1px, transparent 1px)
+  background-image: linear-gradient(to right, #dedede 1px, transparent 1px)
 }
 
 .dark .waterfall-series {
-  background-image: linear-gradient(to right, #ffffff1c 1px, transparent 1px)
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px)
 }
 
 .waterfall-series__segment {
@@ -183,21 +184,28 @@ export default defineComponent({
 
 .waterfall-series__segment-start {
   @apply flex items-center justify-end;
+}
+.waterfall-series__segment-end,
+.waterfall-series__segment-start {
+  background-color: rgba(177 177 177 / 17%);
+}
+
+.dark .waterfall-series__segment-end,
+.dark .waterfall-series__segment-start {
   background-color: rgba(255, 255, 255, 0.04);
 }
 
 .waterfall-series__segment-end {
   @apply flex-1;
-  background-color: rgba(255, 255, 255, 0.04);
 }
 
 .waterfall-series__segment-start-label {
-  @apply text-2xs font-bold text-gray-200 mr-3;
+  @apply text-2xs font-bold dark:text-gray-200 mr-3;
 }
 
 .waterfall-series__segment-time {
   @apply flex-none;
-  min-width: 0px;
+  min-width: 0;
 }
 
 .waterfall-series__segment-start,

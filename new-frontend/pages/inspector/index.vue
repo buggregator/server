@@ -10,12 +10,25 @@ export default defineComponent({
     if (process.client) {
       const { $events } = useNuxtApp();
 
+      if (!$events?.items?.length) {
+        $events.getAll();
+      }
+
       return {
         events: $events.itemsGroupByType[EVENT_TYPES.INSPECTOR],
         clearEvents: () => $events.removeByType(EVENT_TYPES.INSPECTOR),
       };
     }
-    return {};
+
+    return {
+      events: [],
+      clearEvents: () => {},
+    };
+  },
+  head() {
+    return {
+      title: `Inspector [${this.events.length}] | Buggregator`,
+    };
   },
 });
 </script>

@@ -1,11 +1,28 @@
 import {Centrifuge} from 'centrifuge'
-import { EventId, OneOfValues, ServerEvent } from "~/config/types";
-import { EVENT_TYPES } from "~/config/constants";
+import {EventId, OneOfValues, ServerEvent} from "~/config/types";
+import {EVENT_TYPES} from "~/config/constants";
 
-const WS_URL = import.meta.env.VITE_EVENTS_WS_API
-const API_URL = import.meta.env.VITE_EVENTS_REST_API
+// A developer not always has a possibility to configure ENV variables,
+// so we need to guess Api and WS connection urls.
+const guessWsConnection = (): string => {
+  const WS_HOST = window.location.host
+  const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss' : 'ws'
+
+  return `${WS_PROTOCOL}://${WS_HOST}/connection/websocket`;
+}
+
+const guessRestApiConnection = (): string => {
+  const API_HOST = window.location.host
+  const API_PROTOCOL = window.location.protocol === 'https:' ? 'https' : 'http'
+
+  return `${API_PROTOCOL}://${API_HOST}`;
+}
+
+export const REST_API_URL = import.meta.env.VITE_EVENTS_REST_API || guessRestApiConnection()
+export const WS_URL = import.meta.env.VITE_EVENTS_WS_API || guessWsConnection()
 
 export type LoggerParams = [string, unknown]
+
 export interface ApiConnection {
   onEventReceiveCb: (param: ServerEvent<unknown>) => void
   loggerCb?: (params: LoggerParams) => void
@@ -16,9 +33,9 @@ const defaultLogger = (params: LoggerParams) => {
 }
 
 export const apiTransport = ({
-    onEventReceiveCb,
-    loggerCb = defaultLogger,
-  }: ApiConnection) => {
+                               onEventReceiveCb,
+                               loggerCb = defaultLogger,
+                             }: ApiConnection) => {
   const centrifuge = new Centrifuge(WS_URL)
 
   centrifuge.on('connected', (ctx) => {
@@ -27,9 +44,10 @@ export const apiTransport = ({
 
   centrifuge.on('publication', (ctx) => {
     loggerCb(['publication', ctx]);
-    const event = ctx?.data?.data || null
 
-    if (event) {
+    // We need to handle only events from the channel 'events' with event name 'event.received'
+    if (ctx.channel === 'events' && ctx.data?.event === 'event.received') {
+      const event = ctx?.data?.data || null
       onEventReceiveCb(event)
     }
   });
@@ -41,7 +59,7 @@ export const apiTransport = ({
   centrifuge.connect();
 
   const deleteEvent = (eventId: EventId) => {
-    centrifuge.rpc(`delete:api/events/${eventId}`, undefined)
+    centrifuge.rpc(`delete:api/event/${eventId}`, undefined)
   }
 
   const deleteEventsAll = () => {
@@ -52,7 +70,7 @@ export const apiTransport = ({
     centrifuge.rpc(`delete:api/events`, {type})
   }
 
-  const getEventsAll = fetch(`${API_URL}/api/events`)
+  const getEventsAll = fetch(`${REST_API_URL}/api/events`)
     .then((response) => response.json())
     .then((response) => {
       if (response?.data?.length > 0) {

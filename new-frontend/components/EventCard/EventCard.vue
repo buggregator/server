@@ -136,7 +136,7 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .event {
-  @apply flex-grow flex flex-col p-3 lg:p-5 transition-colors md:dark:bg-gray-700;
+  @apply flex-grow flex flex-col p-3 lg:p-5 transition-colors dark:bg-gray-700;
 
   &:hover {
     @apply md:bg-gray-50 dark:bg-gray-900;

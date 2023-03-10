@@ -10,7 +10,7 @@
     </div>
     <div class="item">
       <h4 class="item--name">Result</h4>
-      <span class="item--label">{{ processResult }}</span>
+      <span class="item--value">{{ processResult }}</span>
     </div>
   </section>
 </template>
@@ -54,7 +54,7 @@ export default defineComponent({
     }
 
     &--value {
-      @apply text-2xs sm:text-xs md:text-base truncate;
+      @apply text-2xs sm:text-xs md:text-base truncate dark:text-white;
     }
   }
 }

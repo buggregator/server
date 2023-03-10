@@ -5,13 +5,15 @@
       <div class="calls">Calls</div>
     </header>
 
-    <CallStackRow
-      v-for="(edge, key) in sortedEdges"
-      :key="key"
-      :edge="edge"
-      @hover="$emit('hover', $event)"
-      @hide="$emit('hide')"
-    />
+    <div class="profiler-callstack__calls">
+      <CallStackRow
+          v-for="(edge, key) in sortedEdges"
+          :key="key"
+          :edge="edge"
+          @hover="$emit('hover', $event)"
+          @hide="$emit('hide')"
+      />
+    </div>
   </div>
 </template>
 
@@ -42,19 +44,23 @@ export default defineComponent({
 <style lang="scss" scoped>
 .profiler-callstack {
   > header {
-    @apply flex items-stretch bg-gray-600 border-b border-gray-600 text-xs text-center py-2;
+    @apply flex items-stretch bg-gray-600 text-xs text-white text-center font-bold uppercase py-2;
 
     .callee {
-      @apply flex-1 border-r border-gray-600;
+      @apply flex-1 text-white;
     }
 
     .cpu {
-      @apply flex-1 border-r border-gray-600;
+      @apply flex-1 text-white;
     }
 
     .calls {
       @apply w-12;
     }
   }
+}
+
+.profiler-callstack__calls {
+  @apply flex flex-col divide-y divide-gray-200 dark:divide-gray-600;
 }
 </style>

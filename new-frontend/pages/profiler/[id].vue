@@ -1,6 +1,6 @@
 <template>
   <main class="profiler-event">
-    <EventProfiler v-if="event" :event="event" />
+    <PageProfiler v-if="event" :event="event" />
   </main>
 </template>
 
@@ -9,10 +9,10 @@ import { defineComponent } from "vue";
 import { EventId, Profiler, ServerEvent } from "~/config/types";
 import { useNuxtApp, useRoute } from "#app";
 import { normalizeProfilerEvent } from "~/utils/normalize-event";
-import EventProfiler from "~/components/EventProfiler/EventProfiler.vue";
+import PageProfiler from "~/components/PageProfiler/PageProfiler.vue";
 
 export default defineComponent({
-  components: { EventProfiler },
+  components: { PageProfiler },
   setup() {
     const route = useRoute();
     const eventId = route.params.id as EventId;

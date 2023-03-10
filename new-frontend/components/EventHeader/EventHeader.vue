@@ -5,7 +5,7 @@
         v-if="eventUrl"
         :href="eventUrl"
         target="_blank"
-        class="event-header__tags-chip"
+        class="event-header__tag event-header__button--json"
       >
         JSON
       </a>
@@ -149,23 +149,19 @@ $eventTypeColorsMap: (
 );
 
 .event-header {
-  @apply w-full flex justify-between;
+  @apply w-full flex flex-col sm:flex-row flex-col-reverse justify-between gap-y-3;
 }
 
 .event-header__container {
-  @apply flex items-center space-x-2;
+  @apply flex justify-end space-x-2;
 }
 
 .event-header__tags {
   @apply flex flex-wrap gap-3;
 }
 
-.event-header__tags-chip {
-  @apply font-bold px-2 rounded-full text-xs inline-flex items-center transition-colors text-blue-700 bg-blue-100 border hover:bg-blue-700 hover:text-white;
-}
-
 .event-header__tag {
-  @apply font-bold px-2 rounded-full text-xs inline-flex items-center transition-colors border cursor-help;
+  @apply font-bold px-2 rounded-full text-xs inline-flex items-center transition-colors border dark:border-gray-600 cursor-help;
 
   /* Applied tailwind classes depends on event type
    Need to keep declaration for tailwind correct work:
@@ -217,11 +213,15 @@ $eventTypeColorsMap: (
   @apply text-white bg-gray-600 ring-gray-300;
 }
 
+.event-header__button--json {
+  @apply text-white bg-gray-600 ring-gray-300 bg-blue-700 hover:bg-blue-500;
+}
+
 .event-header__button--delete {
-  @apply text-red-700 bg-white hover:bg-red-700 hover:text-white;
+  @apply text-red-700 bg-white dark:bg-red-700 hover:bg-red-700 hover:text-white;
 }
 
 .event-header__button-icon {
-  @apply p-1;
+  @apply p-1 dark:fill-white;
 }
 </style>

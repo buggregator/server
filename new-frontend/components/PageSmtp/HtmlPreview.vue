@@ -12,15 +12,13 @@
       </button>
     </div>
     <div :class="`device-${currentDevice}`">
-      <div>
-        <slot></slot>
-      </div>
+      <div><slot></slot></div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import {defineComponent, PropType} from "vue";
+import {defineComponent} from "vue";
 import IconSvg from "~/components/IconSvg/IconSvg.vue";
 
 export default defineComponent({

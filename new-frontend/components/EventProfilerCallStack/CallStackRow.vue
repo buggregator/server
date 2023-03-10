@@ -52,10 +52,10 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .profiler-callstack-item {
-  @apply flex items-stretch border-b border-gray-600 hover:bg-gray-900 cursor-pointer;
+  @apply flex items-stretch hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer divide-x divide-gray-200 dark:divide-gray-600;
 
   > .callee {
-    @apply text-xs flex-1 py-1 text-right pr-2 truncate border-r border-gray-600;
+    @apply text-xs flex-1 py-1 text-right pr-2 truncate;
   }
 
   > .calls {
@@ -63,12 +63,12 @@ export default defineComponent({
   }
 
   > .usage {
-    @apply flex-1 text-center text-xs relative border-r border-gray-600;
+    @apply flex-1 text-center text-xs relative;
   }
 
   .usage {
     &--cpu {
-      @apply h-full bg-red-800 text-sm opacity-70;
+      @apply h-full bg-red-900 text-sm opacity-60;
     }
 
     &--memory {
@@ -76,7 +76,7 @@ export default defineComponent({
     }
 
     &--title {
-      @apply absolute inset-0 py-1;
+      @apply absolute inset-0 py-1 text-blue-900 dark:text-gray-200 font-bold;
     }
   }
 }

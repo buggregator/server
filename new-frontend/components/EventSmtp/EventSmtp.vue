@@ -6,7 +6,7 @@
       </h3>
 
       <div class="event-smtp__link-text">
-        <span> <strong>To:</strong> {{ event.payload.to[0].email }} </span>
+        <span><strong>To:</strong> {{ event.payload.to[0].email }} </span>
 
         <span>{{ dateFormat }}</span>
       </div>
@@ -48,19 +48,23 @@ export default defineComponent({
 }
 
 .event-smtp__link {
-  @apply block dark:bg-gray-800 text-sm hover:bg-white dark:hover:bg-gray-900 flex items-stretch dark:border-gray-600 flex flex-col p-5;
+  @apply block border dark:bg-gray-800 text-sm hover:bg-white dark:hover:bg-gray-900 flex items-stretch dark:border-gray-600 flex flex-col p-5;
 }
 
 .event-smtp__nav-item {
-  @apply border;
+  @apply border dark:border-0;
 }
 
 .event-smtp__link-title {
-  @apply font-semibold mb-2;
+  @apply font-semibold mb-2 dark:text-white;
 }
 
 .event-smtp__link-text {
   @include text-muted;
   @apply flex justify-between text-xs;
+}
+
+.event-smtp__link-text strong {
+  @apply font-bold;
 }
 </style>
