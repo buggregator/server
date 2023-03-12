@@ -1,6 +1,10 @@
 <template>
   <main class="inspector-event">
-    <PageInspector v-if="event" :event="event" @delete="clearEvent" />
+    <page-header button-title="Delete event" @delete="clearEvent">
+      Inspector event: {{ event.id }}
+    </page-header>
+
+    <page-inspector v-if="event" :event="event" @delete="clearEvent" />
   </main>
 </template>
 
@@ -10,9 +14,10 @@ import { EventId, Inspector, ServerEvent } from "~/config/types";
 import { useNuxtApp, useRoute } from "#app";
 import { normalizeInspectorEvent } from "~/utils/normalize-event";
 import PageInspector from "~/components/PageInspector/PageInspector.vue";
+import PageHeader from "~/components/PageHeader/PageHeader.vue";
 
 export default defineComponent({
-  components: { PageInspector },
+  components: { PageInspector, PageHeader },
   setup() {
     const route = useRoute();
     const eventId = route.params.id as EventId;

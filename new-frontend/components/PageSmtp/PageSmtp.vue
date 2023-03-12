@@ -4,10 +4,6 @@
       <header class="page-smtp__header">
         <h2 class="page-smtp__header-title">{{ mail.subject }}</h2>
         <div class="page-smtp__header-meta">
-          <button class="page-smtp__delete-button" @click="$emit('delete', event)">
-            <IconSvg name="trash-bin"/>
-          </button>
-
           <span class="page-smtp__header-date">{{ date }}</span>
         </div>
       </header>
@@ -15,10 +11,10 @@
       <section class="page-smtp__sender">
         <template v-for="sender in senders">
           <div
-              v-for="email in sender.address"
-              :key="`${sender.title}-${email.email}`"
-              class="page-smtp__sender-item"
-              :class="`page-smtp__sender-${sender.title.toLowerCase()}`"
+            v-for="email in sender.address"
+            :key="`${sender.title}-${email.email}`"
+            class="page-smtp__sender-item"
+            :class="`page-smtp__sender-${sender.title.toLowerCase()}`"
           >
             <div class="page-smtp__sender-title">{{ sender.title }}</div>
             <div class="page-smtp__sender-address">
@@ -37,14 +33,18 @@
         <Tabs :options="{ useUrlFragment: false }">
           <Tab name="Preview">
             <HtmlPreview device="tablet">
-              <div v-html="htmlSource"/>
+              <div v-html="htmlSource" />
             </HtmlPreview>
           </Tab>
           <Tab name="HTML">
-            <CodeSnippet language="html" class="max-w-full" :code="event.payload.html"/>
+            <CodeSnippet
+              language="html"
+              class="max-w-full"
+              :code="event.payload.html"
+            />
           </Tab>
           <Tab name="Raw">
-            <CodeSnippet language="html" :code="event.payload.raw"/>
+            <CodeSnippet language="html" :code="event.payload.raw" />
           </Tab>
           <Tab name="Tech Info">
             <div>
@@ -57,22 +57,25 @@
                   {{ event.payload.subject }}
                 </TableRow>
                 <TableRow title="From">
-                  <EmailAddresses :addresses="event.payload.from"/>
+                  <EmailAddresses :addresses="event.payload.from" />
                 </TableRow>
                 <TableRow title="To">
-                  <EmailAddresses :addresses="event.payload.to"/>
+                  <EmailAddresses :addresses="event.payload.to" />
                 </TableRow>
                 <TableRow v-if="event.payload.cc.length" title="Cc">
-                  <EmailAddresses :addresses="event.payload.cc"/>
+                  <EmailAddresses :addresses="event.payload.cc" />
                 </TableRow>
                 <TableRow v-if="event.payload.bcc.length" title="Bcc">
-                  <EmailAddresses :addresses="event.payload.bcc"/>
+                  <EmailAddresses :addresses="event.payload.bcc" />
                 </TableRow>
                 <TableRow v-if="event.payload.reply_to.length" title="Reply to">
-                  <EmailAddresses :addresses="event.payload.reply_to"/>
+                  <EmailAddresses :addresses="event.payload.reply_to" />
                 </TableRow>
-                <TableRow v-if="event.payload.attachments.length" title="Attachments">
-                  <EmailAttachments :attachments="event.payload.attachments"/>
+                <TableRow
+                  v-if="event.payload.attachments.length"
+                  title="Attachments"
+                >
+                  <EmailAttachments :attachments="event.payload.attachments" />
                 </TableRow>
               </TableC>
             </div>
@@ -84,11 +87,10 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, PropType} from "vue";
-import IconSvg from "~/components/IconSvg/IconSvg.vue";
-import {NormalizedEvent} from "~/config/types";
+import { defineComponent, PropType } from "vue";
+import { NormalizedEvent } from "~/config/types";
 import moment from "moment";
-import {Tabs, Tab} from "vue3-tabs-component";
+import { Tabs, Tab } from "vue3-tabs-component";
 import TableC from "~/components/Table/Table.vue";
 import TableRow from "~/components/Table/TableRow.vue";
 import CodeSnippet from "~/components/CodeSnippet/CodeSnippet.vue";
@@ -100,11 +102,10 @@ export default defineComponent({
     HtmlPreview,
     EmailAddresses,
     CodeSnippet,
-    IconSvg,
     Tabs,
     Tab,
     TableC,
-    TableRow
+    TableRow,
   },
   props: {
     event: {
@@ -114,33 +115,32 @@ export default defineComponent({
     htmlSource: {
       type: String,
       required: true,
-    }
+    },
   },
-  emits: ['delete'],
   data() {
     return {
       senders: [
         {
-          title: 'From',
-          address: this.event.payload.from
+          title: "From",
+          address: this.event.payload.from,
         },
         {
-          title: 'To',
-          address: this.event.payload.to
+          title: "To",
+          address: this.event.payload.to,
         },
         {
-          title: 'CC',
-          address: this.event.payload.cc
+          title: "CC",
+          address: this.event.payload.cc,
         },
         {
-          title: 'BCC',
-          address: this.event.payload.bcc
+          title: "BCC",
+          address: this.event.payload.bcc,
         },
         {
-          title: 'Reply to',
-          address: this.event.payload.reply_to
-        }
-      ]
+          title: "Reply to",
+          address: this.event.payload.reply_to,
+        },
+      ],
     };
   },
   computed: {
@@ -148,12 +148,11 @@ export default defineComponent({
       return this.event.payload;
     },
     date() {
-      return moment(this.event.timestamp).format('DD.MM.YYYY HH:mm:ss')
+      return moment(this.event.timestamp).format("DD.MM.YYYY HH:mm:ss");
     },
-  }
+  },
 });
 </script>
-
 
 <style lang="scss" scoped>
 @import "assets/mixins";
@@ -216,14 +215,5 @@ export default defineComponent({
 }
 
 .page-smtp__body {
-
-}
-
-.page-smtp__delete-button {
-  @apply h-4 sm:h-5 w-4 sm:h-5;
-}
-
-.page-smtp__delete-button svg {
-  @apply fill-current;
 }
 </style>

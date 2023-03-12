@@ -1,6 +1,10 @@
 <template>
   <main class="profiler-event">
-    <PageProfiler v-if="event" :event="event" />
+    <page-header button-title="Delete event" @delete="clearEvent">
+      Profiler event: {{ event.id }}
+    </page-header>
+
+    <page-profiler v-if="event" :event="event" />
   </main>
 </template>
 
@@ -10,9 +14,10 @@ import { EventId, Profiler, ServerEvent } from "~/config/types";
 import { useNuxtApp, useRoute } from "#app";
 import { normalizeProfilerEvent } from "~/utils/normalize-event";
 import PageProfiler from "~/components/PageProfiler/PageProfiler.vue";
+import PageHeader from "~/components/PageHeader/PageHeader.vue";
 
 export default defineComponent({
-  components: { PageProfiler },
+  components: { PageProfiler, PageHeader },
   setup() {
     const route = useRoute();
     const eventId = route.params.id as EventId;

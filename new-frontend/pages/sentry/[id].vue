@@ -1,18 +1,26 @@
 <template>
   <main class="sentry-event">
-    <PageSentry v-if="event" :event="event" @delete="clearEvent" />
+    <page-header button-title="Delete event" @delete="clearEvent">
+      Sentry event: {{ event.id }}
+    </page-header>
+
+    <page-sentry v-if="event" :event="event" />
   </main>
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import {EventId, Sentry, ServerEvent} from "~/config/types";
+import { EventId, Sentry, ServerEvent } from "~/config/types";
 import { useNuxtApp, useRoute } from "#app";
 import { normalizeSentryEvent } from "~/utils/normalize-event";
 import PageSentry from "~/components/PageSentry/PageSentry.vue";
+import PageHeader from "~/components/PageHeader/PageHeader.vue";
 
 export default defineComponent({
-  components: { PageSentry },
+  components: {
+    PageSentry,
+    PageHeader,
+  },
   setup() {
     const route = useRoute();
     const eventId = route.params.id as EventId;
