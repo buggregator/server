@@ -64,7 +64,7 @@ export default defineComponent({
 }
 
 .main-layout__content {
-  @apply flex flex-col h-full flex-1 w-full;
+  @apply flex flex-col h-full flex-1 w-full min-h-screen;
 
   & > div {
     @apply flex flex-col h-full flex-1;
