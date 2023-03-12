@@ -16,14 +16,14 @@ export default defineComponent({
 
       return {
         events: $events.itemsGroupByType[EVENT_TYPES.INSPECTOR],
-        title: "Inspector Events",
+        title: "Inspector",
         clearEvents: () => $events.removeByType(EVENT_TYPES.INSPECTOR),
       };
     }
 
     return {
       events: [],
-      title: "Inspector Events",
+      title: "Inspector",
       clearEvents: () => {},
     };
   },

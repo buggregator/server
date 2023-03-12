@@ -12,14 +12,14 @@ export default defineComponent({
 
       return {
         events: $events.itemsGroupByType[EVENT_TYPES.PROFILER],
-        title: "Profiler Events",
+        title: "Profiler",
         clearEvents: () => $events.removeByType(EVENT_TYPES.PROFILER),
       };
     }
 
     return {
       events: [],
-      title: "Profiler Events",
+      title: "Profiler",
       clearEvents: () => {},
     };
   },

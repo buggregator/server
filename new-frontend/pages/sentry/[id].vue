@@ -1,7 +1,9 @@
 <template>
   <main class="sentry-event">
     <page-header button-title="Delete event" @delete="clearEvent">
-      Sentry event: {{ event.id }}
+      <nuxt-link to="/">Home</nuxt-link>&nbsp;/
+      <nuxt-link to="/sentry">Sentry</nuxt-link>&nbsp;/
+      <nuxt-link :disabled="true">{{ event.id }}</nuxt-link>
     </page-header>
 
     <page-sentry v-if="event" :event="event" />

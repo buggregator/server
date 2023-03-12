@@ -1,7 +1,9 @@
 <template>
   <main class="profiler-event">
     <page-header button-title="Delete event" @delete="clearEvent">
-      Profiler event: {{ event.id }}
+      <nuxt-link to="/">Home</nuxt-link>&nbsp;/
+      <nuxt-link to="/profiler">Profiler</nuxt-link>&nbsp;/
+      <nuxt-link :disabled="true">{{ event.id }}</nuxt-link>
     </page-header>
 
     <page-profiler v-if="event" :event="event" />

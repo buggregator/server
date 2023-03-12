@@ -1,7 +1,9 @@
 <template>
   <main class="smtp-event">
     <page-header button-title="Delete event" @delete="clearEvent">
-      Smtp event: {{ event.id }}
+      <nuxt-link to="/">Home</nuxt-link>&nbsp;/
+      <nuxt-link to="/smtp">Smtp</nuxt-link>&nbsp;/
+      <nuxt-link :disabled="true">{{ event.id }}</nuxt-link>
     </page-header>
 
     <page-smtp v-if="event" :event="event" :html-source="html" />

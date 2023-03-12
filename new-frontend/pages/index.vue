@@ -1,7 +1,12 @@
 <template>
   <div class="events-page">
     <page-header button-title="Clear events" @delete="clearEvents">
-      {{ title }}
+      <nuxt-link to="/" :disabled="!title">Home</nuxt-link>
+
+      <template v-if="title">
+        <span>&nbsp;/&nbsp;</span>
+        <nuxt-link :disabled="true">{{ title }}</nuxt-link>
+      </template>
     </page-header>
 
     <main v-if="events.length" class="events-page__events">

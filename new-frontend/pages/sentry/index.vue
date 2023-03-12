@@ -1,5 +1,5 @@
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent, h } from "vue";
 import PageIndex from "~/pages/index.vue";
 import { EVENT_TYPES } from "~/config/constants";
 import { useNuxtApp } from "#app";
@@ -9,17 +9,16 @@ export default defineComponent({
   setup() {
     if (process.client) {
       const { $events } = useNuxtApp();
-
       return {
         events: $events.itemsGroupByType[EVENT_TYPES.SENTRY],
-        title: "Sentry Events",
+        title: "Sentry",
         clearEvents: () => $events.removeByType(EVENT_TYPES.SENTRY),
       };
     }
 
     return {
       events: [],
-      title: "Sentry Events",
+      title: "Sentry",
       clearEvents: () => {},
     };
   },

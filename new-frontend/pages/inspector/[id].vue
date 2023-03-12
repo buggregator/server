@@ -1,7 +1,9 @@
 <template>
   <main class="inspector-event">
     <page-header button-title="Delete event" @delete="clearEvent">
-      Inspector event: {{ event.id }}
+      <nuxt-link to="/">Home</nuxt-link>&nbsp;/
+      <nuxt-link to="/inspector">Inspector</nuxt-link>&nbsp;/
+      <nuxt-link :disabled="true">{{ event.id }}</nuxt-link>
     </page-header>
 
     <page-inspector v-if="event" :event="event" @delete="clearEvent" />

@@ -1,6 +1,8 @@
 <template>
   <main class="settings-page">
-    <page-header> Settings </page-header>
+    <page-header>
+      <nuxt-link to="/">Home</nuxt-link>&nbsp; /&nbsp;Settings
+    </page-header>
 
     <section class="settings-page__content">
       <div class="settings-page__radio">
