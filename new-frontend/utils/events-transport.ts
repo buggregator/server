@@ -18,8 +18,8 @@ const guessRestApiConnection = (): string => {
   return `${API_PROTOCOL}://${API_HOST}`;
 }
 
-export const REST_API_URL = import.meta.env.VITE_EVENTS_REST_API || guessRestApiConnection()
-export const WS_URL = import.meta.env.VITE_EVENTS_WS_API || guessWsConnection()
+export const REST_API_URL = (import.meta.env.VITE_EVENTS_REST_API as string) || guessRestApiConnection()
+export const WS_URL = (import.meta.env.VITE_EVENTS_WS_API as string) || guessWsConnection()
 
 export type LoggerParams = [string, unknown]
 
@@ -32,10 +32,7 @@ const defaultLogger = (params: LoggerParams) => {
   console.info(`[ApiConnection logger]:Centrifuge "${params[0]}" called with params: "${JSON.stringify(params[1])}"`)
 }
 
-export const apiTransport = ({
-                               onEventReceiveCb,
-                               loggerCb = defaultLogger,
-                             }: ApiConnection) => {
+export const apiTransport = ({ onEventReceiveCb, loggerCb = defaultLogger, }: ApiConnection) => {
   const centrifuge = new Centrifuge(WS_URL)
 
   centrifuge.on('connected', (ctx) => {
