@@ -1,12 +1,12 @@
 <template>
   <main class="inspector-event">
-    <page-header button-title="Delete event" @delete="clearEvent">
+    <page-header button-title="Delete event" @delete="onDelete">
       <nuxt-link to="/">Home</nuxt-link>&nbsp;/
       <nuxt-link to="/inspector">Inspector</nuxt-link>&nbsp;/
       <nuxt-link :disabled="true">{{ event.id }}</nuxt-link>
     </page-header>
 
-    <page-inspector v-if="event" :event="event" @delete="clearEvent" />
+    <page-inspector v-if="event" :event="event" />
   </main>
 </template>
 
@@ -47,6 +47,13 @@ export default defineComponent({
     return {
       title: `Inspector > ${route.params.id} | Buggregator`,
     };
+  },
+  methods: {
+    onDelete() {
+      this.clearEvent();
+
+      this.$router.push("/");
+    },
   },
 });
 </script>

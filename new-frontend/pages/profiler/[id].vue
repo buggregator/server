@@ -1,6 +1,6 @@
 <template>
   <main class="profiler-event">
-    <page-header button-title="Delete event" @delete="clearEvent">
+    <page-header button-title="Delete event" @delete="onDelete">
       <nuxt-link to="/">Home</nuxt-link>&nbsp;/
       <nuxt-link to="/profiler">Profiler</nuxt-link>&nbsp;/
       <nuxt-link :disabled="true">{{ event.id }}</nuxt-link>
@@ -47,6 +47,13 @@ export default defineComponent({
     return {
       title: `Profiler > ${route.params.id} | Buggregator`,
     };
+  },
+  methods: {
+    onDelete() {
+      this.clearEvent();
+
+      this.$router.push("/");
+    },
   },
 });
 </script>
