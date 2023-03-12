@@ -16,12 +16,14 @@ export default defineComponent({
 
       return {
         events: $events.itemsGroupByType[EVENT_TYPES.SMTP],
+        title: "Smtp Events",
         clearEvents: () => $events.removeByType(EVENT_TYPES.SMTP),
       };
     }
 
     return {
       events: [],
+      title: "Smtp Events",
       clearEvents: () => {},
     };
   },

@@ -1,12 +1,8 @@
 <template>
   <div class="events-page">
-    <header class="events-page__header">
-      <div v-if="events.length" class="events-page__filters">
-        <button class="events-page__btn-clear" @click="clearEvents">
-          Clear screen
-        </button>
-      </div>
-    </header>
+    <page-header button-title="Clear events" @delete="clearEvents">
+      {{ title }}
+    </page-header>
 
     <main v-if="events.length" class="events-page__events">
       <event-mapper
@@ -27,12 +23,14 @@
 import { defineComponent } from "vue";
 import EventMapper from "~/components/EventMapper/EventMapper.vue";
 import PageTips from "~/pages/PageTips/PageTips.vue";
+import PageHeader from "~/components/PageHeader/PageHeader.vue";
 import { useNuxtApp } from "#app";
 
 export default defineComponent({
   components: {
     PageTips,
     EventMapper,
+    PageHeader,
   },
   setup() {
     if (process.client) {
@@ -41,10 +39,12 @@ export default defineComponent({
       return {
         events: $events.items,
         clearEvents: $events.removeAll,
+        title: "",
       };
     }
     return {
       events: [],
+      title: "",
       clearEvents: () => {},
     };
   },
@@ -56,16 +56,6 @@ export default defineComponent({
 
 .events-page {
   @apply h-full w-full;
-}
-
-.events-page__header {
-  @include border-style;
-  @apply md:sticky md:top-0 z-50 bg-white dark:bg-gray-900 border-b flex justify-between items-center px-2;
-}
-
-.events-page__filters {
-  @include border-style;
-  @apply flex flex-col py-2 md:flex-row justify-center md:justify-between items-center gap-2;
 }
 
 .events-page__events {
@@ -81,9 +71,5 @@ export default defineComponent({
 
 .events-page__welcome {
   @apply flex-1 p-4 flex flex-col justify-center items-center bg-gray-50 dark:bg-gray-800 w-full h-full min-h-screen;
-}
-
-.events-page__btn-clear {
-  @apply px-3 py-1 text-xs bg-red-800 text-white rounded-sm hover:bg-red-700 transition transition-all duration-300;
 }
 </style>

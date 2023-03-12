@@ -1,35 +1,36 @@
 <template>
-  <div ref="main" class="page-profiler">
+  <div class="page-profiler">
+    <div class="page-profiler__head"></div>
     <main class="page-profiler__main">
       <section ref="calls" class="page-profiler__callstack">
         <PerfectScrollbar :style="{ height: '100vh' }">
           <EventProfilerCallStack
-              :event="event.payload"
-              @hover="setActiveEdge"
-              @hide="setActiveEdge"
+            :event="event.payload"
+            @hover="setActiveEdge"
+            @hide="setActiveEdge"
           />
         </PerfectScrollbar>
       </section>
 
       <div ref="info" class="page-profiler__stat">
         <section class="page-profiler__stat-board">
-          <stat-board :cost="event.payload.peaks"/>
+          <stat-board :cost="event.payload.peaks" />
         </section>
 
         <section class="page-profiler__stat-tabs">
           <Tabs :options="{ useUrlFragment: false }">
             <Tab name="Call graph">
               <EventProfilerCallGraph
-                  :event="event.payload"
-                  @hover="setActiveEdge"
-                  @hide="setActiveEdge"
+                :event="event.payload"
+                @hover="setActiveEdge"
+                @hide="setActiveEdge"
               />
             </Tab>
             <Tab name="Flamechart">
               <EventProfilerFlamegraph
-                  :edges="event.payload.edges"
-                  @hover="setActiveEdge"
-                  @hide="setActiveEdge"
+                :edges="event.payload.edges"
+                @hover="setActiveEdge"
+                @hide="setActiveEdge"
               />
             </Tab>
           </Tabs>
@@ -37,30 +38,30 @@
       </div>
 
       <div
-          v-if="activeEdge"
-          class="page-profiler__edge"
-          :style="activeEdgeStyle"
+        v-if="activeEdge"
+        class="page-profiler__edge"
+        :style="activeEdgeStyle"
       >
         <h4 class="page-profiler__edge-title">
           {{ activeEdge.callee }}
         </h4>
 
-        <stat-board :cost="activeEdge.cost"/>
+        <stat-board :cost="activeEdge.cost" />
       </div>
     </main>
   </div>
 </template>
 
 <script lang="ts">
-import {defineComponent, PropType} from "vue";
-import {NormalizedEvent} from "~/config/types";
+import { defineComponent, PropType } from "vue";
+import { NormalizedEvent } from "~/config/types";
 import StatBoard from "~/components/StatBoard/StatBoard.vue";
 import EventProfilerCallStack from "~/components/EventProfilerCallStack/EventProfilerCallStack.vue";
 import EventProfilerCallGraph from "~/components/EventProfilerCallGraph/EventProfilerCallGraph.vue";
 import EventProfilerFlamegraph from "~/components/Flamegraph/Flamegraph.vue";
-import {PerfectScrollbar} from "vue3-perfect-scrollbar";
-import type {Profiler, ProfilerEdge} from "~/config/types";
-import {Tabs, Tab} from "vue3-tabs-component";
+import { PerfectScrollbar } from "vue3-perfect-scrollbar";
+import type { Profiler, ProfilerEdge } from "~/config/types";
+import { Tabs, Tab } from "vue3-tabs-component";
 
 export default defineComponent({
   components: {
@@ -91,9 +92,9 @@ export default defineComponent({
   computed: {
     sortedEdges() {
       return Object.fromEntries(
-          Object.entries((this.event.payload as Profiler).edges).sort(
-              ([, a], [, b]) => b.cost.p_cpu - a.cost.p_cpu
-          )
+        Object.entries((this.event.payload as Profiler).edges).sort(
+          ([, a], [, b]) => b.cost.p_cpu - a.cost.p_cpu
+        )
       );
     },
     activeEdgeStyle() {
@@ -104,7 +105,8 @@ export default defineComponent({
       let left = this.activeEdgePosition.x;
 
       if (width + this.activeEdgePosition.x > window.innerWidth - 80) {
-        const deltaX = width + this.activeEdgePosition.x - window.innerWidth + 100;
+        const deltaX =
+          width + this.activeEdgePosition.x - window.innerWidth + 100;
         left -= deltaX;
       }
 
@@ -123,8 +125,8 @@ export default defineComponent({
     calcStyles(percentages: number): { width: string } {
       return {
         width: percentages
-            ? `${this.normalizePercentage(percentages)}%`
-            : `0px`,
+          ? `${this.normalizePercentage(percentages)}%`
+          : `0px`,
       };
     },
     setActiveEdge(edge): void {

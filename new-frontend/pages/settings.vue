@@ -1,8 +1,6 @@
 <template>
   <main class="settings-page">
-    <header class="settings-page__header">
-      <h2 class="page-title">Settings</h2>
-    </header>
+    <page-header> Settings </page-header>
 
     <section class="settings-page__content">
       <div class="settings-page__radio">
@@ -34,11 +32,13 @@
 import { defineComponent } from "vue";
 import { storeToRefs } from "pinia";
 import IconSvg from "~/components/IconSvg/IconSvg.vue";
+import PageHeader from "~/components/PageHeader/PageHeader.vue";
 import { useThemeStore, THEME_MODES } from "~/stores/theme";
 
 export default defineComponent({
   components: {
     IconSvg,
+    PageHeader,
   },
   setup() {
     const themeStore = useThemeStore();
@@ -83,16 +83,8 @@ export default defineComponent({
 .settings-page {
 }
 
-.settings-page__header {
-  @apply p-3 flex justify-between border-b border-gray-600;
-}
-
 .settings-page__content {
   @apply p-3;
-}
-
-.page-title {
-  @apply text-2xl font-bold;
 }
 
 .settings__title {

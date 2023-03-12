@@ -12,12 +12,14 @@ export default defineComponent({
 
       return {
         events: $events.itemsGroupByType[EVENT_TYPES.SENTRY],
+        title: "Sentry Events",
         clearEvents: () => $events.removeByType(EVENT_TYPES.SENTRY),
       };
     }
 
     return {
       events: [],
+      title: "Sentry Events",
       clearEvents: () => {},
     };
   },
