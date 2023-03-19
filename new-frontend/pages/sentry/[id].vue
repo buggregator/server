@@ -3,17 +3,23 @@
     <page-header button-title="Delete event" @delete="onDelete">
       <nuxt-link to="/">Home</nuxt-link>&nbsp;/
       <nuxt-link to="/sentry">Sentry</nuxt-link>&nbsp;/
-      <nuxt-link :disabled="true">{{ event.id }}</nuxt-link>
+      <nuxt-link :disabled="true">{{ eventId }}</nuxt-link>
     </page-header>
 
-    <page-sentry v-if="event" :event="event" />
+    <div v-if="pending" class="sentry-event__loading">
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+
+    <page-sentry v-if="event && pending !== true" :event="event" />
   </main>
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import { EventId, Sentry, ServerEvent } from "~/config/types";
-import { useNuxtApp, useRoute } from "#app";
+import { EventId } from "~/config/types";
+import { useNuxtApp, useRoute, useRouter, useFetch } from "#app";
 import { normalizeSentryEvent } from "~/utils/normalize-event";
 import PageSentry from "~/components/PageSentry/PageSentry.vue";
 import PageHeader from "~/components/PageHeader/PageHeader.vue";
@@ -23,24 +29,37 @@ export default defineComponent({
     PageSentry,
     PageHeader,
   },
-  setup() {
+  async setup() {
     const route = useRoute();
+    const router = useRouter();
     const eventId = route.params.id as EventId;
 
     if (process.client) {
       const { $events } = useNuxtApp();
-      const serverEvent = $events.getItemById(
-        eventId
-      ) as ServerEvent<Sentry> | null;
+      const { data: event, pending } = await useFetch(
+        $events.buildItemFetchUrl(eventId),
+        {
+          onResponse({ response }) {
+            return response.data;
+          },
+          onResponseError() {
+            router.push("/404");
+          },
+        }
+      );
 
       return {
-        event: serverEvent ? normalizeSentryEvent(serverEvent) : null,
+        serverEvent: event,
+        pending,
+        eventId,
         clearEvent: () => $events.removeById(eventId),
       };
     }
 
     return {
-      event: null,
+      serverEvent: null,
+      pending: null,
+      eventId,
       clearEvent: () => {},
     };
   },
@@ -50,6 +69,11 @@ export default defineComponent({
     return {
       title: `Sentry > ${route.params.id} | Buggregator`,
     };
+  },
+  computed: {
+    event() {
+      return this.serverEvent ? normalizeSentryEvent(this.serverEvent) : null;
+    },
   },
   methods: {
     onDelete() {
@@ -62,7 +86,13 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+@import "assets/mixins";
+
 .sentry-event {
   @apply h-full w-full;
+}
+
+.sentry-event__loading {
+  @include loading;
 }
 </style>

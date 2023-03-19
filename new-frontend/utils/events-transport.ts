@@ -78,11 +78,22 @@ export const apiTransport = ({ onEventReceiveCb, loggerCb = defaultLogger, }: Ap
     })
     .then((events: ServerEvent<unknown>[]) => events)
 
+  const getEvent = (id: EventID) => fetch(`${REST_API_URL}/api/event/${id}`)
+    .then((response) => response.json())
+    .then((response) => {
+      if (response?.data) {
+        return response.data as ServerEvent<unknown>[]
+      }
+      return null
+    })
+
 
   return {
     getEventsAll,
+    getEvent,
     deleteEvent,
     deleteEventsAll,
     deleteEventsByType,
+    makeEventUrl: (id) => `${REST_API_URL}/api/event/${id}`
   }
 }

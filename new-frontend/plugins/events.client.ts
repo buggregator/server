@@ -11,7 +11,8 @@ export default defineNuxtPlugin(() => {
     deleteEvent,
     deleteEventsAll,
     deleteEventsByType,
-    getEventsAll
+    getEventsAll,
+    makeEventUrl,
   } = apiTransport({
     onEventReceiveCb: (event: ServerEvent<unknown>) => {
       eventsStore.addEvents([event]);
@@ -54,6 +55,7 @@ export default defineNuxtPlugin(() => {
         items: events,
         itemsGroupByType,
         getItemById: eventsStore.getEventById,
+        buildItemFetchUrl: makeEventUrl,
         getAll,
         removeAll,
         removeByType,
