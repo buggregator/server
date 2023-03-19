@@ -6,47 +6,75 @@
       <nuxt-link :disabled="true">{{ event.id }}</nuxt-link>
     </page-header>
 
+    <div v-if="pending && !event" class="inspector-event__loading">
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+
     <page-inspector v-if="event" :event="event" />
   </main>
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import { EventId, Inspector, ServerEvent } from "~/config/types";
-import { useNuxtApp, useRoute } from "#app";
+import { EventId } from "~/config/types";
+import { useFetch, useNuxtApp, useRoute, useRouter } from "#app";
 import { normalizeInspectorEvent } from "~/utils/normalize-event";
 import PageInspector from "~/components/PageInspector/PageInspector.vue";
 import PageHeader from "~/components/PageHeader/PageHeader.vue";
 
 export default defineComponent({
   components: { PageInspector, PageHeader },
-  setup() {
+
+  async setup() {
     const route = useRoute();
+    const router = useRouter();
     const eventId = route.params.id as EventId;
 
     if (process.client) {
       const { $events } = useNuxtApp();
-      const serverEvent = $events.getItemById(
-        eventId
-      ) as ServerEvent<Inspector> | null;
+      const { data: event, pending } = await useFetch(
+        $events.buildItemFetchUrl(eventId),
+        {
+          onResponse({ response }) {
+            return response.data;
+          },
+          onResponseError() {
+            router.push("/404");
+          },
+          onRequestError() {
+            router.push("/404");
+          },
+        }
+      );
 
       return {
-        event: serverEvent ? normalizeInspectorEvent(serverEvent) : null,
+        serverEvent: event,
+        pending,
+        eventId,
         clearEvent: () => $events.removeById(eventId),
       };
     }
 
     return {
-      event: null,
+      serverEvent: null,
+      pending: false,
+      eventId,
       clearEvent: () => {},
     };
   },
   head() {
-    const route = useRoute();
-
     return {
-      title: `Inspector > ${route.params.id} | Buggregator`,
+      title: `Inspector > ${this.eventId} | Buggregator`,
     };
+  },
+  computed: {
+    event() {
+      return this.serverEvent
+        ? normalizeInspectorEvent(this.serverEvent)
+        : null;
+    },
   },
   methods: {
     onDelete() {
@@ -59,7 +87,11 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+@import "assets/mixins";
 .inspector-event {
   @apply h-full w-full;
+}
+.inspector-event__loading {
+  @include loading;
 }
 </style>

@@ -3,8 +3,14 @@
     <page-header button-title="Delete event" @delete="onDelete">
       <nuxt-link to="/">Home</nuxt-link>&nbsp;/
       <nuxt-link to="/profiler">Profiler</nuxt-link>&nbsp;/
-      <nuxt-link :disabled="true">{{ event.id }}</nuxt-link>
+      <nuxt-link :disabled="true">{{ eventId }}</nuxt-link>
     </page-header>
+
+    <div v-if="pending && !event" class="profiler-event__loading">
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
 
     <page-profiler v-if="event" :event="event" />
   </main>
@@ -12,41 +18,60 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import { EventId, Profiler, ServerEvent } from "~/config/types";
-import { useNuxtApp, useRoute } from "#app";
+import { EventId } from "~/config/types";
+import { useFetch, useNuxtApp, useRoute, useRouter } from "#app";
 import { normalizeProfilerEvent } from "~/utils/normalize-event";
 import PageProfiler from "~/components/PageProfiler/PageProfiler.vue";
 import PageHeader from "~/components/PageHeader/PageHeader.vue";
 
 export default defineComponent({
   components: { PageProfiler, PageHeader },
-  setup() {
+  async setup() {
     const route = useRoute();
+    const router = useRouter();
     const eventId = route.params.id as EventId;
 
     if (process.client) {
       const { $events } = useNuxtApp();
-      const serverEvent = $events.getItemById(
-        eventId
-      ) as ServerEvent<Profiler> | null;
+      const { data: event, pending } = await useFetch(
+        $events.buildItemFetchUrl(eventId),
+        {
+          onResponse({ response }) {
+            return response.data;
+          },
+          onResponseError() {
+            router.push("/404");
+          },
+          onRequestError() {
+            router.push("/404");
+          },
+        }
+      );
 
       return {
-        event: serverEvent ? normalizeProfilerEvent(serverEvent) : null,
+        serverEvent: event,
+        pending,
+        eventId,
         clearEvent: () => $events.removeById(eventId),
       };
     }
 
     return {
-      event: null,
+      serverEvent: null,
+      pending: false,
+      eventId,
       clearEvent: () => {},
     };
   },
   head() {
-    const route = useRoute();
-
     return {
-      title: `Profiler > ${route.params.id} | Buggregator`,
+      title: `Profiler > ${this.eventId} | Buggregator`,
     };
+  },
+  computed: {
+    event() {
+      return this.serverEvent ? normalizeProfilerEvent(this.serverEvent) : null;
+    },
   },
   methods: {
     onDelete() {
@@ -59,8 +84,9 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+@import "assets/mixins";
 .profiler-event {
-  @apply relative h-full w-full;
+  @apply h-full w-full;
 
   > main {
     @apply flex flex-col md:flex-row;
@@ -73,5 +99,9 @@ export default defineComponent({
   .info__wrapper {
     @apply w-full h-full flex flex-col md:w-5/6 divide-y divide-gray-300 dark:divide-gray-500;
   }
+}
+
+.profiler-event__loading {
+  @include loading;
 }
 </style>

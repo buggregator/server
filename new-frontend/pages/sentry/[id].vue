@@ -6,13 +6,13 @@
       <nuxt-link :disabled="true">{{ eventId }}</nuxt-link>
     </page-header>
 
-    <div v-if="pending" class="sentry-event__loading">
+    <div v-if="pending && !event" class="sentry-event__loading">
       <div></div>
       <div></div>
       <div></div>
     </div>
 
-    <page-sentry v-if="event && pending !== true" :event="event" />
+    <page-sentry v-if="event" :event="event" />
   </main>
 </template>
 
@@ -45,6 +45,9 @@ export default defineComponent({
           onResponseError() {
             router.push("/404");
           },
+          onRequestError() {
+            router.push("/404");
+          },
         }
       );
 
@@ -58,16 +61,14 @@ export default defineComponent({
 
     return {
       serverEvent: null,
-      pending: null,
+      pending: false,
       eventId,
       clearEvent: () => {},
     };
   },
   head() {
-    const route = useRoute();
-
     return {
-      title: `Sentry > ${route.params.id} | Buggregator`,
+      title: `Sentry > ${this.eventId} | Buggregator`,
     };
   },
   computed: {

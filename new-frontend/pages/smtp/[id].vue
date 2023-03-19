@@ -3,8 +3,14 @@
     <page-header button-title="Delete event" @delete="onDelete">
       <nuxt-link to="/">Home</nuxt-link>&nbsp;/
       <nuxt-link to="/smtp">Smtp</nuxt-link>&nbsp;/
-      <nuxt-link :disabled="true">{{ event.id }}</nuxt-link>
+      <nuxt-link :disabled="true">{{ eventId }}</nuxt-link>
     </page-header>
+
+    <div v-if="pending && !event" class="smtp-event__loading">
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
 
     <page-smtp v-if="event" :event="event" :html-source="html" />
   </main>
@@ -12,8 +18,8 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import { EventId, SMTP, ServerEvent } from "~/config/types";
-import { useNuxtApp, useRoute } from "#app";
+import { EventId } from "~/config/types";
+import { useFetch, useNuxtApp, useRoute, useRouter } from "#app";
 import { normalizeSMTPEvent } from "~/utils/normalize-event";
 import PageSmtp from "~/components/PageSmtp/PageSmtp.vue";
 import PageHeader from "~/components/PageHeader/PageHeader.vue";
@@ -21,35 +27,54 @@ import { REST_API_URL } from "~/utils/events-transport";
 
 export default defineComponent({
   components: { PageSmtp, PageHeader },
-  setup() {
+  async setup() {
     const route = useRoute();
+    const router = useRouter();
     const eventId = route.params.id as EventId;
 
     if (process.client) {
       const { $events } = useNuxtApp();
-      const serverEvent = $events.getItemById(
-        eventId
-      ) as ServerEvent<SMTP> | null;
+      const { data: event, pending } = await useFetch(
+        $events.buildItemFetchUrl(eventId),
+        {
+          onResponse({ response }) {
+            return response.data;
+          },
+          onResponseError() {
+            router.push("/404");
+          },
+          onRequestError() {
+            router.push("/404");
+          },
+        }
+      );
 
       return {
-        event: serverEvent ? normalizeSMTPEvent(serverEvent) : null,
+        serverEvent: event,
+        pending,
+        eventId,
         html: `<iframe src="${REST_API_URL}/api/smtp/${eventId}/html"/>`,
         clearEvent: () => $events.removeById(eventId),
       };
     }
 
     return {
-      event: null,
+      serverEvent: null,
+      pending: false,
+      eventId,
       html: "",
       clearEvent: () => {},
     };
   },
   head() {
-    const route = useRoute();
-
     return {
-      title: `SMTP > ${route.params.id} | Buggregator`,
+      title: `SMTP > ${this.eventId} | Buggregator`,
     };
+  },
+  computed: {
+    event() {
+      return this.serverEvent ? normalizeSMTPEvent(this.serverEvent) : null;
+    },
   },
   methods: {
     onDelete() {
@@ -62,7 +87,12 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+@import "assets/mixins";
+
 .smtp-event {
   @apply h-full w-full;
+}
+.smtp-event__loading {
+  @include loading;
 }
 </style>
