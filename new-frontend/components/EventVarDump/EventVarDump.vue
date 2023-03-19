@@ -42,6 +42,7 @@ export default defineComponent({
       };
     }
 
+    // NOTE: storybook support
     return {
       Sfdump: window?.Sfdump as unknown,
     };

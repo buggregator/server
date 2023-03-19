@@ -1,5 +1,9 @@
-import { ProfilerEdges } from "~/config/types";
+import { ProfilerCost, ProfilerEdges } from "~/config/types";
 import {FlameChartNode} from "flame-chart-js/dist/types";
+
+type FlameChartData = FlameChartNode & {
+  cost: ProfilerCost
+}
 
 export default class {
   private walked: string[] = []
@@ -10,10 +14,10 @@ export default class {
     this.edges = edges
   }
 
-  build(field = 'cpu'): FlameChartNode {
+  build(field = 'cpu'): FlameChartData {
     this.walked = []
 
-    const datum: Record<string, FlameChartNode> = {}
+    const datum: Record<string, FlameChartData> = {}
 
     Object.values(this.edges).forEach((edge) => {
       const parent = edge.caller
@@ -27,7 +31,7 @@ export default class {
           name: target,
           start,
           duration,
-          // cost: edge.cost,
+          cost: edge.cost,
           children: []
         }
       }
@@ -37,7 +41,7 @@ export default class {
           name: parent,
           start,
           duration,
-          // cost: edge.cost,
+          cost: edge.cost,
           children: []
         }
       }
