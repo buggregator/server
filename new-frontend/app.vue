@@ -5,7 +5,6 @@
 </template>
 
 <script lang="ts" setup>
-import "./assets/tailwind.css";
-import "highlight.js/lib/common";
-import "~/assets/index";
+import "./assets/index.css";
+import "./assets/index";
 </script>

@@ -1,7 +1,8 @@
 import { createPinia } from 'pinia';
 import { app } from '@storybook/vue3';
 import "../assets/index.css";
-import "../assets/index"
+import "../assets/index";
+import SfdumpWrap from "../vendor/dumper";
 
 export const parameters = {
   actions: { argTypesRegex: "^on[A-Z].*" },
@@ -30,6 +31,12 @@ export const parameters = {
   }
 };
 
+
 const pinia = createPinia();
 
 app.use(pinia);
+
+declare global {
+  interface Window { Sfdump: (id: string) => void; }
+}
+window.Sfdump = SfdumpWrap(window.document)

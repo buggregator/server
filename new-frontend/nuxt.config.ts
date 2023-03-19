@@ -16,7 +16,6 @@ export default defineNuxtConfig({
       link: [
         { rel: "icon", type: "image/x-icon", href: "/favicon/favicon.ico" },
       ],
-      script: [{ src: '~/assets/index.ts'}],
     },
   },
   dir: {
@@ -35,9 +34,8 @@ export default defineNuxtConfig({
   },
   css: ["~/assets/index.css"],
   plugins: [
-    {
-      src: '~/plugins/events.client.ts'
-    },
+    { src: '~/plugins/events.client.ts' },
+    { src: '~/plugins/vendors.client.ts' },
   ],
   modules: [
     '@nuxtjs/tailwindcss',

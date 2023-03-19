@@ -1,4 +1,4 @@
-export default (function (doc) {
+export default function (doc) {
     let refStyle = doc.createElement('style'), rxEsc = /([.*+?^${}()|\[\]\/\\])/g, idRx = /\bsf-dump-\d+-ref[012]\w+\b/,
         keyHint = 0 <= navigator.platform.toUpperCase().indexOf('MAC') ? 'Cmd' : 'Ctrl',
         addEventListener = function (e, n, cb) {
@@ -398,4 +398,4 @@ export default (function (doc) {
         } catch (e) {
         }
     };
-})(document);
+};

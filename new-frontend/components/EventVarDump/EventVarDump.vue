@@ -19,6 +19,8 @@ import { defineComponent, PropType } from "vue";
 import { NormalizedEvent, VarDump } from "~/config/types";
 import EventCard from "~/components/EventCard/EventCard.vue";
 import CodeSnippet from "~/components/CodeSnippet/CodeSnippet.vue";
+import { useNuxtApp } from "#app";
+import { EVENT_TYPES } from "~/config/constants";
 
 export default defineComponent({
   components: {
@@ -30,6 +32,19 @@ export default defineComponent({
       type: Object as PropType<NormalizedEvent>,
       required: true,
     },
+  },
+  setup() {
+    if (process.client) {
+      const { $vendors } = useNuxtApp();
+
+      return {
+        Sfdump: $vendors.sfdump,
+      };
+    }
+
+    return {
+      Sfdump: window?.Sfdump as unknown,
+    };
   },
   computed: {
     eventValue(): unknown {
@@ -59,12 +74,8 @@ export default defineComponent({
     },
   },
   mounted() {
-    if (
-      this.varDumpId &&
-      window.Sfdump &&
-      typeof window.Sfdump === "function"
-    ) {
-      window.Sfdump(this.varDumpId);
+    if (this.varDumpId && this.Sfdump && typeof this.Sfdump === "function") {
+      this.Sfdump(this.varDumpId);
     }
   },
 });
