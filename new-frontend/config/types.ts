@@ -170,14 +170,12 @@ export interface ProfilerCost {
 }
 
 export interface ProfilerEdge {
-  caller: string,
+  caller: string | null,
   callee: string,
   cost: ProfilerCost
 }
 
-export type ProfilerEdges = {
-  [key: string]: ProfilerEdge
-}
+export type ProfilerEdges = Record<string, ProfilerEdge>
 
 export interface Profiler {
   tags: {
@@ -187,9 +185,7 @@ export interface Profiler {
   hostname: string,
   date: number,
   peaks: ProfilerCost,
-  edges: {
-    [key: string]: ProfilerEdge
-  }
+  edges: ProfilerEdges
 }
 
 export interface InspectorTransaction {

@@ -27,7 +27,7 @@
               />
             </Tab>
             <Tab name="Flamechart">
-              <EventProfilerFlamegraph
+              <FlamegraphBoard
                 :edges="event.payload.edges"
                 @hover="setActiveEdge"
                 @hide="setActiveEdge"
@@ -58,7 +58,7 @@ import { NormalizedEvent } from "~/config/types";
 import StatBoard from "~/components/StatBoard/StatBoard.vue";
 import EventProfilerCallStack from "~/components/EventProfilerCallStack/EventProfilerCallStack.vue";
 import EventProfilerCallGraph from "~/components/EventProfilerCallGraph/EventProfilerCallGraph.vue";
-import EventProfilerFlamegraph from "~/components/Flamegraph/Flamegraph.vue";
+import FlamegraphBoard from "~/components/FlamegraphBoard/FlamegraphBoard.vue";
 import { PerfectScrollbar } from "vue3-perfect-scrollbar";
 import type { Profiler, ProfilerEdge } from "~/config/types";
 import { Tabs, Tab } from "vue3-tabs-component";
@@ -68,7 +68,7 @@ export default defineComponent({
     StatBoard,
     EventProfilerCallStack,
     EventProfilerCallGraph,
-    EventProfilerFlamegraph,
+    FlamegraphBoard,
     PerfectScrollbar,
     Tabs,
     Tab,
