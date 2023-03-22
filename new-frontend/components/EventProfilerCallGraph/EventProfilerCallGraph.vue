@@ -31,8 +31,9 @@
 </template>
 
 <script lang="ts">
-import { select, selectAll } from "d3-selection";
+import { selectAll } from "d3-selection";
 import { graphviz } from "d3-graphviz";
+import { Graphviz } from "@hpcc-js/wasm/graphviz";
 
 import IconSvg from "~/components/IconSvg/IconSvg.vue";
 
@@ -80,9 +81,9 @@ export default defineComponent({
       return builder.build(this.metric, this.threshold);
     },
 
-    findEdge(name): ProfilerEdge | null {
-      const found = Object.entries(this.event.edges).find(
-        ([, v]) => addSlashes(v.callee) === name
+    findEdge(name: string): ProfilerEdge | null {
+      const found = Object.values(this.event.edges).filter(
+        (v) => addSlashes(v.callee) === name
       );
 
       if (!found || found.length === 0) {
@@ -113,11 +114,13 @@ export default defineComponent({
         });
     },
     renderGraph(): void {
-      this.graph = graphviz(select(this.$refs.graphviz), {})
-        .width("100%")
-        .height("100%")
-        .fit(true)
-        .renderDot(this.buildDigraph(), this.nodeHandler);
+      Graphviz.load().then(() => {
+        this.graph = graphviz(this.$refs.graphviz, {})
+          .width("100%")
+          .height("100%")
+          .fit(true)
+          .renderDot(this.buildDigraph(), this.nodeHandler);
+      });
     },
   },
 });
