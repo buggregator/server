@@ -5,15 +5,10 @@
 </template>
 
 <script lang="ts">
-import { FlameChart } from "flame-chart-js";
+import { FlameChart, FlameChartNode } from "flame-chart-js";
 import { defineComponent, PropType } from "vue";
 import { ProfilerEdges } from "~/config/types";
 import FlamegraphBuilder from "~/utils/flamegraph-builder";
-
-const delay = (time: number): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(resolve, time);
-  });
 
 export default defineComponent({
   props: {
@@ -28,15 +23,24 @@ export default defineComponent({
     // this.flameChart.destroy();
   },
   mounted() {
-    const canvas = this.$refs.flameChartCanvas as HTMLCanvasElement;
-
     const flameData = new FlamegraphBuilder(this.edges).build();
 
-    delay(10).then(() => {
-      const { width = 0, height = 0 } = (
+    this.$nextTick(() => {
+      this.renderChart(
+        this.$refs.flameChartCanvas as HTMLCanvasElement,
+        flameData
+      );
+    });
+  },
+  methods: {
+    renderChart(canvas: HTMLCanvasElement, flameData: FlameChartNode) {
+      const { width = 1, height = 1 } = (
         this.$refs.flamegraph as HTMLElement
       ).getBoundingClientRect();
+
+      // eslint-disable-next-line no-param-reassign
       canvas.width = width;
+      // eslint-disable-next-line no-param-reassign
       canvas.height = height;
 
       const flameChart = new FlameChart({
@@ -73,16 +77,14 @@ export default defineComponent({
         ).getBoundingClientRect();
         flameChart.resize(windowWidth, windowHeight);
       });
-
-      // this.flameChart = flameChart
-    });
+    },
   },
 });
 </script>
 
 <style lang="scss" scoped>
 .flamegraph-board {
-  @apply h-full;
+  @apply w-full h-full;
 }
 
 .flamegraph-board__canvas {

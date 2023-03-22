@@ -18,7 +18,7 @@
         </section>
 
         <section class="page-profiler__stat-tabs">
-          <Tabs :options="{ useUrlFragment: false }">
+          <Tabs :options="{ useUrlFragment: false }" @changed="tabChange">
             <Tab name="Call graph">
               <EventProfilerCallGraph
                 :event="event.payload"
@@ -28,6 +28,8 @@
             </Tab>
             <Tab name="Flamechart">
               <FlamegraphBoard
+                :key="activeTab"
+                :data-key="activeTab"
                 :edges="event.payload.edges"
                 @hover="setActiveEdge"
                 @hide="setActiveEdge"
@@ -83,6 +85,7 @@ export default defineComponent({
     return {
       callStackHeight: "0",
       activeEdge: null,
+      activeTab: "",
       activeEdgePosition: {
         x: 0,
         y: 0,
@@ -138,6 +141,9 @@ export default defineComponent({
     },
     normalizeCostValue(edge: ProfilerEdge): string {
       return `${edge.cost.p_cpu}% / ${edge.cost.p_mu}%`;
+    },
+    tabChange(selectedTab: { tab: { name: string } }) {
+      this.activeTab = selectedTab.tab.name;
     },
   },
 });
