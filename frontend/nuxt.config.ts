@@ -1,6 +1,8 @@
 import { defineNuxtConfig } from "nuxt/config";
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  target: 'static',
+  ssr: false,
   app: {
     head: {
       title: "Buggregator",
@@ -47,5 +49,5 @@ export default defineNuxtConfig({
   devServer: {
     host: '127.0.0.1',
     url: 'http://127.0.0.1:3000',
-  }
+  },
 });

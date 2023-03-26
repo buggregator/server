@@ -68,5 +68,6 @@ fileserver:
   stream_request_body: true
   serve:
     - prefix: "/"
-      root: "frontend/dist"
+      root: "frontend/.output/public"
       compress: true
+
