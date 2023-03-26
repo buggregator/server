@@ -1,50 +1,50 @@
-const defaultTheme = require('tailwindcss/defaultTheme');
-const colors = require('tailwindcss/colors')
+import defaultColors from "tailwindcss/colors.js";
+import defaultTheme from "tailwindcss/defaultTheme.js";
 
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  darkMode: 'class',
+export default {
+  darkMode: "class",
   content: [
-    "./Components/**/*.vue",
+    "./assets/**/*.{scss,css}",
+    "./components/**/*.{js,vue,ts}",
+    "./components/**/*.stories.{js,vue,ts}",
     "./layouts/**/*.vue",
     "./pages/**/*.vue",
-    "./nuxt.config.js",
+    "./plugins/**/*.{js,ts}",
+    "./nuxt.config.{js,ts}",
+    "./app.vue",
   ],
   variants: {
     extend: {
-      opacity: ['disabled'],
-      borderWidth: ['hover', 'first'],
-      ringWidth: ['hover'],
-    }
+      opacity: ["disabled"],
+      borderWidth: ["hover", "first"],
+      ringWidth: ["hover"],
+    },
   },
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Nunito', ...defaultTheme.fontFamily.sans],
+        sans: ["Nunito", defaultTheme.fontFamily.sans],
       },
       transitionProperty: {
-        'height': 'height'
+        height: "height",
       },
       boxShadow: {
-        bottom: 'inset 0 -38px 38px -38px #ececec',
+        bottom: "inset 0 -38px 38px -38px #ececec",
       },
       fontSize: {
-        '2xs': ['0.6rem', {lineHeight: '1rem'}]
+        "2xs": ["0.6rem", { lineHeight: "1rem" }],
       },
     },
+    fontWeight: {
+      ...defaultTheme.fontWeight,
+    },
     colors: {
-      transparent: 'transparent',
-      current: 'currentColor',
-      black: colors.black,
-      white: colors.white,
-      gray: colors.gray,
-      purple: colors.indigo,
-      green: colors.green,
-      blue: colors.blue,
-      red: colors.rose,
-      pink: colors.pink,
-      teal: colors.teal,
-      orange: colors.amber,
-    }
-  }
+      ...defaultColors,
+      transparent: "transparent",
+      current: "currentColor",
+      purple: defaultColors.indigo,
+      red: defaultColors.rose,
+      orange: defaultColors.amber,
+    },
+  },
 };

@@ -1,0 +1,12 @@
+@import "vendor.css";
+
+body {
+  @apply bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-50 p-0;
+}
+
+body a:hover {
+  opacity: 0.8;
+}
+body a[disabled="true"] {
+  pointer-events: none;
+}

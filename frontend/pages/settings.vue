@@ -1,56 +1,119 @@
 <template>
-  <div class="settings-page page">
-    <main>
-      <header>
-        <h2 class="page-title">Settings</h2>
-      </header>
+  <main class="settings-page">
+    <page-header>
+      <nuxt-link to="/">Home</nuxt-link>&nbsp; /&nbsp;Settings
+    </page-header>
 
-      <section class="page-content">
-        <div class="settings__radio">
-          <svg :class="{'opacity-10': darkMode}" width="32" height="32" fill="none">
-            <path fill-rule="evenodd" clip-rule="evenodd"
-                  d="M16 2a1.4 1.4 0 011.4 1.4v1.4a1.4 1.4 0 11-2.8 0V3.4A1.4 1.4 0 0116 2zM6.1 6.1a1.4 1.4 0 011.98 0l.99.99a1.4 1.4 0 11-1.98 1.98l-.99-.99a1.4 1.4 0 010-1.98zm19.8 0a1.4 1.4 0 010 1.98l-.99.99a1.4 1.4 0 01-1.98-1.98l.99-.99a1.4 1.4 0 011.98 0zM9 16a7 7 0 1114 0 7 7 0 01-14 0zm-7 0a1.4 1.4 0 011.4-1.4h1.4a1.4 1.4 0 110 2.8H3.4A1.4 1.4 0 012 16zm23.8 0a1.4 1.4 0 011.4-1.4h1.4a1.4 1.4 0 110 2.8h-1.4a1.4 1.4 0 01-1.4-1.4zm-2.87 6.93a1.4 1.4 0 011.98 0l.99.99a1.4 1.4 0 01-1.98 1.98l-.99-.99a1.4 1.4 0 010-1.98zm-15.84 0a1.4 1.4 0 011.98 1.98l-.99.99a1.4 1.4 0 01-1.98-1.98l.99-.99zM16 25.8a1.4 1.4 0 011.4 1.4v1.4a1.4 1.4 0 11-2.8 0v-1.4a1.4 1.4 0 011.4-1.4z"
-                  fill="url(#paint0_linear)"></path>
-            <defs>
-              <linearGradient id="paint0_linear" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
-                <stop class="transition-all duration-200" stop-color="#FACC15"></stop>
-                <stop class="transition-all duration-200" offset="1" stop-color="#FA9D16"></stop>
-              </linearGradient>
-            </defs>
-          </svg>
-          <div
-            @click="toggle"
-            :class="'bg-gray-200'"
-            class="relative inline-flex h-8 w-16 items-center rounded-full"
-          >
-          <span
-            :class="darkMode ? 'translate-x-8' : 'translate-x-2'"
-            class="inline-block h-6 w-6 transform rounded-full transition bg-blue-600"
-          />
-          </div>
-          <svg class="text-gray-300" width="24" height="24" fill="currentColor">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M9.353 2.939a1 1 0 01.22 1.08 8 8 0 0010.408 10.408 1 1 0 011.301 1.3A10.003 10.003 0 0112 22C6.477 22 2 17.523 2 12c0-4.207 2.598-7.805 6.273-9.282a1 1 0 011.08.22z"></path>
-          </svg>
-        </div>
-      </section>
-    </main>
-  </div>
+    <section class="settings-page__content">
+      <div class="settings-page__radio">
+        <icon-svg
+          name="sun"
+          class="settings-page__radio-icon"
+          :class="{ 'settings-page__radio-icon--dark': isDarkMode }"
+        />
+
+        <button
+          class="settings-page__radio-button"
+          :class="{ 'settings-page__radio-button--dark': isDarkMode }"
+          @click="changeTheme()"
+        >
+          <span class="settings-page__radio-button-in" />
+        </button>
+
+        <icon-svg
+          class="settings-page__radio-icon"
+          name="moon"
+          :class="{ 'settings-page__radio-icon--dark': !isDarkMode }"
+        />
+      </div>
+    </section>
+  </main>
 </template>
 
-<script>
-export default {
-  head: {
-    title: 'Settings | Buggregator',
+<script lang="ts">
+import { defineComponent } from "vue";
+import { storeToRefs } from "pinia";
+import IconSvg from "~/components/IconSvg/IconSvg.vue";
+import PageHeader from "~/components/PageHeader/PageHeader.vue";
+import { useThemeStore, THEME_MODES } from "~/stores/theme";
+
+export default defineComponent({
+  components: {
+    IconSvg,
+    PageHeader,
   },
-  methods: {
-    toggle() {
-      this.$store.commit('theme/toggle', !this.darkMode)
-    }
+  setup() {
+    const themeStore = useThemeStore();
+    const { themeChange } = themeStore;
+    const { themeType } = storeToRefs(themeStore);
+
+    return {
+      themeType,
+      themeChange,
+    };
+  },
+  head: {
+    title: "Settings | Buggregator",
   },
   computed: {
-    darkMode() {
-      return this.$store.state.theme.darkMode
+    isDarkMode() {
+      return this.themeType === THEME_MODES.DARK;
+    },
+  },
+  mounted() {
+    if (this.isDarkMode) {
+      document?.documentElement?.classList?.add(THEME_MODES.DARK);
+    } else {
+      document?.documentElement?.classList?.remove(THEME_MODES.DARK);
     }
+  },
+  methods: {
+    changeTheme() {
+      if (this.isDarkMode) {
+        document?.documentElement?.classList?.remove(THEME_MODES.DARK);
+      } else {
+        document?.documentElement?.classList?.add(THEME_MODES.DARK);
+      }
+
+      return this.themeChange();
+    },
+  },
+});
+</script>
+
+<style lang="scss" scoped>
+.settings-page {
+}
+
+.settings-page__content {
+  @apply p-3;
+}
+
+.settings__title {
+  @apply text-2xl font-bold;
+}
+
+.settings-page__radio {
+  @apply flex space-x-5 items-center my-5;
+}
+
+.settings-page__radio-icon {
+  @apply opacity-100 w-8;
+}
+
+.settings-page__radio-icon--dark {
+  @apply opacity-10;
+}
+
+.settings-page__radio-button {
+  @apply relative inline-flex h-8 w-16 items-center rounded-full bg-gray-200;
+}
+
+.settings-page__radio-button-in {
+  @apply inline-block h-6 w-6 transform rounded-full transition bg-blue-600 translate-x-2;
+
+  .settings-page__radio-button--dark & {
+    @apply translate-x-8;
   }
 }
-</script>
+</style>

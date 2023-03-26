@@ -1,20 +1,32 @@
-<script>
-import Event from "@/Components/Events/Profiler/Event"
-import EventsPage from "@/mixins/EventsPage"
+<script lang="ts">
+import { defineComponent } from "vue";
+import PageIndex from "~/pages/index.vue";
+import { EVENT_TYPES } from "~/config/constants";
+import { useNuxtApp } from "#app";
 
-export default {
-  components: {Event},
+export default defineComponent({
+  extends: PageIndex,
+  setup() {
+    if (process.client) {
+      const { $events } = useNuxtApp();
+
+      return {
+        events: $events.itemsGroupByType[EVENT_TYPES.PROFILER],
+        title: "Profiler",
+        clearEvents: () => $events.removeByType(EVENT_TYPES.PROFILER),
+      };
+    }
+
+    return {
+      events: [],
+      title: "Profiler",
+      clearEvents: () => {},
+    };
+  },
   head() {
     return {
-      title: `Profiler [${this.events.length}] | Buggregator`
-    }
+      title: `Profiler [${this.events.length}] | Buggregator`,
+    };
   },
-  extends: EventsPage,
-  data() {
-    return {
-      title: 'Profiler events',
-      type: 'profiler',
-    }
-  },
-}
+});
 </script>
