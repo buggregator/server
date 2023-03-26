@@ -1,100 +1,80 @@
 <template>
   <div class="events-page">
-    <header class="events-page__header">
-      <div>
-        <Fiilters/>
-      </div>
+    <page-header button-title="Clear events" @delete="clearEvents">
+      <nuxt-link to="/" :disabled="!title">Home</nuxt-link>
 
-      <div class="events-page__filters" v-if="hasEvents">
-        <button @click="clearEvents" class="events__btn-clear">
-          Clear screen
-        </button>
-      </div>
-    </header>
+      <template v-if="title">
+        <span>&nbsp;/&nbsp;</span>
+        <nuxt-link :disabled="true">{{ title }}</nuxt-link>
+      </template>
+    </page-header>
 
-    <main v-if="hasEvents" class="events-page__events">
-      <component
-        :is="eventComponent(event)"
-        :event="event"
+    <main v-if="events.length" class="events-page__events">
+      <event-mapper
         v-for="event in events"
         :key="event.uuid"
+        :event="event"
         class="events-page__event"
       />
     </main>
 
-    <section v-else class="events-page__welcome-block">
-      <WsConnectionStatus/>
-      <Tips class="events-page__tips"/>
+    <section v-if="!events.length" class="events-page__welcome">
+      <page-tips class="events-page__tips" />
     </section>
   </div>
 </template>
 
-<script>
-import WsConnectionStatus from "./_partials/WsConnectionStatus"
-import Fiilters from "./_partials/Fiilters"
-import Tips from "./_partials/Tips"
+<script lang="ts">
+import { defineComponent } from "vue";
+import EventMapper from "~/components/EventMapper/EventMapper.vue";
+import PageTips from "~/pages/PageTips/PageTips.vue";
+import PageHeader from "~/components/PageHeader/PageHeader.vue";
+import { useNuxtApp } from "#app";
 
-import SentryEvent from "@/app/Event/Sentry"
-import SmtpEvent from "@/app/Event/Smtp"
-import VarDumpEvent from "@/app/Event/VarDump"
-import MonologEvent from "@/app/Event/Monolog"
-import InspectorEvent from "@/app/Event/Inspector"
-import ProfilerEvent from "@/app/Event/Profiler"
-
-// import RayComponent from "@/Components/Events/Event"
-import SentryComponent from "@/Components/Events/Sentry/Event"
-import SmtpComponent from "@/Components/Events/Smtp/Event"
-import VarDumpComponent from "@/Components/Events/VarDump/Event"
-import MonologComponent from "@/Components/Events/Monolog/Event"
-import InspectorComponent from "@/Components/Events/Inspector/Event"
-import ProfilerComponent from "@/Components/Events/Profiler/Event"
-
-export default {
+export default defineComponent({
   components: {
-    Fiilters, WsConnectionStatus, Tips,
-    SentryComponent, SmtpComponent, VarDumpComponent,
-    MonologComponent, InspectorComponent, ProfilerComponent
+    PageTips,
+    EventMapper,
+    PageHeader,
   },
-  head() {
-    let title = `Buggregator - Waiting for events`
-    if (this.hasEvents) {
-      title = `Events [${this.events.length}] | Buggregator`
-    }
+  setup() {
+    if (process.client) {
+      const { $events } = useNuxtApp();
 
-    return {title}
+      return {
+        events: $events.items,
+        clearEvents: $events.removeAll,
+        title: "",
+      };
+    }
+    return {
+      events: [],
+      title: "",
+      clearEvents: () => {},
+    };
   },
-  mounted() {
-    this.$store.dispatch('events/fetch')
-  },
-  computed: {
-    hasEvents() {
-      return this.events.length > 0
-    },
-    events() {
-      return this.$store.getters['events/filtered']
-    },
-  },
-  methods: {
-    clearEvents() {
-      this.$store.dispatch('events/clear')
-    },
-    eventComponent(event) {
-      if (event instanceof SentryEvent) {
-        return 'SentryComponent'
-      } else if (event instanceof SmtpEvent) {
-        return 'SmtpComponent'
-      } else if (event instanceof VarDumpEvent) {
-        return 'VarDumpComponent'
-      } else if (event instanceof MonologEvent) {
-        return 'MonologComponent'
-      } else if (event instanceof InspectorEvent) {
-        return 'InspectorComponent'
-      } else if (event instanceof ProfilerEvent) {
-        return 'ProfilerComponent'
-      } else if (event instanceof RayEvent) {
-        return 'RayComponent'
-      }
-    },
-  },
-}
+});
 </script>
+
+<style lang="scss">
+@import "assets/mixins";
+
+.events-page {
+  @apply h-full w-full;
+}
+
+.events-page__events {
+  @include border-style;
+  @apply flex flex-col divide-y;
+}
+
+.events-page__event {
+  & + & {
+    @apply border-b;
+  }
+}
+
+.events-page__welcome {
+  @apply flex-1 p-4 flex flex-col justify-center items-center bg-gray-50 dark:bg-gray-800 w-full h-full min-h-screen;
+}
+</style>

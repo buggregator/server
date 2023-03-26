@@ -1,35 +1,36 @@
-<template>
-  <section>
-    <h2>SMTP Settings</h2>
-    <p class="smtp-page_description">Use these settings to send messages directly from your email client or mail transfer agent.</p>
+<script lang="ts">
+import { defineComponent } from "vue";
+import PageIndex from "~/pages/index.vue";
+import { EVENT_TYPES } from "~/config/constants";
+import { useNuxtApp } from "#app";
 
-    <div v-if="hasEvents" class="my-3">
-      <button @click="clearEvents" class="events__btn-clear">Clear events</button>
-    </div>
-  </section>
-</template>
+export default defineComponent({
+  extends: PageIndex,
+  setup() {
+    if (process.client) {
+      const { $events } = useNuxtApp();
 
-<script>
+      if (!$events?.items?.length) {
+        $events.getAll();
+      }
 
-export default {
-  layout: 'smtp',
+      return {
+        events: $events.itemsGroupByType[EVENT_TYPES.SMTP],
+        title: "Smtp",
+        clearEvents: () => $events.removeByType(EVENT_TYPES.SMTP),
+      };
+    }
+
+    return {
+      events: [],
+      title: "Smtp",
+      clearEvents: () => {},
+    };
+  },
   head() {
     return {
-      title: `SMTP [${this.events.length}] | Buggregator`
-    }
+      title: `SMTP [${this.events.length}] | Buggregator`,
+    };
   },
-  methods: {
-    clearEvents() {
-      this.$store.dispatch('events/clear', 'smtp')
-    },
-  },
-  computed: {
-    events() {
-      return this.$store.getters['events/filteredByType']('smtp')
-    },
-    hasEvents() {
-      return this.events.length > 0
-    }
-  },
-}
+});
 </script>

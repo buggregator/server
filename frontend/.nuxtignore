@@ -1,2 +1,0 @@
-# Ignore page inside _partials folder
-pages/**/_partials/*.vue

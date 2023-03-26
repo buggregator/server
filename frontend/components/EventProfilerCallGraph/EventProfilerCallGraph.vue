@@ -83,14 +83,13 @@ export default defineComponent({
 
     findEdge(name: string): ProfilerEdge | null {
       const found = Object.values(this.event.edges).filter(
-        (v) => addSlashes(v.callee) === name
+        v => addSlashes(v.callee) === name
       );
-
       if (!found || found.length === 0) {
         return null;
       }
 
-      return found[1] || null;
+      return found[0] || null;
     },
     nodeHandler(): void {
       selectAll("g.node")
@@ -101,7 +100,7 @@ export default defineComponent({
           }
 
           this.$emit("hover", {
-            name: edge.callee,
+            callee: edge.callee,
             cost: edge.cost,
             position: {
               x: e.pageX,
@@ -126,7 +125,7 @@ export default defineComponent({
 });
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .graphviz {
   @apply flex-1 justify-items-stretch items-stretch bg-gray-700;
 

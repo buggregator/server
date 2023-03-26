@@ -1,8 +1,8 @@
 {
     "name": "buggregator",
     "scripts": {
-        "dev": "cd new-frontend && npm run dev",
-        "sb": "cd new-frontend && npm run sb",
-        "generate": "cd new-frontend && npm run generate"
+        "dev": "cd frontend && npm run dev",
+        "sb": "cd frontend && npm run sb",
+        "generate": "cd frontend && npm run generate"
     }
 }
