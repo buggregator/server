@@ -313,8 +313,10 @@ most popular languages.
 
 - [Spiral Framework](https://spiral.dev/)
 - [RoadRunner](https://roadrunner.dev/) Http, Websocket, TCP, Queue, Cache server in one bottle
-- [NuxtJs](https://nuxtjs.org/)
+- [NuxtJs 3](https://nuxt.com/)
+- [VueJs 3](https://v3.vuejs.org/)
 - [TailwindCSS](https://tailwindcss.com/)
+- [Storybook](https://storybook.js.org/)
 
 ## Installation
 
