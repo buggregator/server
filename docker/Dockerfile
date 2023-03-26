@@ -1,7 +1,7 @@
-ARG ROAD_RUNNER_IMAGE=latest
+ARG ROAD_RUNNER_IMAGE=2.12.3
 
 # Build rr binary
-FROM spiralscout/roadrunner:$ROAD_RUNNER_IMAGE as rr
+FROM ghcr.io/roadrunner-server/roadrunner:$ROAD_RUNNER_IMAGE as rr
 
 # Clone the project
 FROM alpine/git as git
