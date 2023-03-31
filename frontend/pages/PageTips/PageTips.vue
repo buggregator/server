@@ -5,9 +5,9 @@
         <icon-svg name="github" class="page-sidebar__icon" />
 
         <span>
-          Bugregator&nbsp;
+          Buggregator&nbsp;
           <a
-            href="https://github.com/buggregator/app"
+            href="https://github.com/buggregator/spiral-app"
             target="_blank"
             class="page-sidebar__link"
           >
