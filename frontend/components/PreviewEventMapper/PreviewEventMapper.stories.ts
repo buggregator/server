@@ -63,3 +63,24 @@ export const Inspector = Template.bind({});
 Inspector.args = {
   event: inspectorEventMock,
 };
+
+
+
+const TemplateList: Story = (args) => ({
+  components: { PreviewEventMapper },
+  setup() {
+
+    return {
+      args,
+      eventsList: [monologEventMock,sentryEventMock,smtpEventMock,varDumpEventMock,profilerEventMock,inspectorEventMock, { ...smtpEventMock, type: 'unknown' }]
+    };
+  },
+  template: `<PreviewEventMapper class="border-b" v-for="event in eventsList" :event="event" :key="event.uuid"/>`,
+});
+
+
+export const EventsList = TemplateList.bind({});
+
+EventsList.args = {
+  event: inspectorEventMock,
+};
