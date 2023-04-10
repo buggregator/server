@@ -10,7 +10,7 @@
     </PageHeader>
 
     <main v-if="events.length" class="events-page__events">
-      <EventMapper
+      <PreviewEventMapper
         v-for="event in events"
         :key="event.uuid"
         :event="event"
@@ -29,12 +29,12 @@ import { defineComponent } from "vue";
 import PagePlaceholder from "~/components/PagePlaceholder/PagePlaceholder.vue";
 import PageHeader from "~/components/PageHeader/PageHeader.vue";
 import { useNuxtApp } from "#app";
-import EventMapper from "~/components/EventMapper/EventMapper.vue";
+import PreviewEventMapper from "~/components/PreviewEventMapper/PreviewEventMapper.vue";
 
 export default defineComponent({
   components: {
     PagePlaceholder,
-    EventMapper,
+    PreviewEventMapper,
     PageHeader,
   },
   setup() {
