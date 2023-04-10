@@ -4,7 +4,7 @@ import { EVENT_TYPES } from '~/config/constants';
 import PageHeader from '~/components/PageHeader/PageHeader.vue';
 
 export default {
-  title: "Pages Components/PageHeader",
+  title: "Components/PageHeader",
   component: PageHeader,
   argTypes: {
     eventType: {
@@ -26,10 +26,12 @@ const Template: Story = (args) => ({
     };
   },
   template: `
-    <page-header
+    <PageHeader
       v-bind="args"
       @delete="(a) => action('Delete event')(a)"
-    >Page title</page-header>
+    >
+      Page title
+    </PageHeader>
 `,
 });
 

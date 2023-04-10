@@ -7,7 +7,7 @@
       :class="{ 'code-snippet__copy--active': isCopied }"
       @click="copyCode"
     >
-      <icon-svg name="copy" class="code-snippet__copy-icon" />
+      <IconSvg name="copy" class="code-snippet__copy-icon" />
       copy
     </button>
   </div>

@@ -1,10 +1,10 @@
 <template>
   <main class="profiler-event">
-    <page-header button-title="Delete event" @delete="onDelete">
-      <nuxt-link to="/">Home</nuxt-link>&nbsp;/
-      <nuxt-link to="/profiler">Profiler</nuxt-link>&nbsp;/
-      <nuxt-link :disabled="true">{{ eventId }}</nuxt-link>
-    </page-header>
+    <PageHeader button-title="Delete event" @delete="onDelete">
+      <NuxtLink to="/">Home</NuxtLink>&nbsp;/
+      <NuxtLink to="/profiler">Profiler</NuxtLink>&nbsp;/
+      <NuxtLink :disabled="true">{{ eventId }}</NuxtLink>
+    </PageHeader>
 
     <div v-if="pending && !event" class="profiler-event__loading">
       <div></div>
@@ -12,7 +12,7 @@
       <div></div>
     </div>
 
-    <page-profiler v-if="event" :event="event" />
+    <ProfilerPage v-if="event" :event="event" />
   </main>
 </template>
 
@@ -21,11 +21,11 @@ import { defineComponent } from "vue";
 import { EventId } from "~/config/types";
 import { useFetch, useNuxtApp, useRoute, useRouter } from "#app";
 import { normalizeProfilerEvent } from "~/utils/normalize-event";
-import PageProfiler from "~/components/PageProfiler/PageProfiler.vue";
+import ProfilerPage from "~/components/ProfilerPage/ProfilerPage.vue";
 import PageHeader from "~/components/PageHeader/PageHeader.vue";
 
 export default defineComponent({
-  components: { PageProfiler, PageHeader },
+  components: { ProfilerPage, PageHeader },
   async setup() {
     const route = useRoute();
     const router = useRouter();

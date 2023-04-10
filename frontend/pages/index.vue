@@ -1,16 +1,16 @@
 <template>
   <div class="events-page">
-    <page-header button-title="Clear events" @delete="clearEvents">
-      <nuxt-link to="/" :disabled="!title">Home</nuxt-link>
+    <PageHeader button-title="Clear events" @delete="clearEvents">
+      <NuxtLink to="/" :disabled="!title">Home</NuxtLink>
 
       <template v-if="title">
         <span>&nbsp;/&nbsp;</span>
-        <nuxt-link :disabled="true">{{ title }}</nuxt-link>
+        <NuxtLink :disabled="true">{{ title }}</NuxtLink>
       </template>
-    </page-header>
+    </PageHeader>
 
     <main v-if="events.length" class="events-page__events">
-      <event-mapper
+      <EventMapper
         v-for="event in events"
         :key="event.uuid"
         :event="event"
@@ -19,21 +19,21 @@
     </main>
 
     <section v-if="!events.length" class="events-page__welcome">
-      <page-tips class="events-page__tips" />
+      <PagePlaceholder class="events-page__tips" />
     </section>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import EventMapper from "~/components/EventMapper/EventMapper.vue";
-import PageTips from "~/pages/PageTips/PageTips.vue";
+import PagePlaceholder from "~/components/PagePlaceholder/PagePlaceholder.vue";
 import PageHeader from "~/components/PageHeader/PageHeader.vue";
 import { useNuxtApp } from "#app";
+import EventMapper from "~/components/EventMapper/EventMapper.vue";
 
 export default defineComponent({
   components: {
-    PageTips,
+    PagePlaceholder,
     EventMapper,
     PageHeader,
   },

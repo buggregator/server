@@ -1,5 +1,5 @@
 <script lang="ts">
-import { defineComponent, h } from "vue";
+import { defineComponent } from "vue";
 import PageIndex from "~/pages/index.vue";
 import { EVENT_TYPES } from "~/config/constants";
 import { useNuxtApp } from "#app";

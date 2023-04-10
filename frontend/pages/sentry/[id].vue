@@ -1,10 +1,10 @@
 <template>
   <main class="sentry-event">
-    <page-header button-title="Delete event" @delete="onDelete">
-      <nuxt-link to="/">Home</nuxt-link>&nbsp;/
-      <nuxt-link to="/sentry">Sentry</nuxt-link>&nbsp;/
-      <nuxt-link :disabled="true">{{ eventId }}</nuxt-link>
-    </page-header>
+    <PageHeader button-title="Delete event" @delete="onDelete">
+      <NuxtLink to="/">Home</NuxtLink>&nbsp;/
+      <NuxtLink to="/sentry">Sentry</NuxtLink>&nbsp;/
+      <NuxtLink :disabled="true">{{ eventId }}</NuxtLink>
+    </PageHeader>
 
     <div v-if="pending && !event" class="sentry-event__loading">
       <div></div>
@@ -12,7 +12,7 @@
       <div></div>
     </div>
 
-    <page-sentry v-if="event" :event="event" />
+    <SentryPage v-if="event" :event="event" />
   </main>
 </template>
 
@@ -21,12 +21,12 @@ import { defineComponent } from "vue";
 import { EventId } from "~/config/types";
 import { useNuxtApp, useRoute, useRouter, useFetch } from "#app";
 import { normalizeSentryEvent } from "~/utils/normalize-event";
-import PageSentry from "~/components/PageSentry/PageSentry.vue";
+import SentryPage from "~/components/SentryPage/SentryPage.vue";
 import PageHeader from "~/components/PageHeader/PageHeader.vue";
 
 export default defineComponent({
   components: {
-    PageSentry,
+    SentryPage,
     PageHeader,
   },
   async setup() {

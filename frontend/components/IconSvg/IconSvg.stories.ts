@@ -21,7 +21,7 @@ const Template: Story = (args) => ({
       args,
     };
   },
-  template: '<div style="width: 50px;"><icon-svg v-bind="args" /></div>',
+  template: '<div style="width: 50px;"><IconSvg v-bind="args" /></div>',
 });
 
 export const Default = Template.bind({});
@@ -39,7 +39,7 @@ export const AllIcons: Story = () => ({
   template: `
     <div style="display: flex; flex-wrap: wrap;">
       <figure v-for="name in names" class="flex flex-col items-center p-3 justify-between" style="width: 200px">
-        <icon-svg :name="name" style="width: 50px; margin: auto;" />
+        <IconSvg :name="name" style="width: 50px; margin: auto;" />
         <figcaption>{{ name }}</figcaption>
       </figure>
     </div>

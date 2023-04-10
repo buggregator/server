@@ -15,7 +15,7 @@ const Template: Story = (args) => ({
       args,
     };
   },
-  template: `<code-snippet v-bind="args" />`,
+  template: `<CodeSnippet v-bind="args" />`,
 });
 
 export const Object = Template.bind({});
