@@ -18,7 +18,7 @@
 import { defineComponent, PropType } from "vue";
 import { NormalizedEvent, VarDump } from "~/config/types";
 import PreviewCard from "~/components/PreviewCard/PreviewCard.vue";
-import CodeSnippet from "~/components/codeSnippet/CodeSnippet.vue";
+import CodeSnippet from "~/components/CodeSnippet/CodeSnippet.vue";
 import { useNuxtApp } from "#app";
 
 export default defineComponent({
