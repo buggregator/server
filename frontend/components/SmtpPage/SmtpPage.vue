@@ -74,13 +74,22 @@
                 >
                   <SmtpPageAddresses :addresses="event.payload.reply_to" />
                 </EventTableRow>
-                <EventTableRow
-                  v-if="event.payload.attachments.length"
-                  title="Attachments"
-                >
-                  <SmtpPageAddresses :addresses="event.payload.attachments" />
-                </EventTableRow>
               </EventTable>
+            </div>
+
+            <div v-if="attachments.length">
+              <h3 class="mt-3 mb-3 font-bold">
+                Attachments ({{ attachments.length }})
+              </h3>
+
+              <div class="flex gap-x-3">
+                <SmtpAttachment
+                  v-for="a in attachments"
+                  :key="a.id"
+                  :event="event"
+                  :attachment="a"
+                />
+              </div>
             </div>
           </Tab>
         </Tabs>
@@ -93,12 +102,13 @@
 import { defineComponent, PropType } from "vue";
 import { NormalizedEvent } from "~/config/types";
 import moment from "moment";
-import { Tabs, Tab } from "vue3-tabs-component";
+import { Tab, Tabs } from "vue3-tabs-component";
 import CodeSnippet from "~/components/CodeSnippet/CodeSnippet.vue";
 import SmtpPagePreview from "~/components/SmtpPagePreview/SmtpPagePreview.vue";
 import SmtpPageAddresses from "~/components/SmtpPageAddresses/SmtpPageAddresses.vue";
 import EventTable from "~/components/EventTable/EventTable.vue";
 import EventTableRow from "~/components/EventTableRow/EventTableRow.vue";
+import SmtpAttachment from "~/components/SmtpAttachment/SmtpAttachment.vue";
 
 export default defineComponent({
   components: {
@@ -109,6 +119,7 @@ export default defineComponent({
     CodeSnippet,
     Tabs,
     Tab,
+    SmtpAttachment,
   },
   props: {
     event: {
@@ -153,12 +164,16 @@ export default defineComponent({
     date() {
       return moment(this.event.timestamp).format("DD.MM.YYYY HH:mm:ss");
     },
+    attachments() {
+      return Object.values(this.event.payload.attachments);
+    },
   },
 });
 </script>
 
 <style lang="scss" scoped>
 @import "assets/mixins";
+
 .smtp-page {
   @apply relative flex-1 flex flex-col;
 }

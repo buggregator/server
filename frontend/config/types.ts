@@ -159,6 +159,12 @@ export interface VarDump {
   }
 }
 
+export interface SmtpAttachment {
+  "name": string,
+  "id": string,
+  "uri": string
+}
+
 export interface ProfilerCost {
   [key: string]: number,
 
