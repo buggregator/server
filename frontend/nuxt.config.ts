@@ -1,8 +1,13 @@
-import { defineNuxtConfig } from "nuxt/config";
+import {defineNuxtConfig} from "nuxt/config";
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   target: 'static',
   ssr: false,
+  router: {
+    options: {
+      hashMode: true
+    }
+  },
   app: {
     head: {
       title: "Buggregator",
@@ -10,13 +15,13 @@ export default defineNuxtConfig({
         lang: "en",
       },
       meta: [
-        { charset: "utf-8" },
-        { name: "viewport", content: "width=device-width, initial-scale=1" },
-        { hid: "description", name: "description", content: "" },
-        { name: "format-detection", content: "telephone=no" },
+        {charset: "utf-8"},
+        {name: "viewport", content: "width=device-width, initial-scale=1"},
+        {hid: "description", name: "description", content: ""},
+        {name: "format-detection", content: "telephone=no"},
       ],
       link: [
-        { rel: "icon", type: "image/x-icon", href: "/favicon/favicon.ico" },
+        {rel: "icon", type: "image/x-icon", href: "/favicon/favicon.ico"},
       ],
     },
   },
@@ -36,8 +41,8 @@ export default defineNuxtConfig({
   },
   css: ["~/assets/index.css"],
   plugins: [
-    { src: '~/plugins/events.client.ts' },
-    { src: '~/plugins/vendors.client.ts' },
+    {src: '~/plugins/events.client.ts'},
+    {src: '~/plugins/vendors.client.ts'},
   ],
   modules: [
     '@nuxtjs/tailwindcss',
