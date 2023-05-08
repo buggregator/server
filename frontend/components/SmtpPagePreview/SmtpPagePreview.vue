@@ -76,7 +76,7 @@ export default defineComponent({
 @import "assets/mixins";
 
 .smtp-page-preview {
-  @apply flex flex-col items-center h-full;
+  @apply flex-1 flex flex-col items-center h-full;
 }
 
 .smtp-page-preview__in {
@@ -96,11 +96,11 @@ export default defineComponent({
 }
 
 .smtp-page-preview__device {
-  @apply flex flex-col items-center bg-gray-50 dark:bg-gray-900;
+  @apply flex-1 flex flex-col items-center bg-gray-50 dark:bg-gray-900;
 
   iframe {
     transition-property: width !important;
-    @apply rounded-md w-full h-full;
+    @apply flex-1 rounded-md w-full h-full;
   }
 }
 
@@ -108,9 +108,13 @@ export default defineComponent({
   @apply w-full h-full border rounded-md;
 
   > div {
-    @apply w-full h-full rounded-md bg-white ease-in duration-150;
+    @apply flex-1 flex flex-col w-full h-full rounded-md bg-white ease-in duration-150;
 
     transition-property: width !important;
+
+    > div {
+      @apply flex-1 flex flex-col w-full h-full;
+    }
   }
 }
 
@@ -136,6 +140,10 @@ export default defineComponent({
     width: 768px;
     transition-property: width !important;
     @apply border rounded-md bg-white ease-in duration-150;
+
+    > div {
+      @apply w-full h-full;
+    }
   }
 }
 
@@ -159,6 +167,9 @@ export default defineComponent({
     width: 320px;
     transition-property: width !important;
     @apply border rounded-md bg-white ease-in duration-150;
+    > div {
+      @apply w-full h-full;
+    }
   }
 }
 </style>

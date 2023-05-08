@@ -90,8 +90,9 @@ export default defineComponent({
 @import "assets/mixins";
 
 .smtp-event {
-  @apply h-full w-full;
+  @apply flex-1 flex flex-col h-full w-full;
 }
+
 .smtp-event__loading {
   @include loading;
 }

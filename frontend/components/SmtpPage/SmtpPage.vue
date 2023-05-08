@@ -159,13 +159,12 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 @import "assets/mixins";
-
 .smtp-page {
-  @apply relative;
+  @apply relative flex-1 flex flex-col;
 }
 
 .smtp-page__main {
-  @apply flex flex-col h-full flex-grow py-5 px-4 md:px-6 lg:px-8;
+  @apply flex-1 flex flex-col h-full flex-grow py-5 px-4 md:px-6 lg:px-8;
 }
 
 .smtp-page__header {
@@ -218,5 +217,14 @@ export default defineComponent({
 }
 
 .smtp-page__body {
+  @apply flex-1 flex flex-col;
+
+  .tabs-component {
+    @apply flex-1 flex flex-col;
+  }
+
+  .tabs-component-panel {
+    @apply flex-1 flex flex-col;
+  }
 }
 </style>
