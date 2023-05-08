@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Application\Mail;
 
+use Spiral\Storage\StorageInterface;
 use ZBateson\MailMimeParser\Header\AbstractHeader;
 use ZBateson\MailMimeParser\Header\AddressHeader;
 use ZBateson\MailMimeParser\Header\Part\AddressPart;
 use ZBateson\MailMimeParser\Message as ParseMessage;
-use ZBateson\MailMimeParser\Message\MessagePart;
 
 final class Parser
 {
+    public function __construct(
+        private readonly StorageInterface $storage,
+    ) {
+    }
+
     public function parse(string $body, array $allRecipients = []): Message
     {
         $message = ParseMessage::from($body, true);
@@ -26,9 +31,9 @@ final class Parser
         /** @var AddressHeader|null $ccHeader */
         $ccHeader = $message->getHeader('cc');
         $ccs = $this->joinNameAndEmail($ccHeader ? $ccHeader->getAddresses() : []);
-        $subject = (string) $message->getHeaderValue('subject');
-        $html = (string) $message->getHtmlContent();
-        $text = (string) $message->getTextContent();
+        $subject = (string)$message->getHeaderValue('subject');
+        $html = (string)$message->getHtmlContent();
+        $text = (string)$message->getTextContent();
         /** @var AbstractHeader|null $replyToHeader */
         $replyToHeader = $message->getHeader('reply-to')?->getParts()[0] ?? null;
         $replyTo = $replyToHeader ? [
@@ -37,24 +42,26 @@ final class Parser
                 'name' => $replyToHeader?->getName(),
             ],
         ] : [];
+
         $attachments = $this->buildAttachmentFrom(
-            $message->getAllAttachmentParts()
+            $message->getAllAttachmentParts(),
         );
 
         return new Message(
-            $message->getHeader('Message-Id')->getValue(),
+            $this->storage->bucket('attachments'),
+            $message->getHeader('Message - Id')->getValue(),
             $body, $from, $recipients, $ccs, $subject,
             $html, $text, $replyTo, $allRecipients, $attachments
         );
     }
 
     /**
-     * @param  MessagePart[]  $attachments
+     * @param MessagePart[] $attachments
      * @return Attachment[]
      */
     private function buildAttachmentFrom(array $attachments): array
     {
-        return array_map(function (MessagePart $part) {
+        return \array_map(function (MessagePart|ParseMessage\MimePart $part) {
             return new Attachment(
                 $part->getFilename(),
                 $part->getContent(),
@@ -64,7 +71,7 @@ final class Parser
     }
 
     /**
-     * @param  AddressPart[]  $addresses
+     * @param AddressPart[] $addresses
      * @return string[]
      */
     private function joinNameAndEmail(array $addresses): array

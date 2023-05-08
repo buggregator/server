@@ -5,10 +5,17 @@ declare(strict_types=1);
 namespace Modules\Smtp\Application\Mail;
 
 use JsonSerializable;
+use Spiral\Storage\BucketInterface;
 
 final class Message implements JsonSerializable
 {
+    private array $storedAttachments = [];
+
+    /**
+     * @param Attachment[] $attachments
+     */
     public function __construct(
+        private readonly BucketInterface $storage,
         private readonly ?string $id,
         private readonly string $raw,
         private readonly array $sender,
@@ -19,26 +26,8 @@ final class Message implements JsonSerializable
         private readonly string $textBody,
         private readonly array $replyTo,
         private readonly array $allRecipients,
-        private readonly array $attachments
+        private readonly array $attachments,
     ) {
-    }
-
-    /**
-     * @return list<array{
-     *     id: non-empty-string,
-     *     name: non-empty-string,
-     *     url: non-empty-string
-     * }>
-     */
-    private function attachmentsToArray(): array
-    {
-        return \array_map(function (Attachment $attachment) {
-            return [
-                'id' => $attachment->getId(),
-                'name' => $attachment->getFilename(),
-                'url' => "/api/messages/{$this->id}/attachments/{$attachment->getId()}",
-            ];
-        }, $this->attachments);
     }
 
     /**
@@ -58,7 +47,7 @@ final class Message implements JsonSerializable
                 }
 
                 return true;
-            })
+            }),
         );
     }
 
@@ -75,7 +64,27 @@ final class Message implements JsonSerializable
             'text' => $this->textBody,
             'html' => $this->htmlBody,
             'raw' => $this->raw,
-            'attachments' => $this->attachmentsToArray(),
+            'attachments' => $this->storedAttachments,
         ];
+    }
+
+    public function storeAttachments(): self
+    {
+        foreach ($this->attachments as $attachment) {
+            $file = $this->storage->write(
+                $filename = $this->id . '/' . $attachment->getFilename(),
+                $attachment->getContent(),
+            );
+
+            $this->storedAttachments[$attachment->getId()] = [
+                'name' => $attachment->getFilename(),
+                'uri' => $filename,
+                'size' => $file->getSize(),
+                'mime' => $file->getMimeType(),
+                'id' => $attachment->getId(),
+            ];
+        }
+
+        return $this;
     }
 }

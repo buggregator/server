@@ -16,6 +16,7 @@ use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;
 use Spiral\RoadRunnerBridge\Tcp\Response\RespondMessage;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
 use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
+use Spiral\Storage\StorageInterface;
 
 final class Service implements ServiceInterface
 {
@@ -28,6 +29,7 @@ final class Service implements ServiceInterface
 
     public function __construct(
         private readonly CommandBusInterface $commands,
+        private readonly StorageInterface $storage,
         CacheStorageProviderInterface $provider,
     ) {
         $this->cache = $provider->storage('local');
@@ -39,7 +41,7 @@ final class Service implements ServiceInterface
             return $this->send(self::READY, 'mailamie');
         }
 
-        $cacheKey = 'smtp:'.$request->connectionUuid;
+        $cacheKey = 'smtp:' . $request->connectionUuid;
         $message = $this->cache->get($cacheKey, []);
 
         $response = new CloseConnection();
@@ -68,7 +70,7 @@ final class Service implements ServiceInterface
 
                 if (\count($messages) === 1) {
                     $this->dispatchMessage($content);
-                } elseif (! empty($messages[1])) {
+                } elseif (!empty($messages[1])) {
                     $this->dispatchMessage($messages[0]);
                 }
             }
@@ -79,7 +81,7 @@ final class Service implements ServiceInterface
         $this->cache->set(
             $cacheKey,
             $message,
-            Carbon::now()->addMinutes(5)->diffAsCarbonInterval()
+            Carbon::now()->addMinutes(5)->diffAsCarbonInterval(),
         );
 
         return $response;
@@ -87,10 +89,13 @@ final class Service implements ServiceInterface
 
     private function dispatchMessage(string $message): void
     {
-        $data = (new Parser())->parse($message)->jsonSerialize();
+        $data = (new Parser($this->storage))
+            ->parse($message)
+            ->storeAttachments()
+            ->jsonSerialize();
 
         $this->commands->dispatch(
-            new HandleReceivedEvent(type: 'smtp', payload: $data)
+            new HandleReceivedEvent(type: 'smtp', payload: $data),
         );
     }
 

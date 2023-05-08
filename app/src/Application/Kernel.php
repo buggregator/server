@@ -85,6 +85,9 @@ class Kernel extends \Spiral\Framework\Kernel
 
             // Configure route groups, middleware for route groups
             Bootloader\RoutesBootloader::class,
+
+            \Spiral\Storage\Bootloader\StorageBootloader::class,
+            \Spiral\Distribution\Bootloader\DistributionBootloader::class,
         ];
     }
 
