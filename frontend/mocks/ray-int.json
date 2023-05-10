@@ -1,123 +1,132 @@
 {
-  "uuid": "d98bf37a-70c2-460f-8e80-00f6baa954bd",
-  "payloads": [
-    {
-      "type": "log",
-      "content": {
-        "values": [0]
+  "uuid": "da076402-6f98-4ada-bae2-d77d405cf427",
+  "type": "ray",
+  "payload": {
+    "uuid": "d98bf37a-70c2-460f-8e80-00f6baa954bd",
+    "payloads": [
+      {
+        "type": "log",
+        "content": {
+          "values": [0]
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 35,
+          "hostname": "ButschsterLpp"
+        }
       },
-      "origin": {
-        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
-        "line_number": 35,
-        "hostname": "ButschsterLpp"
-      }
-    },
-    {
-      "type": "log",
-      "content": {
-        "values": [1]
+      {
+        "type": "log",
+        "content": {
+          "values": [1]
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 35,
+          "hostname": "ButschsterLpp"
+        }
       },
-      "origin": {
-        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
-        "line_number": 35,
-        "hostname": "ButschsterLpp"
-      }
-    },
-    {
-      "type": "log",
-      "content": {
-        "values": [2]
+      {
+        "type": "log",
+        "content": {
+          "values": [2]
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 35,
+          "hostname": "ButschsterLpp"
+        }
       },
-      "origin": {
-        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
-        "line_number": 35,
-        "hostname": "ButschsterLpp"
-      }
-    },
-    {
-      "type": "log",
-      "content": {
-        "values": [3]
+      {
+        "type": "log",
+        "content": {
+          "values": [3]
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 35,
+          "hostname": "ButschsterLpp"
+        }
       },
-      "origin": {
-        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
-        "line_number": 35,
-        "hostname": "ButschsterLpp"
-      }
-    },
-    {
-      "type": "log",
-      "content": {
-        "values": [4]
+      {
+        "type": "log",
+        "content": {
+          "values": [4]
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 35,
+          "hostname": "ButschsterLpp"
+        }
       },
-      "origin": {
-        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
-        "line_number": 35,
-        "hostname": "ButschsterLpp"
-      }
-    },
-    {
-      "type": "log",
-      "content": {
-        "values": [5]
+      {
+        "type": "log",
+        "content": {
+          "values": [5]
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 35,
+          "hostname": "ButschsterLpp"
+        }
       },
-      "origin": {
-        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
-        "line_number": 35,
-        "hostname": "ButschsterLpp"
-      }
-    },
-    {
-      "type": "log",
-      "content": {
-        "values": [6]
+      {
+        "type": "log",
+        "content": {
+          "values": [6]
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 35,
+          "hostname": "ButschsterLpp"
+        }
       },
-      "origin": {
-        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
-        "line_number": 35,
-        "hostname": "ButschsterLpp"
-      }
-    },
-    {
-      "type": "log",
-      "content": {
-        "values": [7]
+      {
+        "type": "log",
+        "content": {
+          "values": [7]
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 35,
+          "hostname": "ButschsterLpp"
+        }
       },
-      "origin": {
-        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
-        "line_number": 35,
-        "hostname": "ButschsterLpp"
-      }
-    },
-    {
-      "type": "log",
-      "content": {
-        "values": [8]
+      {
+        "type": "log",
+        "content": {
+          "values": [8]
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 35,
+          "hostname": "ButschsterLpp"
+        }
       },
-      "origin": {
-        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
-        "line_number": 35,
-        "hostname": "ButschsterLpp"
+      {
+        "type": "log",
+        "content": {
+          "values": [9]
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 35,
+          "hostname": "ButschsterLpp"
+        }
       }
-    },
-    {
-      "type": "log",
-      "content": {
-        "values": [9]
-      },
-      "origin": {
-        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
-        "line_number": 35,
-        "hostname": "ButschsterLpp"
-      }
+    ],
+    "meta": {
+      "php_version": "8.2.5",
+      "php_version_id": 80205,
+      "project_name": "",
+      "laravel_version": "9.52.4",
+      "laravel_ray_package_version": "1.32.2.0",
+      "ray_package_version": "1.36.2.0"
     }
-  ],
-  "meta": {
-    "php_version": "8.2.5",
-    "php_version_id": 80205,
-    "project_name": "",
-    "laravel_version": "9.52.4",
-    "laravel_ray_package_version": "1.32.2.0",
-    "ray_package_version": "1.36.2.0"
-  }
+  },
+  "timestamp": 1673266869,
+  "project_id": null
 }
+
+
+

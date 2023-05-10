@@ -1,389 +1,395 @@
 {
-  "uuid": "32094053-7c12-4459-bba8-65d3c80aa9a9",
-  "payloads": [
-    {
-      "type": "trace",
-      "content": {
-        "frames": [
-          {
-            "file_name": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
-            "line_number": 96,
-            "class": "App\\Http\\Controllers\\CallAction",
-            "method": "rayTrace",
-            "vendor_frame": false
-          },
-          {
-            "file_name": "unknown",
-            "line_number": 0,
-            "class": null,
-            "method": "call_user_func",
-            "vendor_frame": false
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/app/Http/Controllers/CallAction.php",
-            "line_number": 83,
-            "class": "App\\Http\\Controllers\\CallAction",
-            "method": "__invoke",
-            "vendor_frame": false
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Controller.php",
-            "line_number": 54,
-            "class": "Illuminate\\Routing\\Controller",
-            "method": "callAction",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php",
-            "line_number": 43,
-            "class": "Illuminate\\Routing\\ControllerDispatcher",
-            "method": "dispatch",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Route.php",
-            "line_number": 259,
-            "class": "Illuminate\\Routing\\Route",
-            "method": "runController",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Route.php",
-            "line_number": 205,
-            "class": "Illuminate\\Routing\\Route",
-            "method": "run",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
-            "line_number": 798,
-            "class": "Illuminate\\Routing\\Router",
-            "method": "Illuminate\\Routing\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 141,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php",
-            "line_number": 50,
-            "class": "Illuminate\\Routing\\Middleware\\SubstituteBindings",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/View/Middleware/ShareErrorsFromSession.php",
-            "line_number": 49,
-            "class": "Illuminate\\View\\Middleware\\ShareErrorsFromSession",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Session/Middleware/StartSession.php",
-            "line_number": 121,
-            "class": "Illuminate\\Session\\Middleware\\StartSession",
-            "method": "handleStatefulRequest",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Session/Middleware/StartSession.php",
-            "line_number": 64,
-            "class": "Illuminate\\Session\\Middleware\\StartSession",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Cookie/Middleware/AddQueuedCookiesToResponse.php",
-            "line_number": 37,
-            "class": "Illuminate\\Cookie\\Middleware\\AddQueuedCookiesToResponse",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Cookie/Middleware/EncryptCookies.php",
-            "line_number": 67,
-            "class": "Illuminate\\Cookie\\Middleware\\EncryptCookies",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 116,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "then",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
-            "line_number": 797,
-            "class": "Illuminate\\Routing\\Router",
-            "method": "runRouteWithinStack",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
-            "line_number": 776,
-            "class": "Illuminate\\Routing\\Router",
-            "method": "runRoute",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
-            "line_number": 740,
-            "class": "Illuminate\\Routing\\Router",
-            "method": "dispatchToRoute",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
-            "line_number": 729,
-            "class": "Illuminate\\Routing\\Router",
-            "method": "dispatch",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
-            "line_number": 190,
-            "class": "Illuminate\\Foundation\\Http\\Kernel",
-            "method": "Illuminate\\Foundation\\Http\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 141,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/sentry/sentry-laravel/src/Sentry/Laravel/Http/SetRequestIpMiddleware.php",
-            "line_number": 45,
-            "class": "Sentry\\Laravel\\Http\\SetRequestIpMiddleware",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/sentry/sentry-laravel/src/Sentry/Laravel/Http/SetRequestMiddleware.php",
-            "line_number": 31,
-            "class": "Sentry\\Laravel\\Http\\SetRequestMiddleware",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php",
-            "line_number": 21,
-            "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php",
-            "line_number": 31,
-            "class": "Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php",
-            "line_number": 21,
-            "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php",
-            "line_number": 40,
-            "class": "Illuminate\\Foundation\\Http\\Middleware\\TrimStrings",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ValidatePostSize.php",
-            "line_number": 27,
-            "class": "Illuminate\\Foundation\\Http\\Middleware\\ValidatePostSize",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php",
-            "line_number": 86,
-            "class": "Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/fruitcake/laravel-cors/src/HandleCors.php",
-            "line_number": 38,
-            "class": "Fruitcake\\Cors\\HandleCors",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php",
-            "line_number": 39,
-            "class": "Illuminate\\Http\\Middleware\\TrustProxies",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/sentry/sentry-laravel/src/Sentry/Laravel/Tracing/Middleware.php",
-            "line_number": 53,
-            "class": "Sentry\\Laravel\\Tracing\\Middleware",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 180,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "Illuminate\\Pipeline\\{closure}",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
-            "line_number": 116,
-            "class": "Illuminate\\Pipeline\\Pipeline",
-            "method": "then",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
-            "line_number": 165,
-            "class": "Illuminate\\Foundation\\Http\\Kernel",
-            "method": "sendRequestThroughRouter",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
-            "line_number": 134,
-            "class": "Illuminate\\Foundation\\Http\\Kernel",
-            "method": "handle",
-            "vendor_frame": true
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/public/index.php",
-            "line_number": 51,
-            "class": null,
-            "method": "require_once",
-            "vendor_frame": false
-          },
-          {
-            "file_name": "/root/repos/buggreagtor/examples/server.php",
-            "line_number": 21,
-            "class": null,
-            "method": "[top]",
-            "vendor_frame": true
-          }
-        ]
-      },
-      "origin": {
-        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
-        "line_number": 96,
-        "hostname": "ButschsterLpp"
+  "uuid": "da076402-6f98-4ada-bae2-d77d405cf427",
+  "type": "ray",
+  "payload": {
+    "uuid": "32094053-7c12-4459-bba8-65d3c80aa9a9",
+    "payloads": [
+      {
+        "type": "trace",
+        "content": {
+          "frames": [
+            {
+              "file_name": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+              "line_number": 96,
+              "class": "App\\Http\\Controllers\\CallAction",
+              "method": "rayTrace",
+              "vendor_frame": false
+            },
+            {
+              "file_name": "unknown",
+              "line_number": 0,
+              "class": null,
+              "method": "call_user_func",
+              "vendor_frame": false
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/app/Http/Controllers/CallAction.php",
+              "line_number": 83,
+              "class": "App\\Http\\Controllers\\CallAction",
+              "method": "__invoke",
+              "vendor_frame": false
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Controller.php",
+              "line_number": 54,
+              "class": "Illuminate\\Routing\\Controller",
+              "method": "callAction",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php",
+              "line_number": 43,
+              "class": "Illuminate\\Routing\\ControllerDispatcher",
+              "method": "dispatch",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Route.php",
+              "line_number": 259,
+              "class": "Illuminate\\Routing\\Route",
+              "method": "runController",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Route.php",
+              "line_number": 205,
+              "class": "Illuminate\\Routing\\Route",
+              "method": "run",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+              "line_number": 798,
+              "class": "Illuminate\\Routing\\Router",
+              "method": "Illuminate\\Routing\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 141,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php",
+              "line_number": 50,
+              "class": "Illuminate\\Routing\\Middleware\\SubstituteBindings",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/View/Middleware/ShareErrorsFromSession.php",
+              "line_number": 49,
+              "class": "Illuminate\\View\\Middleware\\ShareErrorsFromSession",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Session/Middleware/StartSession.php",
+              "line_number": 121,
+              "class": "Illuminate\\Session\\Middleware\\StartSession",
+              "method": "handleStatefulRequest",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Session/Middleware/StartSession.php",
+              "line_number": 64,
+              "class": "Illuminate\\Session\\Middleware\\StartSession",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Cookie/Middleware/AddQueuedCookiesToResponse.php",
+              "line_number": 37,
+              "class": "Illuminate\\Cookie\\Middleware\\AddQueuedCookiesToResponse",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Cookie/Middleware/EncryptCookies.php",
+              "line_number": 67,
+              "class": "Illuminate\\Cookie\\Middleware\\EncryptCookies",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 116,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "then",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+              "line_number": 797,
+              "class": "Illuminate\\Routing\\Router",
+              "method": "runRouteWithinStack",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+              "line_number": 776,
+              "class": "Illuminate\\Routing\\Router",
+              "method": "runRoute",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+              "line_number": 740,
+              "class": "Illuminate\\Routing\\Router",
+              "method": "dispatchToRoute",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+              "line_number": 729,
+              "class": "Illuminate\\Routing\\Router",
+              "method": "dispatch",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
+              "line_number": 190,
+              "class": "Illuminate\\Foundation\\Http\\Kernel",
+              "method": "Illuminate\\Foundation\\Http\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 141,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/sentry/sentry-laravel/src/Sentry/Laravel/Http/SetRequestIpMiddleware.php",
+              "line_number": 45,
+              "class": "Sentry\\Laravel\\Http\\SetRequestIpMiddleware",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/sentry/sentry-laravel/src/Sentry/Laravel/Http/SetRequestMiddleware.php",
+              "line_number": 31,
+              "class": "Sentry\\Laravel\\Http\\SetRequestMiddleware",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php",
+              "line_number": 21,
+              "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php",
+              "line_number": 31,
+              "class": "Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php",
+              "line_number": 21,
+              "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php",
+              "line_number": 40,
+              "class": "Illuminate\\Foundation\\Http\\Middleware\\TrimStrings",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ValidatePostSize.php",
+              "line_number": 27,
+              "class": "Illuminate\\Foundation\\Http\\Middleware\\ValidatePostSize",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php",
+              "line_number": 86,
+              "class": "Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/fruitcake/laravel-cors/src/HandleCors.php",
+              "line_number": 38,
+              "class": "Fruitcake\\Cors\\HandleCors",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php",
+              "line_number": 39,
+              "class": "Illuminate\\Http\\Middleware\\TrustProxies",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/sentry/sentry-laravel/src/Sentry/Laravel/Tracing/Middleware.php",
+              "line_number": 53,
+              "class": "Sentry\\Laravel\\Tracing\\Middleware",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 180,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "Illuminate\\Pipeline\\{closure}",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+              "line_number": 116,
+              "class": "Illuminate\\Pipeline\\Pipeline",
+              "method": "then",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
+              "line_number": 165,
+              "class": "Illuminate\\Foundation\\Http\\Kernel",
+              "method": "sendRequestThroughRouter",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
+              "line_number": 134,
+              "class": "Illuminate\\Foundation\\Http\\Kernel",
+              "method": "handle",
+              "vendor_frame": true
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/public/index.php",
+              "line_number": 51,
+              "class": null,
+              "method": "require_once",
+              "vendor_frame": false
+            },
+            {
+              "file_name": "/root/repos/buggreagtor/examples/server.php",
+              "line_number": 21,
+              "class": null,
+              "method": "[top]",
+              "vendor_frame": true
+            }
+          ]
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 96,
+          "hostname": "ButschsterLpp"
+        }
       }
+    ],
+    "meta": {
+      "php_version": "8.2.5",
+      "php_version_id": 80205,
+      "project_name": "",
+      "laravel_version": "9.52.4",
+      "laravel_ray_package_version": "1.32.2.0",
+      "ray_package_version": "1.36.2.0"
     }
-  ],
-  "meta": {
-    "php_version": "8.2.5",
-    "php_version_id": 80205,
-    "project_name": "",
-    "laravel_version": "9.52.4",
-    "laravel_ray_package_version": "1.32.2.0",
-    "ray_package_version": "1.36.2.0"
-  }
+  },
+  "timestamp": 1673266869,
+  "project_id": null
 }

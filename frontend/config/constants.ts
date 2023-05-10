@@ -5,9 +5,24 @@ export const EVENT_TYPES = {
   PROFILER: "profiler",
   MONOLOG: "monolog",
   INSPECTOR: "inspector",
-  RAY: "ray",
+  RAY_DUMP: "ray",
 };
 
+export const RAY_EVENT_TYPES = {
+  LOG: "log",
+  SIZE: "size",
+  CUSTOM: "custom",
+  LABEL: "label",
+  CALLER: "caller",
+  CARBON: "carbon",
+  COLOR: "color",
+  EXCEPTION: "exception",
+  HIDE: "hide",
+  MEASURE: "measure",
+  NOTIFY: "notify",
+  TABLE: "table",
+  TRACE: "trace",
+}
 
 // TODO: colors should depends on level for some tools
 export const EVENT_STATUS_COLOR_MAP = {

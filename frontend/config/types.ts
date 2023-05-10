@@ -159,6 +159,38 @@ export interface VarDump {
   }
 }
 
+export interface RayDump {
+  uuid: string,
+  payloads: RayPayload[],
+  meta: {
+    php_version: string,
+    php_version_id: number,
+    project_name: string,
+    laravel_version: string,
+    laravel_ray_package_version: string,
+    ray_package_version: string,
+  }
+}
+
+export interface RayPayload {
+  type: string,
+  origin: {
+    file: string,
+    line_number: number,
+    hostname: string,
+  },
+  content: RayContentArray | RayContent
+}
+
+export interface RayContent {
+  content: string,
+  label: string,
+}
+
+export interface RayContentArray {
+  values: [string | number | boolean]
+}
+
 export interface SmtpAttachment {
   "name": string,
   "id": string,
@@ -269,5 +301,5 @@ export interface NormalizedEvent {
   origin: object | null,
   serverName: string,
   date: Date,
-  payload: Monolog | SMTP | Sentry | VarDump | Profiler | Inspector | unknown
+  payload: Monolog | SMTP | Sentry | VarDump | Profiler | Inspector | RayDump | unknown
 }

@@ -9,6 +9,8 @@ export const useEventStore = defineStore('useEventStore', {
     eventsLoading: false
   }),
   getters: {
+    rayEvents: (state) => state.events.filter(({type}) => type === EVENT_TYPES.RAY_DUMP),
+    varDumpEvents: (state) => state.events.filter(({type}) => type === EVENT_TYPES.VAR_DUMP),
     sentryEvents: (state) => state.events.filter(({type}) => type === EVENT_TYPES.SENTRY),
     inspectorEvents: (state) => state.events.filter(({type}) => type === EVENT_TYPES.INSPECTOR),
     profilerEvents: (state) => state.events.filter(({type}) => type === EVENT_TYPES.PROFILER),

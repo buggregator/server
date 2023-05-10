@@ -1,25 +1,31 @@
 {
-  "uuid": "ded34745-0398-49f6-ada1-7e42dd9868fe",
-  "payloads": [
-    {
-      "type": "custom",
-      "content": {
-        "content": "<img src=\"https://placekitten.com/200/300\" alt=\"\" />",
-        "label": "Image"
-      },
-      "origin": {
-        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
-        "line_number": 216,
-        "hostname": "ButschsterLpp"
+  "uuid": "da076402-6f98-4ada-bae2-d77d405cf427",
+  "type": "ray",
+  "payload": {
+    "uuid": "ded34745-0398-49f6-ada1-7e42dd9868fe",
+    "payloads": [
+      {
+        "type": "custom",
+        "content": {
+          "content": "<img src=\"https://placekitten.com/200/300\" alt=\"\" />",
+          "label": "Image"
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 216,
+          "hostname": "ButschsterLpp"
+        }
       }
+    ],
+    "meta": {
+      "php_version": "8.2.5",
+      "php_version_id": 80205,
+      "project_name": "",
+      "laravel_version": "9.52.4",
+      "laravel_ray_package_version": "1.32.2.0",
+      "ray_package_version": "1.36.2.0"
     }
-  ],
-  "meta": {
-    "php_version": "8.2.5",
-    "php_version_id": 80205,
-    "project_name": "",
-    "laravel_version": "9.52.4",
-    "laravel_ray_package_version": "1.32.2.0",
-    "ray_package_version": "1.36.2.0"
-  }
+  },
+  "timestamp": 1673266869,
+  "project_id": null
 }

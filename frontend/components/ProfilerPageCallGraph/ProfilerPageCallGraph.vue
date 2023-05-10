@@ -156,7 +156,7 @@ export default defineComponent({
 }
 
 .profiler-page-call-graph__graphviz {
-  @apply flex-1 justify-items-stretch items-stretch bg-gray-700;
+  @apply flex-1 justify-items-stretch items-stretch bg-white;
 
   .graph {
     > polygon {
