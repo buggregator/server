@@ -3,7 +3,6 @@
     <ul class="page-placeholder__list">
       <li class="page-placeholder__item">
         <IconSvg name="github" class="page-placeholder__icon" />
-
         <span>
           Bugregator&nbsp;
           <a
@@ -85,6 +84,23 @@
           </a>
         </span>
       </li>
+      <li class="page-placeholder__item">
+        <IconSvg
+          name="docs"
+          class="page-placeholder__icon page-placeholder__icon--profilers"
+        />
+
+        <span>
+          XHProf URL
+          <a
+            href="https://github.com/spiral/profiler/tree/3.0"
+            target="_blank"
+            class="page-placeholder__link"
+          >
+            {{ XHProfLinkText }}
+          </a>
+        </span>
+      </li>
     </ul>
   </div>
 </template>
@@ -95,26 +111,27 @@ import { defineComponent } from "vue";
 
 export default defineComponent({
   components: { IconSvg },
+
   computed: {
     sentryLinkText() {
-      return `http://sentry@${this.getHost()}:${this.getPort()}/1`;
+      return `http://sentry@${this.getHost()}/1`;
     },
     inspectorLinkText() {
-      return `http://${this.getHost()}:${this.getPort()}/inspector`;
+      return `http://${this.getHost()}/inspector`;
     },
     varDumperLinkText() {
-      return `tcp://${this.getHost()}:9912`;
+      return `tcp://${this.getHost()}`;
     },
     monologLinkText() {
-      return `tcp://${this.getHost()}:9913`;
+      return `tcp://${this.getHost()}`;
+    },
+    XHProfLinkText() {
+      return `http://${this.getHost()}/api/profiler/store`;
     },
   },
   methods: {
-    getPort() {
-      return "3000"; // window?.location?.host?.split(":")[1] || ''
-    },
     getHost() {
-      return "localhost"; // window?.location?.host?.split(":")[0] || ''
+      return window?.location?.host || "localhost:3000";
     },
   },
 });
