@@ -1,6 +1,6 @@
-import { defineStore } from 'pinia';
-import { EventId, OneOfValues, ServerEvent } from "~/config/types";
-import { EVENT_TYPES } from "~/config/constants";
+import {defineStore} from 'pinia';
+import {EventId, OneOfValues, ServerEvent} from "~/config/types";
+import {EVENT_TYPES} from "~/config/constants";
 
 
 export const useEventStore = defineStore('useEventStore', {
@@ -9,31 +9,38 @@ export const useEventStore = defineStore('useEventStore', {
     eventsLoading: false
   }),
   getters: {
-    sentryEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.SENTRY),
-    inspectorEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.INSPECTOR),
-    profilerEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.PROFILER),
-    smtpEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.SMTP)
+    sentryEvents: (state) => state.events.filter(({type}) => type === EVENT_TYPES.SENTRY),
+    inspectorEvents: (state) => state.events.filter(({type}) => type === EVENT_TYPES.INSPECTOR),
+    profilerEvents: (state) => state.events.filter(({type}) => type === EVENT_TYPES.PROFILER),
+    smtpEvents: (state) => state.events.filter(({type}) => type === EVENT_TYPES.SMTP)
   },
   actions: {
     removeEventById(eventUuid: EventId) {
-      this.events = this.events.filter(({ uuid }) => uuid !== eventUuid)
+      this.events = this.events.filter(({uuid}) => uuid !== eventUuid)
     },
     removeEvents() {
       this.events.length = 0
     },
     removeEventsByType(eventType: OneOfValues<typeof EVENT_TYPES>) {
-      this.events = this.events.filter(({ type }) => type !== eventType);
+      this.events = this.events.filter(({type}) => type !== eventType);
     },
     addEvents(events: ServerEvent<unknown>[]) {
       events.forEach((event) => {
         const isExistedEvent = this.events.some((el) => el.uuid === event.uuid)
         if (!isExistedEvent) {
           this.events.unshift(event)
+        } else {
+          this.events = this.events.map((el) => {
+            if (el.uuid === event.uuid) {
+              return event
+            }
+            return el
+          })
         }
       })
     },
     getEventById(id: EventId): ServerEvent<unknown> | null {
-      return this.events.find(({ uuid }) => String(uuid) === String(id)) || null
+      return this.events.find(({uuid}) => String(uuid) === String(id)) || null
     }
   },
 })

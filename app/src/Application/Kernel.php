@@ -8,12 +8,10 @@ use App\Application\Bootloader\AppBootloader;
 use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
 use Modules\Profiler\Application\ProfilerBootloader;
+use Modules\Ray\Application\RayBootloader;
 use Modules\Sentry\Application\SentryBootloader;
-use Psr\Log\LoggerInterface;
-use Spiral\Boot\Bootloader\Bootloader as SpiralBootloader;
 use Spiral\Boot\Bootloader\CoreBootloader;
 use Spiral\Bootloader as Framework;
-use Spiral\Console\Console;
 use Spiral\Cqrs\Bootloader\CqrsBootloader;
 use Spiral\Cycle\Bootloader as CycleBridge;
 use Spiral\DotEnv\Bootloader\DotenvBootloader;
@@ -22,7 +20,6 @@ use Spiral\League\Event\Bootloader\EventBootloader;
 use Spiral\Monolog\Bootloader\MonologBootloader;
 use Spiral\Nyholm\Bootloader\NyholmBootloader;
 use Spiral\RoadRunnerBridge\Bootloader as RoadRunnerBridge;
-use Spiral\Router\Bootloader\AnnotatedRoutesBootloader;
 use Spiral\Tokenizer\Bootloader\TokenizerListenerBootloader;
 use Spiral\Validation\Bootloader\ValidationBootloader;
 use Spiral\Validator\Bootloader\ValidatorBootloader;
@@ -96,6 +93,7 @@ class Kernel extends \Spiral\Framework\Kernel
         return [
             AppBootloader::class,
             SentryBootloader::class,
+            RayBootloader::class,
             ProfilerBootloader::class,
             MongoDBBootloader::class,
             PersistenceBootloader::class,

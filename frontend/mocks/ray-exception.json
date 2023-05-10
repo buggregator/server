@@ -1,0 +1,2954 @@
+{
+  "uuid": "4c5db617-ef04-4379-b99b-a85683d59612",
+  "payloads": [
+    {
+      "type": "exception",
+      "content": {
+        "class": "Exception",
+        "message": "Something went wrong",
+        "frames": [
+          {
+            "file_name": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+            "line_number": 254,
+            "class": "App\\Http\\Controllers\\CallAction",
+            "method": "rayException",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 248,
+                "text": "    }"
+              },
+              {
+                "line_number": 249,
+                "text": ""
+              },
+              {
+                "line_number": 250,
+                "text": "    /** @test */"
+              },
+              {
+                "line_number": 251,
+                "text": "    function rayException()"
+              },
+              {
+                "line_number": 252,
+                "text": "    {"
+              },
+              {
+                "line_number": 253,
+                "text": "        try {"
+              },
+              {
+                "line_number": 254,
+                "text": "            throw new \\Exception('Something went wrong');"
+              },
+              {
+                "line_number": 255,
+                "text": "        } catch (\\Exception $e) {"
+              },
+              {
+                "line_number": 256,
+                "text": "            ray()->exception($e);"
+              },
+              {
+                "line_number": 257,
+                "text": "        }"
+              },
+              {
+                "line_number": 258,
+                "text": "    }"
+              },
+              {
+                "line_number": 259,
+                "text": ""
+              }
+            ]
+          },
+          {
+            "file_name": "unknown",
+            "line_number": 0,
+            "class": null,
+            "method": "call_user_func",
+            "vendor_frame": false,
+            "snippet": []
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/app/Http/Controllers/CallAction.php",
+            "line_number": 83,
+            "class": "App\\Http\\Controllers\\CallAction",
+            "method": "__invoke",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 77,
+                "text": "            }"
+              },
+              {
+                "line_number": 78,
+                "text": "        }"
+              },
+              {
+                "line_number": 79,
+                "text": ""
+              },
+              {
+                "line_number": 80,
+                "text": "        $method = Str::studly(Str::replace(':', '_', $action));"
+              },
+              {
+                "line_number": 81,
+                "text": ""
+              },
+              {
+                "line_number": 82,
+                "text": "        if (method_exists($this, $method)) {"
+              },
+              {
+                "line_number": 83,
+                "text": "            call_user_func([$this, $method]);"
+              },
+              {
+                "line_number": 84,
+                "text": "            return 'ok';"
+              },
+              {
+                "line_number": 85,
+                "text": "        }"
+              },
+              {
+                "line_number": 86,
+                "text": ""
+              },
+              {
+                "line_number": 87,
+                "text": "        abort(404);"
+              },
+              {
+                "line_number": 88,
+                "text": "    }"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Controller.php",
+            "line_number": 54,
+            "class": "Illuminate\\Routing\\Controller",
+            "method": "callAction",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 48,
+                "text": "     * @param  string  $method"
+              },
+              {
+                "line_number": 49,
+                "text": "     * @param  array  $parameters"
+              },
+              {
+                "line_number": 50,
+                "text": "     * @return \\Symfony\\Component\\HttpFoundation\\Response"
+              },
+              {
+                "line_number": 51,
+                "text": "     */"
+              },
+              {
+                "line_number": 52,
+                "text": "    public function callAction($method, $parameters)"
+              },
+              {
+                "line_number": 53,
+                "text": "    {"
+              },
+              {
+                "line_number": 54,
+                "text": "        return $this->{$method}(...array_values($parameters));"
+              },
+              {
+                "line_number": 55,
+                "text": "    }"
+              },
+              {
+                "line_number": 56,
+                "text": ""
+              },
+              {
+                "line_number": 57,
+                "text": "    /**"
+              },
+              {
+                "line_number": 58,
+                "text": "     * Handle calls to missing methods on the controller."
+              },
+              {
+                "line_number": 59,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php",
+            "line_number": 43,
+            "class": "Illuminate\\Routing\\ControllerDispatcher",
+            "method": "dispatch",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 37,
+                "text": "     */"
+              },
+              {
+                "line_number": 38,
+                "text": "    public function dispatch(Route $route, $controller, $method)"
+              },
+              {
+                "line_number": 39,
+                "text": "    {"
+              },
+              {
+                "line_number": 40,
+                "text": "        $parameters = $this->resolveParameters($route, $controller, $method);"
+              },
+              {
+                "line_number": 41,
+                "text": ""
+              },
+              {
+                "line_number": 42,
+                "text": "        if (method_exists($controller, 'callAction')) {"
+              },
+              {
+                "line_number": 43,
+                "text": "            return $controller->callAction($method, $parameters);"
+              },
+              {
+                "line_number": 44,
+                "text": "        }"
+              },
+              {
+                "line_number": 45,
+                "text": ""
+              },
+              {
+                "line_number": 46,
+                "text": "        return $controller->{$method}(...array_values($parameters));"
+              },
+              {
+                "line_number": 47,
+                "text": "    }"
+              },
+              {
+                "line_number": 48,
+                "text": ""
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Route.php",
+            "line_number": 259,
+            "class": "Illuminate\\Routing\\Route",
+            "method": "runController",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 253,
+                "text": "     * @return mixed"
+              },
+              {
+                "line_number": 254,
+                "text": "     *"
+              },
+              {
+                "line_number": 255,
+                "text": "     * @throws \\Symfony\\Component\\HttpKernel\\Exception\\NotFoundHttpException"
+              },
+              {
+                "line_number": 256,
+                "text": "     */"
+              },
+              {
+                "line_number": 257,
+                "text": "    protected function runController()"
+              },
+              {
+                "line_number": 258,
+                "text": "    {"
+              },
+              {
+                "line_number": 259,
+                "text": "        return $this->controllerDispatcher()->dispatch("
+              },
+              {
+                "line_number": 260,
+                "text": "            $this, $this->getController(), $this->getControllerMethod()"
+              },
+              {
+                "line_number": 261,
+                "text": "        );"
+              },
+              {
+                "line_number": 262,
+                "text": "    }"
+              },
+              {
+                "line_number": 263,
+                "text": ""
+              },
+              {
+                "line_number": 264,
+                "text": "    /**"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Route.php",
+            "line_number": 205,
+            "class": "Illuminate\\Routing\\Route",
+            "method": "run",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 199,
+                "text": "    public function run()"
+              },
+              {
+                "line_number": 200,
+                "text": "    {"
+              },
+              {
+                "line_number": 201,
+                "text": "        $this->container = $this->container ?: new Container;"
+              },
+              {
+                "line_number": 202,
+                "text": ""
+              },
+              {
+                "line_number": 203,
+                "text": "        try {"
+              },
+              {
+                "line_number": 204,
+                "text": "            if ($this->isControllerAction()) {"
+              },
+              {
+                "line_number": 205,
+                "text": "                return $this->runController();"
+              },
+              {
+                "line_number": 206,
+                "text": "            }"
+              },
+              {
+                "line_number": 207,
+                "text": ""
+              },
+              {
+                "line_number": 208,
+                "text": "            return $this->runCallable();"
+              },
+              {
+                "line_number": 209,
+                "text": "        } catch (HttpResponseException $e) {"
+              },
+              {
+                "line_number": 210,
+                "text": "            return $e->getResponse();"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+            "line_number": 798,
+            "class": "Illuminate\\Routing\\Router",
+            "method": "Illuminate\\Routing\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 792,
+                "text": "        $middleware = $shouldSkipMiddleware ? [] : $this->gatherRouteMiddleware($route);"
+              },
+              {
+                "line_number": 793,
+                "text": ""
+              },
+              {
+                "line_number": 794,
+                "text": "        return (new Pipeline($this->container))"
+              },
+              {
+                "line_number": 795,
+                "text": "                        ->send($request)"
+              },
+              {
+                "line_number": 796,
+                "text": "                        ->through($middleware)"
+              },
+              {
+                "line_number": 797,
+                "text": "                        ->then(fn ($request) => $this->prepareResponse("
+              },
+              {
+                "line_number": 798,
+                "text": "                            $request, $route->run()"
+              },
+              {
+                "line_number": 799,
+                "text": "                        ));"
+              },
+              {
+                "line_number": 800,
+                "text": "    }"
+              },
+              {
+                "line_number": 801,
+                "text": ""
+              },
+              {
+                "line_number": 802,
+                "text": "    /**"
+              },
+              {
+                "line_number": 803,
+                "text": "     * Gather the middleware for the given route with resolved class names."
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 141,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 135,
+                "text": "     * @return \\Closure"
+              },
+              {
+                "line_number": 136,
+                "text": "     */"
+              },
+              {
+                "line_number": 137,
+                "text": "    protected function prepareDestination(Closure $destination)"
+              },
+              {
+                "line_number": 138,
+                "text": "    {"
+              },
+              {
+                "line_number": 139,
+                "text": "        return function ($passable) use ($destination) {"
+              },
+              {
+                "line_number": 140,
+                "text": "            try {"
+              },
+              {
+                "line_number": 141,
+                "text": "                return $destination($passable);"
+              },
+              {
+                "line_number": 142,
+                "text": "            } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 143,
+                "text": "                return $this->handleException($passable, $e);"
+              },
+              {
+                "line_number": 144,
+                "text": "            }"
+              },
+              {
+                "line_number": 145,
+                "text": "        };"
+              },
+              {
+                "line_number": 146,
+                "text": "    }"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php",
+            "line_number": 50,
+            "class": "Illuminate\\Routing\\Middleware\\SubstituteBindings",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 42,
+                "text": "        } catch (ModelNotFoundException $exception) {"
+              },
+              {
+                "line_number": 43,
+                "text": "            if ($route->getMissing()) {"
+              },
+              {
+                "line_number": 44,
+                "text": "                return $route->getMissing()($request, $exception);"
+              },
+              {
+                "line_number": 45,
+                "text": "            }"
+              },
+              {
+                "line_number": 46,
+                "text": ""
+              },
+              {
+                "line_number": 47,
+                "text": "            throw $exception;"
+              },
+              {
+                "line_number": 48,
+                "text": "        }"
+              },
+              {
+                "line_number": 49,
+                "text": ""
+              },
+              {
+                "line_number": 50,
+                "text": "        return $next($request);"
+              },
+              {
+                "line_number": 51,
+                "text": "    }"
+              },
+              {
+                "line_number": 52,
+                "text": "}"
+              },
+              {
+                "line_number": 53,
+                "text": ""
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/View/Middleware/ShareErrorsFromSession.php",
+            "line_number": 49,
+            "class": "Illuminate\\View\\Middleware\\ShareErrorsFromSession",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 41,
+                "text": "        $this->view->share("
+              },
+              {
+                "line_number": 42,
+                "text": "            'errors', $request->session()->get('errors') ?: new ViewErrorBag"
+              },
+              {
+                "line_number": 43,
+                "text": "        );"
+              },
+              {
+                "line_number": 44,
+                "text": ""
+              },
+              {
+                "line_number": 45,
+                "text": "        // Putting the errors in the view for every view allows the developer to just"
+              },
+              {
+                "line_number": 46,
+                "text": "        // assume that some errors are always available, which is convenient since"
+              },
+              {
+                "line_number": 47,
+                "text": "        // they don't have to continually run checks for the presence of errors."
+              },
+              {
+                "line_number": 48,
+                "text": ""
+              },
+              {
+                "line_number": 49,
+                "text": "        return $next($request);"
+              },
+              {
+                "line_number": 50,
+                "text": "    }"
+              },
+              {
+                "line_number": 51,
+                "text": "}"
+              },
+              {
+                "line_number": 52,
+                "text": ""
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Session/Middleware/StartSession.php",
+            "line_number": 121,
+            "class": "Illuminate\\Session\\Middleware\\StartSession",
+            "method": "handleStatefulRequest",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 115,
+                "text": "        $request->setLaravelSession("
+              },
+              {
+                "line_number": 116,
+                "text": "            $this->startSession($request, $session)"
+              },
+              {
+                "line_number": 117,
+                "text": "        );"
+              },
+              {
+                "line_number": 118,
+                "text": ""
+              },
+              {
+                "line_number": 119,
+                "text": "        $this->collectGarbage($session);"
+              },
+              {
+                "line_number": 120,
+                "text": ""
+              },
+              {
+                "line_number": 121,
+                "text": "        $response = $next($request);"
+              },
+              {
+                "line_number": 122,
+                "text": ""
+              },
+              {
+                "line_number": 123,
+                "text": "        $this->storeCurrentUrl($request, $session);"
+              },
+              {
+                "line_number": 124,
+                "text": ""
+              },
+              {
+                "line_number": 125,
+                "text": "        $this->addCookieToResponse($response, $session);"
+              },
+              {
+                "line_number": 126,
+                "text": ""
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Session/Middleware/StartSession.php",
+            "line_number": 64,
+            "class": "Illuminate\\Session\\Middleware\\StartSession",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 58,
+                "text": ""
+              },
+              {
+                "line_number": 59,
+                "text": "        if ($this->manager->shouldBlock() ||"
+              },
+              {
+                "line_number": 60,
+                "text": "            ($request->route() instanceof Route && $request->route()->locksFor())) {"
+              },
+              {
+                "line_number": 61,
+                "text": "            return $this->handleRequestWhileBlocking($request, $session, $next);"
+              },
+              {
+                "line_number": 62,
+                "text": "        }"
+              },
+              {
+                "line_number": 63,
+                "text": ""
+              },
+              {
+                "line_number": 64,
+                "text": "        return $this->handleStatefulRequest($request, $session, $next);"
+              },
+              {
+                "line_number": 65,
+                "text": "    }"
+              },
+              {
+                "line_number": 66,
+                "text": ""
+              },
+              {
+                "line_number": 67,
+                "text": "    /**"
+              },
+              {
+                "line_number": 68,
+                "text": "     * Handle the given request within session state."
+              },
+              {
+                "line_number": 69,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Cookie/Middleware/AddQueuedCookiesToResponse.php",
+            "line_number": 37,
+            "class": "Illuminate\\Cookie\\Middleware\\AddQueuedCookiesToResponse",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 31,
+                "text": "     * @param  \\Illuminate\\Http\\Request  $request"
+              },
+              {
+                "line_number": 32,
+                "text": "     * @param  \\Closure  $next"
+              },
+              {
+                "line_number": 33,
+                "text": "     * @return mixed"
+              },
+              {
+                "line_number": 34,
+                "text": "     */"
+              },
+              {
+                "line_number": 35,
+                "text": "    public function handle($request, Closure $next)"
+              },
+              {
+                "line_number": 36,
+                "text": "    {"
+              },
+              {
+                "line_number": 37,
+                "text": "        $response = $next($request);"
+              },
+              {
+                "line_number": 38,
+                "text": ""
+              },
+              {
+                "line_number": 39,
+                "text": "        foreach ($this->cookies->getQueuedCookies() as $cookie) {"
+              },
+              {
+                "line_number": 40,
+                "text": "            $response->headers->setCookie($cookie);"
+              },
+              {
+                "line_number": 41,
+                "text": "        }"
+              },
+              {
+                "line_number": 42,
+                "text": ""
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Cookie/Middleware/EncryptCookies.php",
+            "line_number": 67,
+            "class": "Illuminate\\Cookie\\Middleware\\EncryptCookies",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 61,
+                "text": "     * @param  \\Illuminate\\Http\\Request  $request"
+              },
+              {
+                "line_number": 62,
+                "text": "     * @param  \\Closure  $next"
+              },
+              {
+                "line_number": 63,
+                "text": "     * @return \\Symfony\\Component\\HttpFoundation\\Response"
+              },
+              {
+                "line_number": 64,
+                "text": "     */"
+              },
+              {
+                "line_number": 65,
+                "text": "    public function handle($request, Closure $next)"
+              },
+              {
+                "line_number": 66,
+                "text": "    {"
+              },
+              {
+                "line_number": 67,
+                "text": "        return $this->encrypt($next($this->decrypt($request)));"
+              },
+              {
+                "line_number": 68,
+                "text": "    }"
+              },
+              {
+                "line_number": 69,
+                "text": ""
+              },
+              {
+                "line_number": 70,
+                "text": "    /**"
+              },
+              {
+                "line_number": 71,
+                "text": "     * Decrypt the cookies on the request."
+              },
+              {
+                "line_number": 72,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 116,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "then",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 110,
+                "text": "    public function then(Closure $destination)"
+              },
+              {
+                "line_number": 111,
+                "text": "    {"
+              },
+              {
+                "line_number": 112,
+                "text": "        $pipeline = array_reduce("
+              },
+              {
+                "line_number": 113,
+                "text": "            array_reverse($this->pipes()), $this->carry(), $this->prepareDestination($destination)"
+              },
+              {
+                "line_number": 114,
+                "text": "        );"
+              },
+              {
+                "line_number": 115,
+                "text": ""
+              },
+              {
+                "line_number": 116,
+                "text": "        return $pipeline($this->passable);"
+              },
+              {
+                "line_number": 117,
+                "text": "    }"
+              },
+              {
+                "line_number": 118,
+                "text": ""
+              },
+              {
+                "line_number": 119,
+                "text": "    /**"
+              },
+              {
+                "line_number": 120,
+                "text": "     * Run the pipeline and return the result."
+              },
+              {
+                "line_number": 121,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+            "line_number": 797,
+            "class": "Illuminate\\Routing\\Router",
+            "method": "runRouteWithinStack",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 791,
+                "text": ""
+              },
+              {
+                "line_number": 792,
+                "text": "        $middleware = $shouldSkipMiddleware ? [] : $this->gatherRouteMiddleware($route);"
+              },
+              {
+                "line_number": 793,
+                "text": ""
+              },
+              {
+                "line_number": 794,
+                "text": "        return (new Pipeline($this->container))"
+              },
+              {
+                "line_number": 795,
+                "text": "                        ->send($request)"
+              },
+              {
+                "line_number": 796,
+                "text": "                        ->through($middleware)"
+              },
+              {
+                "line_number": 797,
+                "text": "                        ->then(fn ($request) => $this->prepareResponse("
+              },
+              {
+                "line_number": 798,
+                "text": "                            $request, $route->run()"
+              },
+              {
+                "line_number": 799,
+                "text": "                        ));"
+              },
+              {
+                "line_number": 800,
+                "text": "    }"
+              },
+              {
+                "line_number": 801,
+                "text": ""
+              },
+              {
+                "line_number": 802,
+                "text": "    /**"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+            "line_number": 776,
+            "class": "Illuminate\\Routing\\Router",
+            "method": "runRoute",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 770,
+                "text": "    {"
+              },
+              {
+                "line_number": 771,
+                "text": "        $request->setRouteResolver(fn () => $route);"
+              },
+              {
+                "line_number": 772,
+                "text": ""
+              },
+              {
+                "line_number": 773,
+                "text": "        $this->events->dispatch(new RouteMatched($route, $request));"
+              },
+              {
+                "line_number": 774,
+                "text": ""
+              },
+              {
+                "line_number": 775,
+                "text": "        return $this->prepareResponse($request,"
+              },
+              {
+                "line_number": 776,
+                "text": "            $this->runRouteWithinStack($route, $request)"
+              },
+              {
+                "line_number": 777,
+                "text": "        );"
+              },
+              {
+                "line_number": 778,
+                "text": "    }"
+              },
+              {
+                "line_number": 779,
+                "text": ""
+              },
+              {
+                "line_number": 780,
+                "text": "    /**"
+              },
+              {
+                "line_number": 781,
+                "text": "     * Run the given route within a Stack \"onion\" instance."
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+            "line_number": 740,
+            "class": "Illuminate\\Routing\\Router",
+            "method": "dispatchToRoute",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 734,
+                "text": "     *"
+              },
+              {
+                "line_number": 735,
+                "text": "     * @param  \\Illuminate\\Http\\Request  $request"
+              },
+              {
+                "line_number": 736,
+                "text": "     * @return \\Symfony\\Component\\HttpFoundation\\Response"
+              },
+              {
+                "line_number": 737,
+                "text": "     */"
+              },
+              {
+                "line_number": 738,
+                "text": "    public function dispatchToRoute(Request $request)"
+              },
+              {
+                "line_number": 739,
+                "text": "    {"
+              },
+              {
+                "line_number": 740,
+                "text": "        return $this->runRoute($request, $this->findRoute($request));"
+              },
+              {
+                "line_number": 741,
+                "text": "    }"
+              },
+              {
+                "line_number": 742,
+                "text": ""
+              },
+              {
+                "line_number": 743,
+                "text": "    /**"
+              },
+              {
+                "line_number": 744,
+                "text": "     * Find the route matching a given request."
+              },
+              {
+                "line_number": 745,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+            "line_number": 729,
+            "class": "Illuminate\\Routing\\Router",
+            "method": "dispatch",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 723,
+                "text": "     * @return \\Symfony\\Component\\HttpFoundation\\Response"
+              },
+              {
+                "line_number": 724,
+                "text": "     */"
+              },
+              {
+                "line_number": 725,
+                "text": "    public function dispatch(Request $request)"
+              },
+              {
+                "line_number": 726,
+                "text": "    {"
+              },
+              {
+                "line_number": 727,
+                "text": "        $this->currentRequest = $request;"
+              },
+              {
+                "line_number": 728,
+                "text": ""
+              },
+              {
+                "line_number": 729,
+                "text": "        return $this->dispatchToRoute($request);"
+              },
+              {
+                "line_number": 730,
+                "text": "    }"
+              },
+              {
+                "line_number": 731,
+                "text": ""
+              },
+              {
+                "line_number": 732,
+                "text": "    /**"
+              },
+              {
+                "line_number": 733,
+                "text": "     * Dispatch the request to a route and return the response."
+              },
+              {
+                "line_number": 734,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
+            "line_number": 190,
+            "class": "Illuminate\\Foundation\\Http\\Kernel",
+            "method": "Illuminate\\Foundation\\Http\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 184,
+                "text": "     */"
+              },
+              {
+                "line_number": 185,
+                "text": "    protected function dispatchToRouter()"
+              },
+              {
+                "line_number": 186,
+                "text": "    {"
+              },
+              {
+                "line_number": 187,
+                "text": "        return function ($request) {"
+              },
+              {
+                "line_number": 188,
+                "text": "            $this->app->instance('request', $request);"
+              },
+              {
+                "line_number": 189,
+                "text": ""
+              },
+              {
+                "line_number": 190,
+                "text": "            return $this->router->dispatch($request);"
+              },
+              {
+                "line_number": 191,
+                "text": "        };"
+              },
+              {
+                "line_number": 192,
+                "text": "    }"
+              },
+              {
+                "line_number": 193,
+                "text": ""
+              },
+              {
+                "line_number": 194,
+                "text": "    /**"
+              },
+              {
+                "line_number": 195,
+                "text": "     * Call the terminate method on any terminable middleware."
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 141,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 135,
+                "text": "     * @return \\Closure"
+              },
+              {
+                "line_number": 136,
+                "text": "     */"
+              },
+              {
+                "line_number": 137,
+                "text": "    protected function prepareDestination(Closure $destination)"
+              },
+              {
+                "line_number": 138,
+                "text": "    {"
+              },
+              {
+                "line_number": 139,
+                "text": "        return function ($passable) use ($destination) {"
+              },
+              {
+                "line_number": 140,
+                "text": "            try {"
+              },
+              {
+                "line_number": 141,
+                "text": "                return $destination($passable);"
+              },
+              {
+                "line_number": 142,
+                "text": "            } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 143,
+                "text": "                return $this->handleException($passable, $e);"
+              },
+              {
+                "line_number": 144,
+                "text": "            }"
+              },
+              {
+                "line_number": 145,
+                "text": "        };"
+              },
+              {
+                "line_number": 146,
+                "text": "    }"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/sentry/sentry-laravel/src/Sentry/Laravel/Http/SetRequestIpMiddleware.php",
+            "line_number": 45,
+            "class": "Sentry\\Laravel\\Http\\SetRequestIpMiddleware",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 37,
+                "text": "                $sentry->configureScope(static function (Scope $scope) use ($request): void {"
+              },
+              {
+                "line_number": 38,
+                "text": "                    $scope->setUser(["
+              },
+              {
+                "line_number": 39,
+                "text": "                        'ip_address' => $request->ip(),"
+              },
+              {
+                "line_number": 40,
+                "text": "                    ]);"
+              },
+              {
+                "line_number": 41,
+                "text": "                });"
+              },
+              {
+                "line_number": 42,
+                "text": "            }"
+              },
+              {
+                "line_number": 43,
+                "text": "        }"
+              },
+              {
+                "line_number": 44,
+                "text": ""
+              },
+              {
+                "line_number": 45,
+                "text": "        return $next($request);"
+              },
+              {
+                "line_number": 46,
+                "text": "    }"
+              },
+              {
+                "line_number": 47,
+                "text": "}"
+              },
+              {
+                "line_number": 48,
+                "text": ""
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/sentry/sentry-laravel/src/Sentry/Laravel/Http/SetRequestMiddleware.php",
+            "line_number": 31,
+            "class": "Sentry\\Laravel\\Http\\SetRequestMiddleware",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 25,
+                "text": ""
+              },
+              {
+                "line_number": 26,
+                "text": "            if ($psrRequest !== null) {"
+              },
+              {
+                "line_number": 27,
+                "text": "                $container->instance(LaravelRequestFetcher::CONTAINER_PSR7_INSTANCE_KEY, $psrRequest);"
+              },
+              {
+                "line_number": 28,
+                "text": "            }"
+              },
+              {
+                "line_number": 29,
+                "text": "        }"
+              },
+              {
+                "line_number": 30,
+                "text": ""
+              },
+              {
+                "line_number": 31,
+                "text": "        return $next($request);"
+              },
+              {
+                "line_number": 32,
+                "text": "    }"
+              },
+              {
+                "line_number": 33,
+                "text": ""
+              },
+              {
+                "line_number": 34,
+                "text": "    /**"
+              },
+              {
+                "line_number": 35,
+                "text": "     * This code was copied from the Laravel codebase which was introduced in Laravel 6."
+              },
+              {
+                "line_number": 36,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php",
+            "line_number": 21,
+            "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 15,
+                "text": "     * @return mixed"
+              },
+              {
+                "line_number": 16,
+                "text": "     */"
+              },
+              {
+                "line_number": 17,
+                "text": "    public function handle($request, Closure $next)"
+              },
+              {
+                "line_number": 18,
+                "text": "    {"
+              },
+              {
+                "line_number": 19,
+                "text": "        $this->clean($request);"
+              },
+              {
+                "line_number": 20,
+                "text": ""
+              },
+              {
+                "line_number": 21,
+                "text": "        return $next($request);"
+              },
+              {
+                "line_number": 22,
+                "text": "    }"
+              },
+              {
+                "line_number": 23,
+                "text": ""
+              },
+              {
+                "line_number": 24,
+                "text": "    /**"
+              },
+              {
+                "line_number": 25,
+                "text": "     * Clean the request's data."
+              },
+              {
+                "line_number": 26,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php",
+            "line_number": 31,
+            "class": "Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 25,
+                "text": "        foreach (static::$skipCallbacks as $callback) {"
+              },
+              {
+                "line_number": 26,
+                "text": "            if ($callback($request)) {"
+              },
+              {
+                "line_number": 27,
+                "text": "                return $next($request);"
+              },
+              {
+                "line_number": 28,
+                "text": "            }"
+              },
+              {
+                "line_number": 29,
+                "text": "        }"
+              },
+              {
+                "line_number": 30,
+                "text": ""
+              },
+              {
+                "line_number": 31,
+                "text": "        return parent::handle($request, $next);"
+              },
+              {
+                "line_number": 32,
+                "text": "    }"
+              },
+              {
+                "line_number": 33,
+                "text": ""
+              },
+              {
+                "line_number": 34,
+                "text": "    /**"
+              },
+              {
+                "line_number": 35,
+                "text": "     * Transform the given value."
+              },
+              {
+                "line_number": 36,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php",
+            "line_number": 21,
+            "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 15,
+                "text": "     * @return mixed"
+              },
+              {
+                "line_number": 16,
+                "text": "     */"
+              },
+              {
+                "line_number": 17,
+                "text": "    public function handle($request, Closure $next)"
+              },
+              {
+                "line_number": 18,
+                "text": "    {"
+              },
+              {
+                "line_number": 19,
+                "text": "        $this->clean($request);"
+              },
+              {
+                "line_number": 20,
+                "text": ""
+              },
+              {
+                "line_number": 21,
+                "text": "        return $next($request);"
+              },
+              {
+                "line_number": 22,
+                "text": "    }"
+              },
+              {
+                "line_number": 23,
+                "text": ""
+              },
+              {
+                "line_number": 24,
+                "text": "    /**"
+              },
+              {
+                "line_number": 25,
+                "text": "     * Clean the request's data."
+              },
+              {
+                "line_number": 26,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php",
+            "line_number": 40,
+            "class": "Illuminate\\Foundation\\Http\\Middleware\\TrimStrings",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 34,
+                "text": "        foreach (static::$skipCallbacks as $callback) {"
+              },
+              {
+                "line_number": 35,
+                "text": "            if ($callback($request)) {"
+              },
+              {
+                "line_number": 36,
+                "text": "                return $next($request);"
+              },
+              {
+                "line_number": 37,
+                "text": "            }"
+              },
+              {
+                "line_number": 38,
+                "text": "        }"
+              },
+              {
+                "line_number": 39,
+                "text": ""
+              },
+              {
+                "line_number": 40,
+                "text": "        return parent::handle($request, $next);"
+              },
+              {
+                "line_number": 41,
+                "text": "    }"
+              },
+              {
+                "line_number": 42,
+                "text": ""
+              },
+              {
+                "line_number": 43,
+                "text": "    /**"
+              },
+              {
+                "line_number": 44,
+                "text": "     * Transform the given value."
+              },
+              {
+                "line_number": 45,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ValidatePostSize.php",
+            "line_number": 27,
+            "class": "Illuminate\\Foundation\\Http\\Middleware\\ValidatePostSize",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 21,
+                "text": "        $max = $this->getPostMaxSize();"
+              },
+              {
+                "line_number": 22,
+                "text": ""
+              },
+              {
+                "line_number": 23,
+                "text": "        if ($max > 0 && $request->server('CONTENT_LENGTH') > $max) {"
+              },
+              {
+                "line_number": 24,
+                "text": "            throw new PostTooLargeException;"
+              },
+              {
+                "line_number": 25,
+                "text": "        }"
+              },
+              {
+                "line_number": 26,
+                "text": ""
+              },
+              {
+                "line_number": 27,
+                "text": "        return $next($request);"
+              },
+              {
+                "line_number": 28,
+                "text": "    }"
+              },
+              {
+                "line_number": 29,
+                "text": ""
+              },
+              {
+                "line_number": 30,
+                "text": "    /**"
+              },
+              {
+                "line_number": 31,
+                "text": "     * Determine the server 'post_max_size' as bytes."
+              },
+              {
+                "line_number": 32,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php",
+            "line_number": 86,
+            "class": "Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 80,
+                "text": "                'Service Unavailable',"
+              },
+              {
+                "line_number": 81,
+                "text": "                null,"
+              },
+              {
+                "line_number": 82,
+                "text": "                $this->getHeaders($data)"
+              },
+              {
+                "line_number": 83,
+                "text": "            );"
+              },
+              {
+                "line_number": 84,
+                "text": "        }"
+              },
+              {
+                "line_number": 85,
+                "text": ""
+              },
+              {
+                "line_number": 86,
+                "text": "        return $next($request);"
+              },
+              {
+                "line_number": 87,
+                "text": "    }"
+              },
+              {
+                "line_number": 88,
+                "text": ""
+              },
+              {
+                "line_number": 89,
+                "text": "    /**"
+              },
+              {
+                "line_number": 90,
+                "text": "     * Determine if the incoming request has a maintenance mode bypass cookie."
+              },
+              {
+                "line_number": 91,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/fruitcake/laravel-cors/src/HandleCors.php",
+            "line_number": 38,
+            "class": "Fruitcake\\Cors\\HandleCors",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 32,
+                "text": "     * @return Response"
+              },
+              {
+                "line_number": 33,
+                "text": "     */"
+              },
+              {
+                "line_number": 34,
+                "text": "    public function handle($request, Closure $next)"
+              },
+              {
+                "line_number": 35,
+                "text": "    {"
+              },
+              {
+                "line_number": 36,
+                "text": "        // Check if we're dealing with CORS and if we should handle it"
+              },
+              {
+                "line_number": 37,
+                "text": "        if (! $this->shouldRun($request)) {"
+              },
+              {
+                "line_number": 38,
+                "text": "            return $next($request);"
+              },
+              {
+                "line_number": 39,
+                "text": "        }"
+              },
+              {
+                "line_number": 40,
+                "text": ""
+              },
+              {
+                "line_number": 41,
+                "text": "        // For Preflight, return the Preflight response"
+              },
+              {
+                "line_number": 42,
+                "text": "        if ($this->cors->isPreflightRequest($request)) {"
+              },
+              {
+                "line_number": 43,
+                "text": "            $response = $this->cors->handlePreflightRequest($request);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php",
+            "line_number": 39,
+            "class": "Illuminate\\Http\\Middleware\\TrustProxies",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 33,
+                "text": "    public function handle(Request $request, Closure $next)"
+              },
+              {
+                "line_number": 34,
+                "text": "    {"
+              },
+              {
+                "line_number": 35,
+                "text": "        $request::setTrustedProxies([], $this->getTrustedHeaderNames());"
+              },
+              {
+                "line_number": 36,
+                "text": ""
+              },
+              {
+                "line_number": 37,
+                "text": "        $this->setTrustedProxyIpAddresses($request);"
+              },
+              {
+                "line_number": 38,
+                "text": ""
+              },
+              {
+                "line_number": 39,
+                "text": "        return $next($request);"
+              },
+              {
+                "line_number": 40,
+                "text": "    }"
+              },
+              {
+                "line_number": 41,
+                "text": ""
+              },
+              {
+                "line_number": 42,
+                "text": "    /**"
+              },
+              {
+                "line_number": 43,
+                "text": "     * Sets the trusted proxies on the request."
+              },
+              {
+                "line_number": 44,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/sentry/sentry-laravel/src/Sentry/Laravel/Tracing/Middleware.php",
+            "line_number": 53,
+            "class": "Sentry\\Laravel\\Tracing\\Middleware",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 47,
+                "text": "    public function handle($request, Closure $next)"
+              },
+              {
+                "line_number": 48,
+                "text": "    {"
+              },
+              {
+                "line_number": 49,
+                "text": "        if (app()->bound(HubInterface::class)) {"
+              },
+              {
+                "line_number": 50,
+                "text": "            $this->startTransaction($request, app(HubInterface::class));"
+              },
+              {
+                "line_number": 51,
+                "text": "        }"
+              },
+              {
+                "line_number": 52,
+                "text": ""
+              },
+              {
+                "line_number": 53,
+                "text": "        return $next($request);"
+              },
+              {
+                "line_number": 54,
+                "text": "    }"
+              },
+              {
+                "line_number": 55,
+                "text": ""
+              },
+              {
+                "line_number": 56,
+                "text": "    /**"
+              },
+              {
+                "line_number": 57,
+                "text": "     * Handle the application termination."
+              },
+              {
+                "line_number": 58,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 180,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "Illuminate\\Pipeline\\{closure}",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 174,
+                "text": "                        // the pipe as-is. There is no need to do any extra parsing and formatting"
+              },
+              {
+                "line_number": 175,
+                "text": "                        // since the object we're given was already a fully instantiated object."
+              },
+              {
+                "line_number": 176,
+                "text": "                        $parameters = [$passable, $stack];"
+              },
+              {
+                "line_number": 177,
+                "text": "                    }"
+              },
+              {
+                "line_number": 178,
+                "text": ""
+              },
+              {
+                "line_number": 179,
+                "text": "                    $carry = method_exists($pipe, $this->method)"
+              },
+              {
+                "line_number": 180,
+                "text": "                                    ? $pipe->{$this->method}(...$parameters)"
+              },
+              {
+                "line_number": 181,
+                "text": "                                    : $pipe(...$parameters);"
+              },
+              {
+                "line_number": 182,
+                "text": ""
+              },
+              {
+                "line_number": 183,
+                "text": "                    return $this->handleCarry($carry);"
+              },
+              {
+                "line_number": 184,
+                "text": "                } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 185,
+                "text": "                    return $this->handleException($passable, $e);"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+            "line_number": 116,
+            "class": "Illuminate\\Pipeline\\Pipeline",
+            "method": "then",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 110,
+                "text": "    public function then(Closure $destination)"
+              },
+              {
+                "line_number": 111,
+                "text": "    {"
+              },
+              {
+                "line_number": 112,
+                "text": "        $pipeline = array_reduce("
+              },
+              {
+                "line_number": 113,
+                "text": "            array_reverse($this->pipes()), $this->carry(), $this->prepareDestination($destination)"
+              },
+              {
+                "line_number": 114,
+                "text": "        );"
+              },
+              {
+                "line_number": 115,
+                "text": ""
+              },
+              {
+                "line_number": 116,
+                "text": "        return $pipeline($this->passable);"
+              },
+              {
+                "line_number": 117,
+                "text": "    }"
+              },
+              {
+                "line_number": 118,
+                "text": ""
+              },
+              {
+                "line_number": 119,
+                "text": "    /**"
+              },
+              {
+                "line_number": 120,
+                "text": "     * Run the pipeline and return the result."
+              },
+              {
+                "line_number": 121,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
+            "line_number": 165,
+            "class": "Illuminate\\Foundation\\Http\\Kernel",
+            "method": "sendRequestThroughRouter",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 159,
+                "text": ""
+              },
+              {
+                "line_number": 160,
+                "text": "        $this->bootstrap();"
+              },
+              {
+                "line_number": 161,
+                "text": ""
+              },
+              {
+                "line_number": 162,
+                "text": "        return (new Pipeline($this->app))"
+              },
+              {
+                "line_number": 163,
+                "text": "                    ->send($request)"
+              },
+              {
+                "line_number": 164,
+                "text": "                    ->through($this->app->shouldSkipMiddleware() ? [] : $this->middleware)"
+              },
+              {
+                "line_number": 165,
+                "text": "                    ->then($this->dispatchToRouter());"
+              },
+              {
+                "line_number": 166,
+                "text": "    }"
+              },
+              {
+                "line_number": 167,
+                "text": ""
+              },
+              {
+                "line_number": 168,
+                "text": "    /**"
+              },
+              {
+                "line_number": 169,
+                "text": "     * Bootstrap the application for HTTP requests."
+              },
+              {
+                "line_number": 170,
+                "text": "     *"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
+            "line_number": 134,
+            "class": "Illuminate\\Foundation\\Http\\Kernel",
+            "method": "handle",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 128,
+                "text": "    {"
+              },
+              {
+                "line_number": 129,
+                "text": "        $this->requestStartedAt = Carbon::now();"
+              },
+              {
+                "line_number": 130,
+                "text": ""
+              },
+              {
+                "line_number": 131,
+                "text": "        try {"
+              },
+              {
+                "line_number": 132,
+                "text": "            $request->enableHttpMethodParameterOverride();"
+              },
+              {
+                "line_number": 133,
+                "text": ""
+              },
+              {
+                "line_number": 134,
+                "text": "            $response = $this->sendRequestThroughRouter($request);"
+              },
+              {
+                "line_number": 135,
+                "text": "        } catch (Throwable $e) {"
+              },
+              {
+                "line_number": 136,
+                "text": "            $this->reportException($e);"
+              },
+              {
+                "line_number": 137,
+                "text": ""
+              },
+              {
+                "line_number": 138,
+                "text": "            $response = $this->renderException($request, $e);"
+              },
+              {
+                "line_number": 139,
+                "text": "        }"
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/public/index.php",
+            "line_number": 51,
+            "class": null,
+            "method": "require_once",
+            "vendor_frame": false,
+            "snippet": [
+              {
+                "line_number": 45,
+                "text": "*/"
+              },
+              {
+                "line_number": 46,
+                "text": ""
+              },
+              {
+                "line_number": 47,
+                "text": "$app = require_once __DIR__.'/../bootstrap/app.php';"
+              },
+              {
+                "line_number": 48,
+                "text": ""
+              },
+              {
+                "line_number": 49,
+                "text": "$kernel = $app->make(Kernel::class);"
+              },
+              {
+                "line_number": 50,
+                "text": ""
+              },
+              {
+                "line_number": 51,
+                "text": "$response = tap($kernel->handle("
+              },
+              {
+                "line_number": 52,
+                "text": "    $request = Request::capture()"
+              },
+              {
+                "line_number": 53,
+                "text": "))->send();"
+              },
+              {
+                "line_number": 54,
+                "text": ""
+              },
+              {
+                "line_number": 55,
+                "text": "$kernel->terminate($request, $response);"
+              },
+              {
+                "line_number": 56,
+                "text": ""
+              }
+            ]
+          },
+          {
+            "file_name": "/root/repos/buggreagtor/examples/server.php",
+            "line_number": 21,
+            "class": null,
+            "method": "[top]",
+            "vendor_frame": true,
+            "snippet": [
+              {
+                "line_number": 11,
+                "text": "    parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)"
+              },
+              {
+                "line_number": 12,
+                "text": ");"
+              },
+              {
+                "line_number": 13,
+                "text": ""
+              },
+              {
+                "line_number": 14,
+                "text": "// This file allows us to emulate Apache's \"mod_rewrite\" functionality from the"
+              },
+              {
+                "line_number": 15,
+                "text": "// built-in PHP web server. This provides a convenient way to test a Laravel"
+              },
+              {
+                "line_number": 16,
+                "text": "// application without having installed a \"real\" web server software here."
+              },
+              {
+                "line_number": 17,
+                "text": "if ($uri !== '/' && file_exists(__DIR__.'/public'.$uri)) {"
+              },
+              {
+                "line_number": 18,
+                "text": "    return false;"
+              },
+              {
+                "line_number": 19,
+                "text": "}"
+              },
+              {
+                "line_number": 20,
+                "text": ""
+              },
+              {
+                "line_number": 21,
+                "text": "require_once __DIR__.'/public/index.php';"
+              },
+              {
+                "line_number": 22,
+                "text": ""
+              }
+            ]
+          }
+        ],
+        "meta": []
+      },
+      "origin": {
+        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+        "line_number": 256,
+        "hostname": "ButschsterLpp"
+      }
+    },
+    {
+      "type": "color",
+      "content": {
+        "color": "red"
+      },
+      "origin": {
+        "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+        "line_number": 256,
+        "hostname": "ButschsterLpp"
+      }
+    }
+  ],
+  "meta": {
+    "php_version": "8.2.5",
+    "php_version_id": 80205,
+    "project_name": "",
+    "laravel_version": "9.52.4",
+    "laravel_ray_package_version": "1.32.2.0",
+    "ray_package_version": "1.36.2.0"
+  }
+}

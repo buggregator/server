@@ -30,9 +30,9 @@ final class Uuid implements \Stringable
         return $this->uuid;
     }
 
-    public static function fromString(string $aggregateRootId): self
+    public static function fromString(string $uuid): self
     {
-        return new self(\Ramsey\Uuid\Uuid::fromString($aggregateRootId));
+        return new self(\Ramsey\Uuid\Uuid::fromString($uuid));
     }
 
     public function __toString()
