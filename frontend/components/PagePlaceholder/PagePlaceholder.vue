@@ -86,7 +86,7 @@
       </li>
       <li class="page-placeholder__item">
         <IconSvg
-          name="docs"
+          name="profiler"
           class="page-placeholder__icon page-placeholder__icon--profilers"
         />
 
@@ -98,6 +98,23 @@
             class="page-placeholder__link"
           >
             {{ XHProfLinkText }}
+          </a>
+        </span>
+      </li>
+      <li class="page-placeholder__item">
+        <IconSvg
+          name="smtp"
+          class="page-placeholder__icon page-placeholder__icon--profilers"
+        />
+
+        <span>
+          SMTP URL
+          <a
+            href="https://github.com/buggregator/spiral-app#3-fake-smtp-server-for-catching-mail"
+            target="_blank"
+            class="page-placeholder__link"
+          >
+            {{ smtpLinkText }}
           </a>
         </span>
       </li>
@@ -117,21 +134,27 @@ export default defineComponent({
       return `http://sentry@${this.getHost()}/1`;
     },
     inspectorLinkText() {
-      return `http://${this.getHost()}/inspector`;
+      return `http://${this.getHost()}/api/inspector`;
     },
     varDumperLinkText() {
-      return `tcp://${this.getHost()}`;
+      return `tcp://${this.getHostName()}:9912`;
     },
     monologLinkText() {
-      return `tcp://${this.getHost()}`;
+      return `tcp://${this.getHostName()}:9913`;
     },
     XHProfLinkText() {
       return `http://${this.getHost()}/api/profiler/store`;
+    },
+    smtpLinkText() {
+      return `smtp://${this.getHostName()}:1025`;
     },
   },
   methods: {
     getHost() {
       return window?.location?.host || "localhost:3000";
+    },
+    getHostName() {
+      return window?.location?.hostname || "localhost";
     },
   },
 });
