@@ -36,6 +36,9 @@ final class StoreEventAction
 
     private function createPayload(ServerRequestInterface $request, string $uri): array
     {
+        $fullUrl = (string)$request->getUri();
+
+        $uri = \substr($fullUrl, \strpos($fullUrl, $uri));
         return [
             'received_at' => Carbon::now()->toDateTimeString(),
             'host' => $request->getHeaderLine('Host'),
@@ -45,7 +48,7 @@ final class StoreEventAction
                 'headers' => $request->getHeaders(),
                 'body' => (string)$request->getBody(),
                 'query' => $request->getQueryParams(),
-                'post' => $request->getParsedBody(),
+                'post' => $request->getParsedBody() ?? [],
                 'cookies' => $request->getCookieParams(),
                 'files' => \array_map(
                     static fn(UploadedFileInterface $file) => [

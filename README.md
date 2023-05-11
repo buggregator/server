@@ -26,6 +26,7 @@ packages required, it's effortless to use, making it a must-have tool in your de
     - [Sentry server](#4-compatible-with-sentry-reports)
     - [Monolog server](#5-monolog-server)
     - [Inspector](#6-compatible-with-inspector-reports)
+    - [HTTP Requests dump server](#7-http-requests-dump-server)
 2. [Installation](#installation)
     - [Docker image](#docker-image)
     - [Docker compose](#docker-compose)
@@ -339,6 +340,23 @@ most popular languages.
 > **Note:**
 > You can find out documentation on [official site](https://docs.inspector.dev/)
 
+## 7. HTTP Requests dump server
+
+It's an indispensable tool that simplifies the process of capturing, analyzing, and debugging HTTP requests in their
+applications. With the HTTP Requests Dump Server, developers can effortlessly capture all the relevant request data and
+gain valuable insights. They can dive deep into the captured requests, examine their contents, and pinpoint any issues
+or anomalies that might be affecting their application's performance.
+
+Simply start the server and send your requests to the http://127.0.0.1:8000/api/http-dumps/ URL, it will not only
+capture the URI segments but also gather additional details such as the request `headers`, `cookies`, `POST data`,
+`query strings`, and any `uploaded files`.
+
+For instance, let's say you have a POST request: http://127.0.0.1:8082/api/http-dumps/user/3/update. In this case,
+server will intercept the request and capture all the relevant information. It will then display the
+dumped data, allowing you to examine the request details, including the URI segments (`user/3/update` in this example).
+
+![HTTP Requests dump server](https://github.com/spiral/docs/assets/773481/209f9c8c-00d2-4086-9f54-ce2cf8121394)
+
 -----
 
 ## Technological stack
@@ -354,7 +372,7 @@ most popular languages.
 
 ### Docker image
 
-To run Buggregator using docker, you can use the docker image available 
+To run Buggregator using docker, you can use the docker image available
 on [Github Packages](https://github.com/buggregator/spiral-app/pkgs/container/server)
 
 **Latest stable release**
@@ -393,20 +411,20 @@ docker run --pull always -p 9912:9912 ghcr.io/buggregator/server:latest
 
 ### Using buggregator with docker compose
 
-You can also use Buggregator with Docker Compose. Add the following service definition to 
+You can also use Buggregator with Docker Compose. Add the following service definition to
 your `docker-compose.yml` file:
 
 ```yaml
 services:
-  # ...
+    # ...
 
-  buggregator:
-    image: ghcr.io/buggregator/server:dev
-    ports:
-      - 8000:8000
-      - 1025:1025
-      - 9912:9912
-      - 9913:9913
+    buggregator:
+        image: ghcr.io/buggregator/server:dev
+        ports:
+            - 8000:8000
+            - 1025:1025
+            - 9912:9912
+            - 9913:9913
 ```
 
 After that, you can open http://127.0.0.1:8000 in your browser and start collecting dumps from your application.
@@ -417,8 +435,8 @@ Enjoy!
 
 # Contributing
 
-Contributing to open source projects like Buggregator can be a rewarding experience, and we welcome contributions from 
-the community. There are several [issues](https://github.com/buggregator/spiral-app/issues) in this repo with unresolved 
+Contributing to open source projects like Buggregator can be a rewarding experience, and we welcome contributions from
+the community. There are several [issues](https://github.com/buggregator/spiral-app/issues) in this repo with unresolved
 issues, and it would be great if you help a community solving them.
 
 **We appreciate any contributions to help make Buggregator better!***

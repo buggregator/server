@@ -17,6 +17,10 @@
         <IconSvg class="layout-sidebar__link-icon" name="smtp" />
       </NuxtLink>
 
+      <NuxtLink to="/http-dumps" title="Http dumps" class="layout-sidebar__link">
+        <IconSvg class="layout-sidebar__link-icon" name="http-dumps" />
+      </NuxtLink>
+
       <NuxtLink
         to="/inspector"
         title="Inspector logs"

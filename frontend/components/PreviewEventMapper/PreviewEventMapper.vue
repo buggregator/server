@@ -8,6 +8,7 @@ import {
   SMTP,
   Profiler,
   Inspector,
+  HttpDump,
 } from "~/config/types";
 import { EVENT_TYPES } from "~/config/constants";
 import {
@@ -17,6 +18,7 @@ import {
   normalizeSentryEvent,
   normalizeInspectorEvent,
   normalizeProfilerEvent,
+  normalizeHttpDumpEvent,
   normalizeFallbackEvent,
 } from "~/utils/normalize-event";
 import MonologPreview from "~/components/MonologPreview/MonologPreview.vue";
@@ -26,13 +28,14 @@ import SmtpPreview from "~/components/SmtpPreview/SmtpPreview.vue";
 import ProfilerPreview from "~/components/ProfilerPreview/ProfilerPreview.vue";
 import InspectorPreview from "~/components/InspectorPreview/InspectorPreview.vue";
 import PreviewFallback from "~/components/PreviewFallback/PreviewFallback.vue";
+import HttpDumpPreview from "~/components/HttpDumpPreview/HttpDumpPreview.vue";
 
 export default defineComponent({
   props: {
     event: {
       type: Object as PropType<
         ServerEvent<
-          Monolog | SMTP | Sentry | VarDump | Profiler | Inspector | unknown
+          Monolog | SMTP | Sentry | VarDump | Profiler | Inspector | HttpDump | unknown
         >
       >,
       required: true,
@@ -52,6 +55,8 @@ export default defineComponent({
         h(ProfilerPreview, { event: normalizeProfilerEvent(event) }),
       [EVENT_TYPES.INSPECTOR]: (event: ServerEvent<Inspector>) =>
         h(InspectorPreview, { event: normalizeInspectorEvent(event) }),
+      [EVENT_TYPES.HTTP_DUMP]: (event: ServerEvent<HttpDump>) =>
+        h(HttpDumpPreview, { event: normalizeHttpDumpEvent(event) }),
     };
 
     if (Object.values(EVENT_TYPES).includes(this.event.type)) {
