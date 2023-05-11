@@ -19,15 +19,15 @@ final class StoreEventAction
     ) {
     }
 
-    #[Route(route: 'httpdump[/<uri:.*>]', name: 'httpdump.event.store', group: 'api', priority: 100)]
+    #[Route(route: 'http-dumps[/<uri:.*>]', name: 'http-dumps.event.store', group: 'api', priority: 100)]
     public function __invoke(
         ServerRequestInterface $request,
         CommandBusInterface $commands,
         string $uri = '/',
     ): void {
-        $event = $this->handler->handle(
-            $this->createPayload($request, $uri)
-        );
+        $payload = $this->createPayload($request, $uri);
+
+        $event = $this->handler->handle($payload);
 
         $commands->dispatch(
             new HandleReceivedEvent(type: 'httpdump', payload: $event)
@@ -38,6 +38,7 @@ final class StoreEventAction
     {
         return [
             'received_at' => Carbon::now()->toDateTimeString(),
+            'host' => $request->getHeaderLine('Host'),
             'request' => [
                 'method' => $request->getMethod(),
                 'uri' => $uri,
@@ -45,8 +46,6 @@ final class StoreEventAction
                 'body' => (string)$request->getBody(),
                 'query' => $request->getQueryParams(),
                 'post' => $request->getParsedBody(),
-                'attributes' => $request->getAttributes(),
-                'server' => $request->getServerParams(),
                 'cookies' => $request->getCookieParams(),
                 'files' => \array_map(
                     static fn(UploadedFileInterface $file) => [

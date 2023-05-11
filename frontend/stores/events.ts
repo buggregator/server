@@ -12,7 +12,8 @@ export const useEventStore = defineStore('useEventStore', {
     sentryEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.SENTRY),
     inspectorEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.INSPECTOR),
     profilerEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.PROFILER),
-    smtpEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.SMTP)
+    smtpEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.SMTP),
+    httpDumpEvents: (state) => state.events.filter(({ type }) => type === EVENT_TYPES.HTTP_DUMP)
   },
   actions: {
     removeEventById(eventUuid: EventId) {

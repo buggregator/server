@@ -6,7 +6,7 @@ namespace Modules\Sentry;
 
 use Psr\Container\ContainerInterface;
 
-class EventHandler implements Application\EventHandlerInterface
+final class EventHandler implements Application\EventHandlerInterface
 {
     /**
      * @param class-string<\Modules\Sentry\Application\EventHandlerInterface>[] $handlers
