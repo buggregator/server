@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Modules\Sentry;
+namespace Modules\HttpDumps;
 
+use Modules\HttpDumps\Application;
 use Psr\Container\ContainerInterface;
 
 final class EventHandler implements Application\EventHandlerInterface
