@@ -1,20 +1,20 @@
 import {Meta, Story} from "@storybook/vue3";
-import SmtpAttachment from '~/components/SmtpAttachment/SmtpAttachment.vue';
+import Attachment from '~/components/Attachment/Attachment.vue';
 
 export default {
-  title: "Components/SmtpAttachment",
-  component: SmtpAttachment
-} as Meta<typeof SmtpAttachment>;
+  title: "Components/Attachment",
+  component: Attachment
+} as Meta<typeof Attachment>;
 
 const Template: Story = (args) => ({
-  components: {SmtpAttachment},
+  components: {Attachment},
   setup() {
     return {
       args,
     };
   },
   template: `
-    <SmtpAttachment v-bind="args"/>`,
+    <Attachment v-bind="args"/>`,
 });
 
 export const Default = Template.bind({});

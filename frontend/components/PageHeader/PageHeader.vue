@@ -1,6 +1,6 @@
 <template>
   <header class="page-header">
-    <div class="page-header__title"><slot />&nbsp;</div>
+    <div class="page-header__title"><slot />&nbsp</div>
 
     <button
       v-if="buttonTitle"
@@ -41,7 +41,7 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .page-header {
-  @apply p-3 flex justify-between border-b border-gray-600 text-2xl font-bold;
+  @apply p-3 flex justify-between border-b border-gray-200 dark:border-gray-700;
 }
 
 .page-header__title {

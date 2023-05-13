@@ -11,12 +11,18 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\Router\Annotation\Route;
+use Spiral\Storage\BucketInterface;
+use Spiral\Storage\StorageInterface;
 
 final class StoreEventAction
 {
+    private readonly BucketInterface $bucket;
+
     public function __construct(
-        private readonly EventHandlerInterface $handler
+        private readonly EventHandlerInterface $handler,
+        StorageInterface $storage,
     ) {
+        $this->bucket = $storage->bucket('attachments');
     }
 
     #[Route(route: 'http-dumps[/<uri:.*>]', name: 'http-dumps.event.store', group: 'api', priority: 100)]
@@ -30,7 +36,7 @@ final class StoreEventAction
         $event = $this->handler->handle($payload);
 
         $commands->dispatch(
-            new HandleReceivedEvent(type: 'httpdump', payload: $event)
+            new HandleReceivedEvent(type: 'http-dump', payload: $event)
         );
     }
 
@@ -39,6 +45,9 @@ final class StoreEventAction
         $fullUrl = (string)$request->getUri();
 
         $uri = \substr($fullUrl, \strpos($fullUrl, $uri));
+        $id = \md5(Carbon::now()->toDateTimeString());
+
+
         return [
             'received_at' => Carbon::now()->toDateTimeString(),
             'host' => $request->getHeaderLine('Host'),
@@ -51,11 +60,20 @@ final class StoreEventAction
                 'post' => $request->getParsedBody() ?? [],
                 'cookies' => $request->getCookieParams(),
                 'files' => \array_map(
-                    static fn(UploadedFileInterface $file) => [
-                        'originalName' => $file->getClientFilename(),
-                        'mime' => $file->getClientMediaType(),
-                        'size' => $file->getSize(),
-                    ],
+                    function (UploadedFileInterface $attachment) use ($id) {
+                        $file = $this->bucket->write(
+                            $filename = $id . '/' . $attachment->getClientFilename(),
+                            $attachment->getStream()
+                        );
+
+                        return [
+                            'id' => \md5($filename),
+                            'name' => $attachment->getClientFilename(),
+                            'uri' => $filename,
+                            'size' => $attachment->getSize(),
+                            'mime' => $attachment->getClientMediaType(),
+                        ];
+                    },
                     $request->getUploadedFiles()
                 ),
             ]

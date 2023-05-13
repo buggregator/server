@@ -6,6 +6,7 @@ import smtpEventMock from '~/mocks/smtp-welcome.json'
 import varDumpEventMock from '~/mocks/var-dump-object.json'
 import profilerEventMock from '~/mocks/profiler.json'
 import inspectorEventMock from '~/mocks/inspector.json'
+import httpDumpEventMock from '~/mocks/http-dump.json'
 
 export default {
   title: "Preview/PreviewEventMapper",
@@ -64,6 +65,13 @@ Inspector.args = {
   event: inspectorEventMock,
 };
 
+export const HttpDump = Template.bind({});
+
+HttpDump.args = {
+  event: httpDumpEventMock,
+};
+
+
 
 
 const TemplateList: Story = (args) => ({
@@ -72,7 +80,7 @@ const TemplateList: Story = (args) => ({
 
     return {
       args,
-      eventsList: [monologEventMock,sentryEventMock,smtpEventMock,varDumpEventMock,profilerEventMock,inspectorEventMock, { ...smtpEventMock, type: 'unknown' }]
+      eventsList: [monologEventMock,sentryEventMock,smtpEventMock,varDumpEventMock,profilerEventMock,inspectorEventMock,httpDumpEventMock]
     };
   },
   template: `<PreviewEventMapper class="border-b" v-for="event in eventsList" :event="event" :key="event.uuid"/>`,
