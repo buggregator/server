@@ -65,7 +65,7 @@ export default defineComponent({
 
 .events-page__events {
   @include border-style;
-  @apply flex flex-col divide-y divide--gray-200 dark:divide--gray-700;
+  @apply flex flex-col divide-y divide-y-2 divide-gray-200 dark:divide-gray-600;
 }
 
 .events-page__event {

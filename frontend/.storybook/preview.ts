@@ -1,11 +1,11 @@
-import { createPinia } from 'pinia';
-import { app } from '@storybook/vue3';
+import {createPinia} from 'pinia';
+import {addParameters, app} from '@storybook/vue3';
 import "../assets/index.css";
 import "../assets/index";
 import SfdumpWrap from "../vendor/dumper";
 
-export const parameters = {
-  actions: { argTypesRegex: "^on[A-Z].*" },
+addParameters({
+  actions: {argTypesRegex: "^on[A-Z].*"},
   controls: {
     matchers: {
       color: /(background|color)$/i,
@@ -15,21 +15,21 @@ export const parameters = {
   themes: {
     clearable: false,
     target: 'html',
+    default: 'dark',
     list: [
       {
-        name: 'Light',
+        name: 'light',
         class: [],
         color: '#ffffff',
-        default: true,
       },
       {
-        name: 'Dark',
+        name: 'dark',
         class: ['dark'],
-        color: '#000000'
+        color: '#333333'
       }
     ]
   }
-};
+})
 
 
 const pinia = createPinia();
@@ -37,6 +37,8 @@ const pinia = createPinia();
 app.use(pinia);
 
 declare global {
-  interface Window { Sfdump: (id: string) => void; }
+  interface Window {
+    Sfdump: (id: string) => void;
+  }
 }
 window.Sfdump = SfdumpWrap(window.document)

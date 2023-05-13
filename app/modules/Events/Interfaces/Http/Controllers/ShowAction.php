@@ -11,7 +11,7 @@ use Spiral\Cqrs\QueryBusInterface;
 use Spiral\Http\Exception\ClientException\NotFoundException;
 use Spiral\Router\Annotation\Route;
 
-class ShowAction
+final class ShowAction
 {
     #[Route(route: 'event/<uuid>', name: 'event.show', methods: 'GET', group: 'api')]
     public function __invoke(QueryBusInterface $bus, Uuid $uuid): EventResource

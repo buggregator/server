@@ -1,0 +1,30 @@
+{
+  "uuid": "da076402-6f98-4ada-bae2-d77d405cf427",
+  "type": "ray",
+  "payload": {
+    "uuid": "1f2cfff3-f7af-4fcf-b3dd-de9df1504af8",
+    "payloads": [
+      {
+        "type": "notify",
+        "content": {
+          "value": "This is my notification"
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 241,
+          "hostname": "ButschsterLpp"
+        }
+      }
+    ],
+    "meta": {
+      "php_version": "8.2.5",
+      "php_version_id": 80205,
+      "project_name": "",
+      "laravel_version": "9.52.4",
+      "laravel_ray_package_version": "1.32.2.0",
+      "ray_package_version": "1.36.2.0"
+    }
+  },
+  "timestamp": 1673266869,
+  "project_id": null
+}

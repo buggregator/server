@@ -66,13 +66,9 @@ Inspector.args = {
 };
 
 export const HttpDump = Template.bind({});
-
 HttpDump.args = {
   event: httpDumpEventMock,
 };
-
-
-
 
 const TemplateList: Story = (args) => ({
   components: { PreviewEventMapper },

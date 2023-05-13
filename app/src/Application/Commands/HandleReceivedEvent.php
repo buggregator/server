@@ -16,8 +16,9 @@ final class HandleReceivedEvent implements CommandInterface, \JsonSerializable
         public readonly string $type,
         public readonly array $payload,
         public readonly ?string $project = null,
+        ?Uuid $uuid = null
     ) {
-        $this->uuid = Uuid::generate();
+        $this->uuid = $uuid ?? Uuid::generate();
         $this->timestamp = time();
     }
 

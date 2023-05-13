@@ -1,0 +1,35 @@
+{
+  "uuid": "da076402-6f98-4ada-bae2-d77d405cf427",
+  "type": "ray",
+  "payload": {
+    "uuid": "ccb824a5-dc6c-4370-9c2c-298b0c22d36a",
+    "payloads": [
+      {
+        "type": "measure",
+        "content": {
+          "name": "default",
+          "is_new_timer": false,
+          "total_time": 3018,
+          "max_memory_usage_during_total_time": 2097152,
+          "time_since_last_call": 2007.9,
+          "max_memory_usage_since_last_call": 2097152
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayCommon.php",
+          "line_number": 158,
+          "hostname": "ButschsterLpp"
+        }
+      }
+    ],
+    "meta": {
+      "php_version": "8.2.5",
+      "php_version_id": 80205,
+      "project_name": "",
+      "laravel_version": "9.52.4",
+      "laravel_ray_package_version": "1.32.2.0",
+      "ray_package_version": "1.36.2.0"
+    }
+  },
+  "timestamp": 1673266869,
+  "project_id": null
+}

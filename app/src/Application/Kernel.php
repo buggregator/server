@@ -8,6 +8,7 @@ use App\Application\Bootloader\AppBootloader;
 use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
 use Modules\Profiler\Application\ProfilerBootloader;
+use Modules\Ray\Application\RayBootloader;
 use Modules\HttpDumps\Application\HttpDumpsBootloader;
 use Modules\Sentry\Application\SentryBootloader;
 use Spiral\Boot\Bootloader\CoreBootloader;
@@ -95,6 +96,7 @@ class Kernel extends \Spiral\Framework\Kernel
         return [
             AppBootloader::class,
             SentryBootloader::class,
+            RayBootloader::class,
             HttpDumpsBootloader::class,
             ProfilerBootloader::class,
             MongoDBBootloader::class,
