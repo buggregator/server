@@ -1,5 +1,5 @@
 <template>
-  <a :href="downloadUrl" target="_blank" class="smtp-attachment">
+  <a :href="downloadUrl" target="_blank" class="attachment">
     <svg
       xmlns="http://www.w3.org/2000/svg"
       fill="currentColor"
@@ -11,18 +11,18 @@
         d="M 7 2 L 7 48 L 43 48 L 43 14.59375 L 42.71875 14.28125 L 30.71875 2.28125 L 30.40625 2 Z M 9 4 L 29 4 L 29 16 L 41 16 L 41 46 L 9 46 Z M 31 5.4375 L 39.5625 14 L 31 14 Z"
       />
     </svg>
-    <div class="smtp-attachment--meta">
-      <div class="smtp-attachment--name">
+    <div class="attachment--meta">
+      <div class="attachment--name">
         {{ attachment.name }}
       </div>
-      <div class="smtp-attachment--size">({{ size }})</div>
+      <div class="attachment--size">({{ size }})</div>
     </div>
   </a>
 </template>
 
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
-import { NormalizedEvent, SmtpAttachment } from "~/config/types";
+import { NormalizedEvent, Attachment } from "~/config/types";
 import { REST_API_URL } from "~/utils/events-transport";
 import { humanFileSize } from "~/utils/formats";
 
@@ -33,7 +33,7 @@ export default defineComponent({
       required: true,
     },
     attachment: {
-      type: Object as PropType<SmtpAttachment>,
+      type: Object as PropType<Attachment>,
       required: true,
     },
   },
@@ -51,7 +51,7 @@ export default defineComponent({
 <style lang="scss" scoped>
 @import "assets/mixins";
 
-.smtp-attachment {
+.attachment {
   @apply border border-gray-300 px-3 py-2 flex items-center;
 
   > svg {
@@ -59,15 +59,15 @@ export default defineComponent({
   }
 }
 
-.smtp-attachment--meta {
+.attachment--meta {
   @apple flex flex-col justify-start;
 }
 
-.smtp-attachment--name {
+.attachment--name {
   @apply font-bold text-xs;
 }
 
-.smtp-attachment--size {
+.attachment--size {
   @apply text-xs;
 }
 </style>

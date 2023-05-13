@@ -1,6 +1,6 @@
 <template>
   <div class="event-table-row">
-    <div v-if="title !== null" class="event-table-row__cell-name">
+    <div v-if="hasTitle" class="event-table-row__cell-name">
       <span v-html="title"></span>
     </div>
     <div class="event-table-row__cell-value">
@@ -17,6 +17,11 @@ export default defineComponent({
     title: {
       type: String,
       required: true,
+    },
+  },
+  computed: {
+    hasTitle(): boolean {
+      return this.title !== null;
     },
   },
 });

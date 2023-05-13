@@ -1,7 +1,7 @@
 <template>
   <PreviewCard class="http-dumps-preview" :event="event">
     <NuxtLink tag="div" :to="eventLink" class="http-dumps-preview__link">
-      <strong>{{ event.payload.request.method }}</strong>: <code>{{ uri }}</code>
+      <span class="title-method">{{ event.payload.request.method }}</span>: <span class="title-uri">/{{ uri }}</span>
     </NuxtLink>
   </PreviewCard>
 </template>
@@ -41,5 +41,13 @@ export default defineComponent({
 
 .http-dumps-preview__link {
   @apply cursor-pointer flex-grow p-3 bg-gray-200 dark:bg-gray-800;
+}
+
+.title-method {
+  @apply font-mono;
+}
+
+.title-uri {
+  @apply font-mono font-bold;
 }
 </style>

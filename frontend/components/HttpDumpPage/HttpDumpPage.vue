@@ -1,12 +1,12 @@
 <template>
   <div ref="main" class="http-dump-page">
     <main class="http-dump-page__main">
-      <h2 class="text-2xl">
-        <strong>{{ event.payload.request.method }}</strong>: <code>{{ uri }}</code>
+      <h2 class="http-dump-page__title">
+        <span class="title-method">{{ event.payload.request.method }}</span>: <span class="title-uri">/{{ uri }}</span>
       </h2>
 
-      <section v-if="hasHeaders">
-        <h1 class="mb-3 text-xl font-bold">Headers</h1>
+      <section v-if="hasHeaders" class="section-container">
+        <h1>Headers</h1>
         <EventTable>
           <EventTableRow :title="title" v-for="(value, title) in event.payload.request.headers">
             {{ value[0] || value }}
@@ -14,8 +14,8 @@
         </EventTable>
       </section>
 
-      <section v-if="hasCookies">
-        <h1 class="mb-3 text-xl font-bold">Cookie</h1>
+      <section v-if="hasCookies" class="section-container">
+        <h1>Cookie</h1>
         <EventTable>
           <EventTableRow :title="title" v-for="(value, title) in event.payload.request.cookies">
             {{ value }}
@@ -23,8 +23,8 @@
         </EventTable>
       </section>
 
-      <section v-if="hasQuery">
-        <h1 class="mb-3 text-xl font-bold">Query Parameters</h1>
+      <section v-if="hasQuery" class="section-container">
+        <h1>Query Parameters</h1>
         <EventTable>
           <EventTableRow :title="title" v-for="(value, title) in event.payload.request.query">
             {{ value }}
@@ -32,8 +32,8 @@
         </EventTable>
       </section>
 
-      <section v-if="hasPostData">
-        <h1 class="mb-3 text-xl font-bold">POST Data</h1>
+      <section v-if="hasPostData" class="section-container">
+        <h1>POST Data</h1>
         <EventTable>
           <EventTableRow :title="title" v-for="(value, title) in event.payload.request.post">
             {{ value }}
@@ -41,8 +41,23 @@
         </EventTable>
       </section>
 
-      <section v-if="hasBody">
-        <h1 class="mb-3 text-xl font-bold">Request Body</h1>
+      <section v-if="hasAttachments" class="section-container">
+        <h1>
+          Attachments ({{ event.payload.request.files.length }})
+        </h1>
+
+        <div class="attachments">
+          <Attachment
+            v-for="a in event.payload.request.files"
+            :key="a.id"
+            :event="event"
+            :attachment="a"
+          />
+        </div>
+      </section>
+
+      <section v-if="hasBody" class="section-container">
+        <h1>Request Body</h1>
         <code class="border p-3 block">
           {{ event.payload.request.body }}
         </code>
@@ -56,11 +71,13 @@ import {defineComponent, PropType} from "vue";
 import {NormalizedEvent} from "~/config/types";
 import EventTable from "~/components/EventTable/EventTable.vue";
 import EventTableRow from "~/components/EventTableRow/EventTableRow.vue";
+import Attachment from "~/components/Attachment/Attachment.vue";
 
 export default defineComponent({
   components: {
     EventTable,
-    EventTableRow
+    EventTableRow,
+    Attachment,
   },
   props: {
     event: {
@@ -94,6 +111,10 @@ export default defineComponent({
     hasBody(): boolean {
       return this.event.payload.request.body && this.event.payload.request.body.length > 0;
     },
+
+    hasAttachments(): boolean {
+      return Object.keys(this.event.payload.request.files).length > 0;
+    },
   },
 });
 </script>
@@ -106,7 +127,31 @@ export default defineComponent({
 }
 
 .http-dump-page__main {
-  @apply flex-1 flex flex-col h-full gap-y-5 py-5 px-4 md:px-6 lg:px-8;
+  @apply flex-1 flex flex-col h-full gap-y-10 py-5 px-4 md:px-6 lg:px-8;
+}
+
+.http-dump-page__title {
+  @apply text-2xl;
+}
+
+.title-method {
+  @apply font-mono;
+}
+
+.title-uri {
+  @apply font-mono font-bold;
+}
+
+.section-container {
+  @apply flex-1;
+}
+
+.section-container h1 {
+  @apply mb-3 text-xl font-bold;
+}
+
+.attachments {
+  @apply flex gap-x-3;
 }
 
 </style>
