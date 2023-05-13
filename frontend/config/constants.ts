@@ -5,7 +5,8 @@ export const EVENT_TYPES = {
   PROFILER: "profiler",
   MONOLOG: "monolog",
   INSPECTOR: "inspector",
-  RAY_DUMP: "ray",
+  HTTP_DUMP: "http-dump",
+  RAY: "ray",
 };
 
 export const RAY_EVENT_TYPES = {

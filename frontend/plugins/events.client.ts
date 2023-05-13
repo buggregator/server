@@ -1,8 +1,8 @@
-import { apiTransport } from '~/utils/events-transport'
-import { useEventStore } from "~/stores/events";
-import { EventId, OneOfValues, ServerEvent } from "~/config/types";
-import { EVENT_TYPES } from "~/config/constants";
-import { storeToRefs } from "pinia";
+import {apiTransport} from '~/utils/events-transport'
+import {useEventStore} from "~/stores/events";
+import {EventId, OneOfValues, ServerEvent} from "~/config/types";
+import {EVENT_TYPES} from "~/config/constants";
+import {storeToRefs} from "pinia";
 
 export default defineNuxtPlugin(() => {
   const eventsStore = useEventStore();
@@ -40,7 +40,7 @@ export default defineNuxtPlugin(() => {
     })
   }
 
-  const { events, sentryEvents, inspectorEvents, profilerEvents, smtpEvents, rayEvents, varDumpEvents } = storeToRefs(eventsStore)
+  const {events, sentryEvents, inspectorEvents, profilerEvents, smtpEvents, rayEvents, httpDumpEvents} = storeToRefs(eventsStore)
 
   const itemsGroupByType = {
     [EVENT_TYPES.SENTRY]: sentryEvents,
@@ -49,6 +49,7 @@ export default defineNuxtPlugin(() => {
     [EVENT_TYPES.SMTP]: smtpEvents,
     [EVENT_TYPES.RAY_DUMP]: rayEvents,
     [EVENT_TYPES.VAR_DUMP]: varDumpEvents,
+    [EVENT_TYPES.HTTP_DUMP]: httpDumpEvents,
   }
 
   return {

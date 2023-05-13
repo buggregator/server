@@ -1,0 +1,70 @@
+{
+  "uuid": "84bac285-1b15-4942-9ec9-b97845b68006",
+  "type": "http-dump",
+  "payload": {
+    "received_at": "2023-05-11 20:56:31",
+    "host": "127.0.0.1:8082",
+    "request": {
+      "method": "GET",
+      "uri": "user/3/update?sort=name&page=1",
+      "headers": {
+        "Host": [
+          "127.0.0.1:8082"
+        ],
+        "Sec-Ch-Ua-Platform": [
+          "\"Windows\""
+        ],
+        "User-Agent": [
+          "Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/112.0.0.0 Safari\/537.36"
+        ],
+        "Accept-Language": [
+          "en-US,en;q=0.9,ru-RU;q=0.8,ru;q=0.7,ka;q=0.6"
+        ],
+        "Accept-Encoding": [
+          "gzip, deflate, br"
+        ],
+        "Accept": [
+          "text\/html,application\/xhtml+xml,application\/xml;q=0.9,image\/avif,image\/webp,image\/apng,*\/*;q=0.8,application\/signed-exchange;v=b3;q=0.7"
+        ]
+      },
+      "body": "{\"username\":\"Marcel\",\"password\":\"supersecret\"}",
+      "query": {
+        "page": "1",
+        "sort": "name"
+      },
+      "post": {
+        "username": "Marcel",
+        "password": "supersecret"
+      },
+      "cookies": {
+        "theme": "dark",
+        "_ga_11": "GS1.1.1683804608"
+      },
+      "files": [
+        {
+          "id": "cbdd3296-1e25-4191-9f52-0e2d7e7d6aae",
+          "name": "attachment.txt",
+          "size": 234234,
+          "mime": "text/plain",
+          "uri": "example.com/attachment.txt"
+        },
+        {
+          "id": "cbdd3296-1e25-4191-9f52-0e2d7e7d6aae",
+          "name": "photo.jpg",
+          "size": 2231234,
+          "mime": "text/plain",
+          "uri": "example.com/photo.jpg"
+        },
+        {
+          "id": "cbdd3296-1e25-4191-9f52-0e2d7e7d6aae",
+          "name": "document.pdf",
+          "size": 2436456,
+          "mime": "text/plain",
+          "uri": "example.com/document.pdf"
+        }
+      ]
+    }
+  },
+  "timestamp": 1683838591,
+  "project_id": null
+}

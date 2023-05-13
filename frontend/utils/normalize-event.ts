@@ -8,6 +8,7 @@ import {
   Sentry,
   ServerEvent,
   SMTP,
+  HttpDump,
   VarDump
 } from "~/config/types";
 import {EVENT_TYPES} from "~/config/constants";
@@ -48,6 +49,16 @@ export const normalizeProfilerEvent = (event: ServerEvent<Profiler>): Normalized
   labels: [EVENT_TYPES.PROFILER],
   origin: {name: event.payload.app_name, ...event.payload.tags},
   serverName: event.payload.hostname,
+  date: new Date(event.timestamp * 1000),
+  payload: event.payload
+})
+
+export const normalizeHttpDumpEvent = (event: ServerEvent<HttpDump>): NormalizedEvent => ({
+  id: event.uuid,
+  type: EVENT_TYPES.HTTP_DUMP,
+  labels: [EVENT_TYPES.HTTP_DUMP],
+  origin: { uri: event.payload.request.uri },
+  serverName: event.payload.host,
   date: new Date(event.timestamp * 1000),
   payload: event.payload
 })

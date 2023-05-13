@@ -47,7 +47,7 @@
             <CodeSnippet language="html" :code="event.payload.raw" />
           </Tab>
           <Tab name="Tech Info">
-            <div>
+            <section>
               <h3 class="mb-3 font-bold">Email Headers</h3>
               <EventTable>
                 <EventTableRow title="Id">
@@ -75,22 +75,22 @@
                   <SmtpPageAddresses :addresses="event.payload.reply_to" />
                 </EventTableRow>
               </EventTable>
-            </div>
+            </section>
 
-            <div v-if="attachments.length">
+            <section v-if="attachments.length">
               <h3 class="mt-3 mb-3 font-bold">
                 Attachments ({{ attachments.length }})
               </h3>
 
               <div class="flex gap-x-3">
-                <SmtpAttachment
+                <Attachment
                   v-for="a in attachments"
                   :key="a.id"
                   :event="event"
                   :attachment="a"
                 />
               </div>
-            </div>
+            </section>
           </Tab>
         </Tabs>
       </section>
@@ -108,7 +108,7 @@ import SmtpPagePreview from "~/components/SmtpPagePreview/SmtpPagePreview.vue";
 import SmtpPageAddresses from "~/components/SmtpPageAddresses/SmtpPageAddresses.vue";
 import EventTable from "~/components/EventTable/EventTable.vue";
 import EventTableRow from "~/components/EventTableRow/EventTableRow.vue";
-import SmtpAttachment from "~/components/SmtpAttachment/SmtpAttachment.vue";
+import Attachment from "~/components/Attachment/Attachment.vue";
 
 export default defineComponent({
   components: {
@@ -119,7 +119,7 @@ export default defineComponent({
     CodeSnippet,
     Tabs,
     Tab,
-    SmtpAttachment,
+    Attachment,
   },
   props: {
     event: {

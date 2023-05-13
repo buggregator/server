@@ -60,7 +60,7 @@ export default defineComponent({
 }
 
 .main-layout__sidebar-wrap {
-  @apply w-10 md:w-14 lg:w-16 flex-none border-r;
+  @apply w-10 md:w-14 lg:w-16 flex-none border-r border-gray-200 dark:border-gray-700;
 }
 
 .main-layout__content {

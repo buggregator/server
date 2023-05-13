@@ -17,6 +17,10 @@
         <IconSvg class="layout-sidebar__link-icon" name="smtp" />
       </NuxtLink>
 
+      <NuxtLink to="/http-dumps" title="Http dumps" class="layout-sidebar__link">
+        <IconSvg class="layout-sidebar__link-icon" name="http-dumps" />
+      </NuxtLink>
+
       <NuxtLink
         to="/inspector"
         title="Inspector logs"
@@ -49,7 +53,7 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .layout-sidebar {
-  @apply bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-500 flex flex-col justify-between z-50 w-full h-full;
+  @apply bg-gray-200 dark:bg-gray-800 flex flex-col justify-between z-50 w-full h-full;
 }
 
 .layout-sidebar__nav {

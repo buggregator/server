@@ -9,17 +9,20 @@ use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
 use Modules\Profiler\Application\ProfilerBootloader;
 use Modules\Ray\Application\RayBootloader;
+use Modules\HttpDumps\Application\HttpDumpsBootloader;
 use Modules\Sentry\Application\SentryBootloader;
 use Spiral\Boot\Bootloader\CoreBootloader;
 use Spiral\Bootloader as Framework;
 use Spiral\Cqrs\Bootloader\CqrsBootloader;
 use Spiral\Cycle\Bootloader as CycleBridge;
+use Spiral\Distribution\Bootloader\DistributionBootloader;
 use Spiral\DotEnv\Bootloader\DotenvBootloader;
 use Spiral\Events\Bootloader\EventsBootloader;
 use Spiral\League\Event\Bootloader\EventBootloader;
 use Spiral\Monolog\Bootloader\MonologBootloader;
 use Spiral\Nyholm\Bootloader\NyholmBootloader;
 use Spiral\RoadRunnerBridge\Bootloader as RoadRunnerBridge;
+use Spiral\Storage\Bootloader\StorageBootloader;
 use Spiral\Tokenizer\Bootloader\TokenizerListenerBootloader;
 use Spiral\Validation\Bootloader\ValidationBootloader;
 use Spiral\Validator\Bootloader\ValidatorBootloader;
@@ -83,8 +86,8 @@ class Kernel extends \Spiral\Framework\Kernel
             // Configure route groups, middleware for route groups
             Bootloader\RoutesBootloader::class,
 
-            \Spiral\Storage\Bootloader\StorageBootloader::class,
-            \Spiral\Distribution\Bootloader\DistributionBootloader::class,
+            StorageBootloader::class,
+            DistributionBootloader::class,
         ];
     }
 
@@ -94,6 +97,7 @@ class Kernel extends \Spiral\Framework\Kernel
             AppBootloader::class,
             SentryBootloader::class,
             RayBootloader::class,
+            HttpDumpsBootloader::class,
             ProfilerBootloader::class,
             MongoDBBootloader::class,
             PersistenceBootloader::class,
