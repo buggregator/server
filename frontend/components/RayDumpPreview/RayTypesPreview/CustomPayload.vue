@@ -1,16 +1,16 @@
 <template>
-  <div class="ray-type-log">
+  <div class="ray-type-custom">
     <ValueDump v-if="!isEmptyValue" :value="eventValue" />
   </div>
 </template>
 
 <script lang="ts">
-import {defineComponent, PropType} from "vue";
-import {RayPayload} from "~/config/types";
+import { defineComponent, PropType } from "vue";
+import { RayPayload } from "~/config/types";
 import ValueDump from "~/components/ValueDump/ValueDump.vue";
 
 export default defineComponent({
-  components: {ValueDump},
+  components: { ValueDump },
   props: {
     payload: {
       type: Object as PropType<RayPayload>,
@@ -19,10 +19,10 @@ export default defineComponent({
   },
   computed: {
     isEmptyValue() {
-      return this.eventValue == ''
+      return this.eventValue === "";
     },
     eventValue(): unknown {
-      return this.payload.content.values[0] || '';
+      return this.payload.content.content;
     },
   },
 });
@@ -30,6 +30,5 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .ray-type-log {
-
 }
 </style>

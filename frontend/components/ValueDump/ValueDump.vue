@@ -1,11 +1,6 @@
 <template>
   <div class="dump-preview">
-    <CodeSnippet
-      v-if="isBooleanValue"
-      language="php"
-      :code="value === 1"
-    />
-
+    <CodeSnippet v-if="isBooleanValue" language="php" :code="value === 1" />
     <div
       v-if="!isBooleanValue"
       class="var-dump-preview__html"
@@ -15,18 +10,18 @@
 </template>
 
 <script lang="ts">
-import {defineComponent} from "vue";
+import { defineComponent } from "vue";
 import CodeSnippet from "~/components/CodeSnippet/CodeSnippet.vue";
-import {useNuxtApp} from "#app";
+import { useNuxtApp } from "#app";
 
 export default defineComponent({
   components: {
     CodeSnippet,
   },
-  props: ['value', 'type'],
+  props: ["value", "type"],
   setup() {
     if (process.client) {
-      const {$vendors} = useNuxtApp();
+      const { $vendors } = useNuxtApp();
 
       return {
         Sfdump: $vendors.sfdump,
@@ -40,15 +35,13 @@ export default defineComponent({
   },
   computed: {
     isBooleanValue(): boolean {
-      return typeof this.value == 'boolean' || this.type === 'boolean'
+      return typeof this.value === "boolean" || this.type === "boolean";
     },
     dumpId(): string | null {
       if (!this.value) {
         return null;
       }
-      return (
-        this.value.toString().match(/(sf-dump-[0-9]+)/i)?.[0] || null
-      );
+      return this.value.toString().match(/(sf-dump-[0-9]+)/i)?.[0] || null;
     },
     dumpBody(): string | unknown {
       if (this.dumpId) {
