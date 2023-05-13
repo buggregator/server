@@ -67,7 +67,7 @@ export default defineComponent({
   display: block;
 }
 
-.dump-preview__html {
-  @apply border-gray-300 dark:border-gray-500 divide-gray-300 dark:divide-gray-500 font-mono py-2 px-2 md:px-3 lg:px-4 border bg-gray-800 text-blue-700 dark:text-white text-sm break-all text-2xs sm:text-xs md:text-sm lg:text-base;
+.var-dump-preview__html {
+  @apply border-gray-300 dark:border-gray-600 divide-gray-300 dark:divide-gray-600 font-mono py-2 px-2 md:px-3 lg:px-4 border bg-gray-900 text-white text-sm break-all text-2xs sm:text-xs md:text-sm lg:text-base;
 }
 </style>

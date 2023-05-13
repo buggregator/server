@@ -1,6 +1,6 @@
 <template>
-  <div class="ray-type-custom">
-    <ValueDump v-if="!isEmptyValue" :value="eventValue" />
+  <div class="ray-type-job">
+    <ValueDump :value="payload.content.job" />
   </div>
 </template>
 
@@ -17,19 +17,7 @@ export default defineComponent({
       required: true,
     },
   },
-  computed: {
-    isEmptyValue() {
-      return this.eventValue === "";
-    },
-    eventValue(): unknown {
-      return this.payload.content.content;
-    },
-  },
 });
 </script>
 
-<style lang="scss" scoped>
-.ray-type-custom {
-  @apply py-3;
-}
-</style>
+<style lang="scss" scoped></style>

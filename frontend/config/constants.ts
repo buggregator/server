@@ -6,23 +6,28 @@ export const EVENT_TYPES = {
   MONOLOG: "monolog",
   INSPECTOR: "inspector",
   HTTP_DUMP: "http-dump",
-  RAY: "ray",
+  RAY_DUMP: "ray",
 };
 
 export const RAY_EVENT_TYPES = {
   LOG: "log",
-  SIZE: "size",
+  //SIZE: "size",
   CUSTOM: "custom",
-  LABEL: "label",
+  //LABEL: "label",
   CALLER: "caller",
   CARBON: "carbon",
-  COLOR: "color",
+  //COLOR: "color",
   EXCEPTION: "exception",
-  HIDE: "hide",
+  //HIDE: "hide",
   MEASURE: "measure",
-  NOTIFY: "notify",
+  //NOTIFY: "notify",
   TABLE: "table",
   TRACE: "trace",
+  QUERY: "executed_query",
+  ELOQUENT: "eloquent_model",
+  VIEW: "view",
+  EVENT: "event",
+  JOB: "job_event",
 }
 
 // TODO: colors should depends on level for some tools

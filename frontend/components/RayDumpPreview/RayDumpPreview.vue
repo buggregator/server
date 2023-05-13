@@ -2,6 +2,7 @@
   <PreviewCard class="ray-dump-preview" :event="event">
     <RayDumpTypeMapper
       v-for="payload in event.payload.payload.payloads"
+      :class="classes"
       :payload="payload"
     />
   </PreviewCard>
@@ -24,9 +25,15 @@ export default defineComponent({
       required: true,
     },
   },
+  computed: {
+    classes() {
+      let classes = [];
+
+      classes.push(`text-${this.event.size}`);
+      classes.push(`text-${this.event.color}-900 dark:text-${this.event.color}-200`);
+
+      return classes
+    },
+  }
 });
 </script>
-
-<style lang="scss" scoped>
-
-</style>

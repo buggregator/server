@@ -1,4 +1,5 @@
 import {
+  HttpDump,
   Inspector,
   InspectorTransaction,
   Monolog,
@@ -8,10 +9,9 @@ import {
   Sentry,
   ServerEvent,
   SMTP,
-  HttpDump,
   VarDump
 } from "~/config/types";
-import {EVENT_TYPES} from "~/config/constants";
+import {EVENT_TYPES, RAY_EVENT_TYPES} from "~/config/constants";
 
 const normalizeObjectValue = (object: object | unknown[]): object =>
   Object.entries(object).reduce((acc: object, [key, value]) => ({
@@ -57,7 +57,7 @@ export const normalizeHttpDumpEvent = (event: ServerEvent<HttpDump>): Normalized
   id: event.uuid,
   type: EVENT_TYPES.HTTP_DUMP,
   labels: [EVENT_TYPES.HTTP_DUMP],
-  origin: { uri: event.payload.request.uri },
+  origin: {uri: event.payload.request.uri},
   serverName: event.payload.host,
   date: new Date(event.timestamp * 1000),
   payload: event.payload
@@ -120,18 +120,25 @@ export const normalizeRayDumpEvent = (event: ServerEvent<RayDump>): NormalizedEv
     .filter(payload => payload.type === 'label')
     .map(payload => payload.content.label)
 
+  const typeLabels = event.payload.payloads
+    .filter(payload => Object.values(RAY_EVENT_TYPES).includes(payload.type))
+    .map(payload => payload.type)
+
+  event.payload.payloads
+    .filter(payload => payload.type === 'size')
+
   const color = event.payload.payloads
     .filter(payload => payload.type === 'color')
-    .map(payload => payload.content.color).shift() || 'gray'
+    .map(payload => payload.content.color).shift() || 'black'
 
   const size = event.payload.payloads
     .filter(payload => payload.type === 'size')
-    .map(payload => payload.content.color).shift() || 'md'
+    .map(payload => payload.content.size).shift() || 'md'
 
   return {
     id: event.uuid,
     type: EVENT_TYPES.RAY_DUMP,
-    labels: [EVENT_TYPES.RAY_DUMP, ...labels],
+    labels: [EVENT_TYPES.RAY_DUMP, ...labels, ...typeLabels].filter((x, i, a) => a.indexOf(x) == i),
     origin: null,
     serverName: "",
     date: new Date(event.timestamp * 1000),

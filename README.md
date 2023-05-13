@@ -27,6 +27,7 @@ packages required, it's effortless to use, making it a must-have tool in your de
     - [Monolog server](#5-monolog-server)
     - [Inspector](#6-compatible-with-inspector-reports)
     - [HTTP Requests dump server](#7-http-requests-dump-server)
+    - [Spatie Ray debug tool](#8-spatie-ray-debug-tool)
 2. [Installation](#installation)
     - [Docker image](#docker-image)
     - [Docker compose](#docker-compose)
@@ -356,6 +357,79 @@ server will intercept the request and capture all the relevant information. It w
 dumped data, allowing you to examine the request details, including the URI segments (`user/3/update` in this example).
 
 ![HTTP Requests dump server](https://github.com/spiral/docs/assets/773481/209f9c8c-00d2-4086-9f54-ce2cf8121394)
+
+-----
+
+## 8. Spatie [Ray debug tool](https://github.com/spatie/ray)
+
+Buggregator is compatible with `spatie/ray` package. The Ray debug tool supports PHP, Ruby, JavaScript, TypeScript,
+NodeJS, Go and Bash applications. After installing one of the libraries, you can use the ray function to quickly dump
+stuff. Any variable(s) that you pass will be sent to the Buggregator.
+
+**Supported features**: Simple data, Labels, Caller, Trace, Counter, Class name of an object, Measure, Json, Xml,
+Carbon, File, Table, Image, Html, Text, Notifications, Phpinfo, Exception, Show queries, Count queries, Show events,
+Show jobs, Show cache, Model, Show views, Markdown, Collections, Env, Response, Request, Application log, Show Http
+client requests
+
+### Laravel settings
+
+Please make sure `ray.php` config published to the project root.
+
+You can run an artisan command to publish it in to the project root.
+
+```bash
+php artisan ray:publish-config
+```
+
+**Env variables**
+```
+RAY_HOST=127.0.0.1  # Ray server host (Current HTTP buggregator port)
+RAY_PORT=23517      # Ray server port
+```
+
+### Framework agnostic PHP
+
+In framework agnostic projects you can use this template as the ray config file.
+
+```php
+<?php
+// Save this in a file called "ray.php"
+
+return [
+    /*
+    * This settings controls whether data should be sent to Ray.
+    */
+    'enable' => true,
+
+    /*
+     *  The host used to communicate with the Ray app.
+     */
+    'host' => '127.0.0.1',
+
+    /*
+     *  The port number used to communicate with the Ray app.
+     */
+    'port' => 23517,
+
+    /*
+     *  Absolute base path for your sites or projects in Homestead, Vagrant, Docker, or another remote development server.
+     */
+    'remote_path' => null,
+
+    /*
+     *  Absolute base path for your sites or projects on your local computer where your IDE or code editor is running on.
+     */
+    'local_path' => null,
+
+    /*
+     * When this setting is enabled, the package will not try to format values sent to Ray.
+     */
+    'always_send_raw_values' => false,
+];
+```
+
+You can find out more information about installation and configuration
+on [official site](https://spatie.be/docs/ray/v1/introduction)
 
 -----
 

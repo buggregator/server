@@ -1,0 +1,34 @@
+{
+  "uuid": "da076402-6f98-4ada-bae2-d77d405cf427",
+  "type": "ray",
+  "payload": {
+    "uuid": "a2077b41-3556-40ba-96af-27f56e3093c5",
+    "payloads": [
+      {
+        "type": "table",
+        "content": {
+          "values": {
+            "Event": "<code>Missed</code>",
+            "Key": "another-key"
+          },
+          "label": "Cache"
+        },
+        "origin": {
+          "file": "/root/repos/buggreagtor/examples/app/Modules/Ray/RayLaravel.php",
+          "line_number": 66,
+          "hostname": "ButschsterLpp"
+        }
+      }
+    ],
+    "meta": {
+      "php_version": "8.2.5",
+      "php_version_id": 80205,
+      "project_name": "",
+      "laravel_version": "9.52.4",
+      "laravel_ray_package_version": "1.32.2.0",
+      "ray_package_version": "1.36.2.0"
+    }
+  },
+  "timestamp": 1673266869,
+  "project_id": null
+}

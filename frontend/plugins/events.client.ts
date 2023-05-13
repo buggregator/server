@@ -40,7 +40,7 @@ export default defineNuxtPlugin(() => {
     })
   }
 
-  const {events, sentryEvents, inspectorEvents, profilerEvents, smtpEvents, rayEvents, httpDumpEvents} = storeToRefs(eventsStore)
+  const {events, varDumpEvents, sentryEvents, inspectorEvents, profilerEvents, smtpEvents, rayEvents, httpDumpEvents} = storeToRefs(eventsStore)
 
   const itemsGroupByType = {
     [EVENT_TYPES.SENTRY]: sentryEvents,
