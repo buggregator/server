@@ -25,20 +25,4 @@ export default defineComponent({
 });
 </script>
 
-<style lang="scss" scoped>
-.dark .ray-type-caller__name {
-  --tw-text-opacity: 1;
-  color: rgba(219, 234, 254, var(--tw-text-opacity));
-}
-.ray-type-caller {
-  &__name {
-    --tw-text-opacity: 1;
-    color: rgba(96, 165, 250, var(--tw-text-opacity));
-    text-decoration: underline;
-  }
-  &__code {
-    word-break: break-all;
-    font-weight: 600;
-  }
-}
-</style>
+<style lang="scss" scoped></style>
