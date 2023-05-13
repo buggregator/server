@@ -366,6 +366,8 @@ Buggregator is compatible with `spatie/ray` package. The Ray debug tool supports
 NodeJS, Go and Bash applications. After installing one of the libraries, you can use the ray function to quickly dump
 stuff. Any variable(s) that you pass will be sent to the Buggregator.
 
+![Ray debug tool](https://github.com/buggregator/spiral-app/assets/773481/c2a84d40-fc99-4bde-b87f-ea81cc1daa17)
+
 **Supported features**: Simple data, Labels, Caller, Trace, Counter, Class name of an object, Measure, Json, Xml,
 Carbon, File, Table, Image, Html, Text, Notifications, Phpinfo, Exception, Show queries, Count queries, Show events,
 Show jobs, Show cache, Model, Show views, Markdown, Collections, Env, Response, Request, Application log, Show Http
