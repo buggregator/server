@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\ClientProxy\Interfaces\TCP;
 
-use App\Application\Commands\HandleReceivedEvent;
-use Spiral\Cqrs\CommandBusInterface;
+use Modules\VarDumper\Application\RequestHandler as VarDumperRequestHandler;
+use Psr\Log\LoggerInterface;
 use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpWorkerInterface;
 use Spiral\RoadRunnerBridge\Tcp\Response\ContinueRead;
@@ -15,24 +15,38 @@ use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
 class Service implements ServiceInterface
 {
     public function __construct(
-        private readonly CommandBusInterface $commandBus,
+        private readonly VarDumperRequestHandler $varDumper,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
     public function handle(Request $request): ResponseInterface
     {
-        dump($request);
         if ($request->event === TcpWorkerInterface::EVENT_CONNECTED) {
             return new ContinueRead();
         }
 
-        $messages = \array_filter(\explode("\n", $request->body));
+        $messages = \json_decode($request->body, true, 512, JSON_THROW_ON_ERROR);
 
         foreach ($messages as $message) {
-            //dump($message);
+            try {
+                $this->handlePayload($message);
+            } catch (\Throwable $e) {
+                $this->logger->debug($e->getMessage());
+            }
         }
 
         return new ContinueRead();
     }
 
+    /**
+     * @param array{type: string, data: string, time: string} $payload
+     */
+    private function handlePayload(array $payload): void
+    {
+        match ($payload['type']) {
+            'var-dumper' => $this->varDumper->handle($payload['data']),
+            default => throw new \RuntimeException('Unknown type of payload'),
+        };
+    }
 }
