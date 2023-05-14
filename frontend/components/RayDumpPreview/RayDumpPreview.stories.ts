@@ -18,6 +18,7 @@ import raySizeEventMock from '~/mocks/ray-size.json'
 import rayTableEventMock from '~/mocks/ray-table.json'
 import rayTextEventMock from '~/mocks/ray-text.json'
 import rayTraceEventMock from '~/mocks/ray-trace.json'
+import rayLockEventMock from '~/mocks/ray-lock.json'
 
 export default {
   title: "RayDump/RayDumpPreview/Common",
@@ -85,3 +86,6 @@ Int.args = {event: normalizeRayDumpEvent(rayIntEventMock),};
 
 export const Caller = Template.bind({});
 Caller.args = {event: normalizeRayDumpEvent(rayCallerEventMock),};
+
+export const Lock = Template.bind({});
+Lock.args = {event: normalizeRayDumpEvent(rayLockEventMock),};

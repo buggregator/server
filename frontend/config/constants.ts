@@ -28,6 +28,7 @@ export const RAY_EVENT_TYPES = {
   VIEW: "view",
   EVENT: "event",
   JOB: "job_event",
+  LOCK: "create_lock",
 }
 
 // TODO: colors should depends on level for some tools

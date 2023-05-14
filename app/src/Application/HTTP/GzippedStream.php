@@ -13,16 +13,12 @@ final class GzippedStream
     ) {
     }
 
-    public function getPayload(): array
+    public function getPayload(): \Traversable
     {
-        return \json_decode($this->stream->getContents(), true);
-    }
+        $payloads = \array_filter(\explode("\n", (string)$this->stream));
 
-    public function getEnvelopePayload(): array
-    {
-        return \array_map(
-            fn(string $line): array => \json_decode($line, true),
-            \array_filter(\explode("\n", $this->stream->getContents()))
-        );
+        foreach ($payloads as $payload) {
+            yield \json_decode($payload, true);
+        }
     }
 }

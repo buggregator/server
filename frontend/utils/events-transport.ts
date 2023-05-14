@@ -32,7 +32,7 @@ const defaultLogger = (params: LoggerParams) => {
   console.info(`[ApiConnection logger]:Centrifuge "${params[0]}" called with params: "${JSON.stringify(params[1])}"`)
 }
 
-export const apiTransport = ({ onEventReceiveCb, loggerCb = defaultLogger, }: ApiConnection) => {
+export const apiTransport = ({onEventReceiveCb, loggerCb = defaultLogger,}: ApiConnection) => {
   const centrifuge = new Centrifuge(WS_URL)
 
   centrifuge.on('connected', (ctx) => {
@@ -87,6 +87,15 @@ export const apiTransport = ({ onEventReceiveCb, loggerCb = defaultLogger, }: Ap
       return null
     })
 
+  const rayStopExecution = (hash: string) => {
+    centrifuge.rpc(`post:api/ray/locks/${hash}`, {
+      stop_execution: true
+    })
+  }
+
+  const rayContinueExecution = (hash: string) => {
+    centrifuge.rpc(`post:api/ray/locks/${hash}`)
+  }
 
   return {
     getEventsAll,
@@ -94,6 +103,8 @@ export const apiTransport = ({ onEventReceiveCb, loggerCb = defaultLogger, }: Ap
     deleteEvent,
     deleteEventsAll,
     deleteEventsByType,
+    rayStopExecution,
+    rayContinueExecution,
     makeEventUrl: (id: EventId) => `${REST_API_URL}/api/event/${id}`
   }
 }

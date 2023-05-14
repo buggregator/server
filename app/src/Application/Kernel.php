@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Application;
 
 use App\Application\Bootloader\AppBootloader;
+use App\Application\Bootloader\HttpHandlerBootloader;
 use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
+use Modules\Inspector\Application\InspectorBootloader;
 use Modules\Profiler\Application\ProfilerBootloader;
 use Modules\Ray\Application\RayBootloader;
 use Modules\HttpDumps\Application\HttpDumpsBootloader;
@@ -94,7 +96,9 @@ class Kernel extends \Spiral\Framework\Kernel
     protected function defineAppBootloaders(): array
     {
         return [
+            HttpHandlerBootloader::class,
             AppBootloader::class,
+            InspectorBootloader::class,
             SentryBootloader::class,
             RayBootloader::class,
             HttpDumpsBootloader::class,

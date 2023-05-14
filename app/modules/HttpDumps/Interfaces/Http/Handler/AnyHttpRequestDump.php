@@ -2,51 +2,55 @@
 
 declare(strict_types=1);
 
-namespace Modules\HttpDumps\Interfaces\Http\Controllers;
+namespace Modules\HttpDumps\Interfaces\Http\Handler;
 
 use App\Application\Commands\HandleReceivedEvent;
+use App\Application\Service\HttpHandler\HandlerInterface;
 use Carbon\Carbon;
 use Modules\HttpDumps\Application\EventHandlerInterface;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
 use Spiral\Cqrs\CommandBusInterface;
-use Spiral\Router\Annotation\Route;
+use Spiral\Http\ResponseWrapper;
 use Spiral\Storage\BucketInterface;
 use Spiral\Storage\StorageInterface;
 
-final class StoreEventAction
+final class AnyHttpRequestDump implements HandlerInterface
 {
     private readonly BucketInterface $bucket;
 
     public function __construct(
+        private readonly CommandBusInterface $commands,
         private readonly EventHandlerInterface $handler,
+        private readonly ResponseWrapper $responseWrapper,
         StorageInterface $storage,
     ) {
         $this->bucket = $storage->bucket('attachments');
     }
 
-    #[Route(route: 'http-dumps[/<uri:.*>]', name: 'http-dumps.event.store', group: 'api', priority: 100)]
-    public function __invoke(
-        ServerRequestInterface $request,
-        CommandBusInterface $commands,
-        string $uri = '/',
-    ): void {
-        $payload = $this->createPayload($request, $uri);
+    public function priority(): int
+    {
+        return 100_000;
+    }
+
+    public function handle(ServerRequestInterface $request, \Closure $next): ResponseInterface
+    {
+        $payload = $this->createPayload($request);
 
         $event = $this->handler->handle($payload);
 
-        $commands->dispatch(
+        $this->commands->dispatch(
             new HandleReceivedEvent(type: 'http-dump', payload: $event)
         );
+
+        return $this->responseWrapper->create(200);
     }
 
-    private function createPayload(ServerRequestInterface $request, string $uri): array
+    private function createPayload(ServerRequestInterface $request): array
     {
-        $fullUrl = (string)$request->getUri();
-
-        $uri = \substr($fullUrl, \strpos($fullUrl, $uri));
+        $uri = \ltrim($request->getUri()->getPath(), '/');
         $id = \md5(Carbon::now()->toDateTimeString());
-
 
         return [
             'received_at' => Carbon::now()->toDateTimeString(),
@@ -61,7 +65,7 @@ final class StoreEventAction
                 'cookies' => $request->getCookieParams(),
                 'files' => \array_map(
                     function (UploadedFileInterface $attachment) use ($id) {
-                        $file = $this->bucket->write(
+                        $this->bucket->write(
                             $filename = $id . '/' . $attachment->getClientFilename(),
                             $attachment->getStream()
                         );
