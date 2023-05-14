@@ -11,7 +11,7 @@ use Spiral\RoadRunnerBridge\Tcp\Response\ContinueRead;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
 use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
 
-class Service implements ServiceInterface
+final class Service implements ServiceInterface
 {
     public function __construct(
         private readonly RequestHandler $requestHandler,

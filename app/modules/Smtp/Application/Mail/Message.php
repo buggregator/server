@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Application\Mail;
 
+use App\Application\Commands\StoreAttachment;
 use JsonSerializable;
-use Spiral\Storage\BucketInterface;
+use Spiral\Cqrs\CommandBusInterface;
+use Spiral\Storage\FileInterface;
 
 final class Message implements JsonSerializable
 {
@@ -15,7 +17,7 @@ final class Message implements JsonSerializable
      * @param Attachment[] $attachments
      */
     public function __construct(
-        private readonly BucketInterface $storage,
+        private readonly CommandBusInterface $commands,
         private readonly ?string $id,
         private readonly string $raw,
         private readonly array $sender,
@@ -71,14 +73,18 @@ final class Message implements JsonSerializable
     public function storeAttachments(): self
     {
         foreach ($this->attachments as $attachment) {
-            $file = $this->storage->write(
-                $filename = $this->id . '/' . $attachment->getFilename(),
-                $attachment->getContent(),
+            /** @var FileInterface $file */
+            $file = $this->commands->dispatch(
+                new StoreAttachment(
+                    type: 'smtp',
+                    filename: $attachment->getFilename(),
+                    content: $attachment->getContent(),
+                )
             );
 
             $this->storedAttachments[$attachment->getId()] = [
                 'name' => $attachment->getFilename(),
-                'uri' => $filename,
+                'uri' => $file->getPathname(),
                 'size' => $file->getSize(),
                 'mime' => $file->getMimeType(),
                 'id' => $attachment->getId(),

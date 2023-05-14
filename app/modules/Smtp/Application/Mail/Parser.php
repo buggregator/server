@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Application\Mail;
 
-use Spiral\Storage\StorageInterface;
+use Spiral\Cqrs\CommandBusInterface;
 use ZBateson\MailMimeParser\Header\AbstractHeader;
 use ZBateson\MailMimeParser\Header\AddressHeader;
 use ZBateson\MailMimeParser\Header\Part\AddressPart;
@@ -13,7 +13,7 @@ use ZBateson\MailMimeParser\Message as ParseMessage;
 final class Parser
 {
     public function __construct(
-        private readonly StorageInterface $storage,
+        private readonly CommandBusInterface $commands,
     ) {
     }
 
@@ -48,7 +48,7 @@ final class Parser
         );
 
         return new Message(
-            $this->storage->bucket('attachments'),
+            $this->commands,
             $message->getHeader('Message - Id')->getValue(),
             $body, $from, $recipients, $ccs, $subject,
             $html, $text, $replyTo, $allRecipients, $attachments

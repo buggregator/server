@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application;
 
 use App\Application\Bootloader\AppBootloader;
+use App\Application\Bootloader\ClientProxyBootloader;
 use App\Application\Bootloader\HttpHandlerBootloader;
 use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
@@ -90,13 +91,7 @@ class Kernel extends \Spiral\Framework\Kernel
 
             StorageBootloader::class,
             DistributionBootloader::class,
-        ];
-    }
 
-    protected function defineAppBootloaders(): array
-    {
-        return [
-            HttpHandlerBootloader::class,
             AppBootloader::class,
             InspectorBootloader::class,
             SentryBootloader::class,
@@ -105,6 +100,9 @@ class Kernel extends \Spiral\Framework\Kernel
             ProfilerBootloader::class,
             MongoDBBootloader::class,
             PersistenceBootloader::class,
+
+            ClientProxyBootloader::class,
+            HttpHandlerBootloader::class,
         ];
     }
 }

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Modules\ClientProxy\Interfaces\TCP;
+namespace App\Interfaces\TCP;
 
-use Modules\VarDumper\Application\RequestHandler as VarDumperRequestHandler;
+use App\Application\Service\ClientProxy\EventHandlerRegistryInterface;
 use Psr\Log\LoggerInterface;
 use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpWorkerInterface;
@@ -12,10 +12,10 @@ use Spiral\RoadRunnerBridge\Tcp\Response\ContinueRead;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
 use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
 
-class Service implements ServiceInterface
+final class ClientProxyService implements ServiceInterface
 {
     public function __construct(
-        private readonly VarDumperRequestHandler $varDumper,
+        private readonly EventHandlerRegistryInterface $handlerRegistry,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -44,9 +44,6 @@ class Service implements ServiceInterface
      */
     private function handlePayload(array $payload): void
     {
-        match ($payload['type']) {
-            'var-dumper' => $this->varDumper->handle($payload['data']),
-            default => throw new \RuntimeException('Unknown type of payload'),
-        };
+        $this->handlerRegistry->handle($payload['type'], $payload['data']);
     }
 }

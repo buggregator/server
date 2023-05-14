@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use App\Application\TCP\ExceptionHandlerInterceptor;
-use Modules\VarDumper\Interfaces\TCP\Service as VarDumperService;
+use App\Interfaces\TCP\ClientProxyService as ClientProxyService;
 use Modules\Monolog\Interfaces\TCP\Service as MonologService;
 use Modules\Smtp\Interfaces\TCP\Service as SmtpService;
-use Modules\ClientProxy\Interfaces\TCP\Service as ClientProxyService;
+use Modules\VarDumper\Interfaces\TCP\Service as VarDumperService;
 
 return [
     'services' => [

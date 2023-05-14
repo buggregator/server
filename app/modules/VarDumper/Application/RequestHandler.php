@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Modules\VarDumper\Application;
 
 use App\Application\Commands\HandleReceivedEvent;
+use App\Application\Service\ClientProxy\EventHandlerInterface;
 use Modules\VarDumper\Application\Dump\MessageParser;
 use Spiral\Cqrs\CommandBusInterface;
 use Symfony\Component\VarDumper\Cloner\Data;
 use Symfony\Component\VarDumper\Dumper\HtmlDumper;
 
-final class RequestHandler
+final class RequestHandler implements EventHandlerInterface
 {
     public function __construct(
         private readonly MessageParser $messageParser,
@@ -50,5 +51,10 @@ final class RequestHandler
         $dumper = new HtmlDumper();
 
         return $dumper->dump($data, true);
+    }
+
+    public function isSupported(string $type): bool
+    {
+        return $type === 'var-dumper';
     }
 }

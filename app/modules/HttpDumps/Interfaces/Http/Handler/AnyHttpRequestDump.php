@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\HttpDumps\Interfaces\Http\Handler;
 
 use App\Application\Commands\HandleReceivedEvent;
+use App\Application\Commands\StoreAttachment;
 use App\Application\Service\HttpHandler\HandlerInterface;
 use Carbon\Carbon;
 use Modules\HttpDumps\Application\EventHandlerInterface;
@@ -13,20 +14,15 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\Http\ResponseWrapper;
-use Spiral\Storage\BucketInterface;
-use Spiral\Storage\StorageInterface;
+use Spiral\Storage\FileInterface;
 
 final class AnyHttpRequestDump implements HandlerInterface
 {
-    private readonly BucketInterface $bucket;
-
     public function __construct(
         private readonly CommandBusInterface $commands,
         private readonly EventHandlerInterface $handler,
         private readonly ResponseWrapper $responseWrapper,
-        StorageInterface $storage,
     ) {
-        $this->bucket = $storage->bucket('attachments');
     }
 
     public function priority(): int
@@ -50,7 +46,6 @@ final class AnyHttpRequestDump implements HandlerInterface
     private function createPayload(ServerRequestInterface $request): array
     {
         $uri = \ltrim($request->getUri()->getPath(), '/');
-        $id = \md5(Carbon::now()->toDateTimeString());
 
         return [
             'received_at' => Carbon::now()->toDateTimeString(),
@@ -64,16 +59,20 @@ final class AnyHttpRequestDump implements HandlerInterface
                 'post' => $request->getParsedBody() ?? [],
                 'cookies' => $request->getCookieParams(),
                 'files' => \array_map(
-                    function (UploadedFileInterface $attachment) use ($id) {
-                        $this->bucket->write(
-                            $filename = $id . '/' . $attachment->getClientFilename(),
-                            $attachment->getStream()
+                    function (UploadedFileInterface $attachment): array {
+                        /** @var FileInterface $file */
+                        $file = $this->commands->dispatch(
+                            new StoreAttachment(
+                                type: 'http-dump',
+                                filename: $attachment->getClientFilename(),
+                                content: $attachment->getStream(),
+                            )
                         );
 
                         return [
-                            'id' => \md5($filename),
+                            'id' => \md5($file->getPathname()),
                             'name' => $attachment->getClientFilename(),
-                            'uri' => $filename,
+                            'uri' => $file->getPathname(),
                             'size' => $attachment->getSize(),
                             'mime' => $attachment->getClientMediaType(),
                         ];
