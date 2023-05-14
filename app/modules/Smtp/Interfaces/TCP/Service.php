@@ -7,6 +7,7 @@ namespace Modules\Smtp\Interfaces\TCP;
 use App\Application\Commands\HandleReceivedEvent;
 use Carbon\Carbon;
 use Modules\Smtp\Application\Mail\Parser;
+use Modules\Smtp\Application\RequestHandler;
 use Psr\SimpleCache\CacheInterface;
 use Spiral\Cache\CacheStorageProviderInterface;
 use Spiral\Cqrs\CommandBusInterface;
@@ -28,8 +29,7 @@ final class Service implements ServiceInterface
     private readonly CacheInterface $cache;
 
     public function __construct(
-        private readonly CommandBusInterface $commands,
-        private readonly StorageInterface $storage,
+        private readonly RequestHandler $requestHandler,
         CacheStorageProviderInterface $provider,
     ) {
         $this->cache = $provider->storage('local');
@@ -89,14 +89,7 @@ final class Service implements ServiceInterface
 
     private function dispatchMessage(string $message): void
     {
-        $data = (new Parser($this->storage))
-            ->parse($message)
-            ->storeAttachments()
-            ->jsonSerialize();
-
-        $this->commands->dispatch(
-            new HandleReceivedEvent(type: 'smtp', payload: $data),
-        );
+        $this->requestHandler->handle($message);
     }
 
     private function endOfContentDetected(string $data): bool
