@@ -31,11 +31,21 @@ final class AnyHttpRequestDump implements HandlerInterface
 
     public function priority(): int
     {
-        return 100_000;
+        return 0;
+    }
+
+    private function isValidRequest(ServerRequestInterface $request): bool
+    {
+        return $request->getHeaderLine('X-Buggregator-Event') === 'http-dump'
+            || $request->getAttribute('event-type') === 'http-dump';
     }
 
     public function handle(ServerRequestInterface $request, \Closure $next): ResponseInterface
     {
+        if (!$this->isValidRequest($request)) {
+            return $next($request);
+        }
+
         $payload = $this->createPayload($request);
 
         $event = $this->handler->handle($payload);

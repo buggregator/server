@@ -44,19 +44,14 @@ kv:
     config: {}
 
 service:
-  frontend:
-    service_name_in_log: true
-    remain_after_exit: true
-    restart_sec: 1
-    command: "npm run dev"
-    env:
-      VITE_EVENTS_WS_API: ws://127.0.0.1:8089/connection/websocket
-      VITE_EVENTS_REST_API: http://127.0.0.1:8082
-  storybook:
-    service_name_in_log: true
-    remain_after_exit: true
-    restart_sec: 1
-    command: "npm run sb"
+#  frontend:
+#    service_name_in_log: true
+#    remain_after_exit: true
+#    restart_sec: 1
+#    command: "npm run dev"
+#    env:
+#      VITE_EVENTS_WS_API: ws://127.0.0.1:8089/connection/websocket
+#      VITE_EVENTS_REST_API: http://127.0.0.1:8082
   centrifuge:
     service_name_in_log: true
     remain_after_exit: true

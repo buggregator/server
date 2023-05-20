@@ -8,7 +8,7 @@ FROM alpine/git as git
 
 ARG REPOSITORY=https://github.com/buggregator/spiral-app
 ARG BRANCH=master
-RUN git clone -b $BRANCH $REPOSITORY /app
+RUN git clone --recurse-submodules -b $BRANCH $REPOSITORY /app
 
 WORKDIR /app/bin
 # Download all required binaries
