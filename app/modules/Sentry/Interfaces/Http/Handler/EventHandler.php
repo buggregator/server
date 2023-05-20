@@ -34,7 +34,7 @@ final class EventHandler implements HandlerInterface
             return $next($request);
         }
 
-        $url = $request->getUri()->getPath();
+        $url = \rtrim($request->getUri()->getPath(), '/');
         $payloads = $this->gzippedStreamFactory->createFromRequest($request)->getPayload();
 
         match (true) {
