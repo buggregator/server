@@ -57,7 +57,7 @@ final class FrontendRequest implements HandlerInterface
         return new Response(
             200,
             [
-                'Cache-Control' => 'public, max-age=604800',
+                'Cache-Control' => 'public, max-age=300',
                 'Content-Type' => $this->fileContent[$path]['mime'] . '; charset=utf-8',
                 'Content-Length' => $this->fileContent[$path]['len'],
             ],
