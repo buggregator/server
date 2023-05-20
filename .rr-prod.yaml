@@ -62,12 +62,3 @@ centrifuge:
   grpc_api_address: ${RR_CENTRIFUGE_GRPC_API_ADDRESS}
   poll:
     num_workers: ${RR_CENTRIFUGE_NUM_WORKERS}
-
-fileserver:
-  address: 127.0.0.1:8083
-  stream_request_body: true
-  serve:
-    - prefix: "/"
-      root: "frontend/.output/public"
-      compress: true
-

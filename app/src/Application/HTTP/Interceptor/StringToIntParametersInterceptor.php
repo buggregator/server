@@ -12,7 +12,7 @@ final class StringToIntParametersInterceptor implements CoreInterceptorInterface
     public function process(string $controller, string $action, array $parameters, CoreInterface $core): mixed
     {
         foreach ($parameters as $key => $parameter) {
-            if (ctype_digit($parameter)) {
+            if (\is_string($parameter) && \ctype_digit($parameter)) {
                 $parameters[$key] = (int)$parameter;
             }
         }

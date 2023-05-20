@@ -10,7 +10,7 @@ use Spiral\Router\Annotation\Route;
 
 final class DeleteAction
 {
-    #[Route(route: '/locks/<hash>', name: 'ray.lock.delete', methods: 'DELETE')]
+    #[Route(route: 'ray/locks/<hash>', name: 'ray.lock.delete', methods: 'POST', group: 'api')]
     public function __invoke(InputManager $request, CacheInterface $cache, string $hash): void
     {
         $cache->set($hash, [

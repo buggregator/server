@@ -15,8 +15,6 @@ use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
 use Symfony\Component\VarDumper\Cloner\Data;
 use Symfony\Component\VarDumper\Dumper\HtmlDumper;
 
-use function Amp\ByteStream\getStderr;
-
 class Service implements ServiceInterface
 {
     public function __construct(
@@ -26,6 +24,7 @@ class Service implements ServiceInterface
 
     public function handle(Request $request): ResponseInterface
     {
+        dump($request);
         if ($request->event === TcpWorkerInterface::EVENT_CONNECTED) {
             return new ContinueRead();
         }
