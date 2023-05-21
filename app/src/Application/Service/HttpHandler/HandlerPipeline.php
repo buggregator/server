@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Service\HttpHandler;
 
+use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -49,7 +50,7 @@ final class HandlerPipeline implements HandlerRegistryInterface, CoreHandlerInte
         $this->position++;
 
         if ($handler === null) {
-            throw new \RuntimeException('No more handlers in the pipeline.');
+            return new Response(404);
         }
 
         return $handler->handle(

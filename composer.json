@@ -1,13 +1,33 @@
 {
-    "name": "spiral/app",
+    "name": "buggregator/app",
     "type": "project",
-    "license": "MIT",
-    "description": "Spiral Skeleton Application",
-    "homepage": "https://spiral.dev",
+    "description": "Buggregator is a lightweight, standalone server that offers a range of debugging features for PHP applications.",
+    "homepage": "https://buggregator.dev/",
     "support": {
-        "issues": "https://github.com/spiral/app/issues",
-        "source": "https://github.com/spiral/app"
+        "issues": "https://github.com/buggregator/server/issues",
+        "source": "https://github.com/buggregator/server"
     },
+    "license": "BSD-4-Clause",
+    "authors": [
+        {
+            "name": "Aleksei Gagarin (roxblnfk)",
+            "homepage": "https://github.com/roxblnfk"
+        },
+        {
+            "name": "Pavel Buchnev (butschster)",
+            "homepage": "https://github.com/butschster"
+        }
+    ],
+    "funding": [
+        {
+            "type": "github",
+            "url": "https://github.com/sponsors/buggregator"
+        },
+        {
+            "type": "patreon",
+            "url": "https://www.patreon.com/butschster"
+        }
+    ],
     "require": {
         "php": ">=8.1",
         "ext-mbstring": "*",
@@ -22,6 +42,7 @@
         "spiral/nyholm-bridge": "^1.3",
         "spiral/roadrunner-bridge": "^2.1",
         "spiral/validator": "^1.1",
+        "symfony/mime": "^6.2",
         "symfony/var-dumper": "^6.1",
         "zbateson/mail-mime-parser": "^2.0"
     },

@@ -78,7 +78,7 @@ After installing the package, you need to configure it. The package provides pre
 configure the profiler.
 
 ```dotenv
-PROFILER_ENDPOINT=http://127.0.0.1:8000/api/profiler/store
+PROFILER_ENDPOINT=http://profiler@127.0.0.1:8000
 PROFILER_APP_NAME=My super app
 ```
 
@@ -314,7 +314,7 @@ Laravel is supported via a native package. You can read about integrations
 on [official site](https://docs.inspector.dev/laravel)
 
 ```php
-INSPECTOR_URL=http://127.0.0.1:8000/api/inspector
+INSPECTOR_URL=http://inspector@127.0.0.1:8000
 INSPECTOR_API_KEY=test
 INSPECTOR_INGESTION_KEY=1test
 INSPECTOR_ENABLE=true
@@ -329,7 +329,7 @@ use Inspector\Inspector;
 use Inspector\Configuration;
 
 $configuration = new Configuration('YOUR_INGESTION_KEY');
-$configuration->setUrl('http://127.0.0.1:8000/api/inspector');
+$configuration->setUrl('http://inspector@127.0.0.1:8000');
 $inspector = new Inspector($configuration);
 
 // ...
@@ -348,11 +348,11 @@ applications. With the HTTP Requests Dump Server, developers can effortlessly ca
 gain valuable insights. They can dive deep into the captured requests, examine their contents, and pinpoint any issues
 or anomalies that might be affecting their application's performance.
 
-Simply start the server and send your requests to the http://127.0.0.1:8000/api/http-dumps/ URL, it will not only
+Simply start the server and send your requests to the `http://http-dump@127.0.0.1:8000` URL, it will not only
 capture the URI segments but also gather additional details such as the request `headers`, `cookies`, `POST data`,
 `query strings`, and any `uploaded files`.
 
-For instance, let's say you have a POST request: http://127.0.0.1:8082/api/http-dumps/user/3/update. In this case,
+For instance, let's say you have a POST request: `http://http-dump@127.0.0.1:8000/user/3/update`. In this case,
 server will intercept the request and capture all the relevant information. It will then display the
 dumped data, allowing you to examine the request details, including the URI segments (`user/3/update` in this example).
 
@@ -384,9 +384,10 @@ php artisan ray:publish-config
 ```
 
 **Env variables**
+
 ```
-RAY_HOST=127.0.0.1  # Ray server host (Current HTTP buggregator port)
-RAY_PORT=23517      # Ray server port
+RAY_HOST=ray@127.0.0.1  # Ray server host (Current HTTP buggregator port)
+RAY_PORT=8000           # Ray server port
 ```
 
 ### Framework agnostic PHP
@@ -406,12 +407,12 @@ return [
     /*
      *  The host used to communicate with the Ray app.
      */
-    'host' => '127.0.0.1',
+    'host' => 'ray@127.0.0.1',
 
     /*
      *  The port number used to communicate with the Ray app.
      */
-    'port' => 23517,
+    'port' => 8000,
 
     /*
      *  Absolute base path for your sites or projects in Homestead, Vagrant, Docker, or another remote development server.

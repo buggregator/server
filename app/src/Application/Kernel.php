@@ -91,7 +91,6 @@ class Kernel extends \Spiral\Framework\Kernel
 
             StorageBootloader::class,
             DistributionBootloader::class,
-
             AppBootloader::class,
             InspectorBootloader::class,
             SentryBootloader::class,
