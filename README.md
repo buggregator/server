@@ -514,7 +514,7 @@ Enjoy!
 
 We enthusiastically invite you to contribute to Buggregator Server! Whether you've uncovered a bug, have innovative feature suggestions, or wish to contribute in any other capacity, we warmly welcome your participation. Simply open an issue or submit a pull request on our GitHub repository to get started.
 
-We use the [help wanted]([https://github.com/buggregator/trap/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%2](https://github.com/buggregator/spiral-app/issues)2) label to categorize all issues that would benefit from your help in the repository. 
+We use the [help wanted](https://github.com/buggregator/server/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%2) label to categorize all issues that would benefit from your help in the repository. 
 
 ### Why Should Developers Contribute to Open Source?
 
