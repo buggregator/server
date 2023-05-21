@@ -30,7 +30,9 @@ final class MergeEventsHandler implements EventHandlerInterface
                 ...($storedEvent->getPayload()->jsonSerialize()['payloads'] ?? []),
                 ...($event['payloads'] ?? [])
             ];
-        } catch (EntityNotFoundException) {
+
+
+        } catch (EntityNotFoundException $e) {
         }
 
         return $event;

@@ -53,6 +53,8 @@ final class HandlerPipeline implements HandlerRegistryInterface, CoreHandlerInte
             return new Response(404);
         }
 
+        $request->getBody()->rewind();
+
         return $handler->handle(
             $request,
             fn(ServerRequestInterface $request) => $this->handlePipeline($request)

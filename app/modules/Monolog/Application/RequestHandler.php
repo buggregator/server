@@ -6,6 +6,7 @@ namespace Modules\Monolog\Application;
 
 use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Service\ClientProxy\EventHandlerInterface;
+use Buggregator\Client\Proto\Frame;
 use Spiral\Cqrs\CommandBusInterface;
 
 final class RequestHandler implements EventHandlerInterface
@@ -15,21 +16,19 @@ final class RequestHandler implements EventHandlerInterface
     ) {
     }
 
-    public function handle(string $payload): void
+    /**
+     * @param Frame\Monolog $frame
+     * @return void
+     */
+    public function handle(Frame $frame): void
     {
-        $payload = \json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
-
-        if (!$payload) {
-            throw new \RuntimeException("Unable to decode a message.");
-        }
-
         $this->commandBus->dispatch(
-            new HandleReceivedEvent(type: 'monolog', payload: $payload)
+            new HandleReceivedEvent(type: 'monolog', payload: $frame->message)
         );
     }
 
-    public function isSupported(string $type): bool
+    public function isSupported(Frame $frame): bool
     {
-        return $type === 'monolog';
+        return $frame instanceof Frame\Monolog;
     }
 }

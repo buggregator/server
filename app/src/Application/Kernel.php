@@ -25,6 +25,7 @@ use Spiral\League\Event\Bootloader\EventBootloader;
 use Spiral\Monolog\Bootloader\MonologBootloader;
 use Spiral\Nyholm\Bootloader\NyholmBootloader;
 use Spiral\RoadRunnerBridge\Bootloader as RoadRunnerBridge;
+use Spiral\Scaffolder\Bootloader\ScaffolderBootloader;
 use Spiral\Storage\Bootloader\StorageBootloader;
 use Spiral\Tokenizer\Bootloader\TokenizerListenerBootloader;
 use Spiral\Validation\Bootloader\ValidationBootloader;
@@ -102,6 +103,8 @@ class Kernel extends \Spiral\Framework\Kernel
 
             ClientProxyBootloader::class,
             HttpHandlerBootloader::class,
+
+            // ScaffolderBootloader::class,
         ];
     }
 }

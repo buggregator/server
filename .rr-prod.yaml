@@ -26,14 +26,10 @@ http:
 
 tcp:
   servers:
-    monolog:
-      addr: :9913
+    client:
+      addr: 127.0.0.1:9099
       delimiter: "\n"
-    var-dumper:
-      addr: :9912
-      delimiter: "\n"
-    smtp:
-      addr: :1025
+      read_buf_size: 10
   pool:
     num_workers: ${RR_TCP_NUM_WORKERS}
 
@@ -46,6 +42,11 @@ kv:
     config: {}
 
 service:
+  client:
+    service_name_in_log: true
+    remain_after_exit: true
+    restart_sec: 1
+    command: "php app.php dump:server"
   nginx:
     service_name_in_log: true
     remain_after_exit: true

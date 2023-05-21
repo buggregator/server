@@ -6,6 +6,7 @@ namespace Modules\Smtp\Application;
 
 use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Service\ClientProxy\EventHandlerInterface;
+use Buggregator\Client\Proto\Frame;
 use Modules\Smtp\Application\Mail\Parser;
 use Spiral\Cqrs\CommandBusInterface;
 
@@ -17,15 +18,18 @@ final class RequestHandler implements EventHandlerInterface
     ) {
     }
 
-    public function isSupported(string $type): bool
+    public function isSupported(Frame $frame): bool
     {
-        return $type === 'smtp';
+        return $frame instanceof Frame\Smtp;
     }
 
-    public function handle(string $payload): void
+    /**
+     * @param Frame\Smtp $frame
+     */
+    public function handle(Frame $frame): void
     {
         $content = $this->parser
-            ->parse($payload)
+            ->parse($frame->message)
             ->storeAttachments()
             ->jsonSerialize();
 

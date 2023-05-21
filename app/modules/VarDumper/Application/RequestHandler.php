@@ -6,6 +6,7 @@ namespace Modules\VarDumper\Application;
 
 use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Service\ClientProxy\EventHandlerInterface;
+use Buggregator\Client\Proto\Frame;
 use Modules\VarDumper\Application\Dump\MessageParser;
 use Spiral\Cqrs\CommandBusInterface;
 use Symfony\Component\VarDumper\Cloner\Data;
@@ -19,10 +20,13 @@ final class RequestHandler implements EventHandlerInterface
     ) {
     }
 
-    public function handle(string $payload): void
+    /**
+     * @param Frame\VarDumper $frame
+     */
+    public function handle(Frame $frame): void
     {
         $this->fireEvent(
-            $this->messageParser->parse($payload)
+            $this->messageParser->parse($frame->dump)
         );
     }
 
@@ -53,8 +57,8 @@ final class RequestHandler implements EventHandlerInterface
         return $dumper->dump($data, true);
     }
 
-    public function isSupported(string $type): bool
+    public function isSupported(Frame $frame): bool
     {
-        return $type === 'var-dumper';
+        return $frame instanceof Frame\VarDumper;
     }
 }

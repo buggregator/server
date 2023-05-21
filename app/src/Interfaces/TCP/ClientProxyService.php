@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Interfaces\TCP;
 
 use App\Application\Service\ClientProxy\EventHandlerRegistryInterface;
+use Buggregator\Client\Proto\Frame;
+use Buggregator\Client\Proto\Server\Decoder;
 use Psr\Log\LoggerInterface;
 use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpWorkerInterface;
+use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;
 use Spiral\RoadRunnerBridge\Tcp\Response\ContinueRead;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
 use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
@@ -17,6 +20,7 @@ final class ClientProxyService implements ServiceInterface
     public function __construct(
         private readonly EventHandlerRegistryInterface $handlerRegistry,
         private readonly LoggerInterface $logger,
+        private readonly Decoder $decoder,
     ) {
     }
 
@@ -26,24 +30,21 @@ final class ClientProxyService implements ServiceInterface
             return new ContinueRead();
         }
 
-        $messages = \json_decode($request->body, true, 512, JSON_THROW_ON_ERROR);
+        $request = $this->decoder->decode(\trim($request->body));
 
-        foreach ($messages as $message) {
+        foreach ($request->getParsedPayload() as $event) {
             try {
-                $this->handlePayload($message);
+                $this->handlePayload($event);
             } catch (\Throwable $e) {
                 $this->logger->debug($e->getMessage());
             }
         }
 
-        return new ContinueRead();
+        return new CloseConnection();
     }
 
-    /**
-     * @param array{type: string, data: string, time: string} $payload
-     */
-    private function handlePayload(array $payload): void
+    private function handlePayload(Frame $payload): void
     {
-        $this->handlerRegistry->handle($payload['type'], $payload['data']);
+        $this->handlerRegistry->handle($payload);
     }
 }
