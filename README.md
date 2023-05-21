@@ -14,7 +14,7 @@ platforms via Docker.
 Whether you're an experienced developer or just starting, Buggregator offers essential features like
 [Xhprof](#1-compatible-with-xhprof), [Symfony var-dumper](#2-symfony-vardumper-server), [Monolog](#3-monolog-server),
 [Sentry](#4-compatible-with-sentry), [SMTP catcher](#5-fake-smtp-server-for-catching-mail),
-and[Inspector](#6-compatible-with-inspector) that make it easy to identify and resolve issues. With no additional
+and [Inspector](#6-compatible-with-inspector) that make it easy to identify and resolve issues. With no additional
 packages required, it's effortless to use, making it a must-have tool in your development arsenal.
 
 #### Contents
