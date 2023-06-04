@@ -4,21 +4,20 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Interfaces\TCP;
 
-use App\Application\Commands\HandleReceivedEvent;
 use Carbon\Carbon;
-use Modules\Smtp\Application\Mail\Parser;
 use Modules\Smtp\Application\RequestHandler;
 use Psr\SimpleCache\CacheInterface;
 use Spiral\Cache\CacheStorageProviderInterface;
-use Spiral\Cqrs\CommandBusInterface;
 use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpWorkerInterface;
 use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;
 use Spiral\RoadRunnerBridge\Tcp\Response\RespondMessage;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
 use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
-use Spiral\Storage\StorageInterface;
 
+/**
+ * @deprecated
+ */
 final class Service implements ServiceInterface
 {
     private const READY = 220;

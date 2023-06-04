@@ -40,6 +40,9 @@ kv:
   events:
     driver: memory
     config: { }
+  attachments:
+    driver: memory
+    config: { }
   local:
     driver: memory
     config: { }

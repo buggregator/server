@@ -38,9 +38,13 @@ return [
      * the driver class and its connection options.
      */
     'drivers' => [
-        'runtime' => new Config\SQLiteDriverConfig(
-            connection: new Config\SQLite\FileConnectionConfig(
-                database: '/dev/shm/buggregator'
+        'runtime' => new Config\MySQLDriverConfig(
+            connection: new Config\MySQL\TcpConnectionConfig(
+                database: 'homestead',
+                host: '127.0.0.1',
+                port: 3307,
+                user: 'root',
+                password: 'secret',
             ),
             queryCache: true
         ),
