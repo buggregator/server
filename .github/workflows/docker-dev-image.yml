@@ -19,6 +19,9 @@ jobs:
           username: ${{ secrets.GHCR_LOGIN }}
           password: ${{ secrets.GHCR_PASSWORD }}
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v2
@@ -28,9 +31,10 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./
+          platforms: linux/amd64,linux/arm64
           file: ./docker/Dockerfile
           push: true
           build-args:
             APP_VERSION=dev
           tags:
-            ghcr.io/buggregator/server:dev
+            ghcr.io/${{ github.repository }}:dev
