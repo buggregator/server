@@ -11,7 +11,7 @@ FROM alpine/git as git
 
 ARG REPOSITORY=https://github.com/buggregator/server
 ARG BRANCH=master
-RUN git clone $BRANCH $REPOSITORY /app
+RUN git clone -b $BRANCH $REPOSITORY /app
 
 WORKDIR /app/bin
 # Download all required binaries
