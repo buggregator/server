@@ -73,6 +73,7 @@ RUN docker-php-source delete \
         && apk del ${BUILD_DEPENDS}
 
 WORKDIR /app
+RUN php app.php configure
 
 EXPOSE 8000/tcp
 
@@ -91,6 +92,7 @@ ENV MONOLOG_DEFAULT_LEVEL=ERROR
 ENV APP_ENV=production
 ENV DEBUG=false
 ENV ENCRYPTER_KEY=def00000232ae92c8e8ec0699093fa06ce014cd48d39c3c62c279dd947db084e56ee48b5c91cebc1c5abe53f7755021d09043757561c244c1c0c765cfeb5db33eb45a903
+ENV TOKENIZER_CACHE_TARGETS=true
 
 LABEL org.opencontainers.image.source=$REPOSITORY
 LABEL org.opencontainers.image.description="Buggregator"
