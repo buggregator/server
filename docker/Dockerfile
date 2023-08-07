@@ -3,68 +3,32 @@ ARG ROAD_RUNNER_IMAGE=2.12.3
 # Build rr binary
 FROM ghcr.io/roadrunner-server/roadrunner:$ROAD_RUNNER_IMAGE as rr
 
+# Build JS files
+FROM ghcr.io/buggregator/frontend:latest as frontend
+
 # Clone the project
 FROM alpine/git as git
 
-ARG REPOSITORY=https://github.com/buggregator/spiral-app
+ARG REPOSITORY=https://github.com/buggregator/server
 ARG BRANCH=master
-RUN git clone --recurse-submodules -b $BRANCH $REPOSITORY /app
+RUN git clone $BRANCH $REPOSITORY /app
 
 WORKDIR /app/bin
 # Download all required binaries
 RUN chmod +x get-binaries.sh
 RUN ./get-binaries.sh
 
-# Build JS files
-FROM node:19-alpine as frontend
-COPY --from=git /app /app
-WORKDIR /app/frontend
-
-ENV NODE_OPTIONS=--openssl-legacy-provider
-
-RUN yarn install
-RUN npm run generate
-RUN rm -rf node_modules
-
 # Configure PHP project
-FROM php:8.1.3-cli-alpine3.15 as backend
+FROM ghcr.io/buggregator/docker:latest as backend
 
-RUN apk add --no-cache \
-        curl \
-        libcurl \
-        wget \
-        libzip-dev \
-        libmcrypt-dev \
-        libxslt-dev \
-        libxml2-dev \
-        icu-dev \
-        zip
-
-RUN docker-php-ext-install \
-        opcache \
-        zip \
-        xsl \
-        dom \
-        exif \
-        intl \
-        pcntl \
-        bcmath \
-        sockets
-
-COPY --from=frontend /app /app
+COPY --from=git /app /app
+COPY --from=frontend /app /app/frontend
 COPY --from=rr /usr/bin/rr /app
 
 ARG APP_VERSION=v1.0
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
 WORKDIR /app
-
-RUN apk add --no-cache nginx
-RUN cp docker/nginx/nginx.conf /etc/nginx/nginx.conf
-RUN [ -d /etc/nginx/conf.d ] ||  mkdir /etc/nginx/conf.d
-RUN cp docker/nginx/default.conf /etc/nginx/conf.d/default.conf
-
-RUN curl -s https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin/ --filename=composer
 
 RUN composer config --no-plugins allow-plugins.spiral/composer-publish-plugin false
 RUN composer install --no-dev
