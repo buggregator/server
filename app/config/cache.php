@@ -16,5 +16,9 @@ return [
             'type' => 'roadrunner',
             'driver' => 'events',
         ],
+        'attachments' => [
+            'type' => 'roadrunner',
+            'driver' => 'attachments',
+        ],
     ],
 ];

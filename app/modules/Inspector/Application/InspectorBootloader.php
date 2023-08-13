@@ -10,10 +10,5 @@ use Spiral\Boot\Bootloader\Bootloader;
 
 final class InspectorBootloader extends Bootloader
 {
-    public function boot(
-        HandlerRegistryInterface $registry,
-        EventHandler $handler
-    ): void {
-        $registry->register($handler);
-    }
+
 }

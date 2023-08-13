@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application;
 
 use App\Application\Bootloader\AppBootloader;
+use App\Application\Bootloader\ClientProxyBootloader;
 use App\Application\Bootloader\HttpHandlerBootloader;
 use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
@@ -24,6 +25,7 @@ use Spiral\League\Event\Bootloader\EventBootloader;
 use Spiral\Monolog\Bootloader\MonologBootloader;
 use Spiral\Nyholm\Bootloader\NyholmBootloader;
 use Spiral\RoadRunnerBridge\Bootloader as RoadRunnerBridge;
+use Spiral\Scaffolder\Bootloader\ScaffolderBootloader;
 use Spiral\Storage\Bootloader\StorageBootloader;
 use Spiral\Tokenizer\Bootloader\TokenizerListenerBootloader;
 use Spiral\Validation\Bootloader\ValidationBootloader;
@@ -90,13 +92,6 @@ class Kernel extends \Spiral\Framework\Kernel
 
             StorageBootloader::class,
             DistributionBootloader::class,
-        ];
-    }
-
-    protected function defineAppBootloaders(): array
-    {
-        return [
-            HttpHandlerBootloader::class,
             AppBootloader::class,
             InspectorBootloader::class,
             SentryBootloader::class,
@@ -105,6 +100,11 @@ class Kernel extends \Spiral\Framework\Kernel
             ProfilerBootloader::class,
             MongoDBBootloader::class,
             PersistenceBootloader::class,
+
+            ClientProxyBootloader::class,
+            HttpHandlerBootloader::class,
+
+            // ScaffolderBootloader::class,
         ];
     }
 }

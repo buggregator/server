@@ -46,6 +46,10 @@ final class FrontendRequest implements HandlerInterface
         $path = $this->publicPath . $path;
 
         if (!isset($this->fileContent[$path])) {
+            if (!\file_exists($path)) {
+                return new Response(404);
+            }
+
             $body = \file_get_contents($path);
             $this->fileContent[$path] = [
                 'len' => \strlen($body),

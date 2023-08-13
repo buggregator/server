@@ -9,7 +9,7 @@ use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Service\HttpHandler\HandlerInterface;
 use Carbon\CarbonInterval;
-use Modules\Profiler\Application\EventHandlerInterface;
+use Modules\Ray\Application\EventHandlerInterface;
 use Modules\Ray\Application\TypeEnum;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -49,7 +49,7 @@ final class EventHandler implements HandlerInterface
 
     private function handleEvent(ServerRequestInterface $request): ResponseInterface
     {
-        $event = \json_decode((string)$request->getBody(), true);
+        $event = \json_decode($request->getBody()->getContents(), true);
 
         $type = $event['payloads'][0]['type'] ?? null;
 

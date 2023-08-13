@@ -45,15 +45,11 @@ final class AnyHttpRequestDump implements HandlerInterface
         if (!$this->isValidRequest($request)) {
             return $next($request);
         }
-
         $payload = $this->createPayload($request);
-
         $event = $this->handler->handle($payload);
-
         $this->commands->dispatch(
             new HandleReceivedEvent(type: 'http-dump', payload: $event)
         );
-
         return $this->responseWrapper->create(200);
     }
 
@@ -61,7 +57,6 @@ final class AnyHttpRequestDump implements HandlerInterface
     {
         $uri = \ltrim($request->getUri()->getPath(), '/');
         $id = \md5(Carbon::now()->toDateTimeString());
-
         return [
             'received_at' => Carbon::now()->toDateTimeString(),
             'host' => $request->getHeaderLine('Host'),
@@ -79,7 +74,6 @@ final class AnyHttpRequestDump implements HandlerInterface
                             $filename = $id . '/' . $attachment->getClientFilename(),
                             $attachment->getStream()
                         );
-
                         return [
                             'id' => \md5($filename),
                             'name' => $attachment->getClientFilename(),
