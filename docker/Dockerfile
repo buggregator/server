@@ -28,8 +28,8 @@ COPY --from=rr /usr/bin/rr /app
 ARG APP_VERSION=v1.0
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
-RUN sed -i 's/memory_limit = 128M/memory_limit = 1024M/g' /usr/local/etc/php/php.ini-production && \
-    sed -i 's/post_max_size = 8M/post_max_size = 1024M/g' /usr/local/etc/php/php.ini-production && \
+RUN sed -i 's/memory_limit = 128M/memory_limit = 1024M/g' "$PHP_INI_DIR/php.ini-production" && \
+    sed -i 's/post_max_size = 8M/post_max_size = 1024M/g' "$PHP_INI_DIR/php.ini-production" && \
     mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
 WORKDIR /app
