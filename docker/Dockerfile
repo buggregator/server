@@ -1,4 +1,8 @@
 ARG ROAD_RUNNER_IMAGE=2.12.3
+ARG CENTRIFUGO_IMAGE=v4
+
+# Build centrifugo binary
+FROM centrifugo/centrifugo:$CENTRIFUGO_IMAGE as centrifugo
 
 # Build rr binary
 FROM ghcr.io/roadrunner-server/roadrunner:$ROAD_RUNNER_IMAGE as rr
@@ -13,17 +17,13 @@ ARG REPOSITORY=https://github.com/buggregator/server
 ARG BRANCH=master
 RUN git clone -b $BRANCH $REPOSITORY /app
 
-WORKDIR /app/bin
-# Download all required binaries
-RUN chmod +x get-binaries.sh
-RUN ./get-binaries.sh
-
 # Configure PHP project
 FROM ghcr.io/buggregator/docker:latest as backend
 
 COPY --from=git /app /app
 COPY --from=frontend /app /app/frontend
 COPY --from=rr /usr/bin/rr /app
+COPY --from=centrifugo /usr/local/bin/centrifugo /app/bin
 
 ARG APP_VERSION=v1.0
 ENV COMPOSER_ALLOW_SUPERUSER=1
