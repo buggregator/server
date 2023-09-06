@@ -11,7 +11,7 @@ use Psr\SimpleCache\CacheInterface;
 use Spiral\Cache\CacheStorageProviderInterface;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\RoadRunner\Tcp\Request;
-use Spiral\RoadRunner\Tcp\TcpWorkerInterface;
+use Spiral\RoadRunner\Tcp\TcpEvent;
 use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;
 use Spiral\RoadRunnerBridge\Tcp\Response\RespondMessage;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
@@ -37,7 +37,7 @@ final class Service implements ServiceInterface
 
     public function handle(Request $request): ResponseInterface
     {
-        if ($request->event === TcpWorkerInterface::EVENT_CONNECTED) {
+        if ($request->event === TcpEvent::Connected) {
             return $this->send(self::READY, 'mailamie');
         }
 
@@ -46,7 +46,7 @@ final class Service implements ServiceInterface
 
         $response = new CloseConnection();
 
-        if ($request->event === TcpWorkerInterface::EVENT_CLOSED) {
+        if ($request->event === TcpEvent::Close) {
             $this->cache->delete($cacheKey);
 
             return new CloseConnection();

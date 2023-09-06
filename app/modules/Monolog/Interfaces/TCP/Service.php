@@ -7,7 +7,7 @@ namespace Modules\Monolog\Interfaces\TCP;
 use App\Application\Commands\HandleReceivedEvent;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\RoadRunner\Tcp\Request;
-use Spiral\RoadRunner\Tcp\TcpWorkerInterface;
+use Spiral\RoadRunner\Tcp\TcpEvent;
 use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;
 use Spiral\RoadRunnerBridge\Tcp\Response\ContinueRead;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
@@ -22,7 +22,7 @@ class Service implements ServiceInterface
 
     public function handle(Request $request): ResponseInterface
     {
-        if ($request->event === TcpWorkerInterface::EVENT_CONNECTED) {
+        if ($request->event === TcpEvent::Connected) {
             return new ContinueRead();
         }
 
