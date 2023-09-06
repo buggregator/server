@@ -9,6 +9,7 @@ use GuzzleHttp\Psr7\MimeType;
 use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Spiral\Http\Exception\ClientException\NotFoundException;
 
 final class FrontendRequest implements HandlerInterface
 {
@@ -46,6 +47,10 @@ final class FrontendRequest implements HandlerInterface
         $path = $this->publicPath . $path;
 
         if (!isset($this->fileContent[$path])) {
+            if (!file_exists($path)) {
+                throw new NotFoundException(\sprintf('File "%s" not found', $path));
+            }
+
             $body = \file_get_contents($path);
             $this->fileContent[$path] = [
                 'len' => \strlen($body),
@@ -61,7 +66,7 @@ final class FrontendRequest implements HandlerInterface
                 'Content-Type' => $this->fileContent[$path]['mime'] . '; charset=utf-8',
                 'Content-Length' => $this->fileContent[$path]['len'],
             ],
-            $this->fileContent[$path]['content']
+            $this->fileContent[$path]['content'],
         );
     }
 

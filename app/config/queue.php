@@ -12,30 +12,25 @@ use Spiral\RoadRunnerBridge\Queue\Queue;
 return [
     'default' => env('QUEUE_CONNECTION', 'sync'),
     'aliases' => [],
+    'pipelines' => [
+        'memory' => [
+            'connector' => new MemoryCreateInfo('local'),
+            'consume' => true,
+        ]
+    ],
     'connections' => [
         'sync' => [
             'driver' => 'sync',
         ],
         'roadrunner' => [
             'driver' => 'roadrunner',
-            'default' => 'memory',
-            'pipelines' => [
-                'memory' => [
-                    'connector' => new MemoryCreateInfo('local'),
-                    // Run consumer for this pipeline on startup (by default)
-                    // You can pause consumer for this pipeline via console command
-                    // php app.php queue:pause local
-                    'consume' => true,
-                ]
-            ],
+            'pipeline' => 'memory',
         ],
     ],
-
     'driverAliases' => [
         'sync' => SyncDriver::class,
         'roadrunner' => Queue::class,
     ],
-
     'registry' => [
         'handlers' => [],
     ],
