@@ -8,7 +8,7 @@ use App\Application\Commands\HandleReceivedEvent;
 use Modules\VarDumper\Application\Dump\MessageParser;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\RoadRunner\Tcp\Request;
-use Spiral\RoadRunner\Tcp\TcpWorkerInterface;
+use Spiral\RoadRunner\Tcp\TcpEvent;
 use Spiral\RoadRunnerBridge\Tcp\Response\ContinueRead;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
 use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
@@ -24,8 +24,7 @@ class Service implements ServiceInterface
 
     public function handle(Request $request): ResponseInterface
     {
-        dump($request);
-        if ($request->event === TcpWorkerInterface::EVENT_CONNECTED) {
+        if ($request->event === TcpEvent::Connected) {
             return new ContinueRead();
         }
 
