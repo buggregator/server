@@ -12,7 +12,7 @@ final class EventHandlerAction
 {
     public function handle(ServerRequestInterface $request, CoreHandlerInterface $handler): ResponseInterface
     {
-        $auth = (string)$request->getHeaderLine('Authorization');
+        $auth = $request->getHeaderLine('Authorization');
 
         if (\str_starts_with($auth, 'Basic')) {
             $request = $request->withAttribute(
