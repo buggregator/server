@@ -7,8 +7,10 @@ FROM centrifugo/centrifugo:$CENTRIFUGO_IMAGE as centrifugo
 # Build rr binary
 FROM ghcr.io/roadrunner-server/roadrunner:$ROAD_RUNNER_IMAGE as rr
 
+ARG FRONTEND_IMAGE_TAG=latest
+
 # Build JS files
-FROM ghcr.io/buggregator/frontend:latest as frontend
+FROM ghcr.io/buggregator/frontend:$FRONTEND_IMAGE_TAG as frontend
 
 # Clone the project
 FROM alpine/git as git
@@ -45,6 +47,7 @@ RUN php app.php configure
 
 EXPOSE 8000/tcp
 
+ENV APP_VERSION=$APP_VERSION
 ENV RR_LOG_LEVEL=error
 ENV RR_HTTP_NUM_WORKERS=2
 ENV RR_CENTRIFUGE_NUM_WORKERS=3
