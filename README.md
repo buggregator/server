@@ -76,11 +76,14 @@ composer require --dev spiral/profiler:^3.0
 > Read more about package usage in the [package documentation](https://github.com/spiral/profiler/tree/3.0).
 
  - If you are using Laravel Framework you just need to install
-the [maantje/xhprof-buggregator-laravel]([https://github.com/spiral/profiler/tree/3.0](https://github.com/maantje/xhprof-buggregator-laravel)) package.
+the [maantje/xhprof-buggregator-laravel](https://github.com/maantje/xhprof-buggregator-laravel) package.
 
 ```bash
 composer require --dev maantje/xhprof-buggregator-laravel
 ```
+
+> **Note:**
+> Read more about package usage in the [package documentation](https://github.com/maantje/xhprof-buggregator-laravel).
 
 ### Configuration
 
