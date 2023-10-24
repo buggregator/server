@@ -35,7 +35,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           file: ./docker/Dockerfile
           push: true
-          build-args:
+          build-args: |
             APP_VERSION=${{ steps.previoustag.outputs.tag }}
             FRONTEND_IMAGE_TAG=dev
           tags:
