@@ -1,8 +1,6 @@
 ARG ROAD_RUNNER_IMAGE=2.12.3
 ARG CENTRIFUGO_IMAGE=v4
 ARG FRONTEND_IMAGE_TAG=latest
-ARG REPOSITORY=https://github.com/buggregator/server
-ARG BRANCH=master
 
 # Build centrifugo binary
 FROM centrifugo/centrifugo:$CENTRIFUGO_IMAGE as centrifugo
@@ -10,9 +8,11 @@ FROM centrifugo/centrifugo:$CENTRIFUGO_IMAGE as centrifugo
 FROM ghcr.io/roadrunner-server/roadrunner:$ROAD_RUNNER_IMAGE as rr
 # Build JS files
 FROM ghcr.io/buggregator/frontend:$FRONTEND_IMAGE_TAG as frontend
-
 # Clone the project
 FROM alpine/git as git
+
+ARG REPOSITORY=https://github.com/buggregator/server
+ARG BRANCH=master
 RUN git clone -b $BRANCH $REPOSITORY /app
 
 # Configure PHP project
