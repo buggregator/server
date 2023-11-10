@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Modules\Monolog\Interfaces\TCP;
 
 use App\Application\Commands\HandleReceivedEvent;
+use Psr\Log\LoggerInterface;
 use Spiral\Cqrs\CommandBusInterface;
+use Spiral\Exceptions\ExceptionReporterInterface;
 use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpEvent;
 use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;
@@ -13,10 +15,11 @@ use Spiral\RoadRunnerBridge\Tcp\Response\ContinueRead;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
 use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
 
-class Service implements ServiceInterface
+final class Service implements ServiceInterface
 {
     public function __construct(
         private readonly CommandBusInterface $commandBus,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -33,19 +36,20 @@ class Service implements ServiceInterface
         $messages = \array_filter(\explode("\n", $request->body));
 
         foreach ($messages as $message) {
-            $payload = \json_decode($message, true);
-
-            // Impossible to decode the message, give up.
-            if (!$payload) {
-                throw new \RuntimeException("Unable to decode a message from [{$request->connectionUuid}] client.");
+            try {
+                $payload = \json_decode($message, true, JSON_THROW_ON_ERROR);
+                $this->commandBus->dispatch(
+                    new HandleReceivedEvent(
+                        type: 'monolog',
+                        payload: $payload,
+                    ),
+                );
+            } catch (\JsonException $e) {
+                // Impossible to decode the message, give up.
+                $this->logger->error("Unable to decode log message. Should be a valid JSON.", [
+                    'message' => $message,
+                ]);
             }
-
-            $this->commandBus->dispatch(
-                new HandleReceivedEvent(
-                    type: 'monolog',
-                    payload: $payload
-                )
-            );
         }
 
         return new ContinueRead();
