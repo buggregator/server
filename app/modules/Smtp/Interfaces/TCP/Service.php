@@ -70,8 +70,10 @@ final class Service implements ServiceInterface
 
                 if (\count($messages) === 1) {
                     $this->dispatchMessage($content);
+                    $this->cache->delete($cacheKey);
                 } elseif (!empty($messages[1])) {
                     $this->dispatchMessage($messages[0]);
+                    $this->cache->delete($cacheKey);
                 }
             }
 
