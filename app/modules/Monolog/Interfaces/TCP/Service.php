@@ -26,6 +26,10 @@ class Service implements ServiceInterface
             return new ContinueRead();
         }
 
+        if ($request->event === TcpEvent::Close) {
+            return new CloseConnection();
+        }
+
         $messages = \array_filter(\explode("\n", $request->body));
 
         foreach ($messages as $message) {
@@ -44,6 +48,6 @@ class Service implements ServiceInterface
             );
         }
 
-        return new CloseConnection();
+        return new ContinueRead();
     }
 }
