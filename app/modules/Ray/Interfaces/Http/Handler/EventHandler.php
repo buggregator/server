@@ -9,7 +9,7 @@ use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Service\HttpHandler\HandlerInterface;
 use Carbon\CarbonInterval;
-use Modules\Profiler\Application\EventHandlerInterface;
+use Modules\Ray\Application\EventHandlerInterface;
 use Modules\Ray\Application\TypeEnum;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
