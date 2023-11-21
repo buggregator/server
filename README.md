@@ -467,7 +467,7 @@ on [Github Packages](https://github.com/buggregator/spiral-app/pkgs/container/se
 To run the latest stable release, use the following command:
 
 ```bash
-docker run --pull always -p 8000:8000 -p 1025:1025 -p 9912:9912 -p 9913:9913 ghcr.io/buggregator/server:latest
+docker run --rm --pull always -p 8000:8000 -p 1025:1025 -p 9912:9912 -p 9913:9913 ghcr.io/buggregator/server:latest
 ```
 
 **Latest dev release**
@@ -475,7 +475,7 @@ docker run --pull always -p 8000:8000 -p 1025:1025 -p 9912:9912 -p 9913:9913 ghc
 To run the latest development release, use the following command:
 
 ```bash
-docker run --pull always -p 8000:8000 -p 1025:1025 -p 9912:9912 -p 9913:9913 ghcr.io/buggregator/server:dev
+docker run --rm --pull always -p 8000:8000 -p 1025:1025 -p 9912:9912 -p 9913:9913 ghcr.io/buggregator/server:dev
 ```
 
 > **Note:**
@@ -486,14 +486,14 @@ docker run --pull always -p 8000:8000 -p 1025:1025 -p 9912:9912 -p 9913:9913 ghc
 To run a specific version of Buggregator, use the following command:
 
 ```bash
-docker run -p 8000:8000 -p 1025:1025 -p 9912:9912 -p 9913:9913 ghcr.io/buggregator/server:v1.00
+docker run --rm -p 8000:8000 -p 1025:1025 -p 9912:9912 -p 9913:9913 ghcr.io/buggregator/server:v1.00
 ```
 
 > **Note:**
 > You can omit unused ports if you only use, for example, `symfony/var-dumper`.
 
 ```bash
-docker run --pull always -p 9912:9912 ghcr.io/buggregator/server:latest
+docker run --rm --pull always -p 9912:9912 ghcr.io/buggregator/server:latest
 ```
 
 ### Using buggregator with docker compose
