@@ -3,6 +3,7 @@
 <a href="https://discord.gg/vDsCD3EKUB"><img src="https://img.shields.io/badge/discord-chat-magenta.svg"></a>
 [![Twitter](https://img.shields.io/badge/twitter-Follow-blue)](https://twitter.com/buggregator)
 [![Support me on Patreon](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fshieldsio-patreon.vercel.app%2Fapi%3Fusername%3Dbutschster%26type%3Dpatrons&style=flat)](https://patreon.com/butschster)
+[![phpunit](https://github.com/buggregator/server/actions/workflows/phpunit.yml/badge.svg)](https://github.com/buggregator/server/actions/workflows/phpunit.yml)
 
 **Buggregator is a lightweight, standalone server that offers a range of debugging features for PHP applications. Think of it as a Swiss Army knife for developers. What makes it special is that it offers a range of features that you would usually find in various paid tools, but it's available for free.**
 

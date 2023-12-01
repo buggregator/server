@@ -50,6 +50,7 @@
         "phpunit/phpunit": "^9.5",
         "qossmic/deptrac-shim": "^1.0",
         "spiral/testing": "^2.6",
+        "friendsofphp/php-cs-fixer": "^3.40",
         "vimeo/psalm": "^5.16"
     },
     "autoload": {
@@ -66,7 +67,8 @@
     "config": {
         "sort-packages": true,
         "allow-plugins": {
-            "spiral/composer-publish-plugin": true
+            "spiral/composer-publish-plugin": true,
+            "php-http/discovery": false
         }
     },
     "scripts": {
@@ -76,9 +78,9 @@
             "php app.php configure -vv",
             "rr get-binary"
         ],
-        "rr:download": "rr get-binary",
-        "rr:download-protoc": "rr download-protoc-binary",
-        "psalm:config": "psalm",
+        "psalm": "vendor/bin/psalm --config=psalm.xml ./app",
+        "cs-check": "vendor/bin/php-cs-fixer fix ./app/src --rules=@PER-CS2.0 --dry-run",
+        "cs-fix": "vendor/bin/php-cs-fixer fix ./app/src --rules=@PER-CS2.0",
         "deptrack": [
             "deptrac analyze --report-uncovered"
         ]

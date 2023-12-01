@@ -15,8 +15,7 @@ final class MongoDBEventRepository implements EventRepositoryInterface
 {
     public function __construct(
         private readonly Collection $collection,
-    ) {
-    }
+    ) {}
 
     public function store(Event $event): bool
     {

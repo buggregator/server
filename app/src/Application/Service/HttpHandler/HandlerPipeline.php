@@ -21,8 +21,7 @@ final class HandlerPipeline implements HandlerRegistryInterface, CoreHandlerInte
 
     public function __construct(
         private readonly FactoryInterface $factory,
-    ) {
-    }
+    ) {}
 
     public function register(HandlerInterface $handler): void
     {

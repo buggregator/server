@@ -11,6 +11,5 @@ class DeleteEvent implements CommandInterface
 {
     public function __construct(
         public readonly Uuid $uuid
-    ) {
-    }
+    ) {}
 }

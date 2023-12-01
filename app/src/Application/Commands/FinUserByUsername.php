@@ -10,6 +10,5 @@ class FinUserByUsername implements QueryInterface
 {
     public function __construct(
         public readonly string $username
-    ) {
-    }
+    ) {}
 }

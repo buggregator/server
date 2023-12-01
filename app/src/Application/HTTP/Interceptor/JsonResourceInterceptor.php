@@ -18,8 +18,7 @@ final class JsonResourceInterceptor implements CoreInterceptorInterface
     public function __construct(
         private readonly ResponseFactoryInterface $responseFactory,
         private readonly ExceptionHandlerInterface $exceptionHandler,
-    ) {
-    }
+    ) {}
 
     public function process(string $controller, string $action, array $parameters, CoreInterface $core): mixed
     {

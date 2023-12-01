@@ -12,8 +12,7 @@ final class BroadcastEventInterceptor implements CoreInterceptorInterface
 {
     public function __construct(
         private readonly BroadcastInterface $broadcast
-    ) {
-    }
+    ) {}
 
     public function process(string $controller, string $action, array $parameters, CoreInterface $core): mixed
     {

@@ -14,8 +14,7 @@ final class ExceptionHandlerInterceptor implements CoreInterceptorInterface
 {
     public function __construct(
         private readonly ExceptionReporterInterface $reporter
-    ) {
-    }
+    ) {}
 
     public function process(string $controller, string $action, array $parameters, CoreInterface $core): ResponseInterface
     {

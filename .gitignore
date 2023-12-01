@@ -6,5 +6,6 @@ rr*
 protoc-gen-php-grpc*
 .env
 .phpunit.result.cache
+.php-cs-fixer.cache
 .deptrac.cache
 composer.lock

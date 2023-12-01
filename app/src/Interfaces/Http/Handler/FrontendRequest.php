@@ -24,8 +24,7 @@ final class FrontendRequest implements HandlerInterface
 
     public function __construct(
         private readonly string $publicPath,
-    ) {
-    }
+    ) {}
 
     public function priority(): int
     {

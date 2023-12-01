@@ -10,8 +10,7 @@ final class Json implements \JsonSerializable
 {
     public function __construct(
         private readonly array $data = []
-    ) {
-    }
+    ) {}
 
     public static function cast(string $value, DatabaseInterface $db): self
     {

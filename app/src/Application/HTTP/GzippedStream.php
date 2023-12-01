@@ -10,8 +10,7 @@ final class GzippedStream
 {
     public function __construct(
         private readonly StreamInterface $stream,
-    ) {
-    }
+    ) {}
 
     public function getPayload(): \Traversable
     {

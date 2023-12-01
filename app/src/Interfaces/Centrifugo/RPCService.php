@@ -17,8 +17,7 @@ final class RPCService implements ServiceInterface
     public function __construct(
         private readonly Http $http,
         private readonly ServerRequestFactoryInterface $requestFactory,
-    ) {
-    }
+    ) {}
 
     /**
      * @param Request\RPC $request
@@ -59,10 +58,6 @@ final class RPCService implements ServiceInterface
 
         $httpRequest = $this->requestFactory->createServerRequest(\strtoupper($method), \ltrim($uri, '/'))
             ->withHeader('Content-Type', 'application/json');
-
-//        foreach ($request->headers as $key => $headers) {
-//            $httpRequest = $httpRequest->withHeader($key, $headers);
-//        }
 
         return match ($method) {
             'GET', 'HEAD' => $httpRequest->withQueryParams($request->getData()),
