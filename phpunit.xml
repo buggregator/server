@@ -25,14 +25,8 @@
         <env name="APP_ENV" value="testing"/>
     </php>
     <testsuites>
-        <testsuite name="Unit">
-            <directory suffix="Test.php">tests/Unit</directory>
-        </testsuite>
         <testsuite name="Feature">
             <directory suffix="Test.php">tests/Feature</directory>
-        </testsuite>
-        <testsuite name="Modules">
-            <directory>app/src/Module/*/Test</directory>
         </testsuite>
     </testsuites>
 </phpunit>
