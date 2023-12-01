@@ -24,7 +24,7 @@ final class MongoDBEventRepository implements EventRepositoryInterface
             '_id' => (string)$event->getUuid(),
             'type' => $event->getType(),
             'project_id' => $event->getProjectId(),
-            'date' => $event->getDate()->getTimestamp(),
+            'date' => $event->getTimestamp(),
             'payload' => $event->getPayload()->jsonSerialize(),
         ]);
 
@@ -82,8 +82,8 @@ final class MongoDBEventRepository implements EventRepositoryInterface
         return new Event(
             uuid: Uuid::fromString($document['_id']),
             type: $document['type'],
-            payload: new Json((array) $document['payload']),
-            date: Carbon::createFromTimestamp($document['date'])->toDateTimeImmutable(),
+            payload: new Json((array)$document['payload']),
+            timestamp: $document['date'],
             projectId: $document['project_id'],
         );
     }

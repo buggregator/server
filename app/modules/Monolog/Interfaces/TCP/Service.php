@@ -7,7 +7,6 @@ namespace Modules\Monolog\Interfaces\TCP;
 use App\Application\Commands\HandleReceivedEvent;
 use Psr\Log\LoggerInterface;
 use Spiral\Cqrs\CommandBusInterface;
-use Spiral\Exceptions\ExceptionReporterInterface;
 use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpEvent;
 use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;

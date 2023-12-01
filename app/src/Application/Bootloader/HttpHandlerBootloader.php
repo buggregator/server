@@ -7,28 +7,32 @@ namespace App\Application\Bootloader;
 use App\Application\Service\HttpHandler\CoreHandlerInterface;
 use App\Application\Service\HttpHandler\HandlerPipeline;
 use App\Application\Service\HttpHandler\HandlerRegistryInterface;
-use App\Interfaces\Http\FrontendRequest;
+use App\Interfaces\Http\Handler\FrontendRequest;
 use Spiral\Boot\Bootloader\Bootloader;
 use Spiral\Boot\DirectoriesInterface;
+use Spiral\Core\FactoryInterface;
+use Spiral\Tokenizer\TokenizerListenerRegistryInterface;
 
 final class HttpHandlerBootloader extends Bootloader
 {
-    protected const SINGLETONS = [
-        HandlerPipeline::class => [self::class, 'initHandlerPipeline'],
-        HandlerRegistryInterface::class => HandlerPipeline::class,
-        CoreHandlerInterface::class => HandlerPipeline::class,
-    ];
-
-    private function initHandlerPipeline(DirectoriesInterface $dirs): HandlerPipeline
+    public function defineSingletons(): array
     {
-        $pipeline = new HandlerPipeline();
+        return [
+            HandlerPipeline::class => static function (FactoryInterface $factory): HandlerPipeline {
+                return new HandlerPipeline(factory: $factory);
+            },
+            HandlerRegistryInterface::class => HandlerPipeline::class,
+            CoreHandlerInterface::class => HandlerPipeline::class,
+            FrontendRequest::class => static function (DirectoriesInterface $dirs): FrontendRequest {
+                return new FrontendRequest(
+                    $dirs->get('public'),
+                );
+            },
+        ];
+    }
 
-        $pipeline->register(
-            new FrontendRequest(
-                $dirs->get('public')
-            )
-        );
-
-        return $pipeline;
+    public function init(TokenizerListenerRegistryInterface $tokenizerRegistry, HandlerPipeline $pipeline): void
+    {
+        $tokenizerRegistry->addListener($pipeline);
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Events\Application\Queries;
+namespace Modules\Events\Interfaces\Queries;
 
 use App\Application\Commands\AskEvents;
 

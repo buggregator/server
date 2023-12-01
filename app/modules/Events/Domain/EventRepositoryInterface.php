@@ -7,7 +7,7 @@ namespace Modules\Events\Domain;
 use Cycle\ORM\RepositoryInterface;
 
 /**
- * @template TEntity of Event
+ * @extends RepositoryInterface<Event>
  */
 interface EventRepositoryInterface extends RepositoryInterface
 {

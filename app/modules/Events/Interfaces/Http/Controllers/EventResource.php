@@ -24,7 +24,7 @@ final class EventResource extends JsonResource
             'uuid' => (string)$this->data->getUuid(),
             'type' => $this->data->getType(),
             'payload' => $this->data->getPayload(),
-            'timestamp' => $this->data->getDate()->getTimestamp(),
+            'timestamp' => $this->data->getTimestamp(),
             'project_id' => $this->data->getProjectId(),
         ];
     }

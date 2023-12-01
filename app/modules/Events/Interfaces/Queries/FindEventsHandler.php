@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Events\Application\Queries;
+namespace Modules\Events\Interfaces\Queries;
 
 use App\Application\Commands\FindEvents;
 use Modules\Events\Domain\EventRepositoryInterface;

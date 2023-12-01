@@ -30,7 +30,7 @@ final class CacheEventRepository implements EventRepositoryInterface
 
     public function __construct(
         CacheStorageProviderInterface $provider,
-        private readonly int $ttl = 60 * 60 * 2
+        private readonly int $ttl = 60 * 60 * 2,
     ) {
         $this->cache = $provider->storage('events');
     }
@@ -66,7 +66,7 @@ final class CacheEventRepository implements EventRepositoryInterface
             'id' => $id,
             'type' => $event->getType(),
             'project_id' => $event->getProjectId(),
-            'date' => $event->getDate()->getTimestamp(),
+            'date' => $event->getTimestamp(),
             'payload' => $event->getPayload()->jsonSerialize(),
         ], Carbon::now()->addSeconds($this->ttl)->diffAsCarbonInterval());
     }
@@ -159,7 +159,7 @@ final class CacheEventRepository implements EventRepositoryInterface
             uuid: Uuid::fromString($document['id']),
             type: $document['type'],
             payload: new Json((array)$document['payload']),
-            date: Carbon::createFromTimestamp($document['date'])->toDateTimeImmutable(),
+            timestamp: $document['date'],
             projectId: $document['project_id'],
         );
     }

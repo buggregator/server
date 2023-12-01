@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Events\Application\Commands;
+namespace Modules\Events\Interfaces\Commands;
 
 use App\Application\Commands\ClearEvents;
 use Modules\Events\Domain\EventRepositoryInterface;
@@ -14,7 +14,7 @@ final class ClearEventsHandler
 {
     public function __construct(
         private readonly EventRepositoryInterface $events,
-        private readonly EventDispatcherInterface $dispatcher
+        private readonly EventDispatcherInterface $dispatcher,
     ) {
     }
 

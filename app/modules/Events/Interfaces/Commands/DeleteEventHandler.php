@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Events\Application\Commands;
+namespace Modules\Events\Interfaces\Commands;
 
 use App\Application\Commands\DeleteEvent;
 use Modules\Events\Domain\EventRepositoryInterface;
