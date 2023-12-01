@@ -13,21 +13,21 @@ use Spiral\Boot\Bootloader\Bootloader;
 
 final class RayBootloader extends Bootloader
 {
-    protected const SINGLETONS = [
-        EventHandlerInterface::class => [self::class, 'eventHandler'],
-    ];
+    public function defineSingletons(): array
+    {
+        return [
+            EventHandlerInterface::class => static function (ContainerInterface $container): EventHandlerInterface {
+                return new EventHandler($container, [
+                    MergeEventsHandler::class,
+                ]);
+            },
+        ];
+    }
 
     public function boot(
         HandlerRegistryInterface $registry,
-        HttpEventHandler $handler
+        HttpEventHandler $handler,
     ): void {
         $registry->register($handler);
-    }
-
-    public function eventHandler(ContainerInterface $container): EventHandlerInterface
-    {
-        return new EventHandler($container, [
-            MergeEventsHandler::class,
-        ]);
     }
 }

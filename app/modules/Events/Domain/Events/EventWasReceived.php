@@ -14,7 +14,7 @@ final class EventWasReceived implements ShouldBroadcastInterface
         public readonly Uuid $uuid,
         public readonly string $type,
         public readonly array $payload,
-        public readonly int $timestamp,
+        public readonly float $timestamp,
         public readonly ?int $projectId = null,
     ) {
     }

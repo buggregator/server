@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Events\Interfaces\Http\Controllers;
+namespace Modules\Events\Interfaces\Http\Resources;
 
 use App\Application\HTTP\Response\ResourceCollection;
 

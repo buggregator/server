@@ -14,20 +14,19 @@
     stopOnFailure="false"
     stopOnError="false"
     stderr="true">
-  <coverage processUncoveredFiles="true">
-    <include>
-      <directory suffix=".php">app/src</directory>
-    </include>
-  </coverage>
-  <testsuites>
-    <testsuite name="Unit">
-      <directory suffix="Test.php">tests/Unit</directory>
-    </testsuite>
-    <testsuite name="Feature">
-      <directory suffix="Test.php">tests/Feature</directory>
-    </testsuite>
-      <testsuite name="Modules">
-          <directory>app/src/Module/*/Test</directory>
-      </testsuite>
-  </testsuites>
+    <php>
+        <env name="BROADCAST_CONNECTION" value="in-memory"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="CACHE_STORAGE" value="array"/>
+        <env name="CACHE_DEFAULT_STORAGE" value="array"/>
+        <env name="CYCLE_SCHEMA_CACHE" value="true"/>
+        <env name="DB_LOG_QUERY_PARAMETERS" value="true"/>
+        <env name="TOKENIZER_CACHE_TARGETS" value="true"/>
+        <env name="APP_ENV" value="testing"/>
+    </php>
+    <testsuites>
+        <testsuite name="Feature">
+            <directory suffix="Test.php">tests/Feature</directory>
+        </testsuite>
+    </testsuites>
 </phpunit>

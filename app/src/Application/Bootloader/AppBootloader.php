@@ -12,13 +12,19 @@ use Spiral\Core\CoreInterface;
 
 final class AppBootloader extends DomainBootloader
 {
-    protected const SINGLETONS = [
-        CoreInterface::class => [self::class, 'domainCore'],
-    ];
+    public function defineSingletons(): array
+    {
+        return [
+            CoreInterface::class => [self::class, 'domainCore'],
+        ];
+    }
 
-    protected const INTERCEPTORS = [
-        StringToIntParametersInterceptor::class,
-        UuidParametersConverterInterceptor::class,
-        JsonResourceInterceptor::class,
-    ];
+    protected static function defineInterceptors(): array
+    {
+        return [
+            StringToIntParametersInterceptor::class,
+            UuidParametersConverterInterceptor::class,
+            JsonResourceInterceptor::class,
+        ];
+    }
 }

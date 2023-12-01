@@ -6,6 +6,4 @@ namespace App\Application\Commands;
 
 use Spiral\Cqrs\QueryInterface;
 
-class FindAllTransactions implements QueryInterface
-{
-}
+class FindAllTransactions implements QueryInterface {}

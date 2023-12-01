@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Application\Broadcasting\InMemoryDriver;
 use Spiral\Broadcasting\Driver\NullBroadcast;
 
 return [
@@ -13,6 +14,9 @@ return [
         ],
         'null' => [
             'driver' => NullBroadcast::class,
+        ],
+        'in-memory' => [
+            'driver' => InMemoryDriver::class,
         ],
     ],
 ];

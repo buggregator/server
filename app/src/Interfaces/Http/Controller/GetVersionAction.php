@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Interfaces\Http;
+namespace App\Interfaces\Http\Controller;
 
 use App\Application\HTTP\Response\JsonResource;
 use App\Application\HTTP\Response\ResourceInterface;

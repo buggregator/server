@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace App\Application\Bootloader;
 
-use App\Application\Service\HttpHandler\CoreHandlerInterface;
 use App\Interfaces\Http\EventHandlerAction;
-use Psr\Container\ContainerInterface;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Spiral\Bootloader\Http\RoutesBootloader as BaseRoutesBootloader;
 use Spiral\Filter\ValidationHandlerMiddleware;
 use Spiral\Http\Middleware\ErrorHandlerMiddleware;
+use Spiral\Http\Middleware\JsonPayloadMiddleware;
 use Spiral\Router\Bootloader\AnnotatedRoutesBootloader;
 use Spiral\Router\GroupRegistry;
 use Spiral\Router\Loader\Configurator\RoutingConfigurator;
@@ -25,6 +22,7 @@ final class RoutesBootloader extends BaseRoutesBootloader
     protected function globalMiddleware(): array
     {
         return [
+            JsonPayloadMiddleware::class,
             ErrorHandlerMiddleware::class,
             ValidationHandlerMiddleware::class,
         ];

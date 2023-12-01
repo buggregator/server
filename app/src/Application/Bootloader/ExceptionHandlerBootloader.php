@@ -19,10 +19,13 @@ use Spiral\Http\Middleware\ErrorHandlerMiddleware\SuppressErrorsInterface;
 
 final class ExceptionHandlerBootloader extends Bootloader
 {
-    protected const BINDINGS = [
-        SuppressErrorsInterface::class => EnvSuppressErrors::class,
-        RendererInterface::class => PlainRenderer::class,
-    ];
+    public function defineBindings(): array
+    {
+        return [
+            SuppressErrorsInterface::class => EnvSuppressErrors::class,
+            RendererInterface::class => PlainRenderer::class,
+        ];
+    }
 
     public function init(AbstractKernel $kernel): void
     {

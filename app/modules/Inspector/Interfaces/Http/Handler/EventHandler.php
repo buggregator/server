@@ -35,12 +35,17 @@ final class EventHandler implements HandlerInterface
             ?? throw new ClientException\BadRequestException('Invalid data');
 
         $type = $data[0]['type'] ?? 'unknown';
-        if ($type !== 'request') {
-            throw new ClientException\BadRequestException('Invalid data');
-        }
+
+        $data = match ($type) {
+            'process',
+            'request' => $data,
+            default => throw new ClientException\BadRequestException(
+                \sprintf('Invalid type "%s". [%s] expected.', $type, \implode(', ', ['process', 'request'])),
+            ),
+        };
 
         $this->commands->dispatch(
-            new HandleReceivedEvent(type: 'inspector', payload: $data)
+            new HandleReceivedEvent(type: 'inspector', payload: $data),
         );
 
         return $this->responseWrapper->create(200);

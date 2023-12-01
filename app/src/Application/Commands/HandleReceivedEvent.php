@@ -10,16 +10,16 @@ use Spiral\Cqrs\CommandInterface;
 final class HandleReceivedEvent implements CommandInterface, \JsonSerializable
 {
     public readonly Uuid $uuid;
-    public readonly int $timestamp;
+    public readonly float $timestamp;
 
     public function __construct(
         public readonly string $type,
         public readonly array $payload,
         public readonly ?string $project = null,
-        ?Uuid $uuid = null
+        ?Uuid $uuid = null,
     ) {
         $this->uuid = $uuid ?? Uuid::generate();
-        $this->timestamp = time();
+        $this->timestamp = microtime(true);
     }
 
     public function jsonSerialize(): array

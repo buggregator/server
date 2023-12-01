@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Events\Application\Commands;
+namespace Modules\Events\Interfaces\Commands;
 
 use App\Application\Commands\FindProjectByName;
 use App\Application\Commands\HandleReceivedEvent;
@@ -20,7 +20,7 @@ final class StoreEventHandler
     public function __construct(
         private readonly EventDispatcherInterface $dispatcher,
         private readonly EventRepositoryInterface $events,
-        private readonly QueryBusInterface $queryBus
+        private readonly QueryBusInterface $queryBus,
     ) {
     }
 
@@ -37,9 +37,9 @@ final class StoreEventHandler
                 $command->uuid,
                 $command->type,
                 new Json($command->payload),
-                Carbon::createFromTimestamp($command->timestamp)->toDateTimeImmutable(),
+                $command->timestamp,
                 $projectId,
-            )
+            ),
         );
 
         $this->dispatcher->dispatch(
@@ -49,7 +49,7 @@ final class StoreEventHandler
                 payload: $command->payload,
                 timestamp: $command->timestamp,
                 projectId: $projectId,
-            )
+            ),
         );
     }
 }

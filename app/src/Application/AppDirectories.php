@@ -10,8 +10,7 @@ final class AppDirectories
 {
     public function __construct(
         private readonly DirectoriesInterface $directories
-    ) {
-    }
+    ) {}
 
     /**
      * Application root directory.

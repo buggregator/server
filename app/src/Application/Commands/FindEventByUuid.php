@@ -11,6 +11,5 @@ class FindEventByUuid implements QueryInterface
 {
     public function __construct(
         public readonly Uuid $uuid
-    ) {
-    }
+    ) {}
 }

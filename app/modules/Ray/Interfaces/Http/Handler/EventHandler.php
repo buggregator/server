@@ -58,14 +58,15 @@ final class EventHandler implements HandlerInterface
             $this->cache->set($hash, 1, CarbonInterval::minute(5));
         } elseif ($type === TypeEnum::ClearAll->value) {
             $this->commands->dispatch(new ClearEvents(type: 'ray'));
+            return $this->responseWrapper->create(200);
         }
 
         $event = $this->handler->handle($event);
 
         $this->commands->dispatch(
             new HandleReceivedEvent(
-                type: 'ray', payload: $event, uuid: Uuid::fromString($event['uuid'])
-            )
+                type: 'ray', payload: $event, uuid: Uuid::fromString($event['uuid']),
+            ),
         );
 
         return $this->responseWrapper->create(200);
@@ -86,9 +87,11 @@ final class EventHandler implements HandlerInterface
 
     private function isValidRequest(ServerRequestInterface $request): bool
     {
+        $userAgent = $request->getServerParams()['HTTP_USER_AGENT'] ?? '';
+
         return $request->getHeaderLine('X-Buggregator-Event') === 'ray'
             || $request->getAttribute('event-type') === 'ray'
-            || \str_starts_with($request->getUri()->getPath(), 'Ray')
-            || $request->getUri()->getUserInfo() === 'ray';
+            || $request->getUri()->getUserInfo() === 'ray'
+            || \str_starts_with($userAgent, 'Ray');
     }
 }

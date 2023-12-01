@@ -26,8 +26,8 @@ class Event
         #[Column(type: 'longText', typecast: 'json')]
         private Json $payload,
 
-        #[Column(type: 'datetime')]
-        private DateTimeImmutable $date,
+        #[Column(type: 'float')]
+        private float $timestamp,
 
         #[Column(type: 'integer', nullable: true)]
         private ?int $projectId,
@@ -49,9 +49,9 @@ class Event
         return $this->payload;
     }
 
-    public function getDate(): DateTimeImmutable
+    public function getTimestamp(): float
     {
-        return $this->date;
+        return $this->timestamp;
     }
 
     public function getProjectId(): ?int

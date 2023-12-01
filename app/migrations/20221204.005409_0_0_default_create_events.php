@@ -16,7 +16,7 @@ class OrmDefaultA580ac210e75d2560aaa96f96a407702 extends Migration
         ->addColumn('uuid', 'string', ['nullable' => false, 'default' => null])
         ->addColumn('type', 'string', ['nullable' => false, 'default' => null])
         ->addColumn('payload', 'longText', ['nullable' => false, 'default' => null])
-        ->addColumn('date', 'datetime', ['nullable' => false, 'default' => null])
+        ->addColumn('timestamp', 'float', ['nullable' => false, 'default' => null])
         ->addColumn('project_id', 'integer', ['nullable' => true, 'default' => null])
         ->setPrimaryKeys(['uuid'])
         ->create();

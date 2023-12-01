@@ -3,18 +3,22 @@
 declare(strict_types=1);
 
 use Spiral\Cache\Storage\ArrayStorage;
-use Spiral\Cache\Storage\FileStorage;
+
+$defaultStorage = env('CACHE_DEFAULT_STORAGE', 'roadrunner');
 
 return [
-    'default' => env('CACHE_STORAGE', 'local'),
+    'default' => env('CACHE_STORAGE', 'roadrunner'),
+    'aliases' => [
+        'events' => ['storage' => $defaultStorage, 'prefix' => 'events:'],
+        'local' => ['storage' => $defaultStorage, 'prefix' => 'local:'],
+    ],
     'storages' => [
-        'local' => [
+        'array' => [
+            'type' => ArrayStorage::class,
+        ],
+        'roadrunner' => [
             'type' => 'roadrunner',
             'driver' => 'local',
-        ],
-        'events' => [
-            'type' => 'roadrunner',
-            'driver' => 'events',
         ],
     ],
 ];

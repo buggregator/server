@@ -7,13 +7,21 @@ namespace App\Application\Service\HttpHandler;
 use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Spiral\Core\FactoryInterface;
+use Spiral\Tokenizer\Attribute\TargetClass;
+use Spiral\Tokenizer\TokenizationListenerInterface;
 
-final class HandlerPipeline implements HandlerRegistryInterface, CoreHandlerInterface
+#[TargetClass(class: HandlerInterface::class)]
+final class HandlerPipeline implements HandlerRegistryInterface, CoreHandlerInterface, TokenizationListenerInterface
 {
     /** @var HandlerInterface[] */
     private array $handlers = [];
     private int $position = 0;
     private bool $isHandled = false;
+
+    public function __construct(
+        private readonly FactoryInterface $factory,
+    ) {}
 
     public function register(HandlerInterface $handler): void
     {
@@ -55,7 +63,17 @@ final class HandlerPipeline implements HandlerRegistryInterface, CoreHandlerInte
 
         return $handler->handle(
             $request,
-            fn(ServerRequestInterface $request) => $this->handlePipeline($request)
+            fn(ServerRequestInterface $request) => $this->handlePipeline($request),
         );
+    }
+
+    public function listen(\ReflectionClass $class): void
+    {
+        $this->register($this->factory->make($class->getName()));
+    }
+
+    public function finalize(): void
+    {
+        // TODO: Implement finalize() method.
     }
 }

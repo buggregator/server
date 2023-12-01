@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Interfaces\Http;
+namespace App\Interfaces\Http\Handler;
 
 use App\Application\Service\HttpHandler\HandlerInterface;
 use GuzzleHttp\Psr7\MimeType;
@@ -24,8 +24,7 @@ final class FrontendRequest implements HandlerInterface
 
     public function __construct(
         private readonly string $publicPath,
-    ) {
-    }
+    ) {}
 
     public function priority(): int
     {
