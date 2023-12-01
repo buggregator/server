@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Application\HTTP\Response;
 
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Spiral\DataGrid\GridInterface;
 use Spiral\Http\Traits\JsonTrait;
 
@@ -13,13 +12,17 @@ class ResourceCollection implements ResourceInterface
 {
     use JsonTrait;
 
+    private readonly array $args;
+
     /**
      * @param class-string<ResourceInterface> $resourceClass
      */
     public function __construct(
         protected readonly iterable $data,
-        protected string $resourceClass = JsonResource::class
+        protected string $resourceClass = JsonResource::class,
+        mixed ...$args
     ) {
+        $this->args = $args;
     }
 
     /**
@@ -35,21 +38,30 @@ class ResourceCollection implements ResourceInterface
         return $this->data;
     }
 
-    public function resolve(ServerRequestInterface $request): array
+    public function jsonSerialize(): array
     {
         $data = [];
-        $resourceClass = $this->getResourceClass();
+        $resource = $this->getResourceClass();
 
         foreach ($this->getData() as $key => $row) {
-            $data[$key] = (new $resourceClass($row))->resolve($request);
+            if ($row instanceof \JsonSerializable) {
+                $data[$key] = $row;
+                continue;
+            }
+
+            if (\is_string($resource)) {
+                $resource = static fn(mixed $row, mixed ...$args): ResourceInterface => new $resource($row, ...$args);
+            }
+
+            $data[$key] = $resource($row, ...$this->args);
         }
 
         return $this->wrapData($data);
     }
 
-    public function toResponse(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
+    public function toResponse(ResponseInterface $response): ResponseInterface
     {
-        return $this->writeJson($response, $this->resolve($request));
+        return $this->writeJson($response, $this);
     }
 
     protected function wrapData(array $data): array

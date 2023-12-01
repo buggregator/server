@@ -7,6 +7,7 @@ namespace Modules\Events\Interfaces\Http\Controllers;
 use App\Application\Commands\FindEventByUuid;
 use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Exception\EntityNotFoundException;
+use Modules\Events\Interfaces\Http\Resources\EventResource;
 use Spiral\Cqrs\QueryBusInterface;
 use Spiral\Http\Exception\ClientException\NotFoundException;
 use Spiral\Router\Annotation\Route;

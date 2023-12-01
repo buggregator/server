@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Modules\Events\Interfaces\Http\Controllers;
+namespace Modules\Events\Interfaces\Http\Resources;
 
 use App\Application\HTTP\Response\JsonResource;
 use Modules\Events\Domain\Event;
-use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * @property-read Event $data
@@ -18,7 +17,7 @@ final class EventResource extends JsonResource
         parent::__construct($data);
     }
 
-    protected function mapData(ServerRequestInterface $request): array|\JsonSerializable
+    protected function mapData(): array|\JsonSerializable
     {
         return [
             'uuid' => (string)$this->data->getUuid(),

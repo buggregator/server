@@ -6,6 +6,7 @@ namespace Modules\Events\Interfaces\Http\Controllers;
 
 use App\Application\Commands\FindEvents;
 use Modules\Events\Interfaces\Http\Request\EventsRequest;
+use Modules\Events\Interfaces\Http\Resources\EventCollection;
 use Spiral\Cqrs\QueryBusInterface;
 use Spiral\Router\Annotation\Route;
 

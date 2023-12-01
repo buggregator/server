@@ -90,12 +90,7 @@ class Kernel extends \Spiral\Framework\Kernel
 
             StorageBootloader::class,
             DistributionBootloader::class,
-        ];
-    }
 
-    protected function defineAppBootloaders(): array
-    {
-        return [
             HttpHandlerBootloader::class,
             AppBootloader::class,
             InspectorBootloader::class,

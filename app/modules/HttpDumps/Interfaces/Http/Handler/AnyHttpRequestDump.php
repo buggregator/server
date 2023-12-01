@@ -51,7 +51,7 @@ final class AnyHttpRequestDump implements HandlerInterface
         $event = $this->handler->handle($payload);
 
         $this->commands->dispatch(
-            new HandleReceivedEvent(type: 'http-dump', payload: $event)
+            new HandleReceivedEvent(type: 'http-dump', payload: $event),
         );
 
         return $this->responseWrapper->create(200);
@@ -77,7 +77,7 @@ final class AnyHttpRequestDump implements HandlerInterface
                     function (UploadedFileInterface $attachment) use ($id) {
                         $this->bucket->write(
                             $filename = $id . '/' . $attachment->getClientFilename(),
-                            $attachment->getStream()
+                            $attachment->getStream(),
                         );
 
                         return [
@@ -88,9 +88,9 @@ final class AnyHttpRequestDump implements HandlerInterface
                             'mime' => $attachment->getClientMediaType(),
                         ];
                     },
-                    $request->getUploadedFiles()
+                    $request->getUploadedFiles(),
                 ),
-            ]
+            ],
         ];
     }
 }
