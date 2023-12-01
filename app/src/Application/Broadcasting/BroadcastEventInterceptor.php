@@ -26,7 +26,7 @@ final class BroadcastEventInterceptor implements CoreInterceptorInterface
                 \json_encode([
                     'event' => $event->getEventName(),
                     'data' =>  $event->jsonSerialize(),
-                ])
+                ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)
             );
         }
 
