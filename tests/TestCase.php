@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Service\ErrorHandler\Handler;
 use Modules\Events\Domain\EventRepositoryInterface;
-use Psr\SimpleCache\CacheInterface;
-use Spiral\Cache\Storage\ArrayStorage;
 use Spiral\Core\Container;
 use Spiral\Core\ContainerScope;
 use Spiral\Testing\TestableKernelInterface;
@@ -90,5 +89,10 @@ class TestCase extends BaseTestCase
         }
 
         return $this->events;
+    }
+
+    protected function randomUuid(): Uuid
+    {
+        return Uuid::generate();
     }
 }
