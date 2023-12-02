@@ -24,6 +24,7 @@ use Spiral\League\Event\Bootloader\EventBootloader;
 use Spiral\Monolog\Bootloader\MonologBootloader;
 use Spiral\Nyholm\Bootloader\NyholmBootloader;
 use Spiral\RoadRunnerBridge\Bootloader as RoadRunnerBridge;
+use Spiral\Stempler\Bootloader\StemplerBootloader;
 use Spiral\Storage\Bootloader\StorageBootloader;
 use Spiral\Tokenizer\Bootloader\TokenizerListenerBootloader;
 use Spiral\Validation\Bootloader\ValidationBootloader;
@@ -61,6 +62,8 @@ class Kernel extends \Spiral\Framework\Kernel
             ValidationBootloader::class,
             ValidatorBootloader::class,
 
+            StemplerBootloader::class,
+
             // HTTP extensions
             NyholmBootloader::class,
             Framework\Http\RouterBootloader::class,
@@ -86,6 +89,7 @@ class Kernel extends \Spiral\Framework\Kernel
             RoadRunnerBridge\CommandBootloader::class,
 
             // Configure route groups, middleware for route groups
+            \Spiral\OpenApi\Bootloader\SwaggerBootloader::class,
             Bootloader\RoutesBootloader::class,
 
             StorageBootloader::class,

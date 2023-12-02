@@ -12,6 +12,7 @@ use Spiral\Http\Middleware\JsonPayloadMiddleware;
 use Spiral\Router\Bootloader\AnnotatedRoutesBootloader;
 use Spiral\Router\GroupRegistry;
 use Spiral\Router\Loader\Configurator\RoutingConfigurator;
+use Spiral\OpenApi\Controller\DocumentationController;
 
 final class RoutesBootloader extends BaseRoutesBootloader
 {
@@ -31,7 +32,9 @@ final class RoutesBootloader extends BaseRoutesBootloader
     protected function middlewareGroups(): array
     {
         return [
+            'web' => [],
             'api' => [],
+            'docs' => [],
         ];
     }
 
@@ -45,6 +48,21 @@ final class RoutesBootloader extends BaseRoutesBootloader
 
     protected function defineRoutes(RoutingConfigurator $routes): void
     {
+        $routes
+            ->add('swagger-api-html', '/api/docs')
+            ->group('docs')
+            ->action(DocumentationController::class, 'html');
+
+        $routes
+            ->add('swagger-api-json', '/api/docs.json')
+            ->group('docs')
+            ->action(DocumentationController::class, 'json');
+
+        $routes
+            ->add('swagger-api-yaml', '/api/docs.yaml')
+            ->group('docs')
+            ->action(DocumentationController::class, 'yaml');
+
         $routes->default('/<path:.*>')
             ->group('web')
             ->action(EventHandlerAction::class, 'handle');

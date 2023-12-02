@@ -9,9 +9,20 @@ use Spiral\Filters\Model\Filter;
 use Spiral\Filters\Model\FilterDefinitionInterface;
 use Spiral\Filters\Model\HasFilterDefinition;
 use Spiral\Validator\FilterDefinition;
+use OpenApi\Attributes as OA;
 
+
+#[OA\Schema(
+    schema: 'ClearEventsRequest',
+)]
 final class ClearEventsRequest extends Filter implements HasFilterDefinition
 {
+    #[OA\Property(
+        property: 'type',
+        description: 'Event type',
+        type: 'string',
+        nullable: true,
+    )]
     #[Data]
     public ?string $type = null;
 
