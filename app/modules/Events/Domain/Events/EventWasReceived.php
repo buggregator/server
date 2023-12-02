@@ -22,7 +22,7 @@ final class EventWasReceived implements ShouldBroadcastInterface
     public function jsonSerialize(): array
     {
         return [
-            'projectId' => $this->projectId,
+            'project_id' => $this->projectId,
             'uuid' => (string)$this->uuid,
             'type' => $this->type,
             'payload' => $this->payload,
