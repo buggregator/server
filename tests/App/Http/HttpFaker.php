@@ -40,12 +40,21 @@ final class HttpFaker
         );
     }
 
-    public function clearEvents(?string $type = null): ResponseAssertions
+    public function clearEvents(?string $type = null, ?array $uuids = null): ResponseAssertions
     {
+        $args = [];
+        if ($type) {
+            $args['type'] = $type;
+        }
+
+        if ($uuids) {
+            $args['uuids'] = $uuids;
+        }
+
         return $this->makeResponse(
             $this->http->deleteJson(
                 uri: '/api/events/',
-                data: $type ? ['type' => $type] : [],
+                data: $args,
             ),
         );
     }

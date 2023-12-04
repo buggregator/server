@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Interfaces\TCP\VarDumper;
+namespace Tests\Feature\Interfaces\TCP\VarDumper;
 
 use Modules\VarDumper\Interfaces\TCP\Service;
 use Spiral\RoadRunner\Tcp\Request;

@@ -7,6 +7,7 @@ namespace Tests\App\Events;
 use App\Application\Domain\ValueObjects\Uuid;
 use Mockery\MockInterface;
 use Modules\Events\Domain\EventRepositoryInterface;
+use PHPUnit\Framework\TestCase;
 
 final class EventsMocker
 {
@@ -34,11 +35,23 @@ final class EventsMocker
             ->andReturn($status);
     }
 
-    public function eventShouldBeClear(?string $type = null): void
+    public function eventShouldBeClear(?string $type = null, ?array $uuids = null): void
     {
+        $args = [];
+        if ($type) {
+            $args['type'] = $type;
+        }
+
+        if ($uuids) {
+            $args['uuid'] = $uuids;
+        }
+
         $this->events
             ->shouldReceive('deleteAll')
-            ->with($type ? ['type' => $type] : [])
+            ->withArgs(function (array $data) use($args): bool {
+                TestCase::assertSame($args, $data);
+                return true;
+            })
             ->once();
     }
 }

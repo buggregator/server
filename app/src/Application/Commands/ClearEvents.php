@@ -9,6 +9,7 @@ use Spiral\Cqrs\CommandInterface;
 class ClearEvents implements CommandInterface
 {
     public function __construct(
-        public readonly ?string $type = null
+        public readonly ?string $type = null,
+        public readonly ?array $uuids = null,
     ) {}
 }
