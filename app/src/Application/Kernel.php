@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application;
 
 use App\Application\Bootloader\AppBootloader;
+use App\Application\Bootloader\AttributesBootloader;
 use App\Application\Bootloader\HttpHandlerBootloader;
 use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
@@ -34,6 +35,7 @@ class Kernel extends \Spiral\Framework\Kernel
 {
     protected const SYSTEM = [
         CoreBootloader::class,
+        AttributesBootloader::class,
         TokenizerListenerBootloader::class,
         DotenvBootloader::class,
     ];
