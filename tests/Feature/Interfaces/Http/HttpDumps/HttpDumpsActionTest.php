@@ -8,6 +8,24 @@ use Tests\Feature\Interfaces\Http\ControllerTestCase;
 
 final class HttpDumpsActionTest extends ControllerTestCase
 {
+    public function testHttpDumpViaHttpUser(): void
+    {
+        $this->http
+            ->postJson(
+                uri: 'http://http-dump@localhost/',
+                data: ['foo' => 'bar'],
+            )
+            ->assertOk();
+
+        $this->broadcastig->assertPushed('events', function (array $data) {
+            $this->assertSame('event.received', $data['event']);
+            $this->assertSame('http-dump', $data['data']['type']);
+            $this->assertSame('{"foo":"bar"}', $data['data']['payload']['request']['body']);
+
+            return true;
+        });
+    }
+
     public function testHttpDumpsPost(): void
     {
         $this->http
