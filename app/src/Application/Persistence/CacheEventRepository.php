@@ -56,6 +56,7 @@ final class CacheEventRepository implements EventRepositoryInterface
         $id = (string)$event->getUuid();
         $ids = $this->getEventIds();
         $ids[$id] = [
+            'uuid' => (string)$event->getUuid(),
             'type' => $event->getType(),
             'date' => \microtime(true),
         ];
@@ -168,7 +169,11 @@ final class CacheEventRepository implements EventRepositoryInterface
     {
         $criteria = (new Criteria())->orderBy($orderBy);
         foreach ($scope as $key => $value) {
-            $criteria->andWhere(Criteria::expr()->eq($key, $value));
+            match (true) {
+                \is_array($value) => $criteria->orWhere(Criteria::expr()->in($key, $value)),
+                null === $value => $criteria->orWhere(Criteria::expr()->isNull($key)),
+                default => $criteria->orWhere(Criteria::expr()->eq($key, $value)),
+            };
         }
 
         $ids = (new ArrayCollection($this->getEventIds()))->matching($criteria)->toArray();

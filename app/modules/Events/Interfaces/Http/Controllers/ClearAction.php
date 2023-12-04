@@ -33,7 +33,7 @@ final class ClearAction
     public function __invoke(ClearEventsRequest $request, CommandBusInterface $bus): ResourceInterface
     {
         $bus->dispatch(
-            new ClearEvents(type: $request->type),
+            new ClearEvents(type: $request->type, uuids: $request->uuids),
         );
 
         return new SuccessResource();

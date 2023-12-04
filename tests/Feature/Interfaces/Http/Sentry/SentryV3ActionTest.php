@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Interfaces\Http\Sentry;
+namespace Tests\Feature\Interfaces\Http\Sentry;
 
 use Nyholm\Psr7\Stream;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;

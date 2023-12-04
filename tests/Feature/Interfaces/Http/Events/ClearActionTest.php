@@ -25,4 +25,22 @@ final class ClearActionTest extends ControllerTestCase
             ->clearEvents(type: 'test')
             ->assertSuccessResource();
     }
+
+    public function testClearEventsByUuids(): void
+    {
+        $this->fakeEvents()->eventShouldBeClear(uuids: ['foo', 'bar']);
+
+        $this->http
+            ->clearEvents(uuids: ['foo', 'bar'])
+            ->assertSuccessResource();
+    }
+
+    public function testClearEventsByTypeAndUuids(): void
+    {
+        $this->fakeEvents()->eventShouldBeClear(type: 'test', uuids: ['foo', 'bar']);
+
+        $this->http
+            ->clearEvents(type: 'test', uuids: ['foo', 'bar'])
+            ->assertSuccessResource();
+    }
 }

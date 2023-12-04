@@ -21,7 +21,16 @@ final class ClearEventsHandler
     #[CommandHandler]
     public function __invoke(ClearEvents $command): void
     {
-        $this->events->deleteAll($command->type ? ['type' => $command->type] : []);
+        $args = [];
+        if ($command->type) {
+            $args['type'] = $command->type;
+        }
+
+        if ($command->uuids) {
+            $args['uuid'] = $command->uuids;
+        }
+
+        $this->events->deleteAll($args);
         $this->dispatcher->dispatch(new EventsWasClear(type: $command->type));
     }
 }

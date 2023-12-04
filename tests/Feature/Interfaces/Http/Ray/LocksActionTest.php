@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Interfaces\Http\Ray;
+namespace Tests\Feature\Interfaces\Http\Ray;
 
 use Psr\SimpleCache\CacheInterface;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;
