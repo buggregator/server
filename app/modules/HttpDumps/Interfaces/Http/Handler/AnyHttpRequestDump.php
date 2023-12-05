@@ -37,7 +37,8 @@ final class AnyHttpRequestDump implements HandlerInterface
     private function isValidRequest(ServerRequestInterface $request): bool
     {
         return $request->getHeaderLine('X-Buggregator-Event') === 'http-dump'
-            || $request->getAttribute('event-type') === 'http-dump';
+            || $request->getAttribute('event-type') === 'http-dump'
+            || $request->getUri()->getUserInfo() === 'http-dump';
     }
 
     public function handle(ServerRequestInterface $request, \Closure $next): ResponseInterface

@@ -92,6 +92,6 @@ final class EventHandler implements HandlerInterface
         return $request->getHeaderLine('X-Buggregator-Event') === 'ray'
             || $request->getAttribute('event-type') === 'ray'
             || $request->getUri()->getUserInfo() === 'ray'
-            || \str_starts_with($userAgent, 'Ray');
+            || \str_starts_with(\strtolower($userAgent), 'ray');
     }
 }

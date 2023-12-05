@@ -59,10 +59,15 @@ final class HttpFaker
         );
     }
 
-    public function __call(string $name, array $arguments): ResponseAssertions
+    public function __call(string $name, array $arguments): ResponseAssertions|self
     {
         if (!method_exists($this->http, $name)) {
             throw new \Exception("Method $name does not exist");
+        }
+
+        if (\str_starts_with($name, 'with')) {
+            $this->http->$name(...$arguments);
+            return $this;
         }
 
         return $this->makeResponse(
