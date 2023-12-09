@@ -38,6 +38,8 @@ final class EventHandler implements HandlerInterface
 
         $payloads = $this->payloadParser->parse($request);
 
+        dump($payloads);
+
         match (true) {
             \str_ends_with($url, '/envelope') => $this->handleEnvelope($payloads),
             \str_ends_with($url, '/store') => $this->handleEvent($payloads),

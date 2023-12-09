@@ -17,7 +17,7 @@ final class PayloadParser
     public function parse(ServerRequestInterface $request): array
     {
         $isV4 = $request->getHeaderLine('Content-Type') === 'application/x-sentry-envelope' ||
-            \str_contains($request->getHeaderLine('X-Sentry-Auth'), 'sentry.php/4');
+            \str_contains($request->getHeaderLine('X-Sentry-Auth'), 'sentry_client=sentry.php');
 
         if ($isV4) {
             if ($request->getHeaderLine('Content-Encoding') === 'gzip') {

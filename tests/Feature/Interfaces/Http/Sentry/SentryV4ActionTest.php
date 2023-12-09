@@ -79,4 +79,36 @@ BODY;
             return true;
         });
     }
+
+    public function testSendGzippedSpiral(): void
+    {
+        $this->http
+            ->postJson(
+                uri: '/api/1/envelope/',
+                data: Stream::create(\gzcompress(self::JSON, -1, \ZLIB_ENCODING_GZIP)),
+                headers: [
+                    'Content-Encoding' => 'gzip',
+                    'X-Buggregator-Event' => 'sentry',
+                    'Content-Type' => 'application/json',
+                    'X-Sentry-Auth' => 'Sentry sentry_version=7, sentry_client=sentry.php.spiral/3.1.2, sentry_key=sentry',
+                ],
+            )->assertOk();
+
+        $this->broadcastig->assertPushed('events', function (array $data) {
+            $this->assertSame('event.received', $data['event']);
+            $this->assertSame('sentry', $data['data']['type']);
+
+            $this->assertSame(1701455435.634665, $data['data']['payload']['timestamp']);
+            $this->assertSame('php', $data['data']['payload']['platform']);
+            $this->assertSame('sentry.php', $data['data']['payload']['sdk']['name']);
+            $this->assertSame('4.0.1', $data['data']['payload']['sdk']['version']);
+            $this->assertSame('Test', $data['data']['payload']['server_name']);
+            $this->assertSame('production', $data['data']['payload']['environment']);
+
+            $this->assertNotEmpty($data['data']['uuid']);
+            $this->assertNotEmpty($data['data']['timestamp']);
+
+            return true;
+        });
+    }
 }
