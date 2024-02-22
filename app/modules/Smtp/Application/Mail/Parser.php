@@ -49,7 +49,7 @@ final class Parser
 
         return new Message(
             $this->storage->bucket('attachments'),
-            $message->getHeader('Message - Id')->getValue(),
+            $message->getHeader('Message - Id')?->getValue(),
             $body, $from, $recipients, $ccs, $subject,
             $html, $text, $replyTo, $allRecipients, $attachments
         );
