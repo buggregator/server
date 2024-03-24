@@ -38,7 +38,7 @@
         "spiral-packages/league-event": "^1.0",
         "spiral/cycle-bridge": "^2.5",
         "spiral/data-grid": "^3.0",
-        "spiral/framework": "^3.10",
+        "spiral/framework": "^3.12",
         "spiral/nyholm-bridge": "^1.3",
         "spiral/roadrunner-bridge": "^3.0",
         "spiral/validator": "^1.1",
