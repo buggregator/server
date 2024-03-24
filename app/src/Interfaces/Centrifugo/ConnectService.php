@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Interfaces\Centrifugo;
 
+use App\Application\Broadcasting\Channel\EventsChannel;
+use App\Application\Broadcasting\Channel\SettingsChannel;
 use RoadRunner\Centrifugo\Payload\ConnectResponse;
 use RoadRunner\Centrifugo\Request;
 use RoadRunner\Centrifugo\Request\RequestInterface;
@@ -19,9 +21,12 @@ class ConnectService implements ServiceInterface
         try {
             $request->respond(
                 new ConnectResponse(
-                    user: (string) $request->getAttribute('user_id'),
-                    channels: ['events'],
-                )
+                    user: (string)$request->getAttribute('user_id'),
+                    channels: [
+                        (string)new EventsChannel(),
+                        (string)new SettingsChannel(),
+                    ],
+                ),
             );
         } catch (\Throwable $e) {
             $request->error($e->getCode(), $e->getMessage());
