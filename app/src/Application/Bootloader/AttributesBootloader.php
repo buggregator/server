@@ -19,7 +19,9 @@ final class AttributesBootloader extends Bootloader
 
     public function init(BinderInterface $binder): void
     {
-        AnnotationReader::addGlobalIgnoredName('mixin');
+        if (\class_exists(AnnotationReader::class)) {
+            AnnotationReader::addGlobalIgnoredName('mixin');
+        }
 
         $binder->bindSingleton(
             ReaderInterface::class,
