@@ -17,7 +17,8 @@ final class RPCService implements ServiceInterface
     public function __construct(
         private readonly Http $http,
         private readonly ServerRequestFactoryInterface $requestFactory,
-    ) {}
+    ) {
+    }
 
     /**
      * @param Request\RPC $request
@@ -26,7 +27,7 @@ final class RPCService implements ServiceInterface
     {
         try {
             $response = $this->http->handle(
-                $this->createHttpRequest($request)
+                $this->createHttpRequest($request),
             );
 
             $result = \json_decode((string)$response->getBody(), true);
@@ -43,8 +44,8 @@ final class RPCService implements ServiceInterface
         try {
             $request->respond(
                 new RPCResponse(
-                    data: $result
-                )
+                    data: $result,
+                ),
             );
         } catch (\Throwable $e) {
             $request->error($e->getCode(), $e->getMessage());
@@ -59,9 +60,14 @@ final class RPCService implements ServiceInterface
         $httpRequest = $this->requestFactory->createServerRequest(\strtoupper($method), \ltrim($uri, '/'))
             ->withHeader('Content-Type', 'application/json');
 
+        $data = $request->getData();
+
+        $token = $data['token'] ?? null;
+        unset($data['token']);
+
         return match ($method) {
-            'GET', 'HEAD' => $httpRequest->withQueryParams($request->getData()),
-            'POST', 'PUT', 'DELETE' => $httpRequest->withParsedBody($request->getData()),
+            'GET', 'HEAD' => $httpRequest->withQueryParams($data)->withHeader('X-Auth-Token', $token),
+            'POST', 'PUT', 'DELETE' => $httpRequest->withParsedBody($data)->withHeader('X-Auth-Token', $token),
             default => throw new \InvalidArgumentException('Unsupported method'),
         };
     }
