@@ -11,7 +11,7 @@ use Spiral\Router\Annotation\Route;
 
 final class GetVersionAction
 {
-    #[Route(route: 'version', methods: ['GET'], group: 'api')]
+    #[Route(route: 'version', methods: ['GET'], group: 'api_guest')]
     public function __invoke(EnvironmentInterface $env): ResourceInterface
     {
         return new JsonResource([

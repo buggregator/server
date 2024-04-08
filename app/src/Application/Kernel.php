@@ -6,6 +6,7 @@ namespace App\Application;
 
 use App\Application\Bootloader\AppBootloader;
 use App\Application\Bootloader\AttributesBootloader;
+use App\Application\Bootloader\AuthBootloader;
 use App\Application\Bootloader\HttpHandlerBootloader;
 use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
@@ -84,6 +85,7 @@ class Kernel extends \Spiral\Framework\Kernel
             EventsBootloader::class,
             EventBootloader::class,
             CqrsBootloader::class,
+            Framework\Http\SessionBootloader::class,
 
             // Console commands
             Framework\CommandBootloader::class,
@@ -106,6 +108,7 @@ class Kernel extends \Spiral\Framework\Kernel
             ProfilerBootloader::class,
             MongoDBBootloader::class,
             PersistenceBootloader::class,
+            AuthBootloader::class,
         ];
     }
 }
