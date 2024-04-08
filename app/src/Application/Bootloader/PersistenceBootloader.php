@@ -38,7 +38,7 @@ final class PersistenceBootloader extends Bootloader
         EnvironmentInterface $env
     ): EventRepositoryInterface {
         return match ($env->get('PERSISTENCE_DRIVER', 'cache')) {
-            'cycle' => $factory->make(CycleOrmEventRepository::class),
+            'database' => $factory->make(CycleOrmEventRepository::class),
             'mongodb' => $factory->make(MongoDBEventRepository::class),
             'cache' => $factory->make(CacheEventRepository::class),
             default => throw new \InvalidArgumentException('Unknown persistence driver'),

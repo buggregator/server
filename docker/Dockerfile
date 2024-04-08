@@ -22,6 +22,7 @@ COPY --from=git /app /app
 COPY --from=frontend /app /app/frontend
 COPY --from=rr /usr/bin/rr /app
 COPY --from=centrifugo /usr/local/bin/centrifugo /app/bin
+COPY --from=git /app/docker/entrypoint.sh /app
 
 ARG APP_VERSION=v1.0
 ENV COMPOSER_ALLOW_SUPERUSER=1
@@ -65,4 +66,4 @@ LABEL org.opencontainers.image.source=$REPOSITORY
 LABEL org.opencontainers.image.description="Buggregator"
 LABEL org.opencontainers.image.licenses=MIT
 
-CMD ./rr serve -c .rr-prod.yaml
+CMD ["entrypoint.sh"]
