@@ -6,10 +6,8 @@ use Cycle\Database\Config;
 
 return [
     'logger' => [
-        'default' => null,
-        'drivers' => [
-            // 'runtime' => 'stdout'
-        ],
+        'default' => env('DB_LOGGER'),
+        'drivers' => [],
     ],
 
     /**
@@ -27,7 +25,7 @@ return [
      */
     'databases' => [
         'default' => [
-            'driver' => 'runtime',
+            'driver' => env('DB_DRIVER', 'pgsql'),
         ],
     ],
 
@@ -38,12 +36,34 @@ return [
      * the driver class and its connection options.
      */
     'drivers' => [
-        'runtime' => new Config\SQLiteDriverConfig(
-            connection: new Config\SQLite\FileConnectionConfig(
-                database: '/dev/shm/buggregator'
+        'pgsql' => new Config\PostgresDriverConfig(
+            connection: new Config\Postgres\TcpConnectionConfig(
+                database: env('DB_DATABASE', 'buggregator'),
+                host: env('DB_HOST', '127.0.0.1'),
+                port: env('DB_PORT', 5432),
+                user: env('DB_USERNAME', 'postgres'),
+                password: env('DB_PASSWORD'),
             ),
-            queryCache: true
+            schema: 'public',
+            queryCache: true,
+            options: [
+                'withDatetimeMicroseconds' => true,
+                'logQueryParameters' => env('DB_LOG_QUERY_PARAMETERS', false),
+            ],
         ),
-        // ...
+        'mysql' => new Config\MySQLDriverConfig(
+            connection: new Config\MySQL\TcpConnectionConfig(
+                database: env('DB_DATABASE', 'buggregator'),
+                host: env('DB_HOST', '127.0.0.1'),
+                port: env('DB_PORT', 5432),
+                user: env('DB_USERNAME', 'postgres'),
+                password: env('DB_PASSWORD'),
+            ),
+            queryCache: true,
+            options: [
+                'withDatetimeMicroseconds' => true,
+                'logQueryParameters' => env('DB_LOG_QUERY_PARAMETERS', false),
+            ],
+        ),
     ],
 ];

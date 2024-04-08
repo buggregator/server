@@ -6,7 +6,6 @@ namespace App\Application\Persistence;
 
 use App\Application\Domain\Entity\Json;
 use App\Application\Domain\ValueObjects\Uuid;
-use Carbon\Carbon;
 use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use MongoDB\Collection;
