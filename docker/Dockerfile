@@ -18,6 +18,15 @@ RUN git clone -b $BRANCH $REPOSITORY /app
 # Configure PHP project
 FROM ghcr.io/buggregator/docker:latest as backend
 
+RUN apk update
+
+RUN rm -rf /var/lib/apt/lists/*
+
+RUN apk --no-cache add postgresql-dev
+
+RUN docker-php-ext-install \
+        pgsql pdo_pgsql pdo_mysql
+
 COPY --from=git /app /app
 COPY --from=frontend /app /app/frontend
 COPY --from=rr /usr/bin/rr /app
