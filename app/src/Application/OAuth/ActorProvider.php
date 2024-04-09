@@ -4,17 +4,11 @@ declare(strict_types=1);
 
 namespace App\Application\OAuth;
 
-use Auth0\SDK\Auth0;
 use Spiral\Auth\ActorProviderInterface;
 use Spiral\Auth\TokenInterface;
 
 final class ActorProvider implements ActorProviderInterface
 {
-    public function __construct(
-        private readonly Auth0 $auth,
-    ) {
-    }
-
     public function getActor(TokenInterface $token): ?User
     {
         $payload = $token->getPayload();

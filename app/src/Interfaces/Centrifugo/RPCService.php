@@ -65,10 +65,16 @@ final class RPCService implements ServiceInterface
         $token = $data['token'] ?? null;
         unset($data['token']);
 
-        return match ($method) {
-            'GET', 'HEAD' => $httpRequest->withQueryParams($data)->withHeader('X-Auth-Token', $token),
-            'POST', 'PUT', 'DELETE' => $httpRequest->withParsedBody($data)->withHeader('X-Auth-Token', $token),
+        $httpRequest = match ($method) {
+            'GET', 'HEAD' => $httpRequest->withQueryParams($data),
+            'POST', 'PUT', 'DELETE' => $httpRequest->withParsedBody($data),
             default => throw new \InvalidArgumentException('Unsupported method'),
         };
+
+        if (!empty($token)) {
+            $httpRequest = $httpRequest->withHeader('X-Auth-Token', $token);
+        }
+
+        return $httpRequest;
     }
 }
