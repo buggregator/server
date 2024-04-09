@@ -12,6 +12,7 @@ use Spiral\Cache\CacheStorageProviderInterface;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpEvent;
+use Spiral\RoadRunner\Tcp\TcpResponse;
 use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;
 use Spiral\RoadRunnerBridge\Tcp\Response\RespondMessage;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
@@ -45,6 +46,7 @@ final class Service implements ServiceInterface
         $message = $this->cache->get($cacheKey, []);
 
         $response = new CloseConnection();
+        $dispatched = false;
 
         if ($request->event === TcpEvent::Close) {
             $this->cache->delete($cacheKey);
@@ -71,13 +73,24 @@ final class Service implements ServiceInterface
                 if (\count($messages) === 1) {
                     $this->dispatchMessage($content);
                     $this->cache->delete($cacheKey);
+                    $dispatched = true;
                 } elseif (!empty($messages[1])) {
                     $this->dispatchMessage($messages[0]);
                     $this->cache->delete($cacheKey);
+                    $dispatched = true;
                 }
             }
 
             $message['content'] = $content;
+        }
+
+        if (
+            $response instanceof CloseConnection ||
+            $response->getAction() === TcpResponse::RespondClose ||
+            $dispatched
+        ) {
+            $this->cache->delete($cacheKey);
+            return $response;
         }
 
         $this->cache->set(

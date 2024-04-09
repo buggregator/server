@@ -69,6 +69,8 @@ ENV APP_ENV=production
 ENV DEBUG=false
 ENV ENCRYPTER_KEY=def00000232ae92c8e8ec0699093fa06ce014cd48d39c3c62c279dd947db084e56ee48b5c91cebc1c5abe53f7755021d09043757561c244c1c0c765cfeb5db33eb45a903
 ENV TOKENIZER_CACHE_TARGETS=true
+ENV AUTH_TOKEN_STORAGE=jwt
+ENV AUTH_TOKEN_TRANSPORT=header
 
 LABEL org.opencontainers.image.source=$REPOSITORY
 LABEL org.opencontainers.image.description="Buggregator"
