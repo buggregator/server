@@ -59,6 +59,9 @@ final class RoutesBootloader extends BaseRoutesBootloader
             'web' => [
                 'middleware:auth',
             ],
+            'web_guest' => [
+                'middleware:auth',
+            ],
             'api' => [
                 'middleware:auth',
             ],
@@ -102,7 +105,7 @@ final class RoutesBootloader extends BaseRoutesBootloader
             ->action(DocumentationController::class, 'yaml');
 
         $routes->default('/<path:.*>')
-            ->group('web')
+            ->group('web_guest')
             ->action(EventHandlerAction::class, 'handle');
     }
 }

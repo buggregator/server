@@ -64,7 +64,7 @@ final class JWTTokenStorage implements TokenStorageInterface
         ];
 
         return new Token(
-            JWT::encode($token,$this->secret,$this->algorithm),
+            JWT::encode($token, $this->secret, $this->algorithm),
             $token,
             $payload,
             $issuedAt,
