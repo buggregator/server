@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Application\OAuth;
 
 use Auth0\SDK\Contract\StoreInterface;
-use Spiral\Session\SessionInterface;
+use Spiral\Session\SessionScope;
 
 final class SessionStore implements StoreInterface
 {
     public function __construct(
-        private readonly SessionInterface $session,
+        private readonly SessionScope $session,
         private readonly string $sessionPrefix = 'auth0',
     ) {
     }

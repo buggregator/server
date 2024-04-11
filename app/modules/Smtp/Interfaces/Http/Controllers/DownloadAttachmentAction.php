@@ -23,7 +23,7 @@ final class DownloadAttachmentAction
     ) {
     }
 
-    #[Route(route: 'smtp/<uuid>/attachment/<id>', name: 'smtp.attachment.download', group: 'api')]
+    #[Route(route: 'smtp/<uuid>/attachment/<id>', name: 'smtp.attachment.download', group: 'api_guest')]
     public function __invoke(
         QueryBusInterface $bus,
         ResponseWrapper $responseWrapper,
