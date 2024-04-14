@@ -49,7 +49,6 @@ final class PersistenceBootloader extends Bootloader
 
     public function init(ConsoleBootloader $console, DriverEnum $driver): void
     {
-        var_dump($driver);
         if ($driver === DriverEnum::Database) {
             $console->addConfigureSequence(
                 sequence: 'migrate',
