@@ -8,10 +8,10 @@ use App\Application\Broadcasting\InMemoryDriver;
 use PHPUnit\Framework\TestCase;
 use Spiral\Core\Container;
 
-final class BroadcastFaker
+final readonly class BroadcastFaker
 {
     public function __construct(
-        private readonly Container $container,
+        private Container $container,
     ) {
     }
 
@@ -53,7 +53,7 @@ final class BroadcastFaker
         $messages = $this->filterMessages((string)$topic, $callback);
 
         TestCase::assertTrue(
-            \count($messages) > 0,
+            $messages !== [],
             \sprintf('The expected message [%s] was not pushed.', $topic),
         );
 
@@ -96,12 +96,8 @@ final class BroadcastFaker
     {
         $messages = $this->getMessages()[$topic] ?? [];
 
-        $callback = $callback ?: static function (array $data): bool {
-            return true;
-        };
+        $callback = $callback ?: static fn(array $data): bool => true;
 
-        return \array_filter($messages, static function (array $data) use ($callback) {
-            return $callback($data);
-        });
+        return \array_filter($messages, static fn(array $data) => $callback($data));
     }
 }

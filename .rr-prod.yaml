@@ -6,6 +6,8 @@ rpc:
 server:
   command: 'php app.php'
   relay: pipes
+  on_init:
+    command: "php app.php configure"
 
 logs:
   level: ${RR_LOG_LEVEL}

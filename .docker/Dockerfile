@@ -18,15 +18,6 @@ RUN git clone -b $BRANCH $REPOSITORY /app
 # Configure PHP project
 FROM ghcr.io/buggregator/docker:latest as backend
 
-RUN apk update
-
-RUN rm -rf /var/lib/apt/lists/*
-
-RUN apk --no-cache add postgresql-dev
-
-RUN docker-php-ext-install \
-        pgsql pdo_pgsql pdo_mysql
-
 COPY --from=git /app /app
 COPY --from=frontend /app /app/frontend
 COPY --from=rr /usr/bin/rr /app
@@ -35,22 +26,15 @@ COPY --from=centrifugo /usr/local/bin/centrifugo /app/bin
 ARG APP_VERSION=v1.0
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
-RUN sed -i 's/memory_limit = 128M/memory_limit = 1024M/g' "$PHP_INI_DIR/php.ini-production" && \
-    sed -i 's/post_max_size = 8M/post_max_size = 1024M/g' "$PHP_INI_DIR/php.ini-production" && \
-    mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
-
 WORKDIR /app
 
 RUN composer config --no-plugins allow-plugins.spiral/composer-publish-plugin false
 RUN composer install --no-dev
 
-RUN docker-php-source delete \
-        && apk del ${BUILD_DEPENDS}
-
 WORKDIR /app
 RUN php app.php configure
 
-EXPOSE 8000/tcp
+EXPOSE 8082/tcp
 
 ENV APP_VERSION=$APP_VERSION
 ENV RR_LOG_LEVEL=error

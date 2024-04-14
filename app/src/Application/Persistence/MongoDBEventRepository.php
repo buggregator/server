@@ -10,19 +10,19 @@ use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use MongoDB\Collection;
 
-final class MongoDBEventRepository implements EventRepositoryInterface
+final readonly class MongoDBEventRepository implements EventRepositoryInterface
 {
     public function __construct(
-        private readonly Collection $collection,
+        private Collection $collection,
     ) {}
 
     public function store(Event $event): bool
     {
         $result = $this->collection->insertOne([
-            '_id' => (string)$event->getUuid(),
+            '_id' => (string) $event->getUuid(),
             'type' => $event->getType(),
             'project_id' => $event->getProjectId(),
-            'date' => $event->getTimestamp(),
+            'timestamp' => $event->getTimestamp(),
             'payload' => $event->getPayload()->jsonSerialize(),
         ]);
 
@@ -80,8 +80,8 @@ final class MongoDBEventRepository implements EventRepositoryInterface
         return new Event(
             uuid: Uuid::fromString($document['_id']),
             type: $document['type'],
-            payload: new Json((array)$document['payload']),
-            timestamp: $document['date'],
+            payload: new Json((array) $document['payload']),
+            timestamp: $document['timestamp'],
             projectId: $document['project_id'],
         );
     }

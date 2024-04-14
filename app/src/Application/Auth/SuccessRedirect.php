@@ -8,13 +8,12 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 use Spiral\Http\ResponseWrapper;
 
-final class SuccessRedirect
+final readonly class SuccessRedirect
 {
     public function __construct(
-        private readonly ResponseWrapper $response,
-        private readonly UriInterface $redirectUrl,
-    ) {
-    }
+        private ResponseWrapper $response,
+        private UriInterface $redirectUrl,
+    ) {}
 
     public function makeResponse(string $token): ResponseInterface
     {

@@ -16,10 +16,10 @@ use Spiral\Http\ResponseWrapper;
 use Spiral\Router\Annotation\Route;
 use Spiral\Storage\StorageInterface;
 
-final class DownloadAttachmentAction
+final readonly class DownloadAttachmentAction
 {
     public function __construct(
-        private readonly StorageInterface $storage,
+        private StorageInterface $storage,
     ) {
     }
 

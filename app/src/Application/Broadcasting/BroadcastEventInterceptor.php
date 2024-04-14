@@ -8,10 +8,10 @@ use Spiral\Broadcasting\BroadcastInterface;
 use Spiral\Core\CoreInterceptorInterface;
 use Spiral\Core\CoreInterface;
 
-final class BroadcastEventInterceptor implements CoreInterceptorInterface
+final readonly class BroadcastEventInterceptor implements CoreInterceptorInterface
 {
     public function __construct(
-        private readonly BroadcastInterface $broadcast
+        private BroadcastInterface $broadcast
     ) {}
 
     public function process(string $controller, string $action, array $parameters, CoreInterface $core): mixed

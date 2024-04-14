@@ -6,13 +6,16 @@ namespace App\Application\Domain\Entity;
 
 use Cycle\Database\DatabaseInterface;
 
-final class Json implements \JsonSerializable
+final readonly class Json implements \JsonSerializable, \Stringable
 {
     public function __construct(
-        private readonly array $data = []
+        private array $data = [],
     ) {}
 
-    public static function cast(string $value, DatabaseInterface $db): self
+    /**
+     * Create from data storage raw value
+     */
+    final public static function typecast(mixed $value): static
     {
         return new self(\json_decode($value, true));
     }
@@ -20,5 +23,10 @@ final class Json implements \JsonSerializable
     public function jsonSerialize(): array
     {
         return $this->data;
+    }
+
+    public function __toString(): string
+    {
+        return \json_encode($this);
     }
 }

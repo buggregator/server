@@ -12,7 +12,7 @@ final class ActorProvider implements ActorProviderInterface
     public function getActor(TokenInterface $token): ?User
     {
         $payload = $token->getPayload();
-        if (empty($payload)) {
+        if ($payload === []) {
             $payload = self::getGuestPayload();
         }
 

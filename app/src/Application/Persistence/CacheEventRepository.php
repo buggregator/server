@@ -53,12 +53,12 @@ final class CacheEventRepository implements EventRepositoryInterface
 
     public function store(Event $event): bool
     {
-        $id = (string)$event->getUuid();
+        $id = (string) $event->getUuid();
         $ids = $this->getEventIds();
         $ids[$id] = [
-            'uuid' => (string)$event->getUuid(),
+            'uuid' => (string) $event->getUuid(),
             'type' => $event->getType(),
-            'date' => \microtime(true),
+            'timestamp' => \microtime(true),
         ];
 
         $this->cache->set(self::EVENT_IDS_KEY, $ids);
@@ -67,7 +67,7 @@ final class CacheEventRepository implements EventRepositoryInterface
             'id' => $id,
             'type' => $event->getType(),
             'project_id' => $event->getProjectId(),
-            'date' => $event->getTimestamp(),
+            'timestamp' => $event->getTimestamp(),
             'payload' => $event->getPayload()->jsonSerialize(),
         ], Carbon::now()->addSeconds($this->ttl)->diffAsCarbonInterval());
     }
@@ -159,8 +159,8 @@ final class CacheEventRepository implements EventRepositoryInterface
         return new Event(
             uuid: Uuid::fromString($document['id']),
             type: $document['type'],
-            payload: new Json((array)$document['payload']),
-            timestamp: $document['date'],
+            payload: new Json($document['payload']),
+            timestamp: $document['timestamp'],
             projectId: $document['project_id'],
         );
     }
@@ -187,6 +187,6 @@ final class CacheEventRepository implements EventRepositoryInterface
      */
     private function getEventIds(): array
     {
-        return (array)$this->cache->get(self::EVENT_IDS_KEY, []);
+        return (array) $this->cache->get(self::EVENT_IDS_KEY, []);
     }
 }

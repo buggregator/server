@@ -6,14 +6,14 @@ namespace Modules\Smtp\Application\Mail;
 
 use Ramsey\Uuid\Uuid;
 
-final class Attachment
+final readonly class Attachment
 {
-    private readonly string $id;
+    private string $id;
 
     public function __construct(
-        private readonly ?string $filename,
-        private readonly string $content,
-        private readonly string $type
+        private ?string $filename,
+        private string $content,
+        private string $type
     ) {
         $this->id = (string) Uuid::uuid4();
     }

@@ -10,10 +10,10 @@ use Spiral\Exceptions\ExceptionReporterInterface;
 use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
 
-final class ExceptionHandlerInterceptor implements CoreInterceptorInterface
+final readonly class ExceptionHandlerInterceptor implements CoreInterceptorInterface
 {
     public function __construct(
-        private readonly ExceptionReporterInterface $reporter
+        private ExceptionReporterInterface $reporter
     ) {}
 
     public function process(string $controller, string $action, array $parameters, CoreInterface $core): ResponseInterface

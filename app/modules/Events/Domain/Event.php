@@ -20,10 +20,10 @@ class Event
         #[Column(type: 'string(36)', primary: true, typecast: 'uuid')]
         private Uuid $uuid,
 
-        #[Column(type: 'string')]
+        #[Column(type: 'string(50)')]
         private string $type,
 
-        #[Column(type: 'longText', typecast: 'json')]
+        #[Column(type: 'jsonb', typecast: Json::class)]
         private Json $payload,
 
         #[Column(type: 'float')]

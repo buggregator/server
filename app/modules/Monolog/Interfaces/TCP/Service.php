@@ -14,11 +14,11 @@ use Spiral\RoadRunnerBridge\Tcp\Response\ContinueRead;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
 use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
 
-final class Service implements ServiceInterface
+final readonly class Service implements ServiceInterface
 {
     public function __construct(
-        private readonly CommandBusInterface $commandBus,
-        private readonly LoggerInterface $logger,
+        private CommandBusInterface $commandBus,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -43,7 +43,7 @@ final class Service implements ServiceInterface
                         payload: $payload,
                     ),
                 );
-            } catch (\JsonException $e) {
+            } catch (\JsonException) {
                 // Impossible to decode the message, give up.
                 $this->logger->error("Unable to decode log message. Should be a valid JSON.", [
                     'message' => $message,

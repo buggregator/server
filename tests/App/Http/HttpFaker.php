@@ -16,14 +16,10 @@ use Tests\TestCase;
  */
 final class HttpFaker
 {
-    private Carbon $date;
     private bool $dumpResponse = false;
 
-    public function __construct(
-        private FakeHttp $http,
-        private TestCase $tests,
-    ) {
-        $this->date = Carbon::create(2021, 1, 1, 0, 0, 0);
+    public function __construct(private FakeHttp $http)
+    {
     }
 
     public function showEvent(Uuid $uuid): ResponseAssertions

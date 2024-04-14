@@ -1,10 +1,91 @@
 version: '3.1'
 
 services:
-  php:
-    build: "./docker"
+  buggregator-reverse-proxy:
+    image: traefik:v2.9
+    command:
+      - "--accesslog"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--providers.file.directory=/configuration/"
+      - "--providers.file.watch=true"
     ports:
-        - 8000:8000
-        - 1025:1025
-        - 9912:9912
-        - 9913:9913
+      - ${TRAEFIC_PORT_HTTP:-80}:80
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.buggregator-reverse-proxy.entrypoints=web"
+      - "traefik.http.routers.buggregator-reverse-proxy.rule=Host(`traefik.buggregator.localhost`)"
+      - "traefik.http.services.buggregator-reverse-proxy.loadbalancer.server.port=8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - buggregator-network
+
+  buggregator-server:
+    build: "./.docker"
+    ports:
+      - 1025:1025
+      - 9912:9912
+      - 9913:9913
+    environment:
+      # RR_LOG_LEVEL: debug
+
+      PERSISTENCE_DRIVER: db
+      # DB_LOGGER: roadrunner
+      DB_USERNAME: homestead
+      DB_PASSWORD: secret
+      DB_DRIVER: pgsql
+      DB_HOST: buggregator-pgsql
+
+      # PERSISTENCE_DRIVER: mongodb
+      MONGODB_CONNECTION: mongodb://homestead:secret@buggregator-mongo:27017
+      MONGODB_DATABASE: buggregator
+
+      # Auth
+      AUTH_ENABLED: false
+      AUTH_PROVIDER_URL: https://${AUTH_DOMAIN}.us.auth0.com
+      AUTH_CLIENT_ID: ${AUTH_CLIENT_ID}
+      AUTH_CLIENT_SECRET: ${AUTH_CLIENT_SECRET}
+      AUTH_CALLBACK_URL: http://buggregator.localhost/auth/sso/callback
+      AUTH_SCOPES: openid,email,profile
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.buggregator-http.entrypoints=web"
+      - "traefik.http.routers.buggregator-http.rule=Host(`buggregator.localhost`)"
+      - "traefik.http.services.buggregator-http.loadbalancer.server.port=8000"
+    volumes:
+      - ./:/app
+    networks:
+      - buggregator-network
+
+  buggregator-mongo:
+    image: mongo:latest
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: homestead
+      MONGO_INITDB_ROOT_PASSWORD: secret
+      MONGO_INITDB_DATABASE: buggregator
+    ports:
+      - 27017:27017
+    networks:
+      - buggregator-network
+
+  buggregator-pgsql:
+    image: postgres:15
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: homestead
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: buggregator
+    networks:
+      - buggregator-network
+
+networks:
+  buggregator-network:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.0.72.0/24

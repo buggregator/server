@@ -8,14 +8,14 @@ use App\Application\Broadcasting\Channel\EventsChannel;
 use App\Application\Broadcasting\ShouldBroadcastInterface;
 use App\Application\Domain\ValueObjects\Uuid;
 
-final class EventWasReceived implements ShouldBroadcastInterface
+final readonly class EventWasReceived implements ShouldBroadcastInterface
 {
     public function __construct(
-        public readonly Uuid $uuid,
-        public readonly string $type,
-        public readonly array $payload,
-        public readonly float $timestamp,
-        public readonly ?int $projectId = null,
+        public Uuid $uuid,
+        public string $type,
+        public array $payload,
+        public float $timestamp,
+        public ?int $projectId = null,
     ) {
     }
 

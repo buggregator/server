@@ -7,10 +7,10 @@ namespace Modules\Sentry\Application;
 use App\Application\HTTP\GzippedStreamFactory;
 use Psr\Http\Message\ServerRequestInterface;
 
-final class PayloadParser
+final readonly class PayloadParser
 {
     public function __construct(
-        private readonly GzippedStreamFactory $gzippedStreamFactory,
+        private GzippedStreamFactory $gzippedStreamFactory,
     ) {
     }
 

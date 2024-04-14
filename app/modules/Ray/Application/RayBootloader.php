@@ -16,11 +16,11 @@ final class RayBootloader extends Bootloader
     public function defineSingletons(): array
     {
         return [
-            EventHandlerInterface::class => static function (ContainerInterface $container): EventHandlerInterface {
-                return new EventHandler($container, [
-                    MergeEventsHandler::class,
-                ]);
-            },
+            EventHandlerInterface::class => static fn(
+                ContainerInterface $container,
+            ): EventHandlerInterface => new EventHandler($container, [
+                MergeEventsHandler::class,
+            ]),
         ];
     }
 

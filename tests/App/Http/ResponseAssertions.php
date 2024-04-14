@@ -12,10 +12,10 @@ use Spiral\Testing\Http\TestResponse;
 /**
  * @mixin TestResponse
  */
-final class ResponseAssertions
+final readonly class ResponseAssertions
 {
     public function __construct(
-        private readonly TestResponse $response,
+        private TestResponse $response,
     ) {
     }
 

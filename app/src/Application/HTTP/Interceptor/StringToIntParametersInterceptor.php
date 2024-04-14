@@ -13,7 +13,7 @@ final class StringToIntParametersInterceptor implements CoreInterceptorInterface
     {
         foreach ($parameters as $key => $parameter) {
             if (\is_string($parameter) && \ctype_digit($parameter)) {
-                $parameters[$key] = (int)$parameter;
+                $parameters[$key] = (int) $parameter;
             }
         }
 

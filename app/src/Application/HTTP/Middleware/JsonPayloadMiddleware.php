@@ -10,17 +10,16 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Spiral\Bootloader\Http\JsonPayloadConfig;
 
-final class JsonPayloadMiddleware implements MiddlewareInterface
+final readonly class JsonPayloadMiddleware implements MiddlewareInterface
 {
     public function __construct(
-        private readonly JsonPayloadConfig $config,
-    ) {
-    }
+        private JsonPayloadConfig $config,
+    ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         if ($this->isJsonPayload($request)) {
-            $body = (string)$request->getBody();
+            $body = (string) $request->getBody();
             if ($body !== '') {
                 $parsedBody = \json_decode($body, true);
                 if (\json_last_error() === 0) {
@@ -49,4 +48,3 @@ final class JsonPayloadMiddleware implements MiddlewareInterface
         return false;
     }
 }
-

@@ -16,46 +16,45 @@ use MongoDB\Database;
 use Spiral\Boot\Bootloader\Bootloader;
 use Spiral\Boot\EnvironmentInterface;
 use Spiral\Cache\CacheStorageProviderInterface;
+use Spiral\Console\Bootloader\ConsoleBootloader;
 use Spiral\Core\FactoryInterface;
 
 final class PersistenceBootloader extends Bootloader
 {
-    protected const SINGLETONS = [
-        EventRepositoryInterface::class => [self::class, 'createRepository'],
-        CycleOrmEventRepository::class => [self::class, 'createCycleOrmEventRepository'],
-        MongoDBEventRepository::class => [self::class, 'createMongoDBEventRepository'],
-        CacheEventRepository::class => [self::class, 'createCacheEventRepository'],
-    ];
-
-    private function createCacheEventRepository(
-        CacheStorageProviderInterface $provider,
-    ): EventRepositoryInterface {
-        return new CacheEventRepository($provider);
-    }
-
-    private function createRepository(
-        FactoryInterface $factory,
-        EnvironmentInterface $env
-    ): EventRepositoryInterface {
-        return match ($env->get('PERSISTENCE_DRIVER', 'cache')) {
-            'database' => $factory->make(CycleOrmEventRepository::class),
-            'mongodb' => $factory->make(MongoDBEventRepository::class),
-            'cache' => $factory->make(CacheEventRepository::class),
-            default => throw new \InvalidArgumentException('Unknown persistence driver'),
-        };
-    }
-
-    private function createCycleOrmEventRepository(
-        ORMInterface $orm,
-        EntityManagerInterface $manager
-    ): CycleOrmEventRepository {
-        return new CycleOrmEventRepository($manager, new Select($orm, Event::class));
-    }
-
-    private function createMongoDBEventRepository(Database $database): MongoDBEventRepository
+    public function defineSingletons(): array
     {
-        return new MongoDBEventRepository(
-            $database->selectCollection('events')
-        );
+        return [
+            EventRepositoryInterface::class => static fn(
+                FactoryInterface $factory,
+                EnvironmentInterface $env,
+            ): EventRepositoryInterface => match ($env->get('PERSISTENCE_DRIVER', 'cache')) {
+                'cycle', 'database', 'db' => $factory->make(CycleOrmEventRepository::class),
+                'mongodb', 'mongo' => $factory->make(MongoDBEventRepository::class),
+                'cache', 'memory' => $factory->make(CacheEventRepository::class),
+                default => throw new \InvalidArgumentException('Unknown persistence driver'),
+            },
+            CycleOrmEventRepository::class => static fn(
+                ORMInterface $orm,
+                EntityManagerInterface $manager,
+            ): CycleOrmEventRepository => new CycleOrmEventRepository($manager, new Select($orm, Event::class)),
+            MongoDBEventRepository::class => static fn(
+                Database $database,
+            ): MongoDBEventRepository => new MongoDBEventRepository(
+                $database->selectCollection('events'),
+            ),
+            CacheEventRepository::class => static fn(
+                CacheStorageProviderInterface $provider,
+            ): EventRepositoryInterface => new CacheEventRepository($provider),
+        ];
+    }
+
+    public function init(ConsoleBootloader $console, EventRepositoryInterface $repository): void
+    {
+        if ($repository instanceof CycleOrmEventRepository) {
+            $console->addConfigureSequence(
+                sequence: 'migrate',
+                header: 'Migration',
+            );
+        }
     }
 }

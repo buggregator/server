@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Application\OAuth;
 
-final class User
+final readonly class User
 {
     public function __construct(
-        private readonly array $data,
-    ) {
-    }
+        private array $data,
+    ) {}
 
     public function getUsername(): string
     {

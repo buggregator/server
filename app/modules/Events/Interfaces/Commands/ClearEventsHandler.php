@@ -10,11 +10,11 @@ use Modules\Events\Domain\Events\EventsWasClear;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Spiral\Cqrs\Attribute\CommandHandler;
 
-final class ClearEventsHandler
+final readonly class ClearEventsHandler
 {
     public function __construct(
-        private readonly EventRepositoryInterface $events,
-        private readonly EventDispatcherInterface $dispatcher,
+        private EventRepositoryInterface $events,
+        private EventDispatcherInterface $dispatcher,
     ) {
     }
 

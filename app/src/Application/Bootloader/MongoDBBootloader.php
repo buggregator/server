@@ -14,12 +14,13 @@ final class MongoDBBootloader extends Bootloader
     public function defineSingletons(): array
     {
         return [
-            Client::class => static function (EnvironmentInterface $env): Client {
-                return new Client(
-                    $env->get('MONGODB_CONNECTION'),
-                );
-            },
-            Database::class => static function (Client $client, EnvironmentInterface $env): Database {
+            Client::class => static fn(EnvironmentInterface $env): Client => new Client(
+                $env->get('MONGODB_CONNECTION'),
+            ),
+            Database::class => static function (
+                Client $client,
+                EnvironmentInterface $env,
+            ): Database {
                 $database = $client->selectDatabase($env->get('MONGODB_DATABASE'));
                 $database->command(['ping' => 1]);
 

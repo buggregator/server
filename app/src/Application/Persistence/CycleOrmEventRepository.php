@@ -14,7 +14,7 @@ final class CycleOrmEventRepository extends Repository implements EventRepositor
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        Select $select
+        Select $select,
     ) {
         parent::__construct($select);
     }
@@ -23,6 +23,8 @@ final class CycleOrmEventRepository extends Repository implements EventRepositor
     {
         $this->entityManager->persist($event);
         $this->entityManager->run();
+
+        return true;
     }
 
     public function deleteAll(array $scope = []): void

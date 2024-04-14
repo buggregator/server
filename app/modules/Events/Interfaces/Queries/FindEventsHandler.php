@@ -11,7 +11,7 @@ use Spiral\Cqrs\Attribute\QueryHandler;
 final class FindEventsHandler extends EventsHandler
 {
     public function __construct(
-        private readonly EventRepositoryInterface $events
+        private readonly EventRepositoryInterface $events,
     ) {
     }
 
@@ -19,8 +19,9 @@ final class FindEventsHandler extends EventsHandler
     public function __invoke(FindEvents $query): iterable
     {
         return $this->events->findAll(
-            self::getScopeFromFindEvents($query),
-            ['date' => 'desc']
+            scope: self::getScopeFromFindEvents($query),
+            orderBy: ['timestamp' => 'desc'],
+            limit: $query->limit,
         );
     }
 }
