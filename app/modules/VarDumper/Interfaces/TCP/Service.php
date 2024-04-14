@@ -15,10 +15,10 @@ use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
 use Symfony\Component\VarDumper\Cloner\Data;
 use Symfony\Component\VarDumper\Dumper\HtmlDumper;
 
-class Service implements ServiceInterface
+final readonly class Service implements ServiceInterface
 {
     public function __construct(
-        private readonly CommandBusInterface $commandBus,
+        private CommandBusInterface $commandBus,
     ) {
     }
 

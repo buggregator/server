@@ -15,7 +15,7 @@ final class Uuid implements \Stringable
 
     public function __construct(private ?UuidInterface $uuid = null)
     {
-        if ($uuid === null) {
+        if (!$uuid instanceof \Ramsey\Uuid\UuidInterface) {
             $this->uuid = \Ramsey\Uuid\Uuid::uuid7();
         }
     }
