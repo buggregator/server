@@ -6,6 +6,7 @@ namespace App\Application\Bootloader;
 
 use App\Application\Persistence\CacheEventRepository;
 use App\Application\Persistence\CycleOrmEventRepository;
+use App\Application\Persistence\DriverEnum;
 use App\Application\Persistence\MongoDBEventRepository;
 use Cycle\ORM\EntityManagerInterface;
 use Cycle\ORM\ORMInterface;
@@ -14,7 +15,6 @@ use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use MongoDB\Database;
 use Spiral\Boot\Bootloader\Bootloader;
-use Spiral\Boot\EnvironmentInterface;
 use Spiral\Cache\CacheStorageProviderInterface;
 use Spiral\Console\Bootloader\ConsoleBootloader;
 use Spiral\Core\FactoryInterface;
@@ -26,12 +26,11 @@ final class PersistenceBootloader extends Bootloader
         return [
             EventRepositoryInterface::class => static fn(
                 FactoryInterface $factory,
-                EnvironmentInterface $env,
-            ): EventRepositoryInterface => match ($env->get('PERSISTENCE_DRIVER', 'cache')) {
-                'cycle', 'database', 'db' => $factory->make(CycleOrmEventRepository::class),
-                'mongodb', 'mongo' => $factory->make(MongoDBEventRepository::class),
-                'cache', 'memory' => $factory->make(CacheEventRepository::class),
-                default => throw new \InvalidArgumentException('Unknown persistence driver'),
+                DriverEnum $driver,
+            ): EventRepositoryInterface => match ($driver) {
+                DriverEnum::Database => $factory->make(CycleOrmEventRepository::class),
+                DriverEnum::MongoDb => $factory->make(MongoDBEventRepository::class),
+                DriverEnum::InMemory => $factory->make(CacheEventRepository::class),
             },
             CycleOrmEventRepository::class => static fn(
                 ORMInterface $orm,
@@ -48,9 +47,9 @@ final class PersistenceBootloader extends Bootloader
         ];
     }
 
-    public function init(ConsoleBootloader $console, EventRepositoryInterface $repository): void
+    public function init(ConsoleBootloader $console, DriverEnum $driver): void
     {
-        if ($repository instanceof CycleOrmEventRepository) {
+        if ($driver === DriverEnum::Database) {
             $console->addConfigureSequence(
                 sequence: 'migrate',
                 header: 'Migration',
