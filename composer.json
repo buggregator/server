@@ -29,12 +29,13 @@
         }
     ],
     "require": {
-        "php": ">=8.1",
+        "php": ">=8.2",
         "ext-mbstring": "*",
         "auth0/auth0-php": "^8.11",
         "doctrine/collections": "^1.8",
         "firebase/php-jwt": "^6.10",
         "guzzlehttp/guzzle": "^7.8",
+        "mongodb/mongodb": "^1.18",
         "nesbot/carbon": "^2.64",
         "php-http/message": "^1.11",
         "spiral-packages/cqrs": "^2.0",
@@ -51,10 +52,11 @@
         "zentlix/swagger-php": "1.x-dev"
     },
     "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.40",
         "phpunit/phpunit": "^9.5",
         "qossmic/deptrac-shim": "^1.0",
+        "rector/rector": "^1.0",
         "spiral/testing": "^2.6",
-        "friendsofphp/php-cs-fixer": "^3.40",
         "vimeo/psalm": "^5.16"
     },
     "autoload": {
@@ -65,7 +67,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\": "tests"
+            "Tests\\": "tests",
+            "Utils\\Rector\\": "utils/rector/src"
         }
     },
     "config": {

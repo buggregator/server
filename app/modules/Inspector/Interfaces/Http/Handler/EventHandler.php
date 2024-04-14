@@ -12,11 +12,11 @@ use Spiral\Cqrs\CommandBusInterface;
 use Spiral\Http\Exception\ClientException;
 use Spiral\Http\ResponseWrapper;
 
-final class EventHandler implements HandlerInterface
+final readonly class EventHandler implements HandlerInterface
 {
     public function __construct(
-        private readonly ResponseWrapper $responseWrapper,
-        private readonly CommandBusInterface $commands,
+        private ResponseWrapper $responseWrapper,
+        private CommandBusInterface $commands,
     ) {
     }
 

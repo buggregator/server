@@ -6,16 +6,15 @@ namespace App\Application\Auth;
 
 use Spiral\Auth\TokenInterface;
 
-final class Token implements TokenInterface
+final readonly class Token implements TokenInterface
 {
     public function __construct(
-        private readonly string $id,
-        private readonly array $token,
-        private readonly array $payload,
-        private readonly \DateTimeImmutable $issuedAt,
-        private readonly \DateTimeImmutable $expiresAt,
-    ) {
-    }
+        private string $id,
+        private array $token,
+        private array $payload,
+        private \DateTimeImmutable $issuedAt,
+        private \DateTimeImmutable $expiresAt,
+    ) {}
 
     public function getID(): string
     {

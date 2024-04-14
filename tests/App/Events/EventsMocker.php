@@ -9,10 +9,10 @@ use Mockery\MockInterface;
 use Modules\Events\Domain\EventRepositoryInterface;
 use PHPUnit\Framework\TestCase;
 
-final class EventsMocker
+final readonly class EventsMocker
 {
     public function __construct(
-        private readonly MockInterface&EventRepositoryInterface $events,
+        private MockInterface&EventRepositoryInterface $events,
     ) {
     }
 

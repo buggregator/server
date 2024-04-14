@@ -10,10 +10,10 @@ use ZBateson\MailMimeParser\Header\AddressHeader;
 use ZBateson\MailMimeParser\Header\Part\AddressPart;
 use ZBateson\MailMimeParser\Message as ParseMessage;
 
-final class Parser
+final readonly class Parser
 {
     public function __construct(
-        private readonly StorageInterface $storage,
+        private StorageInterface $storage,
     ) {
     }
 
@@ -61,13 +61,11 @@ final class Parser
      */
     private function buildAttachmentFrom(array $attachments): array
     {
-        return \array_map(function (MessagePart|ParseMessage\MimePart $part) {
-            return new Attachment(
-                $part->getFilename(),
-                $part->getContent(),
-                $part->getContentType()
-            );
-        }, $attachments);
+        return \array_map(fn(MessagePart|ParseMessage\MimePart $part) => new Attachment(
+            $part->getFilename(),
+            $part->getContent(),
+            $part->getContentType()
+        ), $attachments);
     }
 
     /**

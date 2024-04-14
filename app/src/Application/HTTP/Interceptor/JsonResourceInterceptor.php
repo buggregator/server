@@ -13,11 +13,11 @@ use Spiral\Core\CoreInterface;
 use Spiral\Exceptions\ExceptionHandlerInterface;
 use Spiral\Filters\Exception\ValidationException;
 
-final class JsonResourceInterceptor implements CoreInterceptorInterface
+final readonly class JsonResourceInterceptor implements CoreInterceptorInterface
 {
     public function __construct(
-        private readonly ResponseFactoryInterface $responseFactory,
-        private readonly ExceptionHandlerInterface $exceptionHandler,
+        private ResponseFactoryInterface $responseFactory,
+        private ExceptionHandlerInterface $exceptionHandler,
     ) {}
 
     public function process(string $controller, string $action, array $parameters, CoreInterface $core): mixed

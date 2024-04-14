@@ -10,11 +10,11 @@ use Modules\Events\Domain\Events\EventWasDeleted;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Spiral\Cqrs\Attribute\CommandHandler;
 
-final class DeleteEventHandler
+final readonly class DeleteEventHandler
 {
     public function __construct(
-        private readonly EventRepositoryInterface $events,
-        private readonly EventDispatcherInterface $dispatcher
+        private EventRepositoryInterface $events,
+        private EventDispatcherInterface $dispatcher
     ) {
     }
 

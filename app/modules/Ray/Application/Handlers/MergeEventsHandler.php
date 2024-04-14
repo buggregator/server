@@ -10,10 +10,10 @@ use App\Application\Exception\EntityNotFoundException;
 use Modules\Sentry\Application\EventHandlerInterface;
 use Spiral\Cqrs\QueryBusInterface;
 
-final class MergeEventsHandler implements EventHandlerInterface
+final readonly class MergeEventsHandler implements EventHandlerInterface
 {
     public function __construct(
-        private readonly QueryBusInterface $bus,
+        private QueryBusInterface $bus,
     ) {
     }
 

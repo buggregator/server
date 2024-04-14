@@ -15,12 +15,12 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Spiral\Cqrs\Attribute\CommandHandler;
 use Spiral\Cqrs\QueryBusInterface;
 
-final class StoreEventHandler
+final readonly class StoreEventHandler
 {
     public function __construct(
-        private readonly EventDispatcherInterface $dispatcher,
-        private readonly EventRepositoryInterface $events,
-        private readonly QueryBusInterface $queryBus,
+        private EventDispatcherInterface $dispatcher,
+        private EventRepositoryInterface $events,
+        private QueryBusInterface $queryBus,
     ) {
     }
 

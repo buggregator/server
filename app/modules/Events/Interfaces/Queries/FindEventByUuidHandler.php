@@ -10,10 +10,10 @@ use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Spiral\Cqrs\Attribute\QueryHandler;
 
-final class FindEventByUuidHandler
+final readonly class FindEventByUuidHandler
 {
     public function __construct(
-        private readonly EventRepositoryInterface $events
+        private EventRepositoryInterface $events
     ) {
     }
 
@@ -21,7 +21,7 @@ final class FindEventByUuidHandler
     public function __invoke(FindEventByUuid $query): Event
     {
         $event = $this->events->findByPK((string)$query->uuid);
-        if (!$event) {
+        if ($event === null) {
             throw new EntityNotFoundException(
                 \sprintf('Event with given uuid [%s] was not found.', (string)$query->uuid)
             );

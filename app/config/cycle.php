@@ -10,12 +10,10 @@ return [
     'schema' => [
         'cache' => env('CYCLE_SCHEMA_CACHE', true),
         'defaults' => [
-            // SchemaInterface::MAPPER => \Cycle\ORM\Mapper\Mapper::class,
-            // SchemaInterface::REPOSITORY => \Cycle\ORM\Select\Repository::class,
-            // SchemaInterface::SCOPE => null,
-            // SchemaInterface::TYPECAST_HANDLER => [
-            //    \Cycle\ORM\Parser\Typecast::class
-            // ],
+            \Cycle\ORM\SchemaInterface::TYPECAST_HANDLER => [
+                \Cycle\ORM\Parser\Typecast::class,
+                \App\Application\Domain\Entity\ExtendedTypecast::class,
+            ],
         ],
         'collections' => [
             'default' => 'doctrine',

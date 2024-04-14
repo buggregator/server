@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace Modules\HttpDumps;
 
-use Modules\HttpDumps\Application;
 use Psr\Container\ContainerInterface;
 
-final class EventHandler implements Application\EventHandlerInterface
+final readonly class EventHandler implements Application\EventHandlerInterface
 {
     /**
      * @param class-string<\Modules\Sentry\Application\EventHandlerInterface>[] $handlers
      */
     public function __construct(
-        private readonly ContainerInterface $container,
-        private readonly array $handlers
+        private ContainerInterface $container,
+        private array $handlers,
     ) {
     }
 

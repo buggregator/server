@@ -33,7 +33,7 @@ jobs:
         with:
           context: ./
           platforms: linux/amd64,linux/arm64
-          file: ./docker/Dockerfile
+          file: ./.docker/Dockerfile
           push: true
           build-args: |
             APP_VERSION=${{ steps.previoustag.outputs.tag }}

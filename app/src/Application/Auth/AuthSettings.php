@@ -6,11 +6,10 @@ namespace App\Application\Auth;
 
 use Psr\Http\Message\UriInterface;
 
-final class AuthSettings
+final readonly class AuthSettings
 {
     public function __construct(
-        public readonly bool $enabled,
-        public readonly UriInterface $loginUrl,
-    ) {
-    }
+        public bool $enabled,
+        public UriInterface $loginUrl,
+    ) {}
 }

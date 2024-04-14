@@ -28,7 +28,7 @@ final class HandleReceivedEvent implements CommandInterface, \JsonSerializable
             'project' => $this->project,
             'type' => $this->type,
             'payload' => $this->payload,
-            'uuid' => (string)$this->uuid,
+            'uuid' => (string) $this->uuid,
             'timestamp' => $this->timestamp,
         ];
     }

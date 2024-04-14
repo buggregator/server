@@ -92,9 +92,6 @@ JSON;
         });
     }
 
-    /**
-     * @return void
-     */
     public function assertEventSent(): void
     {
         $this->broadcastig->assertPushed('events', function (array $data) {

@@ -55,7 +55,7 @@ return [
             connection: new Config\MySQL\TcpConnectionConfig(
                 database: env('DB_DATABASE', 'buggregator'),
                 host: env('DB_HOST', '127.0.0.1'),
-                port: env('DB_PORT', 5432),
+                port: env('DB_PORT', 3306),
                 user: env('DB_USERNAME', 'postgres'),
                 password: env('DB_PASSWORD'),
             ),

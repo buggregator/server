@@ -12,7 +12,7 @@ final class GzippedStreamFactory
 {
     public function createFromRequest(ServerRequestInterface $request): GzippedStream
     {
-        $content = (string)$request->getBody();
+        $content = (string) $request->getBody();
 
         $resource = fopen('php://temp', 'r+');
         fwrite($resource, $content);

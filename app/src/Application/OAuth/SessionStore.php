@@ -7,13 +7,12 @@ namespace App\Application\OAuth;
 use Auth0\SDK\Contract\StoreInterface;
 use Spiral\Session\SessionScope;
 
-final class SessionStore implements StoreInterface
+final readonly class SessionStore implements StoreInterface
 {
     public function __construct(
-        private readonly SessionScope $session,
-        private readonly string $sessionPrefix = 'auth0',
-    ) {
-    }
+        private SessionScope $session,
+        private string $sessionPrefix = 'auth0',
+    ) {}
 
     /**
      * This has no effect when using sessions as the storage medium.
@@ -24,8 +23,7 @@ final class SessionStore implements StoreInterface
      */
     public function defer(
         bool $deferring,
-    ): void {
-    }
+    ): void {}
 
     /**
      * Removes a persisted value identified by $key.
@@ -73,12 +71,5 @@ final class SessionStore implements StoreInterface
         $value,
     ): void {
         $this->session->getSection($this->sessionPrefix)->set($key, $value);
-    }
-
-    /**
-     * This basic implementation of BaseAuth0 SDK uses PHP Sessions to store volatile data.
-     */
-    public function start(): void
-    {
     }
 }

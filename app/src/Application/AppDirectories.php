@@ -6,10 +6,10 @@ namespace App\Application;
 
 use Spiral\Boot\DirectoriesInterface;
 
-final class AppDirectories
+final readonly class AppDirectories
 {
     public function __construct(
-        private readonly DirectoriesInterface $directories
+        private DirectoriesInterface $directories
     ) {}
 
     /**

@@ -18,16 +18,16 @@ final class HttpHandlerBootloader extends Bootloader
     public function defineSingletons(): array
     {
         return [
-            HandlerPipeline::class => static function (FactoryInterface $factory): HandlerPipeline {
-                return new HandlerPipeline(factory: $factory);
-            },
+            HandlerPipeline::class => static fn(
+                FactoryInterface $factory,
+            ): HandlerPipeline => new HandlerPipeline(factory: $factory),
             HandlerRegistryInterface::class => HandlerPipeline::class,
             CoreHandlerInterface::class => HandlerPipeline::class,
-            FrontendRequest::class => static function (DirectoriesInterface $dirs): FrontendRequest {
-                return new FrontendRequest(
-                    $dirs->get('public'),
-                );
-            },
+            FrontendRequest::class => static fn(
+                DirectoriesInterface $dirs,
+            ): FrontendRequest => new FrontendRequest(
+                $dirs->get('public'),
+            ),
         ];
     }
 

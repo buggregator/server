@@ -12,12 +12,12 @@ use Psr\Http\Message\ServerRequestInterface;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\Http\ResponseWrapper;
 
-final class EventHandler implements HandlerInterface
+final readonly class EventHandler implements HandlerInterface
 {
     public function __construct(
-        private readonly ResponseWrapper $responseWrapper,
-        private readonly EventHandlerInterface $handler,
-        private readonly CommandBusInterface $commands,
+        private ResponseWrapper $responseWrapper,
+        private EventHandlerInterface $handler,
+        private CommandBusInterface $commands,
     ) {
     }
 

@@ -21,9 +21,7 @@ final class JWTTokenStorage implements TokenStorageInterface
         private readonly string $expiresAt = '+30 days',
         callable $time = null
     ) {
-        $this->time = $time ?? static function (string $offset): \DateTimeImmutable {
-            return new \DateTimeImmutable($offset);
-        };
+        $this->time = $time ?? static fn(string $offset): \DateTimeImmutable => new \DateTimeImmutable($offset);
     }
 
     public function load(string $id): ?TokenInterface
@@ -32,7 +30,7 @@ final class JWTTokenStorage implements TokenStorageInterface
             $token = (array) JWT::decode($id, new Key($this->secret, $this->algorithm));
         } catch (ExpiredException $exception) {
             throw $exception;
-        } catch (\Throwable $exception) {
+        } catch (\Throwable) {
             return null;
         }
 

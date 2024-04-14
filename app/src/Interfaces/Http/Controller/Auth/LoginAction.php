@@ -12,12 +12,11 @@ use Spiral\Auth\TokenStorageInterface;
 use Spiral\Http\ResponseWrapper;
 use Spiral\Router\Annotation\Route;
 
-final class LoginAction
+final readonly class LoginAction
 {
     public function __construct(
-        private readonly ResponseWrapper $response,
-    ) {
-    }
+        private ResponseWrapper $response,
+    ) {}
 
     #[Route(route: 'auth/sso/login', methods: ['GET'], group: 'guest')]
     public function __invoke(

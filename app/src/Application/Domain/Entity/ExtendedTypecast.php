@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Domain\Entity;
 
-use App\Domain\ValueObjects\Uuid;
+use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\ORM\Parser\CastableInterface;
 use Cycle\ORM\Parser\UncastableInterface;
 use Ramsey\Uuid\UuidInterface;
@@ -63,7 +63,7 @@ final class ExtendedTypecast implements CastableInterface, UncastableInterface
     private function uncastUuid(mixed $value): string
     {
         if ($value instanceof Uuid || $value instanceof UuidInterface) {
-            return $value->toString();
+            return (string) $value;
         }
 
         return $value;
@@ -71,6 +71,6 @@ final class ExtendedTypecast implements CastableInterface, UncastableInterface
 
     private function uncastJson(mixed $value): string
     {
-        return (string)$value;
+        return (string) $value;
     }
 }

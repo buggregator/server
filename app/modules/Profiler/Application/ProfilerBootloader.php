@@ -16,14 +16,14 @@ final class ProfilerBootloader extends Bootloader
     public function defineSingletons(): array
     {
         return [
-            EventHandlerInterface::class => static function (ContainerInterface $container): EventHandlerInterface {
-                return new EventHandler($container, [
-                    PreparePeaks::class,
-                    CalculateDiffsBetweenEdges::class,
-                    PrepareEdges::class,
-                    CleanupEvent::class,
-                ]);
-            },
+            EventHandlerInterface::class => static fn(
+                ContainerInterface $container,
+            ): EventHandlerInterface => new EventHandler($container, [
+                PreparePeaks::class,
+                CalculateDiffsBetweenEdges::class,
+                PrepareEdges::class,
+                CleanupEvent::class,
+            ]),
         ];
     }
 }

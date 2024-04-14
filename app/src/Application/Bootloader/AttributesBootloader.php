@@ -13,9 +13,12 @@ use Spiral\Core\BinderInterface;
 
 final class AttributesBootloader extends Bootloader
 {
-    protected const DEPENDENCIES = [
-        \Spiral\Bootloader\Attributes\AttributesBootloader::class,
-    ];
+    public function defineDependencies(): array
+    {
+        return [
+            \Spiral\Bootloader\Attributes\AttributesBootloader::class,
+        ];
+    }
 
     public function init(BinderInterface $binder): void
     {

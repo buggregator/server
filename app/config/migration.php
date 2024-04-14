@@ -13,8 +13,10 @@ return [
      */
     'table' => 'migrations',
 
+    'strategy' => \Cycle\Schema\Generator\Migrations\Strategy\MultipleFilesStrategy::class,
+
     /**
      * When set to true no confirmation will be requested on migration run.
      */
-    'safe' => env('APP_ENV') === 'local',
+    'safe' => true,
 ];
