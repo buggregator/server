@@ -22,9 +22,13 @@ use Spiral\Session\SessionScope;
 
 final class AuthBootloader extends Bootloader
 {
-    public function defineSingletons(): array
+    public function defineBindings(): array
     {
         return [
+            Auth0::class => static fn(SdkConfiguration $config, SessionScope $session) => new Auth0(
+                $config->setTransientStorage(new SessionStore($session)),
+            ),
+
             SdkConfiguration::class => static fn(EnvironmentInterface $env) => new SdkConfiguration(
                 strategy: $env->get('AUTH_STRATEGY', SdkConfiguration::STRATEGY_REGULAR),
                 domain: $env->get('AUTH_PROVIDER_URL'),
@@ -34,11 +38,12 @@ final class AuthBootloader extends Bootloader
                 scope: \explode(',', $env->get('AUTH_SCOPES', 'openid,profile,email')),
                 cookieSecret: $env->get('AUTH_COOKIE_SECRET', $env->get('ENCRYPTER_KEY') ?? 'secret'),
             ),
+        ];
+    }
 
-            Auth0::class => static fn(SdkConfiguration $config, SessionScope $session) => new Auth0(
-                $config->setTransientStorage(new SessionStore($session)),
-            ),
-
+    public function defineSingletons(): array
+    {
+        return [
             AuthSettings::class => static fn(
                 EnvironmentInterface $env,
                 UriFactoryInterface $factory,
