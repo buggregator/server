@@ -47,6 +47,9 @@ kv:
     driver: memory
     config: {}
 
+jobs:
+  consume: []
+
 service:
   nginx:
     service_name_in_log: true

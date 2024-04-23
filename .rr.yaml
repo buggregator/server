@@ -45,6 +45,9 @@ kv:
     driver: memory
     config: {}
 
+jobs:
+  consume: []
+
 service:
 #  frontend:
 #    service_name_in_log: true

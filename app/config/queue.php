@@ -2,21 +2,22 @@
 
 declare(strict_types=1);
 
+use Modules\Webhooks\Interfaces\Job\WebhookHandler;
 use Spiral\Queue\Driver\SyncDriver;
 use Spiral\RoadRunner\Jobs\Queue\MemoryCreateInfo;
-use Spiral\RoadRunner\Jobs\Queue\AMQPCreateInfo;
-use Spiral\RoadRunner\Jobs\Queue\BeanstalkCreateInfo;
-use Spiral\RoadRunner\Jobs\Queue\SQSCreateInfo;
 use Spiral\RoadRunnerBridge\Queue\Queue;
 
 return [
     'default' => env('QUEUE_CONNECTION', 'sync'),
-    'aliases' => [],
+    'aliases' => [
+        'webhook' => 'roadrunner',
+        'events' => 'roadrunner',
+    ],
     'pipelines' => [
         'memory' => [
             'connector' => new MemoryCreateInfo('local'),
             'consume' => true,
-        ]
+        ],
     ],
     'connections' => [
         'sync' => [
@@ -33,5 +34,8 @@ return [
     ],
     'registry' => [
         'handlers' => [],
+        'serializers' => [
+            WebhookHandler::class => 'symfony-json',
+        ],
     ],
 ];

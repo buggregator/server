@@ -15,7 +15,11 @@ final class AppBootloader extends DomainBootloader
     public function defineSingletons(): array
     {
         return [
-            CoreInterface::class => fn(\Spiral\Core\Core $core, \Psr\Container\ContainerInterface $container, ?\Psr\EventDispatcher\EventDispatcherInterface $dispatcher = null): \Spiral\Core\InterceptableCore => self::domainCore($core, $container, $dispatcher),
+            CoreInterface::class => fn(
+                \Spiral\Core\Core $core,
+                \Psr\Container\ContainerInterface $container,
+                ?\Psr\EventDispatcher\EventDispatcherInterface $dispatcher = null,
+            ): \Spiral\Core\InterceptableCore => self::domainCore($core, $container, $dispatcher),
         ];
     }
 
