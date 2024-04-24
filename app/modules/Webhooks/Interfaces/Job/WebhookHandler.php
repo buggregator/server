@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Webhooks\Interfaces\Job;
 
+use App\Application\Domain\ValueObjects\Uuid;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
+use Modules\Webhooks\Domain\DeliveryFactoryInterface;
+use Modules\Webhooks\Domain\DeliveryRepositoryInterface;
 use Modules\Webhooks\Domain\Webhook;
 use Modules\Webhooks\Domain\WebhookRepositoryInterface;
 use Psr\Log\LoggerInterface;
@@ -18,6 +21,8 @@ final class WebhookHandler extends JobHandler
     public function __construct(
         InvokerInterface $invoker,
         private readonly WebhookRepositoryInterface $webhooks,
+        private readonly DeliveryRepositoryInterface $deliveries,
+        private readonly DeliveryFactoryInterface $deliveryFactory,
         private readonly ClientInterface $httpClient,
         private readonly ExceptionReporterInterface $reporter,
         private readonly LoggerInterface $logger,
@@ -27,7 +32,9 @@ final class WebhookHandler extends JobHandler
 
     public function invoke(JobPayload $payload): void
     {
-        $webhook = $this->webhooks->getByUuid($payload->webhookUuid);
+        $uuid = Uuid::fromString($payload->webhookUuid->toString());
+
+        $webhook = $this->webhooks->getByUuid($uuid);
 
         $totalRetries = $webhook->retryOnFailure ? 3 : 1;
 
@@ -61,7 +68,7 @@ final class WebhookHandler extends JobHandler
                 $headers[$header] = $webhook->getHeaderLine($header);
             }
 
-            $this->httpClient->request('POST', $webhook->url, [
+            $response = $this->httpClient->request('POST', $webhook->url, [
                 'json' => $payload->payload,
                 'verify' => $webhook->verifySsl,
                 'headers' => $headers,
@@ -71,6 +78,15 @@ final class WebhookHandler extends JobHandler
             $response = $e->getResponse();
             $failed = true;
             // Handle exception
+        } finally {
+            $delivery = $this->deliveryFactory->create(
+                webhookUuid: $webhook->uuid,
+                payload: \json_encode($payload->payload),
+                response: $response->getBody()->getContents(),
+                status: $response->getStatusCode(),
+            );
+
+            $this->deliveries->store($delivery);
         }
 
         if ($failed) {

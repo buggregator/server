@@ -6,6 +6,8 @@ namespace Modules\Webhooks\Application;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
+use Modules\Webhooks\Domain\DeliveryFactoryInterface;
+use Modules\Webhooks\Domain\DeliveryRepositoryInterface;
 use Modules\Webhooks\Domain\WebhookFactoryInterface;
 use Modules\Webhooks\Domain\WebhookLocatorInterface;
 use Modules\Webhooks\Domain\WebhookRegistryInterface;
@@ -19,6 +21,8 @@ use Spiral\Core\FactoryInterface;
 
 final class WebhooksBootloader extends Bootloader
 {
+    private const CACHE_ALIAS = 'webhooks';
+
     public function defineSingletons(): array
     {
         return [
@@ -43,7 +47,7 @@ final class WebhooksBootloader extends Bootloader
             ): InMemoryWebhookRepository => $factory->make(
                 InMemoryWebhookRepository::class,
                 [
-                    'cache' => $storageProvider->storage('webhooks'),
+                    'cache' => $storageProvider->storage(self::CACHE_ALIAS),
                 ],
             ),
             WebhookRepositoryInterface::class => InMemoryWebhookRepository::class,
@@ -66,6 +70,18 @@ final class WebhooksBootloader extends Bootloader
                     $locator,
                 ]);
             },
+
+            DeliveryRepositoryInterface::class => static fn(
+                FactoryInterface $factory,
+                CacheStorageProviderInterface $storageProvider,
+            ): DeliveryRepositoryInterface => $factory->make(
+                InMemoryDeliveryRepository::class,
+                [
+                    'cache' => $storageProvider->storage(self::CACHE_ALIAS),
+                ],
+            ),
+
+            DeliveryFactoryInterface::class => DeliveryFactory::class,
         ];
     }
 

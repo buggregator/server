@@ -81,14 +81,6 @@ final readonly class YamlFileWebhookLocator implements WebhookLocatorInterface
             throw new \RuntimeException('Invalid "webhook" key');
         }
 
-        if (!isset($data['webhook']['uuid'])) {
-            $errors[] = 'Missing "uuid" key';
-        } elseif (!\is_string($data['webhook']['uuid'])) {
-            $errors[] = 'Invalid "uuid" key';
-        } elseif (Uuid::isValid($data['webhook']['uuid']) === false) {
-            $errors[] = 'Invalid "uuid" format';
-        }
-
         if (!isset($data['webhook']['event'])) {
             $errors[] = 'Missing "event" key';
         } elseif (!\is_string($data['webhook']['event'])) {

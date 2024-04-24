@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Webhooks\Application;
 
+use App\Application\Domain\ValueObjects\Uuid;
 use Modules\Webhooks\Domain\WebhookEvent;
 use Modules\Webhooks\Domain\WebhookRepositoryInterface;
 use Modules\Webhooks\Domain\WebhookServiceInterface;
 use Modules\Webhooks\Interfaces\Job\JobPayload;
 use Modules\Webhooks\Interfaces\Job\WebhookHandler;
 use Psr\Log\LoggerInterface;
-use Ramsey\Uuid\UuidInterface;
 use Spiral\Queue\QueueConnectionProviderInterface;
 use Spiral\Queue\QueueInterface;
 
@@ -35,7 +35,7 @@ final readonly class WebhookService implements WebhookServiceInterface
         }
     }
 
-    public function sendWebhook(UuidInterface $uuid, WebhookEvent $event): void
+    public function sendWebhook(Uuid $uuid, WebhookEvent $event): void
     {
         $webhook = $this->webhooks->getByUuid($uuid);
 
@@ -44,7 +44,7 @@ final readonly class WebhookService implements WebhookServiceInterface
         $this->queue->push(
             WebhookHandler::class,
             new JobPayload(
-                $webhook->uuid,
+                $webhook->uuid->toObject(),
                 $event->event,
                 $event->payload,
             ),

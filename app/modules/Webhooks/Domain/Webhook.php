@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Webhooks\Domain;
 
-use Psr\Http\Message\MessageInterface;
-use Ramsey\Uuid\UuidInterface;
+use App\Application\Domain\ValueObjects\Uuid;
 
 final class Webhook
 {
     public function __construct(
-        public UuidInterface $uuid,
+        public Uuid $uuid,
         public string $event,
         public string $url,
         public array $headers = [],

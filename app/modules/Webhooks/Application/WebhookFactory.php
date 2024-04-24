@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Webhooks\Application;
 
+use App\Application\Domain\ValueObjects\Uuid;
 use Modules\Webhooks\Domain\Webhook;
 use Modules\Webhooks\Domain\WebhookFactoryInterface;
-use Ramsey\Uuid\Uuid;
 
 final readonly class WebhookFactory implements WebhookFactoryInterface
 {
@@ -17,7 +17,7 @@ final readonly class WebhookFactory implements WebhookFactoryInterface
         bool $retryOnFailure = true,
     ): Webhook {
         return new Webhook(
-            uuid: Uuid::uuid4(),
+            uuid: Uuid::generate(),
             event: $event,
             url: $url,
             verifySsl: $verifySsl,

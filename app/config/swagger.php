@@ -64,5 +64,6 @@ return [
         directory('app') . 'src/Application/HTTP/Response',
         directory('app') . 'src/Interfaces/Http',
         directory('app') . 'modules/Events/Interfaces/Http',
+        directory('app') . 'modules/Webhooks/Interfaces/Http',
     ],
 ];

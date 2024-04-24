@@ -38,7 +38,6 @@ final readonly class WebhookEventInterceptor implements CoreInterceptorInterface
 
 
         if ($webhookEvent) {
-            dump($webhookEvent);
             $this->service->send($webhookEvent);
         }
 

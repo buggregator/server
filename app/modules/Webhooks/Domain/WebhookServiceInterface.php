@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Webhooks\Domain;
 
-use Ramsey\Uuid\UuidInterface;
+use App\Application\Domain\ValueObjects\Uuid;
 
 interface WebhookServiceInterface
 {
     public function send(WebhookEvent $event): void;
 
-    public function sendWebhook(UuidInterface $uuid, WebhookEvent $event): void;
+    public function sendWebhook(Uuid $uuid, WebhookEvent $event): void;
 }
