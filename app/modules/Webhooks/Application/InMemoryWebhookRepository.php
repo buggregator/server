@@ -9,23 +9,22 @@ use Modules\Webhooks\Domain\WebhookRegistryInterface;
 use Modules\Webhooks\Domain\WebhookRepositoryInterface;
 use Modules\Webhooks\Exceptions\WebhookNotFoundException;
 use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
 use Ramsey\Uuid\UuidInterface;
 use Spiral\Core\Attribute\Singleton;
 
 #[Singleton]
-final class InMemoryWebhookRepository implements WebhookRepositoryInterface, WebhookRegistryInterface
+final readonly class InMemoryWebhookRepository implements WebhookRepositoryInterface, WebhookRegistryInterface
 {
-    /** @var Webhook[] */
-    private array $webhooks = [];
-
     public function __construct(
         private LoggerInterface $logger,
+        private CacheInterface $cache,
     ) {
     }
 
     public function findByEvent(string $event): array
     {
-        return \array_filter($this->webhooks, fn(Webhook $webhook) => $webhook->event === $event);
+        return \array_filter($this->getWebhooks(), fn(Webhook $webhook) => $webhook->event === $event);
     }
 
     public function getByUuid(UuidInterface $uuid): Webhook
@@ -37,17 +36,32 @@ final class InMemoryWebhookRepository implements WebhookRepositoryInterface, Web
 
     public function findByUuid(UuidInterface $uuid): ?Webhook
     {
-        return $this->webhooks[(string)$uuid] ?? null;
+        return $this->getWebhooks()[(string)$uuid] ?? null;
     }
 
     public function register(Webhook $webhook): void
     {
-        $this->webhooks[(string)$webhook->uuid] = $webhook;
+        if ($this->findByUuid($webhook->uuid) !== null) {
+            return;
+        }
 
-        $this->logger->info('Webhook registered', [
+        $webhooks = $this->getWebhooks();
+        $webhooks[(string)$webhook->uuid] = $webhook;
+
+        $this->logger->debug('Webhook registered', [
             'uuid' => (string)$webhook->uuid,
             'event' => $webhook->event,
             'url' => $webhook->url,
         ]);
+
+        $this->cache->set('webhooks', $webhooks);
+    }
+
+    /**
+     * @return Webhook[]
+     */
+    private function getWebhooks(): array
+    {
+        return $this->cache->get('webhooks', []);
     }
 }

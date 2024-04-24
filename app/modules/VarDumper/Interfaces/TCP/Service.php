@@ -49,8 +49,8 @@ final readonly class Service implements ServiceInterface
                         'value' => $this->convertToPrimitive($payload[0]),
                     ],
                     'context' => $payload[1],
-                ]
-            )
+                ],
+            ),
         );
     }
 

@@ -6,19 +6,18 @@ namespace Modules\Webhooks\Application;
 
 use Modules\Webhooks\Domain\Webhook;
 use Modules\Webhooks\Domain\WebhookFactoryInterface;
-use Ramsey\Uuid\UuidInterface;
+use Ramsey\Uuid\Uuid;
 
 final readonly class WebhookFactory implements WebhookFactoryInterface
 {
     public function create(
-        UuidInterface $uuid,
         string $event,
         string $url,
         bool $verifySsl = false,
         bool $retryOnFailure = true,
     ): Webhook {
         return new Webhook(
-            uuid: $uuid,
+            uuid: Uuid::uuid4(),
             event: $event,
             url: $url,
             verifySsl: $verifySsl,

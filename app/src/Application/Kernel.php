@@ -54,6 +54,7 @@ class Kernel extends \Spiral\Framework\Kernel
             RoadRunnerBridge\QueueBootloader::class,
             RoadRunnerBridge\TcpBootloader::class,
             RoadRunnerBridge\LoggerBootloader::class,
+            RoadRunnerBridge\LockBootloader::class,
 
             MonologBootloader::class,
 

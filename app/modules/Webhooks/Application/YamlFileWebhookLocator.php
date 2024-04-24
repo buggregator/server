@@ -8,6 +8,7 @@ use Modules\Webhooks\Domain\WebhookFactoryInterface;
 use Modules\Webhooks\Domain\WebhookLocatorInterface;
 use Psr\Log\LoggerInterface;
 use Ramsey\Uuid\Uuid;
+use RoadRunner\Lock\LockInterface;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Yaml\Yaml;
 
@@ -17,6 +18,7 @@ final readonly class YamlFileWebhookLocator implements WebhookLocatorInterface
         private Finder $finder,
         private LoggerInterface $logger,
         private WebhookFactoryInterface $webhookFactory,
+        private LockInterface $lock,
         private string $directory,
     ) {
     }
@@ -27,6 +29,14 @@ final readonly class YamlFileWebhookLocator implements WebhookLocatorInterface
 
         foreach ($this->finder as $file) {
             try {
+                $lockId = 'webhook:' . $file->getFilename();
+
+                if ($this->lock->exists($lockId)) {
+                    continue;
+                }
+
+                $this->lock->lock($lockId, ttl: 60);
+
                 /**
                  * @var array{webhook: array{
                  *     event: string,
@@ -36,11 +46,9 @@ final readonly class YamlFileWebhookLocator implements WebhookLocatorInterface
                  * }} $data
                  */
                 $data = Yaml::parseFile($file->getPathname());
-
                 $this->validateWebhookData($data);
 
                 $webhook = $this->webhookFactory->create(
-                    uuid: Uuid::fromString($data['webhook']['uuid']),
                     event: $data['webhook']['event'],
                     url: $data['webhook']['url'],
                     verifySsl: (bool)($data['webhook']['verify_ssl'] ?? false),

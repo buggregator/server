@@ -10,6 +10,7 @@ return [
     'default' => env('CACHE_STORAGE', 'roadrunner'),
     'aliases' => [
         'events' => ['storage' => $defaultStorage, 'prefix' => 'events:'],
+        'webhooks' => ['storage' => $defaultStorage, 'prefix' => 'webhooks:'],
         'local' => ['storage' => $defaultStorage, 'prefix' => 'local:'],
     ],
     'storages' => [

@@ -46,20 +46,4 @@ final class Webhook
 
         return $clone;
     }
-
-    public function withAddedHeader(string $name, $value): self
-    {
-        $clone = clone $this;
-        $clone->headers[$name][] = $value;
-
-        return $clone;
-    }
-
-    public function withoutHeader(string $name): self
-    {
-        $clone = clone $this;
-        unset($clone->headers[$name]);
-
-        return $clone;
-    }
 }
