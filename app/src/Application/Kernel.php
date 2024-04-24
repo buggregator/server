@@ -15,6 +15,7 @@ use Modules\Profiler\Application\ProfilerBootloader;
 use Modules\Ray\Application\RayBootloader;
 use Modules\HttpDumps\Application\HttpDumpsBootloader;
 use Modules\Sentry\Application\SentryBootloader;
+use Modules\VarDumper\Application\VarDumperBootloader;
 use Modules\Webhooks\Application\WebhooksBootloader;
 use Spiral\Boot\Bootloader\CoreBootloader;
 use Spiral\Bootloader as Framework;
@@ -54,7 +55,6 @@ class Kernel extends \Spiral\Framework\Kernel
             RoadRunnerBridge\QueueBootloader::class,
             RoadRunnerBridge\TcpBootloader::class,
             RoadRunnerBridge\LoggerBootloader::class,
-            RoadRunnerBridge\LockBootloader::class,
 
             MonologBootloader::class,
 
@@ -106,6 +106,7 @@ class Kernel extends \Spiral\Framework\Kernel
             AppBootloader::class,
             InspectorBootloader::class,
             SentryBootloader::class,
+            VarDumperBootloader::class,
             RayBootloader::class,
             HttpDumpsBootloader::class,
             ProfilerBootloader::class,
