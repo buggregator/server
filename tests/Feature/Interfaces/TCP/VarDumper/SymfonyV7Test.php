@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Interfaces\TCP\VarDumper;
 
+use Modules\VarDumper\Application\Dump\DumpIdGeneratorInterface;
 use Modules\VarDumper\Interfaces\TCP\Service;
 use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpEvent;
+use Symfony\Component\VarDumper\Caster\ReflectionCaster;
+use Symfony\Component\VarDumper\Cloner\VarCloner;
 use Tests\Feature\Interfaces\TCP\TCPTestCase;
 
 final class SymfonyV7Test extends TCPTestCase
@@ -39,6 +42,51 @@ final class SymfonyV7Test extends TCPTestCase
             $this->assertNotEmpty($data['data']['uuid']);
             $this->assertNotEmpty($data['data']['timestamp']);
 
+            return true;
+        });
+    }
+
+    public function testSendObjectDump(): void
+    {
+        $generator = $this->mockContainer(DumpIdGeneratorInterface::class);
+        $generator->shouldReceive('generate')->andReturn('sf-dump-730421088');
+
+        $cloner = new VarCloner();
+        $cloner->addCasters(ReflectionCaster::UNSET_CLOSURE_FILE_INFO);
+        $data = $cloner->cloneVar((object)['type' => 'string', 'value' => 'foo']);
+
+        $payload = \base64_encode(\serialize([$data, []])) . "\n";
+
+        $service = $this->get(Service::class);
+
+        $service->handle(
+            new Request(
+                remoteAddr: '127.0.0.1',
+                event: TcpEvent::Data,
+                body: $payload,
+                connectionUuid: (string)$this->randomUuid(),
+                server: 'local',
+            ),
+        );
+
+        $this->broadcastig->assertPushed('events', function (array $data) {
+            $this->assertSame('event.received', $data['event']);
+            $this->assertSame('var-dump', $data['data']['type']);
+
+            $this->assertSame([
+                'type' => 'stdClass',
+                'value' => <<<'HTML'
+<pre class=sf-dump id=sf-dump-730421088 data-indent-pad="  ">{<a class=sf-dump-ref>#2296</a><samp data-depth=1 class=sf-dump-expanded>
+  +"<span class=sf-dump-public>type</span>": "<span class=sf-dump-str>string</span>"
+  +"<span class=sf-dump-public>value</span>": "<span class=sf-dump-str>foo</span>"
+</samp>}
+</pre><script>Sfdump("sf-dump-730421088")</script>
+
+HTML,
+            ], $data['data']['payload']['payload']);
+
+            $this->assertNotEmpty($data['data']['uuid']);
+            $this->assertNotEmpty($data['data']['timestamp']);
 
             return true;
         });

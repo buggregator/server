@@ -15,6 +15,7 @@ use Modules\Profiler\Application\ProfilerBootloader;
 use Modules\Ray\Application\RayBootloader;
 use Modules\HttpDumps\Application\HttpDumpsBootloader;
 use Modules\Sentry\Application\SentryBootloader;
+use Modules\VarDumper\Application\VarDumperBootloader;
 use Spiral\Boot\Bootloader\CoreBootloader;
 use Spiral\Bootloader as Framework;
 use Spiral\Cqrs\Bootloader\CqrsBootloader;
@@ -103,6 +104,7 @@ class Kernel extends \Spiral\Framework\Kernel
             AppBootloader::class,
             InspectorBootloader::class,
             SentryBootloader::class,
+            VarDumperBootloader::class,
             RayBootloader::class,
             HttpDumpsBootloader::class,
             ProfilerBootloader::class,
