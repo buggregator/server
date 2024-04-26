@@ -36,6 +36,18 @@ JSON;
         $this->assertEventSent();
     }
 
+    public function testSendDumpViaHttpAuthWithProjectId(): void
+    {
+        $project = $this->createProject('Some project');
+
+        $this->http->postJson(
+            uri: 'http://ray:123@localhost',
+            data: Stream::create(self::PAYLOAD),
+        )->assertOk();
+
+        $this->assertEventSent('123');
+    }
+
     public function testSendDumpViaUserAgent(): void
     {
         $this->http
@@ -43,9 +55,9 @@ JSON;
                 'HTTP_USER_AGENT' => 'ray 1.0.0',
             ])
             ->postJson(
-            uri: '/',
-            data: Stream::create(self::PAYLOAD),
-        )->assertOk();
+                uri: '/',
+                data: Stream::create(self::PAYLOAD),
+            )->assertOk();
 
         $this->assertEventSent();
     }
@@ -92,16 +104,16 @@ JSON;
         });
     }
 
-    public function assertEventSent(): void
+    public function assertEventSent(?string $project = null): void
     {
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed('events', function (array $data) use ($project) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('ray', $data['data']['type']);
+            $this->assertSame($project, $data['data']['project']);
 
             $this->assertSame('11325003-b9cf-4c06-83d0-8a18fe368ac4', $data['data']['payload']['uuid']);
             $this->assertSame('8.2.5', $data['data']['payload']['meta']['php_version']);
             $this->assertSame('1.40.1.0', $data['data']['payload']['meta']['ray_package_version']);
-
 
             $this->assertSame('log', $data['data']['payload']['payloads'][0]['type']);
             $this->assertSame(['foo'], $data['data']['payload']['payloads'][0]['content']['values']);

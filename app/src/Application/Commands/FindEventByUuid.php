@@ -7,9 +7,9 @@ namespace App\Application\Commands;
 use App\Application\Domain\ValueObjects\Uuid;
 use Spiral\Cqrs\QueryInterface;
 
-class FindEventByUuid implements QueryInterface
+final readonly class FindEventByUuid implements QueryInterface
 {
     public function __construct(
-        public readonly Uuid $uuid
+        public Uuid $uuid
     ) {}
 }

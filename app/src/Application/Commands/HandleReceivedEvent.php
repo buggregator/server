@@ -7,19 +7,19 @@ namespace App\Application\Commands;
 use App\Application\Domain\ValueObjects\Uuid;
 use Spiral\Cqrs\CommandInterface;
 
-final class HandleReceivedEvent implements CommandInterface, \JsonSerializable
+final readonly class HandleReceivedEvent implements CommandInterface, \JsonSerializable
 {
-    public readonly Uuid $uuid;
-    public readonly float $timestamp;
+    public Uuid $uuid;
+    public float $timestamp;
 
     public function __construct(
-        public readonly string $type,
-        public readonly array $payload,
-        public readonly ?string $project = null,
+        public string $type,
+        public array $payload,
+        public ?string $project = null,
         ?Uuid $uuid = null,
     ) {
         $this->uuid = $uuid ?? Uuid::generate();
-        $this->timestamp = microtime(true);
+        $this->timestamp = \microtime(true);
     }
 
     public function jsonSerialize(): array

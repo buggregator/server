@@ -6,7 +6,7 @@ namespace Modules\Events\Domain;
 
 use App\Application\Domain\Entity\Json;
 use App\Application\Domain\ValueObjects\Uuid;
-use App\Application\Persistence\CacheEventRepository;
+use App\Integration\RoadRunner\Persistence\CacheEventRepository;
 use Tests\TestCase;
 
 final class CacheEventRepositoryTest extends TestCase

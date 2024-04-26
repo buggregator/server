@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Application\Commands;
 
+use App\Application\Domain\ValueObjects\Uuid;
 use Spiral\Cqrs\QueryInterface;
 
-class FindProjectByName implements QueryInterface
+final readonly class FindProjectByKey implements QueryInterface
 {
     public function __construct(
-        public readonly string $name
+        public string $key
     ) {}
 }

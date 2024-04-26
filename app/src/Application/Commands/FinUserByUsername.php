@@ -6,9 +6,9 @@ namespace App\Application\Commands;
 
 use Spiral\Cqrs\QueryInterface;
 
-class FinUserByUsername implements QueryInterface
+final readonly class FinUserByUsername implements QueryInterface
 {
     public function __construct(
-        public readonly string $username
+        public string $username
     ) {}
 }

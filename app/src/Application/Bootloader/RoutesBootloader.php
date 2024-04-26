@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Bootloader;
 
 use App\Application\Auth\AuthSettings;
+use App\Application\HTTP\Middleware\DetectEventTypeMiddleware;
 use App\Application\HTTP\Middleware\JsonPayloadMiddleware;
 use App\Interfaces\Http\EventHandlerAction;
 use Spiral\Auth\Middleware\AuthMiddleware;
@@ -24,7 +25,8 @@ final class RoutesBootloader extends BaseRoutesBootloader
 {
     public function __construct(
         private readonly Container $container,
-    ) {}
+    ) {
+    }
 
     public function defineDependencies(): array
     {
@@ -105,6 +107,7 @@ final class RoutesBootloader extends BaseRoutesBootloader
 
         $routes->default('/<path:.*>')
             ->group('web_guest')
+            ->middleware(DetectEventTypeMiddleware::class)
             ->action(EventHandlerAction::class, 'handle');
     }
 }

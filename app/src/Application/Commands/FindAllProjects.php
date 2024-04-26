@@ -6,4 +6,7 @@ namespace App\Application\Commands;
 
 use Spiral\Cqrs\QueryInterface;
 
-class FindAllProjects implements QueryInterface {}
+final class FindAllProjects implements QueryInterface
+{
+
+}

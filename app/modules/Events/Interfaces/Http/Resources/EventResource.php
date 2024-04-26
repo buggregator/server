@@ -18,6 +18,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'type', type: 'string'),
         new OA\Property(property: 'payload', description: 'Event payload based on type', type: 'object'),
         new OA\Property(property: 'timestamp', type: 'float', example: 1630540800.12312),
+        new OA\Property(property: 'project', description: 'Project', type: 'string', format: 'uuid'),
     ],
 )]
 final class EventResource extends JsonResource
@@ -34,7 +35,7 @@ final class EventResource extends JsonResource
             'type' => $this->data->getType(),
             'payload' => $this->data->getPayload(),
             'timestamp' => $this->data->getTimestamp(),
-            'project_id' => $this->data->getProjectId(),
+            'project' => $this->data->getProject(),
         ];
     }
 }

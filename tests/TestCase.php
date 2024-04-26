@@ -7,6 +7,8 @@ namespace Tests;
 use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Service\ErrorHandler\Handler;
 use Modules\Events\Domain\EventRepositoryInterface;
+use Modules\Projects\Domain\Project;
+use Modules\Projects\Domain\ProjectRepositoryInterface;
 use Spiral\Core\Container;
 use Spiral\Core\ContainerScope;
 use Spiral\Testing\TestableKernelInterface;
@@ -94,5 +96,15 @@ class TestCase extends BaseTestCase
     protected function randomUuid(): Uuid
     {
         return Uuid::generate();
+    }
+
+    private function createProject(string $name): Project
+    {
+        $this->get(ProjectRepositoryInterface::class)->store(
+            new Project(
+                uuid: $this->randomUuid(),
+                name: $name,
+            ),
+        );
     }
 }

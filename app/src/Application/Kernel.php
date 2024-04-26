@@ -12,6 +12,7 @@ use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
 use Modules\Inspector\Application\InspectorBootloader;
 use Modules\Profiler\Application\ProfilerBootloader;
+use Modules\Projects\Application\ProjectBootloader;
 use Modules\Ray\Application\RayBootloader;
 use Modules\HttpDumps\Application\HttpDumpsBootloader;
 use Modules\Sentry\Application\SentryBootloader;
@@ -114,6 +115,7 @@ class Kernel extends \Spiral\Framework\Kernel
             PersistenceBootloader::class,
             AuthBootloader::class,
             WebhooksBootloader::class,
+            ProjectBootloader::class,
         ];
     }
 }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Persistence;
+namespace App\Integration\RoadRunner\Persistence;
 
 use App\Application\Domain\Entity\Json;
 use App\Application\Domain\ValueObjects\Uuid;
@@ -12,7 +12,6 @@ use Doctrine\Common\Collections\Criteria;
 use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Psr\SimpleCache\CacheInterface;
-use Spiral\Cache\CacheStorageProviderInterface;
 
 /**
  * @phpstan-type TDocument array{
@@ -20,19 +19,17 @@ use Spiral\Cache\CacheStorageProviderInterface;
  *     type: non-empty-string,
  *     payload: array,
  *     date: positive-int,
- *     projectId: string|null,
+ *     project: string|null,
  * }
  */
-final class CacheEventRepository implements EventRepositoryInterface
+final readonly class CacheEventRepository implements EventRepositoryInterface
 {
     private const EVENT_IDS_KEY = 'ids';
-    private readonly CacheInterface $cache;
 
     public function __construct(
-        CacheStorageProviderInterface $provider,
-        private readonly int $ttl = 60 * 60 * 2,
+        private CacheInterface $cache,
+        private int $ttl = 60 * 60 * 2,
     ) {
-        $this->cache = $provider->storage('events');
     }
 
     public function findAll(array $scope = [], array $orderBy = [], int $limit = 30, int $offset = 0): iterable
@@ -40,7 +37,7 @@ final class CacheEventRepository implements EventRepositoryInterface
         $events = $this->getFilteredEvents($scope, $orderBy, $limit, $offset);
 
         foreach ($events as $document) {
-            yield $this->mapDocumentInfoEvent($document);
+            yield $this->mapDocumentIntoEvent($document);
         }
     }
 
@@ -53,11 +50,12 @@ final class CacheEventRepository implements EventRepositoryInterface
 
     public function store(Event $event): bool
     {
-        $id = (string) $event->getUuid();
+        $id = (string)$event->getUuid();
         $ids = $this->getEventIds();
         $ids[$id] = [
-            'uuid' => (string) $event->getUuid(),
+            'uuid' => (string)$event->getUuid(),
             'type' => $event->getType(),
+            'project' => $event->getProject(),
             'timestamp' => \microtime(true),
         ];
 
@@ -66,7 +64,7 @@ final class CacheEventRepository implements EventRepositoryInterface
         return $this->cache->set($id, [
             'id' => $id,
             'type' => $event->getType(),
-            'project_id' => $event->getProjectId(),
+            'project' => $event->getProject(),
             'timestamp' => $event->getTimestamp(),
             'payload' => $event->getPayload()->jsonSerialize(),
         ], Carbon::now()->addSeconds($this->ttl)->diffAsCarbonInterval());
@@ -114,7 +112,7 @@ final class CacheEventRepository implements EventRepositoryInterface
         $event = $this->cache->get($uuid);
 
         if (\is_array($event)) {
-            return $this->mapDocumentInfoEvent($event);
+            return $this->mapDocumentIntoEvent($event);
         }
 
         return null;
@@ -125,7 +123,7 @@ final class CacheEventRepository implements EventRepositoryInterface
         $events = $this->findAll(scope: $scope, limit: 1);
 
         foreach ($events as $event) {
-            return $this->mapDocumentInfoEvent($event);
+            return $this->mapDocumentIntoEvent($event);
         }
 
         return null;
@@ -154,14 +152,14 @@ final class CacheEventRepository implements EventRepositoryInterface
     /**
      * @param TDocument $document
      */
-    private function mapDocumentInfoEvent(array $document): Event
+    private function mapDocumentIntoEvent(array $document): Event
     {
         return new Event(
             uuid: Uuid::fromString($document['id']),
             type: $document['type'],
             payload: new Json($document['payload']),
             timestamp: $document['timestamp'],
-            projectId: $document['project_id'],
+            project: $document['project'],
         );
     }
 
@@ -187,6 +185,6 @@ final class CacheEventRepository implements EventRepositoryInterface
      */
     private function getEventIds(): array
     {
-        return (array) $this->cache->get(self::EVENT_IDS_KEY, []);
+        return (array)$this->cache->get(self::EVENT_IDS_KEY, []);
     }
 }

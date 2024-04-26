@@ -8,7 +8,6 @@ use App\Application\Domain\Entity\Json;
 use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\Annotated\Annotation\Column;
 use Cycle\Annotated\Annotation\Entity;
-use DateTimeImmutable;
 
 #[Entity(
     repository: EventRepositoryInterface::class
@@ -29,8 +28,8 @@ class Event
         #[Column(type: 'float')]
         private float $timestamp,
 
-        #[Column(type: 'integer', nullable: true)]
-        private ?int $projectId,
+        #[Column(type: 'string', nullable: true)]
+        private ?string $project = null,
     ) {
     }
 
@@ -54,8 +53,8 @@ class Event
         return $this->timestamp;
     }
 
-    public function getProjectId(): ?int
+    public function getProject(): ?string
     {
-        return $this->projectId;
+        return $this->project;
     }
 }

@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Persistence;
+namespace App\Integration\MongoDb\Persistence;
 
 use App\Application\Domain\Entity\Json;
 use App\Application\Domain\ValueObjects\Uuid;
 use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use MongoDB\Collection;
+use MongoDB\Model\BSONDocument;
 
 final readonly class MongoDBEventRepository implements EventRepositoryInterface
 {
@@ -21,7 +22,7 @@ final readonly class MongoDBEventRepository implements EventRepositoryInterface
         $result = $this->collection->insertOne([
             '_id' => (string) $event->getUuid(),
             'type' => $event->getType(),
-            'project_id' => $event->getProjectId(),
+            'project' => $event->getProject(),
             'timestamp' => $event->getTimestamp(),
             'payload' => $event->getPayload()->jsonSerialize(),
         ]);
@@ -55,7 +56,7 @@ final readonly class MongoDBEventRepository implements EventRepositoryInterface
         ]);
 
         foreach ($cursor as $document) {
-            yield $this->mapDocumentInfoEvent($document);
+            yield $this->mapDocumentIntoEvent($document);
         }
     }
 
@@ -72,17 +73,17 @@ final readonly class MongoDBEventRepository implements EventRepositoryInterface
             return null;
         }
 
-        return $this->mapDocumentInfoEvent($document);
+        return $this->mapDocumentIntoEvent($document);
     }
 
-    public function mapDocumentInfoEvent(\MongoDB\Model\BSONDocument $document): Event
+    public function mapDocumentIntoEvent(BSONDocument $document): Event
     {
         return new Event(
             uuid: Uuid::fromString($document['_id']),
             type: $document['type'],
             payload: new Json((array) $document['payload']),
             timestamp: $document['timestamp'],
-            projectId: $document['project_id'],
+            project: $document['project'],
         );
     }
 

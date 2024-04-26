@@ -15,14 +15,14 @@ final readonly class EventWasReceived implements ShouldBroadcastInterface
         public string $type,
         public array $payload,
         public float $timestamp,
-        public ?int $projectId = null,
+        public ?string $project = null,
     ) {
     }
 
     public function jsonSerialize(): array
     {
         return [
-            'projectId' => $this->projectId,
+            'project' => $this->project,
             'uuid' => (string)$this->uuid,
             'type' => $this->type,
             'payload' => $this->payload,

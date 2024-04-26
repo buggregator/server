@@ -6,9 +6,9 @@ namespace App\Application\Commands;
 
 use Spiral\Cqrs\QueryInterface;
 
-class FindTransactionByName implements QueryInterface
+final readonly class FindTransactionByName implements QueryInterface
 {
     public function __construct(
-        public readonly string $name
+        public string $name
     ) {}
 }

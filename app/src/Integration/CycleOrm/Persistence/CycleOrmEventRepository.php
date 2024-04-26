@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Persistence;
+namespace App\Integration\CycleOrm\Persistence;
 
 use Cycle\ORM\EntityManagerInterface;
 use Cycle\ORM\Select;

@@ -60,7 +60,7 @@ final class WebhooksBootloader extends Bootloader
             ): YamlFileWebhookLocator => $factory->make(
                 YamlFileWebhookLocator::class,
                 [
-                    'directory' => $dirs->get('runtime') . '/webhooks',
+                    'directory' => $dirs->get('runtime') . '/configs',
                 ],
             ),
 
