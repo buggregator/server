@@ -17,6 +17,7 @@ use Spiral\Boot\Bootloader\Bootloader;
 use Spiral\Boot\DirectoriesInterface;
 use Spiral\Boot\EnvironmentInterface;
 use Spiral\Cache\CacheStorageProviderInterface;
+use Spiral\Console\Bootloader\ConsoleBootloader;
 use Spiral\Core\FactoryInterface;
 
 final class WebhooksBootloader extends Bootloader
@@ -85,12 +86,11 @@ final class WebhooksBootloader extends Bootloader
         ];
     }
 
-    public function boot(
-        WebhookRegistryInterface $registry,
-        WebhookLocatorInterface $locator,
-    ): void {
-        foreach ($locator->findAll() as $webhook) {
-            $registry->register($webhook);
-        }
+    public function init(ConsoleBootloader $console): void
+    {
+        $console->addConfigureSequence(
+            sequence: 'webhooks:register',
+            header: 'Register webhooks from configuration',
+        );
     }
 }
