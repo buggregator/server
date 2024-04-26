@@ -16,6 +16,7 @@ use Modules\Ray\Application\RayBootloader;
 use Modules\HttpDumps\Application\HttpDumpsBootloader;
 use Modules\Sentry\Application\SentryBootloader;
 use Modules\VarDumper\Application\VarDumperBootloader;
+use Modules\Webhooks\Application\WebhooksBootloader;
 use Spiral\Boot\Bootloader\CoreBootloader;
 use Spiral\Bootloader as Framework;
 use Spiral\Cqrs\Bootloader\CqrsBootloader;
@@ -99,6 +100,7 @@ class Kernel extends \Spiral\Framework\Kernel
 
             StorageBootloader::class,
             DistributionBootloader::class,
+            \Spiral\Serializer\Symfony\Bootloader\SerializerBootloader::class,
 
             HttpHandlerBootloader::class,
             AppBootloader::class,
@@ -111,6 +113,7 @@ class Kernel extends \Spiral\Framework\Kernel
             MongoDBBootloader::class,
             PersistenceBootloader::class,
             AuthBootloader::class,
+            WebhooksBootloader::class,
         ];
     }
 }
