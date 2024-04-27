@@ -24,12 +24,12 @@ final readonly class CacheProjectRepository implements ProjectRepositoryInterfac
     public function store(Project $project): bool
     {
         $key = $project->getKey();
-
-        $projects = $this->getProjects();
         $exists = $this->findByPK($key);
         if ($exists) {
             throw new UniqueKeyException(\sprintf('Project with key %s already exists', $key));
         }
+
+        $projects = $this->getProjects();
 
         $projects[] = [
             'key' => (string)$project->getKey(),

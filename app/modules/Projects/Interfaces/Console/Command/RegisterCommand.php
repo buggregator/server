@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Projects\Interfaces\Console\Command;
 
+use App\Application\Commands\CreateProject;
 use Modules\Projects\Domain\ProjectLocatorInterface;
-use Modules\Projects\Domain\ProjectRepositoryInterface;
 use Spiral\Console\Attribute\AsCommand;
 use Spiral\Console\Command;
+use Spiral\Cqrs\CommandBusInterface;
 
 #[AsCommand(
     name: 'projects:register',
@@ -16,17 +17,21 @@ use Spiral\Console\Command;
 final class RegisterCommand extends Command
 {
     public function __invoke(
-        ProjectRepositoryInterface $projects,
+        CommandBusInterface $bus,
         ProjectLocatorInterface $locator,
     ): int {
         foreach ($locator->findAll() as $project) {
-            if ($projects->findByPK($project->getKey()) !== null) {
-                $this->writeln("Project already registered: {$project->getName()}");
-                continue;
+            try {
+                $this->writeln("Registering project: {$project->getName()}");
+                $bus->dispatch(
+                    new CreateProject(
+                        key: (string)$project->getKey(),
+                        name: $project->getName(),
+                    ),
+                );
+            } catch (\Throwable $e) {
+                $this->error($e->getMessage());
             }
-
-            $this->writeln("Registering project: {$project->getName()}");
-            $projects->store($project);
         }
 
         return self::SUCCESS;
