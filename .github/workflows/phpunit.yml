@@ -8,6 +8,8 @@ jobs:
     uses: spiral/gh-actions/.github/workflows/phpunit.yml@master
     with:
       install_protoc: true
+      extensions: >-
+        ['sockets', 'mongodb', 'pgsql', 'pdo_pgsql', 'pdo_mysql']
       os: >-
         ['ubuntu-latest']
       php: >-
