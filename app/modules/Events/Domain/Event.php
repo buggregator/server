@@ -8,10 +8,13 @@ use App\Application\Domain\Entity\Json;
 use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\Annotated\Annotation\Column;
 use Cycle\Annotated\Annotation\Entity;
+use Cycle\Annotated\Annotation\Table\Index;
 
 #[Entity(
     repository: EventRepositoryInterface::class
 )]
+#[Index(columns: ['type'])]
+#[Index(columns: ['project'])]
 class Event
 {
     /**  @internal */

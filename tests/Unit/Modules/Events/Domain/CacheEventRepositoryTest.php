@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Events\Domain;
+namespace Tests\Unit\Modules\Events\Domain;
 
 use App\Application\Domain\Entity\Json;
 use App\Application\Domain\ValueObjects\Uuid;
@@ -22,11 +22,11 @@ final class CacheEventRepositoryTest extends TestCase
 
     public function testStoreEvent(): void
     {
-        $this->assertCount(0, $this->repository->findAll());
+        $this->assertCount(0, \iterator_to_array($this->repository->findAll()));
 
         $this->createEvent();
 
-        $this->assertCount(1, $this->repository->findAll());
+        $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
     }
 
     public function testDeleteByType(): void
@@ -35,10 +35,10 @@ final class CacheEventRepositoryTest extends TestCase
         $this->createEvent(type: 'foo');
         $this->createEvent(type: 'bar');
 
-        $this->assertCount(3, $this->repository->findAll());
+        $this->assertCount(3, \iterator_to_array($this->repository->findAll()));
 
         $this->repository->deleteAll(['type' => 'foo']);
-        $this->assertCount(1, $this->repository->findAll());
+        $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
     }
 
     public function testDeleteByUuids(): void
@@ -47,10 +47,10 @@ final class CacheEventRepositoryTest extends TestCase
         $this->createEvent(uuid: $uuid2 = $this->randomUuid());
         $this->createEvent(uuid: $uuid3 = $this->randomUuid());
 
-        $this->assertCount(3, $this->repository->findAll());
+        $this->assertCount(3, \iterator_to_array($this->repository->findAll()));
 
         $this->repository->deleteAll(['uuid' => [(string)$uuid1, (string)$uuid3]]);
-        $this->assertCount(1, $this->repository->findAll());
+        $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
 
         $result = \iterator_to_array($this->repository->findAll());
 
@@ -65,10 +65,10 @@ final class CacheEventRepositoryTest extends TestCase
         $this->createEvent(uuid: $uuid2 = $this->randomUuid());
         $this->createEvent(uuid: $uuid3 = $this->randomUuid());
 
-        $this->assertCount(5, $this->repository->findAll());
+        $this->assertCount(5, \iterator_to_array($this->repository->findAll()));
 
         $this->repository->deleteAll(['type' => 'foo', 'uuid' => [(string)$uuid1, (string)$uuid3]]);
-        $this->assertCount(1, $this->repository->findAll());
+        $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
 
         $result = \iterator_to_array($this->repository->findAll());
 
@@ -83,7 +83,7 @@ final class CacheEventRepositoryTest extends TestCase
                 type: $type,
                 payload: new Json([]),
                 timestamp: \microtime(true),
-                projectId: null,
+                project: null,
             ),
         );
 

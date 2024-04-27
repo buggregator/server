@@ -20,6 +20,20 @@ JSON;
             data: Stream::create(self::PAYLOAD),
             headers: [
                 'X-Buggregator-Event' => 'ray',
+                'X-Buggregator-Project' => 'default',
+            ],
+        )->assertOk();
+
+        $this->assertEventSent('default');
+    }
+
+    public function testSendDumpWithProject(): void
+    {
+        $this->http->postJson(
+            uri: '/',
+            data: Stream::create(self::PAYLOAD),
+            headers: [
+                'X-Buggregator-Event' => 'ray',
             ],
         )->assertOk();
 
@@ -38,14 +52,12 @@ JSON;
 
     public function testSendDumpViaHttpAuthWithProjectId(): void
     {
-        $project = $this->createProject('Some project');
-
         $this->http->postJson(
-            uri: 'http://ray:123@localhost',
+            uri: 'http://ray:default@localhost',
             data: Stream::create(self::PAYLOAD),
         )->assertOk();
 
-        $this->assertEventSent('123');
+        $this->assertEventSent('default');
     }
 
     public function testSendDumpViaUserAgent(): void

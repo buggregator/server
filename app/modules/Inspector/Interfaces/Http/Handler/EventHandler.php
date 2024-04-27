@@ -73,7 +73,7 @@ final readonly class EventHandler implements HandlerInterface
             || $request->hasHeader('X-Inspector-Version')
             || \str_ends_with((string)$request->getUri(), 'inspector')
         ) {
-            return new EventType(type: 'profiler');
+            return new EventType(type: 'inspector');
         }
 
         return null;

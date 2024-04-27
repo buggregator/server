@@ -9,6 +9,7 @@ use ZBateson\MailMimeParser\Header\AbstractHeader;
 use ZBateson\MailMimeParser\Header\AddressHeader;
 use ZBateson\MailMimeParser\Header\Part\AddressPart;
 use ZBateson\MailMimeParser\Message as ParseMessage;
+use ZBateson\MailMimeParser\Message\IMessagePart;
 
 final readonly class Parser
 {
@@ -51,20 +52,20 @@ final readonly class Parser
             $this->storage->bucket('attachments'),
             $message->getHeader('Message - Id')?->getValue(),
             $body, $from, $recipients, $ccs, $subject,
-            $html, $text, $replyTo, $allRecipients, $attachments
+            $html, $text, $replyTo, $allRecipients, $attachments,
         );
     }
 
     /**
-     * @param MessagePart[] $attachments
+     * @param ParseMessage\IMessagePart[] $attachments
      * @return Attachment[]
      */
     private function buildAttachmentFrom(array $attachments): array
     {
-        return \array_map(fn(MessagePart|ParseMessage\MimePart $part) => new Attachment(
+        return \array_map(fn(ParseMessage\IMessagePart $part) => new Attachment(
             $part->getFilename(),
             $part->getContent(),
-            $part->getContentType()
+            $part->getContentType(),
         ), $attachments);
     }
 
@@ -74,7 +75,7 @@ final readonly class Parser
      */
     private function joinNameAndEmail(array $addresses): array
     {
-        return array_map(function (AddressPart $addressPart) {
+        return \array_map(function (AddressPart $addressPart) {
             $name = $addressPart->getName();
             $email = $addressPart->getValue();
 

@@ -17,7 +17,7 @@ final readonly class SecretKeyValidator
 
     public function validateRequest(ServerRequestInterface $request): bool
     {
-        if ($this->secret === null) {
+        if (empty($this->secret)) {
             return true;
         }
 
@@ -29,14 +29,12 @@ final readonly class SecretKeyValidator
             return false;
         }
 
-        $key = null;
-        $parts = \explode(',', $request->getHeaderLine('X-Sentry-Auth'));
-        foreach ($parts as $part) {
-            if (\str_starts_with($part, 'sentry_key=')) {
-                $key = \substr($part, 11);
-                break;
-            }
-        }
+        // Header: Sentry sentry_version=7, sentry_client=raven-php/0.15.0, sentry_key=1234567890
+        $key = \preg_match(
+            '/sentry_key=(\w+)/',
+            $request->getHeaderLine('X-Sentry-Auth'),
+            $matches,
+        ) ? $matches[1] : null;
 
         return $this->secret === $key;
     }

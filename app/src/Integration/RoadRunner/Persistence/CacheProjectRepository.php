@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Criteria;
 use Modules\Projects\Domain\Project;
 use Modules\Projects\Domain\ProjectRepositoryInterface;
+use Modules\Projects\Domain\ValueObject\Key;
 use Modules\Projects\Exception\UniqueKeyException;
 use Psr\SimpleCache\CacheInterface;
 
@@ -31,7 +32,7 @@ final readonly class CacheProjectRepository implements ProjectRepositoryInterfac
         }
 
         $projects[] = [
-            'key' => $project->getKey(),
+            'key' => (string)$project->getKey(),
             'name' => $project->getName(),
         ];
 
@@ -107,7 +108,7 @@ final readonly class CacheProjectRepository implements ProjectRepositoryInterfac
     private function mapDocumentIntoProject(array $document): Project
     {
         return new Project(
-            key: $document['key'],
+            key: new Key($document['key']),
             name: $document['name'],
         );
     }

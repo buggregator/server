@@ -1,22 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
-    bootstrap="vendor/autoload.php"
-    backupGlobals="false"
-    backupStaticAttributes="false"
-    colors="true"
-    verbose="false"
-    convertErrorsToExceptions="true"
-    convertNoticesToExceptions="true"
-    convertWarningsToExceptions="true"
-    processIsolation="false"
-    stopOnFailure="false"
-    stopOnError="false"
-    stderr="true">
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd" bootstrap="vendor/autoload.php"
+         backupGlobals="false" colors="true" stderr="true" cacheDirectory=".phpunit.cache"
+         backupStaticProperties="false">
     <php>
         <env name="BROADCAST_CONNECTION" value="in-memory"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="QUEUE_DEFAULT_CONNECTION" value="sync"/>
         <env name="CACHE_STORAGE" value="array"/>
         <env name="CACHE_DEFAULT_STORAGE" value="array"/>
         <env name="CYCLE_SCHEMA_CACHE" value="true"/>
@@ -28,6 +18,7 @@
     <testsuites>
         <testsuite name="Feature">
             <directory suffix="Test.php">tests/Feature</directory>
+            <directory suffix="Test.php">tests/Unit</directory>
         </testsuite>
     </testsuites>
 </phpunit>

@@ -18,7 +18,7 @@ final class ShowActionTest extends ControllerTestCase
             type: 'test',
             payload: new Json(['foo' => 'bar']),
             timestamp: 123.456,
-            projectId: null,
+            project: null,
         );
 
         $this->fakeEvents()

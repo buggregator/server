@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Interfaces\Http\Sentry;
 
 use Nyholm\Psr7\Stream;
+use Spiral\Testing\Attribute\Env;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;
 
 final class SentryV3ActionTest extends ControllerTestCase
@@ -17,42 +18,33 @@ BODY;
     {
         $this->http
             ->postJson(
-                uri: '/api/1/store/',
+                uri: '/api/default/store/',
                 data: Stream::create(self::PAYLOAD),
-                headers: ['X-Buggregator-Event' => 'sentry'],
+                headers: ['X-Sentry-Auth' => 'Sentry sentry_version=7, sentry_client=sentry.php/4.0.1, sentry_key=12345abcde'],
             )->assertOk();
 
-        $this->assertEventSent();
+        $this->assertEventSent('default');
     }
 
-    public function testSendViaHeaders(): void
+    #[Env('SENTRY_SECRET_KEY', '12345abcde')]
+    public function testSendWithSecretKeyValidation(): void
     {
         $this->http
             ->postJson(
-                uri: '/api/1/store/',
+                uri: '/api/default/store/',
                 data: Stream::create(self::PAYLOAD),
-                headers: ['X-Sentry-Auth' => 'test'],
+                headers: ['X-Sentry-Auth' => 'Sentry sentry_version=7, sentry_client=sentry.php/4.0.1, sentry_key=12345abcde'],
             )->assertOk();
 
-        $this->assertEventSent();
+        $this->assertEventSent('default');
     }
 
-    public function testSendViaHttpAuth(): void
+    public function assertEventSent(?string $project = null): void
     {
-        $this->http
-            ->postJson(
-                uri: 'http://sentry@localhots/api/1/store/',
-                data: Stream::create(self::PAYLOAD),
-            )->assertOk();
-
-        $this->assertEventSent();
-    }
-
-    public function assertEventSent(): void
-    {
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed('events', function (array $data) use ($project) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
+            $this->assertSame($project, $data['data']['project']);
 
             $this->assertSame('f7b7f09d40e645c79a8a2846e2111c81', $data['data']['payload']['event_id']);
             $this->assertSame(1701453725.632805, $data['data']['payload']['timestamp']);

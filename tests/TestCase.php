@@ -9,6 +9,7 @@ use App\Application\Service\ErrorHandler\Handler;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Modules\Projects\Domain\Project;
 use Modules\Projects\Domain\ProjectRepositoryInterface;
+use Modules\Projects\Domain\ValueObject\Key;
 use Spiral\Core\Container;
 use Spiral\Core\ContainerScope;
 use Spiral\Testing\TestableKernelInterface;
@@ -98,13 +99,15 @@ class TestCase extends BaseTestCase
         return Uuid::generate();
     }
 
-    private function createProject(string $name): Project
+    protected function createProject(string $key, string $name): Project
     {
         $this->get(ProjectRepositoryInterface::class)->store(
-            new Project(
-                uuid: $this->randomUuid(),
+            $project = new Project(
+                key: Key::create($key),
                 name: $name,
             ),
         );
+
+        return $project;
     }
 }

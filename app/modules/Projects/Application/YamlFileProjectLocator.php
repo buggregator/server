@@ -6,6 +6,7 @@ namespace Modules\Projects\Application;
 
 use Modules\Projects\Domain\ProjectFactoryInterface;
 use Modules\Projects\Domain\ProjectLocatorInterface;
+use Modules\Projects\Domain\ValueObject\Key;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Yaml\Yaml;
@@ -36,7 +37,7 @@ final readonly class YamlFileProjectLocator implements ProjectLocatorInterface
                 $this->validateData($data);
 
                 $project = $this->projectFactory->create(
-                    key: $data['project']['key'],
+                    key: Key::create($data['project']['key']),
                     name: $data['project']['name'],
                 );
 

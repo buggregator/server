@@ -6,23 +6,12 @@ namespace Modules\Projects\Application;
 
 use Modules\Projects\Domain\Project;
 use Modules\Projects\Domain\ProjectFactoryInterface;
-use Modules\Projects\Exception\InvalidKeyFormatException;
+use Modules\Projects\Domain\ValueObject\Key;
 
 final readonly class ProjectFactory implements ProjectFactoryInterface
 {
-    public function __construct(
-        private string $allowedKeyCharacters = 'a-z0-9-_',
-    ) {
-    }
-
-    public function create(string $key, string $name): Project
+    public function create(Key $key, string $name): Project
     {
-        if (\preg_match('/^[' . $this->allowedKeyCharacters . ']+$/', $key) !== 1) {
-            throw new InvalidKeyFormatException(
-                'Invalid project key. Key must contain only lowercase letters, numbers, hyphens and underscores.',
-            );
-        }
-
         return new Project($key, $name);
     }
 }

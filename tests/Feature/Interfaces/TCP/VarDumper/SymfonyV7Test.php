@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Interfaces\TCP\VarDumper;
 
 use Modules\VarDumper\Application\Dump\DumpIdGeneratorInterface;
+use Modules\VarDumper\Exception\InvalidPayloadException;
 use Modules\VarDumper\Interfaces\TCP\Service;
 use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpEvent;
@@ -53,7 +54,9 @@ final class SymfonyV7Test extends TCPTestCase
 
         $cloner = new VarCloner();
         $cloner->addCasters(ReflectionCaster::UNSET_CLOSURE_FILE_INFO);
-        $data = $cloner->cloneVar((object)['type' => 'string', 'value' => 'foo']);
+        $object = (object)['type' => 'string', 'value' => 'foo'];
+        $objectId = \spl_object_id($object);
+        $data = $cloner->cloneVar($object);
 
         $payload = \base64_encode(\serialize([$data, []])) . "\n";
 
@@ -69,20 +72,23 @@ final class SymfonyV7Test extends TCPTestCase
             ),
         );
 
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed('events', function (array $data) use ($objectId) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('var-dump', $data['data']['type']);
 
             $this->assertSame([
                 'type' => 'stdClass',
-                'value' => <<<'HTML'
-<pre class=sf-dump id=sf-dump-730421088 data-indent-pad="  ">{<a class=sf-dump-ref>#2296</a><samp data-depth=1 class=sf-dump-expanded>
+                'value' => \sprintf(
+                    <<<HTML
+<pre class=sf-dump id=sf-dump-730421088 data-indent-pad="  ">{<a class=sf-dump-ref>#%s</a><samp data-depth=1 class=sf-dump-expanded>
   +"<span class=sf-dump-public>type</span>": "<span class=sf-dump-str>string</span>"
   +"<span class=sf-dump-public>value</span>": "<span class=sf-dump-str>foo</span>"
 </samp>}
 </pre><script>Sfdump("sf-dump-730421088")</script>
 
 HTML,
+                    $objectId,
+                ),
             ], $data['data']['payload']['payload']);
 
             $this->assertNotEmpty($data['data']['uuid']);
@@ -90,5 +96,50 @@ HTML,
 
             return true;
         });
+    }
+
+    public function testSendDumpWithProject(): void
+    {
+        $cloner = new VarCloner();
+        $cloner->addCasters(ReflectionCaster::UNSET_CLOSURE_FILE_INFO);
+        $data = $cloner->cloneVar('string');
+
+        $service = $this->get(Service::class);
+
+        $service->handle(
+            new Request(
+                remoteAddr: '127.0.0.1',
+                event: TcpEvent::Data,
+                body: \base64_encode(\serialize([$data, ['project' => 'test']])) . "\n",
+                connectionUuid: (string)$this->randomUuid(),
+                server: 'local',
+            ),
+        );
+
+        $this->broadcastig->assertPushed('events', function (array $data) {
+            $this->assertSame('event.received', $data['event']);
+            $this->assertSame('var-dump', $data['data']['type']);
+            $this->assertSame('test', $data['data']['project']);
+
+            return true;
+        });
+    }
+
+    public function testSendInvalidDump(): void
+    {
+        $this->expectException(InvalidPayloadException::class);
+        $this->expectExceptionMessage('Unable to decode the message.');
+
+        $service = $this->get(Service::class);
+
+        $service->handle(
+            new Request(
+                remoteAddr: '127.0.0.1',
+                event: TcpEvent::Data,
+                body: 'invalid',
+                connectionUuid: (string)$this->randomUuid(),
+                server: 'local',
+            ),
+        );
     }
 }

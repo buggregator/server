@@ -7,6 +7,7 @@ namespace App\Integration\MongoDb\Persistence;
 use App\Application\Domain\ValueObjects\Uuid;
 use Modules\Projects\Domain\Project;
 use Modules\Projects\Domain\ProjectRepositoryInterface;
+use Modules\Projects\Domain\ValueObject\Key;
 use MongoDB\Collection;
 use MongoDB\Model\BSONDocument;
 
@@ -20,7 +21,7 @@ final readonly class MongoDBProjectRepository implements ProjectRepositoryInterf
     public function store(Project $project): bool
     {
         $result = $this->collection->insertOne([
-            '_id' => $project->getKey(),
+            '_id' => (string) $project->getKey(),
             'name' => $project->getName(),
         ]);
 
@@ -66,7 +67,7 @@ final readonly class MongoDBProjectRepository implements ProjectRepositoryInterf
     public function mapDocumentIntoProject(BSONDocument $document): Project
     {
         return new Project(
-            key: $document['_id'],
+            key: new Key($document['_id']),
             name: $document['name'],
         );
     }

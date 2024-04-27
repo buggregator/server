@@ -31,6 +31,7 @@ BODY;
         $this->broadcastig->assertPushed('events', function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
+            $this->assertSame('1', $data['data']['project']);
 
             $this->assertSame(1701455435.634665, $data['data']['payload']['timestamp']);
             $this->assertSame('php', $data['data']['payload']['platform']);
@@ -64,6 +65,7 @@ BODY;
         $this->broadcastig->assertPushed('events', function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
+            $this->assertSame('1', $data['data']['project']);
 
             $this->assertSame(1701455435.634665, $data['data']['payload']['timestamp']);
             $this->assertSame('php', $data['data']['payload']['platform']);
