@@ -60,12 +60,14 @@
         "qossmic/deptrac-shim": "^1.0",
         "rector/rector": "^1.0",
         "spiral/testing": "^2.6",
+        "spiral-packages/database-seeder": "^3.1",
         "vimeo/psalm": "^5.16"
     },
     "autoload": {
         "psr-4": {
             "App\\": "app/src",
-            "Modules\\": "app/modules"
+            "Modules\\": "app/modules",
+            "Database\\": "app/database"
         }
     },
     "autoload-dev": {

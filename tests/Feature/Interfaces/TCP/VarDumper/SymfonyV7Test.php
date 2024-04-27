@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Interfaces\TCP\VarDumper;
 
+use App\Application\Broadcasting\Channel\EventsChannel;
 use Modules\VarDumper\Application\Dump\DumpIdGeneratorInterface;
 use Modules\VarDumper\Exception\InvalidPayloadException;
 use Modules\VarDumper\Interfaces\TCP\Service;
@@ -110,16 +111,16 @@ HTML,
             new Request(
                 remoteAddr: '127.0.0.1',
                 event: TcpEvent::Data,
-                body: \base64_encode(\serialize([$data, ['project' => 'test']])) . "\n",
+                body: \base64_encode(\serialize([$data, ['project' => 'default']])) . "\n",
                 connectionUuid: (string)$this->randomUuid(),
                 server: 'local',
             ),
         );
 
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed((string) new EventsChannel('default'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('var-dump', $data['data']['type']);
-            $this->assertSame('test', $data['data']['project']);
+            $this->assertSame('default', $data['data']['project']);
 
             return true;
         });

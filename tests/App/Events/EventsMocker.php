@@ -6,6 +6,7 @@ namespace Tests\App\Events;
 
 use App\Application\Domain\ValueObjects\Uuid;
 use Mockery\MockInterface;
+use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -14,6 +15,17 @@ final readonly class EventsMocker
     public function __construct(
         private MockInterface&EventRepositoryInterface $events,
     ) {
+    }
+
+    public function eventShouldBeFound(Uuid|string $uuid, ?Event $result): self
+    {
+        $this->events
+            ->shouldReceive('findByPK')
+            ->with((string)$uuid)
+            ->once()
+            ->andReturn($result);
+
+        return $this;
     }
 
     public function shouldRequestEventByUuid(Uuid $uuid): EventExpectation
@@ -35,9 +47,17 @@ final readonly class EventsMocker
             ->andReturn($status);
     }
 
-    public function eventShouldBeClear(?string $type = null, ?array $uuids = null): void
+    public function eventShouldNotBeDeleted(Uuid $uuid): void
     {
-        $args = [];
+        $this->events
+            ->shouldNotReceive('deleteByPK')
+            ->with((string)$uuid);
+    }
+
+    public function eventShouldBeClear(?string $type = null, ?string $project = null, ?array $uuids = null): void
+    {
+        $args = ['project' => $project];
+
         if ($type) {
             $args['type'] = $type;
         }
@@ -48,7 +68,7 @@ final readonly class EventsMocker
 
         $this->events
             ->shouldReceive('deleteAll')
-            ->withArgs(function (array $data) use($args): bool {
+            ->withArgs(function (array $data) use ($args): bool {
                 TestCase::assertSame($args, $data);
                 return true;
             })

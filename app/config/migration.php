@@ -6,7 +6,7 @@ return [
     /**
      * Directory to store migration files
      */
-    'directory' => directory('app') . 'migrations/',
+    'directory' => directory('app') . 'database/Migrations/',
 
     /**
      * Table name to store information about migrations status (per database)

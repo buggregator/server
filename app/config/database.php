@@ -10,31 +10,14 @@ return [
         'drivers' => [],
     ],
 
-    /**
-     * Default database connection
-     */
     'default' => 'default',
 
-    /**
-     * The Spiral/Database module provides support to manage multiple databases
-     * in one application, use read/write connections and logically separate
-     * multiple databases within one connection using prefixes.
-     *
-     * To register a new database simply add a new one into
-     * "databases" section below.
-     */
     'databases' => [
         'default' => [
             'driver' => env('DB_DRIVER', 'pgsql'),
         ],
     ],
 
-    /**
-     * Each database instance must have an associated connection object.
-     * Connections used to provide low-level functionality and wrap different
-     * database drivers. To register a new connection you have to specify
-     * the driver class and its connection options.
-     */
     'drivers' => [
         'pgsql' => new Config\PostgresDriverConfig(
             connection: new Config\Postgres\TcpConnectionConfig(
@@ -56,7 +39,7 @@ return [
                 database: env('DB_DATABASE', 'buggregator'),
                 host: env('DB_HOST', '127.0.0.1'),
                 port: env('DB_PORT', 3306),
-                user: env('DB_USERNAME', 'postgres'),
+                user: env('DB_USERNAME', 'root'),
                 password: env('DB_PASSWORD'),
             ),
             queryCache: true,

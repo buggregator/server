@@ -11,14 +11,12 @@ use Modules\Events\Domain\EventRepositoryInterface;
 use Modules\Events\Domain\Events\EventWasReceived;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Spiral\Cqrs\Attribute\CommandHandler;
-use Spiral\Cqrs\QueryBusInterface;
 
 final readonly class StoreEventHandler
 {
     public function __construct(
         private EventDispatcherInterface $dispatcher,
         private EventRepositoryInterface $events,
-        private QueryBusInterface $queryBus,
     ) {
     }
 

@@ -8,10 +8,11 @@ use App\Application\Broadcasting\Channel\EventsChannel;
 use App\Application\Broadcasting\ShouldBroadcastInterface;
 use App\Application\Domain\ValueObjects\Uuid;
 
-class EventWasDeleted implements ShouldBroadcastInterface
+final readonly class EventWasDeleted implements ShouldBroadcastInterface
 {
     public function __construct(
-        public readonly Uuid $uuid
+        public Uuid $uuid,
+        public ?string $project = null,
     ) {
     }
 
@@ -19,6 +20,7 @@ class EventWasDeleted implements ShouldBroadcastInterface
     {
         return [
             'uuid' => (string)$this->uuid,
+            'project' => $this->project,
         ];
     }
 
@@ -29,6 +31,6 @@ class EventWasDeleted implements ShouldBroadcastInterface
 
     public function getBroadcastTopics(): iterable|string|\Stringable
     {
-        return new EventsChannel();
+        return new EventsChannel($this->project);
     }
 }

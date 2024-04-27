@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Modules\Events\Domain;
 
-use App\Application\Domain\Entity\Json;
-use App\Application\Domain\ValueObjects\Uuid;
 use App\Integration\RoadRunner\Persistence\CacheEventRepository;
 use Tests\TestCase;
 
@@ -73,20 +71,5 @@ final class CacheEventRepositoryTest extends TestCase
         $result = \iterator_to_array($this->repository->findAll());
 
         $this->assertSame((string)$uuid2, (string)$result[0]->getUuid());
-    }
-
-    private function createEvent(string $type = 'test', ?Uuid $uuid = null): Event
-    {
-        $this->repository->store(
-            $event = new Event(
-                uuid: $uuid ?? $this->randomUuid(),
-                type: $type,
-                payload: new Json([]),
-                timestamp: \microtime(true),
-                project: null,
-            ),
-        );
-
-        return $event;
     }
 }

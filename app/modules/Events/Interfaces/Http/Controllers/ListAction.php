@@ -23,6 +23,12 @@ use OpenApi\Attributes as OA;
             required: false,
             schema: new OA\Schema(type: 'string'),
         ),
+        new OA\QueryParameter(
+            name: 'project',
+            description: 'Filter by event type',
+            required: false,
+            schema: new OA\Schema(type: 'string'),
+        ),
     ],
     responses: [
         new OA\Response(
@@ -61,7 +67,7 @@ final class ListAction
     {
         return new EventCollection(
             $bus->ask(
-                new FindEvents(type: $request->type),
+                new FindEvents(type: $request->type, project: $request->project),
             ),
         );
     }

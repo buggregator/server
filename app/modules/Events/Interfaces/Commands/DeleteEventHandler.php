@@ -14,15 +14,25 @@ final readonly class DeleteEventHandler
 {
     public function __construct(
         private EventRepositoryInterface $events,
-        private EventDispatcherInterface $dispatcher
+        private EventDispatcherInterface $dispatcher,
     ) {
     }
 
     #[CommandHandler]
     public function __invoke(DeleteEvent $command): void
     {
+        $event = $this->events->findByPK((string)$command->uuid);
+        if (!$event) {
+            return;
+        }
+
         if ($this->events->deleteByPK((string)$command->uuid)) {
-            $this->dispatcher->dispatch(new EventWasDeleted($command->uuid));
+            $this->dispatcher->dispatch(
+                new EventWasDeleted(
+                    uuid: $command->uuid,
+                    project: $event->getProject(),
+                ),
+            );
         }
     }
 }

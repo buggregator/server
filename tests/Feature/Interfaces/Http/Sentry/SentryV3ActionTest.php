@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Interfaces\Http\Sentry;
 
+use App\Application\Broadcasting\Channel\EventsChannel;
 use Nyholm\Psr7\Stream;
 use Spiral\Testing\Attribute\Env;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;
@@ -41,7 +42,7 @@ BODY;
 
     public function assertEventSent(?string $project = null): void
     {
-        $this->broadcastig->assertPushed('events', function (array $data) use ($project) {
+        $this->broadcastig->assertPushed((string) new EventsChannel($project), function (array $data) use ($project) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
             $this->assertSame($project, $data['data']['project']);

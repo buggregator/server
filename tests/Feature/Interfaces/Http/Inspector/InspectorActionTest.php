@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Interfaces\Http\Inspector;
 
+use App\Application\Broadcasting\Channel\EventsChannel;
 use Nyholm\Psr7\Stream;
 use Spiral\Testing\Attribute\Env;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;
@@ -58,7 +59,7 @@ BODY;
     {
         $this->http
             ->post(
-                uri: 'http://inspector:test@localhost/',
+                uri: 'http://inspector:default@localhost/',
                 data: Stream::create(self::PAYLOAD),
                 headers: [
                     'X-Inspector-Key' => 'test',
@@ -66,7 +67,7 @@ BODY;
                 ],
             )->assertOk();
 
-        $this->assertEvent('test');
+        $this->assertEvent('default');
     }
 
     #[Env('INSPECTOR_SECRET_KEY', 'test')]
@@ -101,7 +102,7 @@ BODY;
 
     public function assertEvent(?string $project = null): void
     {
-        $this->broadcastig->assertPushed('events', function (array $data) use($project) {
+        $this->broadcastig->assertPushed((string) new EventsChannel($project), function (array $data) use($project) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('inspector', $data['data']['type']);
             $this->assertSame($project, $data['data']['project']);

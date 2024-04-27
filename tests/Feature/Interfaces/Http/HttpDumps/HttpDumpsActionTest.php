@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Interfaces\Http\HttpDumps;
 
+use App\Application\Broadcasting\Channel\EventsChannel;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;
 
 final class HttpDumpsActionTest extends ControllerTestCase
@@ -36,7 +37,7 @@ final class HttpDumpsActionTest extends ControllerTestCase
             )
             ->assertOk();
 
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed((string) new EventsChannel('test'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('http-dump', $data['data']['type']);
             $this->assertSame('test', $data['data']['project']);
@@ -60,7 +61,7 @@ final class HttpDumpsActionTest extends ControllerTestCase
             )
             ->assertOk();
 
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed((string) new EventsChannel('test'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('http-dump', $data['data']['type']);
             $this->assertSame('test', $data['data']['project']);

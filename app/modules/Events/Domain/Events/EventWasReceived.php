@@ -37,6 +37,6 @@ final readonly class EventWasReceived implements ShouldBroadcastInterface
 
     public function getBroadcastTopics(): iterable|string|\Stringable
     {
-        return new EventsChannel();
+        return new EventsChannel($this->project);
     }
 }

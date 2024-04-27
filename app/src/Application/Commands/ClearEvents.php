@@ -10,6 +10,7 @@ final readonly class ClearEvents implements CommandInterface
 {
     public function __construct(
         public ?string $type = null,
+        public ?string $project = null,
         public ?array $uuids = null,
     ) {}
 }

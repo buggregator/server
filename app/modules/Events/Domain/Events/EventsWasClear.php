@@ -7,10 +7,11 @@ namespace Modules\Events\Domain\Events;
 use App\Application\Broadcasting\Channel\EventsChannel;
 use App\Application\Broadcasting\ShouldBroadcastInterface;
 
-class EventsWasClear implements ShouldBroadcastInterface
+final readonly class EventsWasClear implements ShouldBroadcastInterface
 {
     public function __construct(
-        public readonly ?string $type
+        public ?string $type,
+        public ?string $project = null,
     ) {
     }
 
@@ -18,6 +19,7 @@ class EventsWasClear implements ShouldBroadcastInterface
     {
         return [
             'type' => $this->type,
+            'project' => $this->project,
         ];
     }
 
@@ -28,6 +30,6 @@ class EventsWasClear implements ShouldBroadcastInterface
 
     public function getBroadcastTopics(): iterable|string|\Stringable
     {
-        return new EventsChannel();
+        return new EventsChannel($this->project);
     }
 }

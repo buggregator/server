@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Interfaces\Http\Sentry;
 
+use App\Application\Broadcasting\Channel\EventsChannel;
 use Nyholm\Psr7\Stream;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;
 
@@ -19,7 +20,7 @@ BODY;
     {
         $this->http
             ->postJson(
-                uri: '/api/1/envelope/',
+                uri: '/api/default/envelope/',
                 data: Stream::create(self::JSON),
                 headers: [
                     'X-Buggregator-Event' => 'sentry',
@@ -28,10 +29,10 @@ BODY;
                 ],
             )->assertOk();
 
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed((string) new EventsChannel('default'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
-            $this->assertSame('1', $data['data']['project']);
+            $this->assertSame('default', $data['data']['project']);
 
             $this->assertSame(1701455435.634665, $data['data']['payload']['timestamp']);
             $this->assertSame('php', $data['data']['payload']['platform']);
@@ -52,7 +53,7 @@ BODY;
     {
         $this->http
             ->postJson(
-                uri: '/api/1/envelope/',
+                uri: '/api/default/envelope/',
                 data: Stream::create(\gzcompress(self::JSON, -1, \ZLIB_ENCODING_GZIP)),
                 headers: [
                     'Content-Encoding' => 'gzip',
@@ -62,10 +63,10 @@ BODY;
                 ],
             )->assertOk();
 
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed((string) new EventsChannel('default'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
-            $this->assertSame('1', $data['data']['project']);
+            $this->assertSame('default', $data['data']['project']);
 
             $this->assertSame(1701455435.634665, $data['data']['payload']['timestamp']);
             $this->assertSame('php', $data['data']['payload']['platform']);
@@ -86,7 +87,7 @@ BODY;
     {
         $this->http
             ->postJson(
-                uri: '/api/1/envelope/',
+                uri: '/api/default/envelope/',
                 data: Stream::create(\gzcompress(self::JSON, -1, \ZLIB_ENCODING_GZIP)),
                 headers: [
                     'Content-Encoding' => 'gzip',
@@ -96,7 +97,7 @@ BODY;
                 ],
             )->assertOk();
 
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed((string) new EventsChannel('default'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
 

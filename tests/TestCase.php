@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Application\Domain\Entity\Json;
 use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Service\ErrorHandler\Handler;
+use App\Integration\RoadRunner\Persistence\CacheEventRepository;
+use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Modules\Projects\Domain\Project;
 use Modules\Projects\Domain\ProjectRepositoryInterface;
@@ -109,5 +112,20 @@ class TestCase extends BaseTestCase
         );
 
         return $project;
+    }
+
+    protected function createEvent(string $type = 'test', ?Uuid $uuid = null): Event
+    {
+        $this->get(CacheEventRepository::class)->store(
+            $event = new Event(
+                uuid: $uuid ?? $this->randomUuid(),
+                type: $type,
+                payload: new Json([]),
+                timestamp: \microtime(true),
+                project: null,
+            ),
+        );
+
+        return $event;
     }
 }

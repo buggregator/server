@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Application\Commands;
 
-use App\Application\Domain\ValueObjects\Uuid;
+use Modules\Projects\Domain\Project;
 use Spiral\Cqrs\QueryInterface;
 
+/**
+ * @implements QueryInterface<Project>
+ */
 final readonly class FindProjectByKey implements QueryInterface
 {
     public function __construct(
