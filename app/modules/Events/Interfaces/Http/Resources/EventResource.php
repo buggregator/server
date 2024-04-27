@@ -15,10 +15,10 @@ use OpenApi\Attributes as OA;
     schema: 'Event',
     properties: [
         new OA\Property(property: 'uuid', type: 'string', format: 'uuid'),
+        new OA\Property(property: 'project', description: 'Project', type: 'string', format: 'uuid'),
         new OA\Property(property: 'type', type: 'string'),
         new OA\Property(property: 'payload', description: 'Event payload based on type', type: 'object'),
         new OA\Property(property: 'timestamp', type: 'float', example: 1630540800.12312),
-        new OA\Property(property: 'project', description: 'Project', type: 'string', format: 'uuid'),
     ],
 )]
 final class EventResource extends JsonResource
@@ -32,10 +32,10 @@ final class EventResource extends JsonResource
     {
         return [
             'uuid' => (string)$this->data->getUuid(),
+            'project' => $this->data->getProject(),
             'type' => $this->data->getType(),
             'payload' => $this->data->getPayload(),
             'timestamp' => $this->data->getTimestamp(),
-            'project' => $this->data->getProject(),
         ];
     }
 }

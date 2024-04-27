@@ -12,7 +12,7 @@ use OpenApi\Attributes as OA;
  * @property-read Project $data
  */
 #[OA\Schema(
-    schema: 'Event',
+    schema: 'Project',
     properties: [
         new OA\Property(property: 'uuid', type: 'string', format: 'uuid'),
         new OA\Property(property: 'name', type: 'string'),
