@@ -14,7 +14,7 @@ final readonly class HandleReceivedEvent implements CommandInterface, \JsonSeria
 
     public function __construct(
         public string $type,
-        public array $payload,
+        public array|\JsonSerializable $payload,
         public ?string $project = null,
         ?Uuid $uuid = null,
     ) {

@@ -5,17 +5,19 @@ declare(strict_types=1);
 namespace Tests\Unit\Modules\Events\Domain;
 
 use App\Integration\RoadRunner\Persistence\CacheEventRepository;
+use Modules\Events\Domain\EventRepositoryInterface;
+use Tests\DatabaseTestCase;
 use Tests\TestCase;
 
-final class CacheEventRepositoryTest extends TestCase
+final class CacheEventRepositoryTest extends DatabaseTestCase
 {
-    private CacheEventRepository $repository;
+    private EventRepositoryInterface $repository;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->repository = $this->get(CacheEventRepository::class);
+        $this->repository = $this->get(EventRepositoryInterface::class);
     }
 
     public function testStoreEvent(): void
@@ -41,35 +43,54 @@ final class CacheEventRepositoryTest extends TestCase
 
     public function testDeleteByUuids(): void
     {
-        $this->createEvent(uuid: $uuid1 = $this->randomUuid());
-        $this->createEvent(uuid: $uuid2 = $this->randomUuid());
-        $this->createEvent(uuid: $uuid3 = $this->randomUuid());
+        $event1 = $this->createEvent();
+        $event2 = $this->createEvent();
+        $event3 = $this->createEvent();
 
         $this->assertCount(3, \iterator_to_array($this->repository->findAll()));
 
-        $this->repository->deleteAll(['uuid' => [(string)$uuid1, (string)$uuid3]]);
+        $this->repository->deleteAll([
+            'uuid' => [
+                'in' => [
+                    (string)$event1->getUuid(),
+                    (string)$event3->getUuid(),
+                ],
+            ],
+        ]);
         $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
 
         $result = \iterator_to_array($this->repository->findAll());
 
-        $this->assertSame((string)$uuid2, (string)$result[0]->getUuid());
+        $this->assertSame((string)$event2->getUuid(), (string)$result[0]->getUuid());
     }
 
     public function testDeleteByTypeAndUuids(): void
     {
-        $this->createEvent(type: 'foo');
-        $this->createEvent(type: 'foo');
-        $this->createEvent(type: 'bar', uuid: $uuid1 = $this->randomUuid());
-        $this->createEvent(uuid: $uuid2 = $this->randomUuid());
-        $this->createEvent(uuid: $uuid3 = $this->randomUuid());
+        $event1 = $this->createEvent(type: 'foo');
+        $event2 = $this->createEvent(type: 'foo');
+        $event3 = $this->createEvent(type: 'bar');
+        $event4 = $this->createEvent(type: 'foo');
+        $event5 = $this->createEvent(type: 'foo');
 
         $this->assertCount(5, \iterator_to_array($this->repository->findAll()));
 
-        $this->repository->deleteAll(['type' => 'foo', 'uuid' => [(string)$uuid1, (string)$uuid3]]);
-        $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
+        $this->repository->deleteAll([
+            'type' => 'foo',
+            'uuid' => [
+                'in' => [
+                    (string)$event3->getUuid(),
+                    (string)$event5->getUuid(),
+                    (string)$event4->getUuid(),
+                ],
+            ],
+        ]);
+
+        $this->assertCount(3, \iterator_to_array($this->repository->findAll()));
 
         $result = \iterator_to_array($this->repository->findAll());
 
-        $this->assertSame((string)$uuid2, (string)$result[0]->getUuid());
+        $this->assertSame((string)$event1->getUuid(), (string)$result[0]->getUuid());
+        $this->assertSame((string)$event2->getUuid(), (string)$result[1]->getUuid());
+        $this->assertSame((string)$event3->getUuid(), (string)$result[2]->getUuid());
     }
 }

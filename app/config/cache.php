@@ -13,6 +13,7 @@ return [
         'projects' => ['storage' => $defaultStorage, 'prefix' => 'projects:'],
         'webhooks' => ['storage' => $defaultStorage, 'prefix' => 'webhooks:'],
         'local' => ['storage' => $defaultStorage, 'prefix' => 'local:'],
+        'smtp' => ['storage' => $defaultStorage, 'prefix' => 'smtp:'],
     ],
     'storages' => [
         'array' => [

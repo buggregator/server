@@ -8,7 +8,7 @@ use Modules\Projects\Domain\Project;
 use Spiral\Cqrs\QueryInterface;
 
 /**
- * @implements QueryInterface<Project>
+ * @implements QueryInterface<Project|null>
  */
 final readonly class FindProjectByKey implements QueryInterface
 {

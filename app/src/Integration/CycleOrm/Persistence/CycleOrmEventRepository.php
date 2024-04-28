@@ -13,7 +13,7 @@ use Modules\Events\Domain\EventRepositoryInterface;
 final class CycleOrmEventRepository extends Repository implements EventRepositoryInterface
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private readonly EntityManagerInterface $em,
         Select $select,
     ) {
         parent::__construct($select);
@@ -21,8 +21,14 @@ final class CycleOrmEventRepository extends Repository implements EventRepositor
 
     public function store(Event $event): bool
     {
-        $this->entityManager->persist($event);
-        $this->entityManager->run();
+        if ($found = $this->findByPK($event->getUuid())) {
+            $found->setPayload($event->getPayload());
+            $this->em->persist($found);
+        } else {
+            $this->em->persist($event);
+        }
+
+        $this->em->run();
 
         return true;
     }
@@ -30,11 +36,12 @@ final class CycleOrmEventRepository extends Repository implements EventRepositor
     public function deleteAll(array $scope = []): void
     {
         $events = $this->findAll($scope);
+
         foreach ($events as $event) {
-            $this->entityManager->delete($event);
+            $this->em->delete($event);
         }
 
-        $this->entityManager->run();
+        $this->em->run();
     }
 
     public function deleteByPK(string $uuid): bool
@@ -45,8 +52,8 @@ final class CycleOrmEventRepository extends Repository implements EventRepositor
             return false;
         }
 
-        $this->entityManager->delete($event);
-        $this->entityManager->run();
+        $this->em->delete($event);
+        $this->em->run();
 
         return true;
     }

@@ -30,6 +30,8 @@ final class HttpDumpsActionTest extends ControllerTestCase
 
     public function testHttpDumpViaHttpUserWithProject(): void
     {
+        $this->createProject('test');
+
         $this->http
             ->postJson(
                 uri: 'http://http-dump:test@localhost/',
@@ -49,22 +51,24 @@ final class HttpDumpsActionTest extends ControllerTestCase
 
     public function testHttpDumpWithProjectFromHeader(): void
     {
+        $this->createProject('default');
+
         $this->http
             ->postJson(
                 uri: '/',
                 data: ['foo' => 'bar'],
                 headers: [
                     'X-Buggregator-Event' => 'http-dump',
-                    'X-Buggregator-Project' => 'test',
+                    'X-Buggregator-Project' => 'default',
                 ],
                 cookies: ['foo' => 'bar'],
             )
             ->assertOk();
 
-        $this->broadcastig->assertPushed((string) new EventsChannel('test'), function (array $data) {
+        $this->broadcastig->assertPushed((string) new EventsChannel('default'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('http-dump', $data['data']['type']);
-            $this->assertSame('test', $data['data']['project']);
+            $this->assertSame('default', $data['data']['project']);
 
             return true;
         });

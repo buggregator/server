@@ -26,6 +26,7 @@ final readonly class MergeEventsHandler implements EventHandlerInterface
                     Uuid::fromString($event['uuid'])
                 )
             );
+
             $event['payloads'] = [
                 ...($storedEvent->getPayload()->jsonSerialize()['payloads'] ?? []),
                 ...($event['payloads'] ?? [])

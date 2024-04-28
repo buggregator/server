@@ -26,12 +26,12 @@ final readonly class WebhookEventInterceptor implements CoreInterceptorInterface
         $webhookEvent = null;
         if ($event instanceof EventWasReceived) {
             $webhookEvent = new WebhookEvent(
-                event: $event->type . '.received',
+                event: $event->event->getType() . '.received',
                 payload: [
-                    'uuid' => (string)$event->uuid,
-                    'type' => $event->type,
-                    'payload' => $event->payload,
-                    'timestamp' => $event->timestamp,
+                    'uuid' => (string)$event->event->getUuid(),
+                    'type' => $event->event->getType(),
+                    'payload' => $event->event->getPayload(),
+                    'timestamp' => $event->event->getTimestamp(),
                 ],
             );
         }

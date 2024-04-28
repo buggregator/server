@@ -15,11 +15,14 @@ use Spiral\Core\Container;
 use Spiral\Filter\ValidationHandlerMiddleware;
 use Spiral\Http\Exception\ClientException\ForbiddenException;
 use Spiral\Http\Middleware\ErrorHandlerMiddleware;
+use Spiral\Nyholm\Bootloader\NyholmBootloader;
+use Spiral\OpenApi\Bootloader\SwaggerBootloader;
 use Spiral\Router\Bootloader\AnnotatedRoutesBootloader;
 use Spiral\Router\GroupRegistry;
 use Spiral\Router\Loader\Configurator\RoutingConfigurator;
 use Spiral\OpenApi\Controller\DocumentationController;
 use Spiral\Session\Middleware\SessionMiddleware;
+use Spiral\Bootloader as Framework;
 
 final class RoutesBootloader extends BaseRoutesBootloader
 {
@@ -31,6 +34,11 @@ final class RoutesBootloader extends BaseRoutesBootloader
     public function defineDependencies(): array
     {
         return [
+            NyholmBootloader::class,
+            Framework\Http\RouterBootloader::class,
+            Framework\Http\JsonPayloadsBootloader::class,
+            Framework\Http\SessionBootloader::class,
+            SwaggerBootloader::class,
             AnnotatedRoutesBootloader::class,
         ];
     }

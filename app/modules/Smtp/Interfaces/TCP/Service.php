@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace Modules\Smtp\Interfaces\TCP;
 
 use App\Application\Commands\HandleReceivedEvent;
-use Carbon\Carbon;
-use Modules\Smtp\Application\Mail\Parser;
-use Psr\SimpleCache\CacheInterface;
-use Spiral\Cache\CacheStorageProviderInterface;
+use Modules\Smtp\Application\Mail\Message;
+use Modules\Smtp\Application\Storage\AttachmentStorage;
+use Modules\Smtp\Application\Storage\EmailBodyStorage;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpEvent;
@@ -17,71 +16,61 @@ use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;
 use Spiral\RoadRunnerBridge\Tcp\Response\RespondMessage;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
 use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
-use Spiral\Storage\StorageInterface;
 
-final class Service implements ServiceInterface
+final readonly class Service implements ServiceInterface
 {
-    private const READY = 220;
-    public const OK = 250;
-    public const CLOSING = 221;
-    public const START_MAIL_INPUT = 354;
-
-    private readonly CacheInterface $cache;
-
     public function __construct(
-        private readonly CommandBusInterface $commands,
-        private readonly StorageInterface $storage,
-        CacheStorageProviderInterface $provider,
+        private CommandBusInterface $commands,
+        private EmailBodyStorage $emailBodyStorage,
+        private AttachmentStorage $attachments,
     ) {
-        $this->cache = $provider->storage('local');
     }
 
     public function handle(Request $request): ResponseInterface
     {
         if ($request->event === TcpEvent::Connected) {
-            return $this->send(self::READY, 'mailamie');
+            return $this->send(ResponseMessage::ready());
         }
 
-        $cacheKey = 'smtp:' . $request->connectionUuid;
-        $message = $this->cache->get($cacheKey, []);
+        $message = $this->emailBodyStorage->getMessage($request->connectionUuid);
 
         $response = new CloseConnection();
         $dispatched = false;
 
         if ($request->event === TcpEvent::Close) {
-            $this->cache->delete($cacheKey);
+            $this->emailBodyStorage->delete($message);
 
             return new CloseConnection();
-        } elseif (\preg_match('/^(EHLO|HELO|MAIL FROM:)/', $request->body)) {
-            $response = $this->send(self::OK);
+        } elseif (\preg_match('/^(EHLO|HELO)/', $request->body)) {
+            $response = $this->send(ResponseMessage::ok());
+        } elseif ($request->body === "AUTH LOGIN\r\n") {
+            $response = $this->send(ResponseMessage::enterUsername());
+            $message->waitUsername = true;
+        } elseif ($message->waitUsername) {
+            $message->setUsername($request->body);
+            $response = $this->send(ResponseMessage::enterPassword());
+        } elseif ($message->waitPassword) {
+            $message->setPassword($request->body);
+            $response = $this->send(ResponseMessage::authenticated());
+        } elseif (\preg_match('/^MAIL FROM:<(.*)>/', $request->body, $matches)) {
+            $message->setFrom($matches[1]);
+            $response = $this->send(ResponseMessage::ok());
         } elseif (\preg_match('/^RCPT TO:<(.*)>/', $request->body, $matches)) {
-            $message['recipients'][] = $matches[0];
-            $response = $this->send(self::OK);
+            $message->addRecipient($matches[1]);
+            $response = $this->send(ResponseMessage::ok());
         } elseif (\str_starts_with($request->body, 'QUIT')) {
-            $response = $this->send(self::CLOSING, null, true);
+            $response = $this->send(ResponseMessage::closing(), close: true);
         } elseif ($request->body === "DATA\r\n") {
-            $response = $this->send(self::START_MAIL_INPUT);
-            $message['collecting'] = true;
-        } elseif ($message['collecting'] ?? false) {
-            $content = $message['content'] ?? '';
-            $response = $this->send(self::OK);
-            $content .= \preg_replace("/^(\.\.)/m", '.', $request->body);
+            $response = $this->send(ResponseMessage::provideBody());
+            $message->waitBody = true;
+        } elseif ($message->waitBody) {
+            $response = $this->send(ResponseMessage::ok());
+            $message->appendBody($request->body);
 
-            if ($this->endOfContentDetected($request->body)) {
-                $messages = \array_filter(\explode("\r\n.\r\n", $content));
-
-                if (\count($messages) === 1) {
-                    $this->dispatchMessage($content);
-                    $this->cache->delete($cacheKey);
-                    $dispatched = true;
-                } elseif (!empty($messages[1])) {
-                    $this->dispatchMessage($messages[0]);
-                    $this->cache->delete($cacheKey);
-                    $dispatched = true;
-                }
+            if ($message->bodyHasEos()) {
+                $this->dispatchMessage($message->parse());
+                $dispatched = true;
             }
-
-            $message['content'] = $content;
         }
 
         if (
@@ -89,40 +78,30 @@ final class Service implements ServiceInterface
             $response->getAction() === TcpResponse::RespondClose ||
             $dispatched
         ) {
-            $this->cache->delete($cacheKey);
             return $response;
         }
 
-        $this->cache->set(
-            $cacheKey,
-            $message,
-            Carbon::now()->addMinutes(5)->diffAsCarbonInterval(),
-        );
+        $this->emailBodyStorage->persist($message);
 
         return $response;
     }
 
-    private function dispatchMessage(string $message): void
+    private function dispatchMessage(Message $message, ?string $project = null): void
     {
-        $data = (new Parser($this->storage))
-            ->parse($message)
-            ->storeAttachments()
-            ->jsonSerialize();
+        $data = $message->jsonSerialize();
+
+        $data['attachments'] = $this->attachments->store(
+            id: $message->id,
+            attachments: $message->attachments,
+        );
 
         $this->commands->dispatch(
-            new HandleReceivedEvent(type: 'smtp', payload: $data),
+            new HandleReceivedEvent(type: 'smtp', payload: $data, project: $project),
         );
     }
 
-    private function endOfContentDetected(string $data): bool
+    private function send(ResponseMessage $message, bool $close = false): RespondMessage
     {
-        return \str_ends_with($data, "\r\n.\r\n");
-    }
-
-    private function send(int $statusCode, string|null $comment = null, bool $close = false): RespondMessage
-    {
-        $response = \implode(' ', \array_filter([$statusCode, $comment]));
-
-        return new RespondMessage("{$response} \r\n", $close);
+        return new RespondMessage((string)$message, $close);
     }
 }

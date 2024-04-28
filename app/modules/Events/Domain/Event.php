@@ -9,6 +9,7 @@ use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\Annotated\Annotation\Column;
 use Cycle\Annotated\Annotation\Entity;
 use Cycle\Annotated\Annotation\Table\Index;
+use Modules\Projects\Domain\ValueObject\Key;
 
 #[Entity(
     repository: EventRepositoryInterface::class
@@ -32,7 +33,7 @@ class Event
         private float $timestamp,
 
         #[Column(type: 'string', nullable: true)]
-        private ?string $project = null,
+        private ?Key $project = null,
     ) {
     }
 
@@ -51,12 +52,17 @@ class Event
         return $this->payload;
     }
 
+    public function setPayload(Json $payload): void
+    {
+        $this->payload = $payload;
+    }
+
     public function getTimestamp(): float
     {
         return $this->timestamp;
     }
 
-    public function getProject(): ?string
+    public function getProject(): ?Key
     {
         return $this->project;
     }

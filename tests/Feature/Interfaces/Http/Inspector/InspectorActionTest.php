@@ -57,6 +57,8 @@ BODY;
 
     public function testSendDataWithProject(): void
     {
+        $this->createProject('default');
+
         $this->http
             ->post(
                 uri: 'http://inspector:default@localhost/',

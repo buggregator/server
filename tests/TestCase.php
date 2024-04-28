@@ -4,17 +4,15 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Application\Domain\Entity\Json;
 use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Service\ErrorHandler\Handler;
-use App\Integration\RoadRunner\Persistence\CacheEventRepository;
-use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
-use Modules\Projects\Domain\Project;
-use Modules\Projects\Domain\ProjectRepositoryInterface;
-use Modules\Projects\Domain\ValueObject\Key;
 use Spiral\Core\Container;
 use Spiral\Core\ContainerScope;
+use Spiral\Cqrs\CommandBusInterface;
+use Spiral\Cqrs\CommandInterface;
+use Spiral\Cqrs\QueryBusInterface;
+use Spiral\Cqrs\QueryInterface;
 use Spiral\Testing\TestableKernelInterface;
 use Spiral\Testing\TestCase as BaseTestCase;
 use Tests\App\Broadcasting\BroadcastFaker;
@@ -102,30 +100,13 @@ class TestCase extends BaseTestCase
         return Uuid::generate();
     }
 
-    protected function createProject(string $key, string $name): Project
+    protected function dispatchCommand(CommandInterface $command): mixed
     {
-        $this->get(ProjectRepositoryInterface::class)->store(
-            $project = new Project(
-                key: Key::create($key),
-                name: $name,
-            ),
-        );
-
-        return $project;
+        return $this->get(CommandBusInterface::class)->dispatch($command);
     }
 
-    protected function createEvent(string $type = 'test', ?Uuid $uuid = null): Event
+    protected function dispatchQuery(QueryInterface $query): mixed
     {
-        $this->get(CacheEventRepository::class)->store(
-            $event = new Event(
-                uuid: $uuid ?? $this->randomUuid(),
-                type: $type,
-                payload: new Json([]),
-                timestamp: \microtime(true),
-                project: null,
-            ),
-        );
-
-        return $event;
+        return $this->get(QueryBusInterface::class)->ask($query);
     }
 }

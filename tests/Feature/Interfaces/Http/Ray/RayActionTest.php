@@ -16,6 +16,8 @@ JSON;
 
     public function testSendDump(): void
     {
+        $this->createProject('default');
+
         $this->http->postJson(
             uri: '/',
             data: Stream::create(self::PAYLOAD),
@@ -53,6 +55,8 @@ JSON;
 
     public function testSendDumpViaHttpAuthWithProjectId(): void
     {
+        $this->createProject('default');
+
         $this->http->postJson(
             uri: 'http://ray:default@localhost',
             data: Stream::create(self::PAYLOAD),
@@ -87,11 +91,13 @@ JSON;
             data: Stream::create($payload),
             headers: ['X-Buggregator-Event' => 'ray',],
         )->assertOk();
+
         $this->broadcastig->reset();
+
         $this->http->postJson(
             uri: '/',
             data: Stream::create($color),
-            headers: ['X-Buggregator-Event' => 'ray',],
+            headers: ['X-Buggregator-Event' => 'ray'],
         )->assertOk();
 
         $this->broadcastig->assertPushed('events', function (array $data) {
@@ -119,7 +125,7 @@ JSON;
 
     public function assertEventSent(?string $project = null): void
     {
-        $this->broadcastig->assertPushed((string) new EventsChannel($project), function (array $data) use ($project) {
+        $this->broadcastig->assertPushed((string)new EventsChannel($project), function (array $data) use ($project) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('ray', $data['data']['type']);
             $this->assertSame($project, $data['data']['project']);

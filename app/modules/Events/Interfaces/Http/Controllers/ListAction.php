@@ -60,11 +60,13 @@ use OpenApi\Attributes as OA;
         ),
     ]
 )]
-final class ListAction
+final readonly class ListAction
 {
     #[Route(route: 'events', name: 'events.list', methods: 'GET', group: 'api')]
-    public function __invoke(EventsRequest $request, QueryBusInterface $bus): EventCollection
-    {
+    public function __invoke(
+        EventsRequest $request,
+        QueryBusInterface $bus,
+    ): EventCollection {
         return new EventCollection(
             $bus->ask(
                 new FindEvents(type: $request->type, project: $request->project),

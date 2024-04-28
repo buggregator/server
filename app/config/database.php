@@ -48,5 +48,14 @@ return [
                 'logQueryParameters' => env('DB_LOG_QUERY_PARAMETERS', false),
             ],
         ),
+
+        // Only for testing purposes
+        // SQLite does not support multiple connections in the same time
+        'sqlite' => new Config\SQLiteDriverConfig(
+            connection: new Config\SQLite\MemoryConnectionConfig(),
+            options: [
+                'logQueryParameters' => env('DB_LOG_QUERY_PARAMETERS', false),
+            ],
+        ),
     ],
 ];

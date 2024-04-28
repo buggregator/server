@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Interfaces\Http\Events;
 
 use App\Application\Domain\Entity\Json;
+use App\Application\Event\EventTypeMapperInterface;
 use Modules\Events\Domain\Event;
 use Modules\Events\Interfaces\Http\Resources\EventResource;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;
@@ -28,7 +29,12 @@ final class ShowActionTest extends ControllerTestCase
         $this->http
             ->showEvent($event->getUuid())
             ->assertOk()
-            ->assertResource(new EventResource($event));
+            ->assertResource(
+                new EventResource(
+                    $event,
+                    $this->get(EventTypeMapperInterface::class),
+                ),
+            );
     }
 
     public function testNotFoundShowEvent(): void

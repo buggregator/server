@@ -24,9 +24,24 @@ use Spiral\Boot\EnvironmentInterface;
 use Spiral\Cache\CacheStorageProviderInterface;
 use Spiral\Console\Bootloader\ConsoleBootloader;
 use Spiral\Core\FactoryInterface;
+use Spiral\Cycle\Bootloader as CycleBridge;
 
 final class PersistenceBootloader extends Bootloader
 {
+    public function defineDependencies(): array
+    {
+        return [
+            // Databases
+            CycleBridge\DatabaseBootloader::class,
+            CycleBridge\MigrationsBootloader::class,
+
+            // ORM
+            CycleBridge\SchemaBootloader::class,
+            CycleBridge\CycleOrmBootloader::class,
+            CycleBridge\AnnotatedBootloader::class,
+        ];
+    }
+
     public function defineSingletons(): array
     {
         return [

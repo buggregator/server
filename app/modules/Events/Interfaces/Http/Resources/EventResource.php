@@ -23,8 +23,9 @@ use OpenApi\Attributes as OA;
 )]
 final class EventResource extends JsonResource
 {
-    public function __construct(Event $data)
-    {
+    public function __construct(
+        Event $data,
+    ) {
         parent::__construct($data);
     }
 
