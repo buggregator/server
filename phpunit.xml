@@ -16,6 +16,11 @@
         <env name="PERSISTENCE_DRIVER" value="db"/>
         <env name="DB_DRIVER" value="sqlite"/>
     </php>
+    <source>
+        <include>
+            <directory suffix=".php">./app</directory>
+        </include>
+    </source>
     <testsuites>
         <testsuite name="Feature tests">
             <directory suffix="Test.php">tests/Feature</directory>
