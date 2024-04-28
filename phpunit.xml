@@ -17,15 +17,21 @@
         <env name="DB_DRIVER" value="sqlite"/>
     </php>
     <testsuites>
-        <testsuite name="Feature">
+        <testsuite name="Feature tests">
             <directory suffix="Test.php">tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Unit tests">
             <directory suffix="Test.php">tests/Unit</directory>
         </testsuite>
     </testsuites>
+    <logging>
+        <junit outputFile="build/report.junit.xml"/>
+    </logging>
     <coverage>
-        <include>
-            <directory>app/modules</directory>
-            <directory>app/src</directory>
-        </include>
+        <report>
+            <html outputDirectory="build/coverage"/>
+            <text outputFile="build/coverage.txt"/>
+            <clover outputFile="build/logs/clover.xml"/>
+        </report>
     </coverage>
 </phpunit>
