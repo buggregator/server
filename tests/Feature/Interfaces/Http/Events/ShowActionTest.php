@@ -14,13 +14,7 @@ final class ShowActionTest extends ControllerTestCase
 {
     public function testShowEvent(): void
     {
-        $event = new Event(
-            uuid: $this->randomUuid(),
-            type: 'test',
-            payload: new Json(['foo' => 'bar']),
-            timestamp: 123.456,
-            project: null,
-        );
+        $event = $this->createEvent();
 
         $this->fakeEvents()
             ->shouldRequestEventByUuid($event->getUuid())
@@ -30,10 +24,7 @@ final class ShowActionTest extends ControllerTestCase
             ->showEvent($event->getUuid())
             ->assertOk()
             ->assertResource(
-                new EventResource(
-                    $event,
-                    $this->get(EventTypeMapperInterface::class),
-                ),
+                new EventResource($event),
             );
     }
 

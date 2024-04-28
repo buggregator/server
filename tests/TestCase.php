@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests;
 
 use App\Application\Domain\ValueObjects\Uuid;
+use App\Application\Event\EventTypeMapperInterface;
 use App\Application\Service\ErrorHandler\Handler;
+use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Spiral\Core\Container;
 use Spiral\Core\ContainerScope;
@@ -108,5 +110,13 @@ class TestCase extends BaseTestCase
     protected function dispatchQuery(QueryInterface $query): mixed
     {
         return $this->get(QueryBusInterface::class)->ask($query);
+    }
+
+    protected function mapEventTypeToPreview(Event $event): array|\JsonSerializable
+    {
+        return $this->get(EventTypeMapperInterface::class)->toPreview(
+            $event->getType(),
+            $event->getPayload(),
+        );
     }
 }

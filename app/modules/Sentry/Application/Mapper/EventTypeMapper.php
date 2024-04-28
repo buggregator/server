@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Smtp\Application\Mapper;
+namespace Modules\Sentry\Application\Mapper;
 
 use App\Application\Event\EventTypeMapperInterface;
 
@@ -13,9 +13,11 @@ final readonly class EventTypeMapper implements EventTypeMapperInterface
         $data = $payload instanceof \JsonSerializable ? $payload->jsonSerialize() : $payload;
 
         return [
-            'subject' => $data['subject'],
-            'from' => $data['from'],
-            'to' => $data['to'],
+            'exception' => $data['exception'],
+            'platform' => $data['platform'],
+            'environment' => $data['environment'],
+            'server_name' => $data['server_name'],
+            'event_id' => $data['event_id'] ?? null,
         ];
     }
 }

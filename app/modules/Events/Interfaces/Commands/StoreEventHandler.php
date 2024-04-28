@@ -10,6 +10,7 @@ use App\Application\Domain\Entity\Json;
 use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Modules\Events\Domain\Events\EventWasReceived;
+use Modules\Events\Domain\ValueObject\Timestamp;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Spiral\Cqrs\Attribute\CommandHandler;
 use Spiral\Cqrs\QueryBusInterface;
@@ -37,7 +38,7 @@ final readonly class StoreEventHandler
                 uuid: $command->uuid,
                 type: $command->type,
                 payload: new Json($command->payload),
-                timestamp: $command->timestamp,
+                timestamp: Timestamp::create(),
                 project: $project?->getKey(),
             ),
         );

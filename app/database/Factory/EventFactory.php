@@ -14,6 +14,7 @@ use Database\Factory\Partials\SentryType;
 use Database\Factory\Partials\SmtpType;
 use Database\Factory\Partials\VarDumperType;
 use Modules\Events\Domain\Event;
+use Modules\Events\Domain\ValueObject\Timestamp;
 use Modules\Projects\Domain\ValueObject\Key;
 use Spiral\DatabaseSeeder\Factory\AbstractFactory;
 
@@ -39,22 +40,10 @@ final class EventFactory extends AbstractFactory
     {
         $type = $this->faker->randomElement(['sentry', 'monolog', 'var-dump', 'inspector', 'ray', 'profiler']);
 
-        $payload = match ($type) {
-            'sentry' => self::getSentryPayload(),
-            'monolog' => self::getMonologPayload(),
-            'var-dump' => self::getVarDumperPayload(),
-            'inspector' => self::getInspectorPayload(),
-            'ray' => self::getRayPayload(),
-            'profiler' => self::getProfilerPayload(),
-            'smtp' => self::getSmtpPayload(),
-            default => ['foo' => 'bar'],
-        };
-
         return [
             'uuid' => Uuid::generate(),
             'type' => $this->faker->randomElement(['sentry', 'monolog', 'var-dump', 'inspector', 'ray', 'profiler']),
-            'payload' => new Json($payload),
-            'timestamp' => \microtime(true),
+            'timestamp' => Timestamp::create(),
             'project' => null,
         ];
     }
@@ -65,9 +54,23 @@ final class EventFactory extends AbstractFactory
         return new Event(
             uuid: $definition['uuid'],
             type: $definition['type'],
-            payload: $definition['payload'],
+            payload: new Json($this->getPayload($definition['type'])),
             timestamp: $definition['timestamp'],
             project: $definition['project'] ? Key::create($definition['project']) : null,
         );
+    }
+
+    public function getPayload(string $type): array
+    {
+        return match ($type) {
+            'sentry' => self::getSentryPayload(),
+            'monolog' => self::getMonologPayload(),
+            'var-dump' => self::getVarDumperPayload(),
+            'inspector' => self::getInspectorPayload(),
+            'ray' => self::getRayPayload(),
+            'profiler' => self::getProfilerPayload(),
+            'smtp' => self::getSmtpPayload(),
+            default => ['foo' => 'bar'],
+        };
     }
 }

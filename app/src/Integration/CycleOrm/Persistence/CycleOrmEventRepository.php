@@ -35,7 +35,7 @@ final class CycleOrmEventRepository extends Repository implements EventRepositor
 
     public function deleteAll(array $scope = []): void
     {
-        $events = $this->findAll($scope);
+        $events = $this->select()->where($scope)->fetchAll();
 
         foreach ($events as $event) {
             $this->em->delete($event);

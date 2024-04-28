@@ -62,7 +62,8 @@ use OpenApi\Attributes as OA;
 )]
 final readonly class ListAction
 {
-    #[Route(route: 'events', name: 'events.list', methods: 'GET', group: 'api')]
+    // todo: uncomment after implementing on frontend side
+    // #[Route(route: 'events', name: 'events.list', methods: 'GET', group: 'api')]
     public function __invoke(
         EventsRequest $request,
         QueryBusInterface $bus,

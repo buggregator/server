@@ -26,9 +26,9 @@ class ResourceCollection implements ResourceInterface
     }
 
     /**
-     * @return class-string<ResourceInterface>
+     * @return class-string<ResourceInterface>|\Closure
      */
-    protected function getResourceClass(): string
+    protected function getResourceClass(): string|\Closure
     {
         return $this->resourceClass;
     }

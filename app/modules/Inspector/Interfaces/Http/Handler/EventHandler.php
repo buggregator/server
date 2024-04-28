@@ -52,6 +52,7 @@ final readonly class EventHandler implements HandlerInterface
             ),
         };
 
+        file_put_contents(directory('runtime') .'/inspectot.php', var_export($data, true));
         $this->commands->dispatch(
             new HandleReceivedEvent(type: $eventType->type, payload: $data, project: $eventType->project),
         );

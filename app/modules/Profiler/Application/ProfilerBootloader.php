@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Profiler\Application;
 
+use App\Application\Event\EventTypeRegistryInterface;
 use Modules\Profiler\Application\Handlers\CalculateDiffsBetweenEdges;
 use Modules\Profiler\Application\Handlers\CleanupEvent;
 use Modules\Profiler\Application\Handlers\PrepareEdges;
@@ -25,5 +26,10 @@ final class ProfilerBootloader extends Bootloader
                 CleanupEvent::class,
             ]),
         ];
+    }
+
+    public function boot(EventTypeRegistryInterface $registry): void
+    {
+        $registry->register('profiler', new Mapper\EventTypeMapper());
     }
 }

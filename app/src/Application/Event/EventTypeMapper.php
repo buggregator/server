@@ -23,6 +23,10 @@ final class EventTypeMapper implements EventTypeMapperInterface, EventTypeRegist
 
     public function register(string $type, EventTypeMapperInterface $mapper): void
     {
+        if (isset($this->mappers[$type])) {
+            throw new \RuntimeException("Mapper for type [$type] already registered");
+        }
+
         $this->mappers[$type] = $mapper;
     }
 }

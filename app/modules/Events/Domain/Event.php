@@ -9,6 +9,7 @@ use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\Annotated\Annotation\Column;
 use Cycle\Annotated\Annotation\Entity;
 use Cycle\Annotated\Annotation\Table\Index;
+use Modules\Events\Domain\ValueObject\Timestamp;
 use Modules\Projects\Domain\ValueObject\Key;
 
 #[Entity(
@@ -29,8 +30,8 @@ class Event
         #[Column(type: 'jsonb', typecast: Json::class)]
         private Json $payload,
 
-        #[Column(type: 'float')]
-        private float $timestamp,
+        #[Column(type: 'string(25)', typecast: Timestamp::class)]
+        private Timestamp $timestamp,
 
         #[Column(type: 'string', nullable: true)]
         private ?Key $project = null,
@@ -57,7 +58,7 @@ class Event
         $this->payload = $payload;
     }
 
-    public function getTimestamp(): float
+    public function getTimestamp(): Timestamp
     {
         return $this->timestamp;
     }

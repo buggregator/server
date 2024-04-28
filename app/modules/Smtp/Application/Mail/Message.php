@@ -62,11 +62,4 @@ final readonly class Message implements JsonSerializable
             'raw' => $this->raw,
         ];
     }
-
-    public function storeAttachments(): self
-    {
-
-
-        return $this;
-    }
 }

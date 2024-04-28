@@ -64,11 +64,7 @@ BODY;
             $this->assertSame($project ? (string)$project : null, $data['data']['project']);
 
             $this->assertSame('f7b7f09d40e645c79a8a2846e2111c81', $data['data']['payload']['event_id']);
-            $this->assertSame(1701453725.632805, $data['data']['payload']['timestamp']);
             $this->assertSame('php', $data['data']['payload']['platform']);
-            $this->assertSame('php', $data['data']['payload']['logger']);
-            $this->assertSame('sentry.php', $data['data']['payload']['sdk']['name']);
-            $this->assertSame('3.22.1', $data['data']['payload']['sdk']['version']);
             $this->assertSame('Test', $data['data']['payload']['server_name']);
             $this->assertSame('production', $data['data']['payload']['environment']);
 

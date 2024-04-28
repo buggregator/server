@@ -37,10 +37,6 @@ BODY;
             $this->assertSame('sentry', $data['data']['type']);
             $this->assertSame('default', $data['data']['project']);
 
-            $this->assertSame(1701455435.634665, $data['data']['payload']['timestamp']);
-            $this->assertSame('php', $data['data']['payload']['platform']);
-            $this->assertSame('sentry.php', $data['data']['payload']['sdk']['name']);
-            $this->assertSame('4.0.1', $data['data']['payload']['sdk']['version']);
             $this->assertSame('Test', $data['data']['payload']['server_name']);
             $this->assertSame('production', $data['data']['payload']['environment']);
 
@@ -70,10 +66,6 @@ BODY;
             $this->assertSame('sentry', $data['data']['type']);
             $this->assertSame('default', $data['data']['project']);
 
-            $this->assertSame(1701455435.634665, $data['data']['payload']['timestamp']);
-            $this->assertSame('php', $data['data']['payload']['platform']);
-            $this->assertSame('sentry.php', $data['data']['payload']['sdk']['name']);
-            $this->assertSame('4.0.1', $data['data']['payload']['sdk']['version']);
             $this->assertSame('Test', $data['data']['payload']['server_name']);
             $this->assertSame('production', $data['data']['payload']['environment']);
 
@@ -103,10 +95,6 @@ BODY;
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
 
-            $this->assertSame(1701455435.634665, $data['data']['payload']['timestamp']);
-            $this->assertSame('php', $data['data']['payload']['platform']);
-            $this->assertSame('sentry.php', $data['data']['payload']['sdk']['name']);
-            $this->assertSame('4.0.1', $data['data']['payload']['sdk']['version']);
             $this->assertSame('Test', $data['data']['payload']['server_name']);
             $this->assertSame('production', $data['data']['payload']['environment']);
 

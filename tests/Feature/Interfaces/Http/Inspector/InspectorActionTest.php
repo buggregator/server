@@ -117,9 +117,6 @@ BODY;
                 $data['data']['payload'][0]['hash'],
             );
 
-            $this->assertSame('segment', $data['data']['payload'][1]['model']);
-            $this->assertSame('my-process', $data['data']['payload'][1]['type']);
-
             $this->assertNotEmpty($data['data']['uuid']);
             $this->assertNotEmpty($data['data']['timestamp']);
 

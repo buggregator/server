@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Smtp\Application\Mapper;
+namespace Modules\Inspector\Application\Mapper;
 
 use App\Application\Event\EventTypeMapperInterface;
 
@@ -12,10 +12,17 @@ final readonly class EventTypeMapper implements EventTypeMapperInterface
     {
         $data = $payload instanceof \JsonSerializable ? $payload->jsonSerialize() : $payload;
 
+        $transaction = [];
+
+        foreach ($data as $block) {
+            if ($block['model'] === 'transaction') {
+                $transaction = $block;
+                break;
+            }
+        }
+
         return [
-            'subject' => $data['subject'],
-            'from' => $data['from'],
-            'to' => $data['to'],
+            $transaction,
         ];
     }
 }
