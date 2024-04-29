@@ -27,7 +27,7 @@ class Event
         #[Column(type: 'string(50)')]
         private string $type,
 
-        #[Column(type: 'jsonb', typecast: Json::class)]
+        #[Column(type: 'json', typecast: Json::class)]
         private Json $payload,
 
         #[Column(type: 'string(25)', typecast: Timestamp::class)]

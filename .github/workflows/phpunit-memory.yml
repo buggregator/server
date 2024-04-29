@@ -7,7 +7,7 @@ env:
   PERSISTENCE_DRIVER: memory
 
 jobs:
-  phpunit-db:
+  phpunit-memory:
     uses: spiral/gh-actions/.github/workflows/phpunit.yml@master
     with:
       extensions: >-
