@@ -21,17 +21,17 @@ final readonly class ClearEventsHandler
     #[CommandHandler]
     public function __invoke(ClearEvents $command): void
     {
-        $args = ['project' => $command->project];
+        $scope = ['project' => $command->project];
 
         if ($command->type) {
-            $args['type'] = $command->type;
+            $scope['type'] = $command->type;
         }
 
         if ($command->uuids) {
-            $args['uuid'] = $command->uuids;
+            $scope['uuid'] = $command->uuids;
         }
 
-        $this->events->deleteAll($args);
+        $this->events->deleteAll($scope);
         $this->dispatcher->dispatch(
             new EventsWasClear(
                 type: $command->type,

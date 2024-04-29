@@ -35,7 +35,9 @@ final class CycleOrmEventRepository extends Repository implements EventRepositor
 
     public function deleteAll(array $scope = []): void
     {
-        $events = $this->select()->where($scope)->fetchAll();
+        $events = $this->select()
+            ->where($this->buildScope($scope))
+            ->fetchAll();
 
         foreach ($events as $event) {
             $this->em->delete($event);
@@ -60,11 +62,29 @@ final class CycleOrmEventRepository extends Repository implements EventRepositor
 
     public function countAll(array $scope = []): int
     {
-        return $this->select()->where($scope)->count();
+        return $this->select()
+            ->where($this->buildScope($scope))
+            ->count();
     }
 
     public function findAll(array $scope = [], array $orderBy = [], int $limit = 30, int $offset = 0): iterable
     {
-        return $this->select()->where($scope)->orderBy($orderBy)->limit($limit)->offset($offset)->fetchAll();
+        return $this->select()
+            ->where($this->buildScope($scope))
+            ->orderBy($orderBy)
+            ->limit($limit)
+            ->offset($offset)
+            ->fetchAll();
+    }
+
+    private function buildScope(array $scope): array
+    {
+        $newScope = [];
+
+        foreach ($scope as $key => $value) {
+            $newScope[$key] = \is_array($value) ? ['in' => $value] : $value;
+        }
+
+        return $newScope;
     }
 }

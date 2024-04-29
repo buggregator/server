@@ -61,10 +61,33 @@ abstract class DatabaseTestCase extends TestCase
         ])->createOne();
     }
 
-    protected function createEvent(string $type = 'fake'): Event
+    protected function createEvent(string $type = 'fake', ?string $project = null): Event
     {
         return EventFactory::new([
             'type' => $type,
+            'project' => $project ? Key::create($project) : null,
         ])->createOne();
+    }
+
+    protected function assertEventExists(Event...$events): self
+    {
+        foreach ($events as $event) {
+            $this->assertEntity($event)->where([
+                'uuid' => $event->getUuid(),
+            ])->assertExists();
+        }
+
+        return $this;
+    }
+
+    protected function assertEventMissing(Event ...$events): self
+    {
+        foreach ($events as $event) {
+            $this->assertEntity($event)->where([
+                'uuid' => $event->getUuid(),
+            ])->assertMissing();
+        }
+
+        return $this;
     }
 }

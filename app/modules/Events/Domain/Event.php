@@ -33,7 +33,7 @@ class Event
         #[Column(type: 'string(25)', typecast: Timestamp::class)]
         private Timestamp $timestamp,
 
-        #[Column(type: 'string', nullable: true)]
+        #[Column(type: 'string', nullable: true, typecast: Key::class)]
         private ?Key $project = null,
     ) {
     }

@@ -10,46 +10,91 @@ final class ClearActionTest extends ControllerTestCase
 {
     public function testClearAllEvents(): void
     {
-        $this->fakeEvents()->eventShouldBeClear();
+        $event1 = $this->createEvent(type: 'foo');
+        $event2 = $this->createEvent(type: 'foo', project: 'default');
+        $event3 = $this->createEvent(type: 'bar');
+        $event4 = $this->createEvent(type: 'baz', project: 'default');
 
         $this->http
             ->clearEvents()
             ->assertSuccessResource();
+
+        $this
+            ->assertEventExists($event2, $event4)
+            ->assertEventMissing($event1, $event3);
     }
 
     public function testClearEventsByType(): void
     {
-        $this->fakeEvents()->eventShouldBeClear(type: 'test');
+        $event1 = $this->createEvent(type: 'foo');
+        $event2 = $this->createEvent(type: 'foo');
+        $event3 = $this->createEvent(type: 'bar');
 
         $this->http
-            ->clearEvents(type: 'test')
+            ->clearEvents(type: 'bar')
             ->assertSuccessResource();
+
+        $this
+            ->assertEventExists($event1, $event2)
+            ->assertEventMissing($event3);
     }
 
     public function testClearEventsByProject(): void
     {
-        $this->fakeEvents()->eventShouldBeClear(project: 'test');
+        $event1 = $this->createEvent(type: 'foo');
+        $event2 = $this->createEvent(type: 'foo', project: 'default');
+        $event3 = $this->createEvent(type: 'bar');
+        $event4 = $this->createEvent(type: 'baz', project: 'default');
 
         $this->http
-            ->clearEvents(project: 'test')
+            ->clearEvents(project: 'default')
             ->assertSuccessResource();
+
+        $this
+            ->assertEventMissing($event2, $event4)
+            ->assertEventExists($event1, $event3);
     }
 
     public function testClearEventsByUuids(): void
     {
-        $this->fakeEvents()->eventShouldBeClear(uuids: ['foo', 'bar']);
+        $event1 = $this->createEvent(type: 'foo');
+        $event2 = $this->createEvent(type: 'foo');
+        $event3 = $this->createEvent(type: 'foo');
+        $event4 = $this->createEvent(type: 'foo');
+        $event5 = $this->createEvent(type: 'bar');
 
         $this->http
-            ->clearEvents(uuids: ['foo', 'bar'])
+            ->clearEvents(uuids: [
+                (string)$event1->getUuid(),
+                (string)$event2->getUuid(),
+                (string)$event3->getUuid(),
+                (string)$event4->getUuid(),
+            ])
             ->assertSuccessResource();
+
+        $this
+            ->assertEventMissing($event1, $event2, $event3, $event4)
+            ->assertEventExists($event5);
     }
 
     public function testClearEventsByTypeAndUuids(): void
     {
-        $this->fakeEvents()->eventShouldBeClear(type: 'test', uuids: ['foo', 'bar']);
+        $event1 = $this->createEvent(type: 'foo');
+        $event2 = $this->createEvent(type: 'foo');
+        $event3 = $this->createEvent(type: 'foo');
+        $event4 = $this->createEvent(type: 'foo');
+        $event5 = $this->createEvent(type: 'bar');
 
         $this->http
-            ->clearEvents(type: 'test', uuids: ['foo', 'bar'])
+            ->clearEvents(type: 'foo', uuids: [
+                (string)$event1->getUuid(),
+                (string)$event2->getUuid(),
+                (string)$event3->getUuid(),
+            ])
             ->assertSuccessResource();
+
+        $this
+            ->assertEventMissing($event1, $event2, $event3)
+            ->assertEventExists($event4, $event5);
     }
 }

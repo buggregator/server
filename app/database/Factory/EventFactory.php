@@ -38,8 +38,6 @@ final class EventFactory extends AbstractFactory
 
     public function definition(): array
     {
-        $type = $this->faker->randomElement(['sentry', 'monolog', 'var-dump', 'inspector', 'ray', 'profiler']);
-
         return [
             'uuid' => Uuid::generate(),
             'type' => $this->faker->randomElement(['sentry', 'monolog', 'var-dump', 'inspector', 'ray', 'profiler']),
@@ -56,7 +54,9 @@ final class EventFactory extends AbstractFactory
             type: $definition['type'],
             payload: new Json($this->getPayload($definition['type'])),
             timestamp: $definition['timestamp'],
-            project: $definition['project'] ? Key::create($definition['project']) : null,
+            project: $definition['project']
+                ? ($definition['project'] instanceof Key ? $definition['project'] : Key::create($definition['project']))
+                : null,
         );
     }
 
