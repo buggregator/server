@@ -3,11 +3,14 @@ on:
 
 name: phpunit
 
+env:
+  PERSISTENCE_DRIVER: db
+  DB_DRIVER: sqlite
+
 jobs:
-  phpunit:
+  phpunit-db:
     uses: spiral/gh-actions/.github/workflows/phpunit.yml@master
     with:
-      install_protoc: true
       extensions: >-
         ['sockets', 'mongodb', 'pgsql', 'pdo_pgsql', 'pdo_mysql']
       os: >-

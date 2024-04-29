@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Application\Persistence\DriverEnum;
 use Database\Factory\EventFactory;
 use Database\Factory\ProjectFactory;
 use Modules\Events\Domain\Event;
+use Modules\Events\Domain\EventRepositoryInterface;
 use Modules\Projects\Domain\Project;
+use Modules\Projects\Domain\ProjectRepositoryInterface;
 use Modules\Projects\Domain\ValueObject\Key;
+use MongoDB\Database;
+use MongoDB\Model\CollectionInfo;
+use Spiral\Cache\CacheStorageProviderInterface;
 use Spiral\DatabaseSeeder\Database\Traits\DatabaseAsserts;
 use Spiral\DatabaseSeeder\Database\Traits\DatabaseMigrations;
 use Spiral\DatabaseSeeder\Database\Traits\ShowQueries;
@@ -24,7 +30,20 @@ abstract class DatabaseTestCase extends TestCase
     {
         parent::setUp();
 
+        $dbDriver = $this->get(DriverEnum::class);
         $this->getRefreshStrategy()->enableRefreshAttribute();
+
+        // TODO: refactor this
+        if ($dbDriver === DriverEnum::MongoDb) {
+            $mongoDb = $this->get(Database::class);
+            foreach ($mongoDb->listCollections() as $collection) {
+                /** @var CollectionInfo $collection */
+                $mongoDb->selectCollection($collection->getName())->drop();
+            }
+        } elseif ($dbDriver === DriverEnum::InMemory) {
+            $this->get(CacheStorageProviderInterface::class)->storage('events')->clear();
+            $this->get(CacheStorageProviderInterface::class)->storage('projects')->clear();
+        }
     }
 
     protected function tearDown(): void
@@ -56,25 +75,31 @@ abstract class DatabaseTestCase extends TestCase
 
     protected function createProject(string $key = 'default'): Project
     {
-        return ProjectFactory::new([
+        $project = ProjectFactory::new([
             'key' => Key::create($key),
-        ])->createOne();
+        ])->makeOne();
+
+        $this->get(ProjectRepositoryInterface::class)->store($project);
+        return $project;
     }
 
     protected function createEvent(string $type = 'fake', ?string $project = null): Event
     {
-        return EventFactory::new([
+        $event = EventFactory::new([
             'type' => $type,
             'project' => $project ? Key::create($project) : null,
-        ])->createOne();
+        ])->makeOne();
+        $this->get(EventRepositoryInterface::class)->store($event);
+
+        return $event;
     }
 
     protected function assertEventExists(Event...$events): self
     {
+        $repo = $this->get(EventRepositoryInterface::class);
+
         foreach ($events as $event) {
-            $this->assertEntity($event)->where([
-                'uuid' => $event->getUuid(),
-            ])->assertExists();
+            $this->assertNotNull($repo->findByPK($event->getUuid()), 'Event not found in database');
         }
 
         return $this;
@@ -82,10 +107,9 @@ abstract class DatabaseTestCase extends TestCase
 
     protected function assertEventMissing(Event ...$events): self
     {
+        $repo = $this->get(EventRepositoryInterface::class);
         foreach ($events as $event) {
-            $this->assertEntity($event)->where([
-                'uuid' => $event->getUuid(),
-            ])->assertMissing();
+            $this->assertNull($repo->findByPK($event->getUuid()), 'Event found in database');
         }
 
         return $this;

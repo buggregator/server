@@ -61,7 +61,7 @@ final readonly class CacheProjectRepository implements ProjectRepositoryInterfac
         $projects = $this->getProjects();
 
         foreach ($projects as $document) {
-            if ($document['key'] === $key) {
+            if ($document['key'] === (string)$key) {
                 return $this->mapDocumentIntoProject($document);
             }
         }
@@ -102,7 +102,7 @@ final readonly class CacheProjectRepository implements ProjectRepositoryInterfac
             };
         }
 
-        return \array_keys((new ArrayCollection($projects))->matching($criteria)->toArray());
+        return \array_values((new ArrayCollection($projects))->matching($criteria)->toArray());
     }
 
     private function mapDocumentIntoProject(array $document): Project

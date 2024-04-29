@@ -11,6 +11,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Criteria;
 use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
+use Modules\Projects\Domain\ValueObject\Key;
 use Psr\SimpleCache\CacheInterface;
 
 /**
@@ -55,8 +56,8 @@ final readonly class CacheEventRepository implements EventRepositoryInterface
         $ids[$id] = [
             'uuid' => (string)$event->getUuid(),
             'type' => $event->getType(),
-            'project' => $event->getProject(),
-            'timestamp' => \microtime(true),
+            'project' => $event->getProject() ? (string)$event->getProject() : null,
+            'timestamp' => $event->getTimestamp(),
         ];
 
         $this->cache->set(self::EVENT_IDS_KEY, $ids);
@@ -64,7 +65,7 @@ final readonly class CacheEventRepository implements EventRepositoryInterface
         return $this->cache->set($id, [
             'id' => $id,
             'type' => $event->getType(),
-            'project' => $event->getProject(),
+            'project' => (string)$event->getProject(),
             'timestamp' => $event->getTimestamp(),
             'payload' => $event->getPayload()->jsonSerialize(),
         ], Carbon::now()->addSeconds($this->ttl)->diffAsCarbonInterval());
@@ -107,8 +108,7 @@ final readonly class CacheEventRepository implements EventRepositoryInterface
      */
     public function findByPK(mixed $uuid): ?Event
     {
-        \assert(\is_string($uuid));
-
+        $uuid = (string)$uuid;
         $event = $this->cache->get($uuid);
 
         if (\is_array($event)) {
@@ -159,7 +159,7 @@ final readonly class CacheEventRepository implements EventRepositoryInterface
             type: $document['type'],
             payload: new Json($document['payload']),
             timestamp: $document['timestamp'],
-            project: $document['project'],
+            project: $document['project'] ? new Key($document['project']) : null,
         );
     }
 
@@ -168,12 +168,11 @@ final readonly class CacheEventRepository implements EventRepositoryInterface
         $criteria = (new Criteria())->orderBy($orderBy);
         foreach ($scope as $key => $value) {
             match (true) {
-                \is_array($value) => $criteria->orWhere(Criteria::expr()->in($key, $value)),
-                null === $value => $criteria->orWhere(Criteria::expr()->isNull($key)),
-                default => $criteria->orWhere(Criteria::expr()->eq($key, $value)),
+                \is_array($value) => $criteria->andWhere(Criteria::expr()->in($key, $value)),
+                null === $value => $criteria->andWhere(Criteria::expr()->isNull($key)),
+                default => $criteria->andWhere(Criteria::expr()->eq($key, $value)),
             };
         }
-
         $ids = (new ArrayCollection($this->getEventIds()))->matching($criteria)->toArray();
 
         return \array_keys($ids);
