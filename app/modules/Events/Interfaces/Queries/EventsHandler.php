@@ -12,9 +12,8 @@ abstract class EventsHandler
         if ($query->type !== null) {
             $scope['type'] = $query->type;
         }
-        if ($query->projectId !== null) {
-            $scope['project_id'] = $query->projectId;
-        }
+
+        $scope['project'] = $query->project;
 
         return $scope;
     }

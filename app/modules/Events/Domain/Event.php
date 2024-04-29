@@ -8,11 +8,15 @@ use App\Application\Domain\Entity\Json;
 use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\Annotated\Annotation\Column;
 use Cycle\Annotated\Annotation\Entity;
-use DateTimeImmutable;
+use Cycle\Annotated\Annotation\Table\Index;
+use Modules\Events\Domain\ValueObject\Timestamp;
+use Modules\Projects\Domain\ValueObject\Key;
 
 #[Entity(
     repository: EventRepositoryInterface::class
 )]
+#[Index(columns: ['type'])]
+#[Index(columns: ['project'])]
 class Event
 {
     /**  @internal */
@@ -23,14 +27,14 @@ class Event
         #[Column(type: 'string(50)')]
         private string $type,
 
-        #[Column(type: 'jsonb', typecast: Json::class)]
+        #[Column(type: 'json', typecast: Json::class)]
         private Json $payload,
 
-        #[Column(type: 'float')]
-        private float $timestamp,
+        #[Column(type: 'string(25)', typecast: Timestamp::class)]
+        private Timestamp $timestamp,
 
-        #[Column(type: 'integer', nullable: true)]
-        private ?int $projectId,
+        #[Column(type: 'string', nullable: true, typecast: Key::class)]
+        private ?Key $project = null,
     ) {
     }
 
@@ -49,13 +53,18 @@ class Event
         return $this->payload;
     }
 
-    public function getTimestamp(): float
+    public function setPayload(Json $payload): void
+    {
+        $this->payload = $payload;
+    }
+
+    public function getTimestamp(): Timestamp
     {
         return $this->timestamp;
     }
 
-    public function getProjectId(): ?int
+    public function getProject(): ?Key
     {
-        return $this->projectId;
+        return $this->project;
     }
 }

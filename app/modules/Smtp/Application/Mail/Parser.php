@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Application\Mail;
 
-use Spiral\Storage\StorageInterface;
 use ZBateson\MailMimeParser\Header\AbstractHeader;
 use ZBateson\MailMimeParser\Header\AddressHeader;
 use ZBateson\MailMimeParser\Header\Part\AddressPart;
@@ -12,11 +11,6 @@ use ZBateson\MailMimeParser\Message as ParseMessage;
 
 final readonly class Parser
 {
-    public function __construct(
-        private StorageInterface $storage,
-    ) {
-    }
-
     public function parse(string $body, array $allRecipients = []): Message
     {
         $message = ParseMessage::from($body, true);
@@ -48,23 +42,22 @@ final readonly class Parser
         );
 
         return new Message(
-            $this->storage->bucket('attachments'),
             $message->getHeader('Message - Id')?->getValue(),
             $body, $from, $recipients, $ccs, $subject,
-            $html, $text, $replyTo, $allRecipients, $attachments
+            $html, $text, $replyTo, $allRecipients, $attachments,
         );
     }
 
     /**
-     * @param MessagePart[] $attachments
+     * @param ParseMessage\IMessagePart[] $attachments
      * @return Attachment[]
      */
     private function buildAttachmentFrom(array $attachments): array
     {
-        return \array_map(fn(MessagePart|ParseMessage\MimePart $part) => new Attachment(
+        return \array_map(fn(ParseMessage\IMessagePart $part) => new Attachment(
             $part->getFilename(),
             $part->getContent(),
-            $part->getContentType()
+            $part->getContentType(),
         ), $attachments);
     }
 
@@ -74,7 +67,7 @@ final readonly class Parser
      */
     private function joinNameAndEmail(array $addresses): array
     {
-        return array_map(function (AddressPart $addressPart) {
+        return \array_map(function (AddressPart $addressPart) {
             $name = $addressPart->getName();
             $email = $addressPart->getValue();
 

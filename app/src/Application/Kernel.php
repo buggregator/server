@@ -7,27 +7,28 @@ namespace App\Application;
 use App\Application\Bootloader\AppBootloader;
 use App\Application\Bootloader\AttributesBootloader;
 use App\Application\Bootloader\AuthBootloader;
+use App\Application\Bootloader\BroadcastingBootloader;
 use App\Application\Bootloader\HttpHandlerBootloader;
 use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
+use Modules\Events\Application\EventsBootloader;
 use Modules\Inspector\Application\InspectorBootloader;
 use Modules\Profiler\Application\ProfilerBootloader;
+use Modules\Projects\Application\ProjectBootloader;
 use Modules\Ray\Application\RayBootloader;
 use Modules\HttpDumps\Application\HttpDumpsBootloader;
 use Modules\Sentry\Application\SentryBootloader;
+use Modules\Smtp\Application\SmtpBootloader;
 use Modules\VarDumper\Application\VarDumperBootloader;
 use Modules\Webhooks\Application\WebhooksBootloader;
 use Spiral\Boot\Bootloader\CoreBootloader;
 use Spiral\Bootloader as Framework;
-use Spiral\Cqrs\Bootloader\CqrsBootloader;
 use Spiral\Cycle\Bootloader as CycleBridge;
 use Spiral\Distribution\Bootloader\DistributionBootloader;
 use Spiral\DotEnv\Bootloader\DotenvBootloader;
-use Spiral\Events\Bootloader\EventsBootloader;
-use Spiral\League\Event\Bootloader\EventBootloader;
 use Spiral\Monolog\Bootloader\MonologBootloader;
-use Spiral\Nyholm\Bootloader\NyholmBootloader;
 use Spiral\RoadRunnerBridge\Bootloader as RoadRunnerBridge;
+use Spiral\Serializer\Symfony\Bootloader\SerializerBootloader;
 use Spiral\Stempler\Bootloader\StemplerBootloader;
 use Spiral\Storage\Bootloader\StorageBootloader;
 use Spiral\Tokenizer\Bootloader\TokenizerListenerBootloader;
@@ -51,7 +52,6 @@ class Kernel extends \Spiral\Framework\Kernel
             // RoadRunner
             RoadRunnerBridge\CacheBootloader::class,
             RoadRunnerBridge\HttpBootloader::class,
-            RoadRunnerBridge\CentrifugoBootloader::class,
             RoadRunnerBridge\QueueBootloader::class,
             RoadRunnerBridge\TcpBootloader::class,
             RoadRunnerBridge\LoggerBootloader::class,
@@ -69,43 +69,24 @@ class Kernel extends \Spiral\Framework\Kernel
 
             StemplerBootloader::class,
 
-            // HTTP extensions
-            NyholmBootloader::class,
-            Framework\Http\RouterBootloader::class,
-            Framework\Http\JsonPayloadsBootloader::class,
-
-            // Databases
-            CycleBridge\DatabaseBootloader::class,
-            CycleBridge\MigrationsBootloader::class,
-
-            // ORM
-            CycleBridge\SchemaBootloader::class,
-            CycleBridge\CycleOrmBootloader::class,
-            CycleBridge\AnnotatedBootloader::class,
-
-            // Event Dispatcher
-            EventsBootloader::class,
-            EventBootloader::class,
-            CqrsBootloader::class,
-            Framework\Http\SessionBootloader::class,
-
             // Console commands
             Framework\CommandBootloader::class,
             CycleBridge\CommandBootloader::class,
             RoadRunnerBridge\CommandBootloader::class,
 
             // Configure route groups, middleware for route groups
-            \Spiral\OpenApi\Bootloader\SwaggerBootloader::class,
             Bootloader\RoutesBootloader::class,
 
             StorageBootloader::class,
             DistributionBootloader::class,
-            \Spiral\Serializer\Symfony\Bootloader\SerializerBootloader::class,
+            SerializerBootloader::class,
+            BroadcastingBootloader::class,
 
             HttpHandlerBootloader::class,
             AppBootloader::class,
             InspectorBootloader::class,
             SentryBootloader::class,
+            SmtpBootloader::class,
             VarDumperBootloader::class,
             RayBootloader::class,
             HttpDumpsBootloader::class,
@@ -114,6 +95,8 @@ class Kernel extends \Spiral\Framework\Kernel
             PersistenceBootloader::class,
             AuthBootloader::class,
             WebhooksBootloader::class,
+            ProjectBootloader::class,
+            EventsBootloader::class,
         ];
     }
 }

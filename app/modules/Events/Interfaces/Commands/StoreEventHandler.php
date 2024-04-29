@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Events\Interfaces\Commands;
 
-use App\Application\Commands\FindProjectByName;
+use App\Application\Commands\FindProjectByKey;
 use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Domain\Entity\Json;
-use Carbon\Carbon;
 use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Modules\Events\Domain\Events\EventWasReceived;
+use Modules\Events\Domain\ValueObject\Timestamp;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Spiral\Cqrs\Attribute\CommandHandler;
 use Spiral\Cqrs\QueryBusInterface;
@@ -27,29 +27,24 @@ final readonly class StoreEventHandler
     #[CommandHandler]
     public function handle(HandleReceivedEvent $command): void
     {
-        $projectId = null;
+        $project = null;
+        // If the project is not null, we will find the project by key
         if ($command->project !== null) {
-            $projectId = $this->queryBus->ask(new FindProjectByName($command->project));
+            $project = $this->queryBus->ask(new FindProjectByKey($command->project));
         }
 
         $this->events->store(
-            new Event(
-                $command->uuid,
-                $command->type,
-                new Json($command->payload),
-                $command->timestamp,
-                $projectId,
+            $event = new Event(
+                uuid: $command->uuid,
+                type: $command->type,
+                payload: new Json($command->payload),
+                timestamp: Timestamp::create(),
+                project: $project?->getKey(),
             ),
         );
 
         $this->dispatcher->dispatch(
-            new EventWasReceived(
-                uuid: $command->uuid,
-                type: $command->type,
-                payload: $command->payload,
-                timestamp: $command->timestamp,
-                projectId: $projectId,
-            ),
+            new EventWasReceived($event),
         );
     }
 }

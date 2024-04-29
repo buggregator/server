@@ -84,5 +84,6 @@ jobs:
           build-args:
             APP_VERSION=${{ steps.previoustag.outputs.tag }}
             FRONTEND_IMAGE_TAG=latest
+            BRANCH=${{ steps.previoustag.outputs.tag }}
           tags:
             ${{ secrets.DOCKER_HUB_USERNAME }}/buggregator:latest, ${{ secrets.DOCKER_HUB_USERNAME }}/buggregator:${{ steps.previoustag.outputs.tag }}

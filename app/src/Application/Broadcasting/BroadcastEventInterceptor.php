@@ -11,8 +11,10 @@ use Spiral\Core\CoreInterface;
 final readonly class BroadcastEventInterceptor implements CoreInterceptorInterface
 {
     public function __construct(
-        private BroadcastInterface $broadcast
-    ) {}
+        private BroadcastInterface $broadcast,
+        private EventMapperInterface $mapper,
+    ) {
+    }
 
     public function process(string $controller, string $action, array $parameters, CoreInterface $core): mixed
     {
@@ -20,12 +22,14 @@ final readonly class BroadcastEventInterceptor implements CoreInterceptorInterfa
         $result = $core->callAction($controller, $action, $parameters);
 
         if ($event instanceof ShouldBroadcastInterface) {
+            $broadcastEvent = $this->mapper->toBroadcast($event);
+
             $this->broadcast->publish(
-                $event->getBroadcastTopics(),
+                $broadcastEvent->channel,
                 \json_encode([
-                    'event' => $event->getEventName(),
-                    'data' =>  $event->jsonSerialize(),
-                ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)
+                    'event' => (string)$broadcastEvent->event,
+                    'data' => $broadcastEvent->payload,
+                ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE),
             );
         }
 

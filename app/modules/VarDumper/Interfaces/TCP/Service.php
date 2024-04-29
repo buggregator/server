@@ -10,6 +10,7 @@ use Modules\VarDumper\Application\Dump\DumpIdGeneratorInterface;
 use Modules\VarDumper\Application\Dump\HtmlBody;
 use Modules\VarDumper\Application\Dump\HtmlDumper;
 use Modules\VarDumper\Application\Dump\MessageParser;
+use Modules\VarDumper\Application\Dump\ParsedPayload;
 use Modules\VarDumper\Application\Dump\PrimitiveBody;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\RoadRunner\Tcp\Request;
@@ -37,24 +38,26 @@ final readonly class Service implements ServiceInterface
 
         foreach ($messages as $message) {
             $payload = (new MessageParser())->parse($message);
+
             $this->fireEvent($payload);
         }
 
         return new ContinueRead();
     }
 
-    private function fireEvent(array $payload): void
+    private function fireEvent(ParsedPayload $payload): void
     {
         $this->commandBus->dispatch(
             new HandleReceivedEvent(
                 type: 'var-dump',
                 payload: [
                     'payload' => [
-                        'type' => $payload[0]->getType(),
-                        'value' => $this->convertToPrimitive($payload[0]),
+                        'type' => $payload->data->getType(),
+                        'value' => $this->convertToPrimitive($payload->data),
                     ],
-                    'context' => $payload[1],
+                    'context' => $payload->context,
                 ],
+                project: $payload->context['project'] ?? null,
             ),
         );
     }

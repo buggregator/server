@@ -7,6 +7,7 @@ namespace Modules\Ray\Interfaces\Http\Handler;
 use App\Application\Commands\ClearEvents;
 use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Domain\ValueObjects\Uuid;
+use App\Application\Event\EventType;
 use App\Application\Service\HttpHandler\HandlerInterface;
 use Carbon\CarbonInterval;
 use Modules\Ray\Application\EventHandlerInterface;
@@ -34,7 +35,9 @@ final readonly class EventHandler implements HandlerInterface
 
     public function handle(ServerRequestInterface $request, \Closure $next): ResponseInterface
     {
-        if (!$this->isValidRequest($request)) {
+        $event = $this->listenEvent($request);
+
+        if ($event === null) {
             return $next($request);
         }
 
@@ -43,11 +46,11 @@ final readonly class EventHandler implements HandlerInterface
         return match (true) {
             $uri === '_availability_check' => $this->responseWrapper->create(400),
             \str_starts_with($uri, 'locks') => $this->handleLocks($request),
-            default => $this->handleEvent($request),
+            default => $this->handleEvent($request, $event),
         };
     }
 
-    private function handleEvent(ServerRequestInterface $request): ResponseInterface
+    private function handleEvent(ServerRequestInterface $request, EventType $eventType): ResponseInterface
     {
         $event = \json_decode((string)$request->getBody(), true);
 
@@ -65,7 +68,10 @@ final readonly class EventHandler implements HandlerInterface
 
         $this->commands->dispatch(
             new HandleReceivedEvent(
-                type: 'ray', payload: $event, uuid: Uuid::fromString($event['uuid']),
+                type: $eventType->type,
+                payload: $event,
+                project: $eventType->project,
+                uuid: Uuid::fromString($event['uuid']),
             ),
         );
 
@@ -85,13 +91,21 @@ final readonly class EventHandler implements HandlerInterface
         return $this->responseWrapper->json($lock);
     }
 
-    private function isValidRequest(ServerRequestInterface $request): bool
+    private function listenEvent(ServerRequestInterface $request): ?EventType
     {
+        /** @var EventType|null $event */
+        $event = $request->getAttribute('event');
+
+        if ($event?->type === 'ray') {
+            return $event;
+        }
+
         $userAgent = $request->getServerParams()['HTTP_USER_AGENT'] ?? '';
 
-        return $request->getHeaderLine('X-Buggregator-Event') === 'ray'
-            || $request->getAttribute('event-type') === 'ray'
-            || $request->getUri()->getUserInfo() === 'ray'
-            || \str_starts_with(\strtolower($userAgent), 'ray');
+        if (\str_starts_with(\strtolower($userAgent), 'ray')) {
+            return new EventType(type: 'ray');
+        }
+
+        return null;
     }
 }

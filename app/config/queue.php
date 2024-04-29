@@ -7,11 +7,13 @@ use Spiral\Queue\Driver\SyncDriver;
 use Spiral\RoadRunner\Jobs\Queue\MemoryCreateInfo;
 use Spiral\RoadRunnerBridge\Queue\Queue;
 
+$defaultConnection = env('QUEUE_DEFAULT_CONNECTION', 'roadrunner');
+
 return [
-    'default' => env('QUEUE_CONNECTION', 'sync'),
+    'default' => env('QUEUE_CONNECTION', 'memory'),
     'aliases' => [
-        'webhook' => 'roadrunner',
-        'events' => 'roadrunner',
+        'webhook' => $defaultConnection,
+        'events' => $defaultConnection,
     ],
     'pipelines' => [
         'memory' => [

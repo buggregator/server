@@ -27,13 +27,17 @@ use OpenApi\Attributes as OA;
         ),
     ]
 )]
-final class ClearAction
+final readonly class ClearAction
 {
     #[Route(route: 'events', name: 'events.clear', methods: 'DELETE', group: 'api')]
     public function __invoke(ClearEventsRequest $request, CommandBusInterface $bus): ResourceInterface
     {
         $bus->dispatch(
-            new ClearEvents(type: $request->type, uuids: $request->uuids),
+            new ClearEvents(
+                type: $request->type,
+                project: $request->project,
+                uuids: $request->uuids,
+            ),
         );
 
         return new SuccessResource();

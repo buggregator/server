@@ -10,8 +10,10 @@ return [
     'default' => env('CACHE_STORAGE', 'roadrunner'),
     'aliases' => [
         'events' => ['storage' => $defaultStorage, 'prefix' => 'events:'],
+        'projects' => ['storage' => $defaultStorage, 'prefix' => 'projects:'],
         'webhooks' => ['storage' => $defaultStorage, 'prefix' => 'webhooks:'],
         'local' => ['storage' => $defaultStorage, 'prefix' => 'local:'],
+        'smtp' => ['storage' => $defaultStorage, 'prefix' => 'smtp:'],
     ],
     'storages' => [
         'array' => [

@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Application\Domain\Entity;
 
-use Cycle\Database\DatabaseInterface;
-
 final readonly class Json implements \JsonSerializable, \Stringable
 {
     public function __construct(
-        private array $data = [],
-    ) {}
+        private array|\JsonSerializable $data = [],
+    ) {
+    }
 
     /**
      * Create from data storage raw value
@@ -22,7 +21,9 @@ final readonly class Json implements \JsonSerializable, \Stringable
 
     public function jsonSerialize(): array
     {
-        return $this->data;
+        return $this->data instanceof \JsonSerializable
+            ? $this->data->jsonSerialize()
+            : $this->data;
     }
 
     public function __toString(): string

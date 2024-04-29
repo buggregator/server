@@ -10,6 +10,6 @@ abstract class AskEvents implements QueryInterface
 {
     public function __construct(
         public readonly ?string $type = null,
-        public readonly ?int $projectId = null,
+        public readonly ?string $project = null,
     ) {}
 }

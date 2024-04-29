@@ -6,6 +6,8 @@ rpc:
 server:
   command: 'php app.php'
   relay: pipes
+  env:
+    - MODE: 'roadrunner'
   on_init:
     command: "php app.php configure"
 

@@ -9,8 +9,11 @@ use App\Application\HTTP\Response\ResourceCollection;
 final class EventCollection extends ResourceCollection
 {
     public function __construct(
-        iterable $data
+        iterable $data,
     ) {
-        parent::__construct($data, EventResource::class);
+        parent::__construct(
+            $data,
+            EventResource::class,
+        );
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Interfaces\Http\Ray;
 
+use App\Application\Broadcasting\Channel\EventsChannel;
 use Nyholm\Psr7\Stream;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;
 
@@ -14,6 +15,22 @@ final class RayActionTest extends ControllerTestCase
 JSON;
 
     public function testSendDump(): void
+    {
+        $this->createProject('default');
+
+        $this->http->postJson(
+            uri: '/',
+            data: Stream::create(self::PAYLOAD),
+            headers: [
+                'X-Buggregator-Event' => 'ray',
+                'X-Buggregator-Project' => 'default',
+            ],
+        )->assertOk();
+
+        $this->assertEventSent('default');
+    }
+
+    public function testSendDumpWithProject(): void
     {
         $this->http->postJson(
             uri: '/',
@@ -36,6 +53,18 @@ JSON;
         $this->assertEventSent();
     }
 
+    public function testSendDumpViaHttpAuthWithProjectId(): void
+    {
+        $this->createProject('default');
+
+        $this->http->postJson(
+            uri: 'http://ray:default@localhost',
+            data: Stream::create(self::PAYLOAD),
+        )->assertOk();
+
+        $this->assertEventSent('default');
+    }
+
     public function testSendDumpViaUserAgent(): void
     {
         $this->http
@@ -43,9 +72,9 @@ JSON;
                 'HTTP_USER_AGENT' => 'ray 1.0.0',
             ])
             ->postJson(
-            uri: '/',
-            data: Stream::create(self::PAYLOAD),
-        )->assertOk();
+                uri: '/',
+                data: Stream::create(self::PAYLOAD),
+            )->assertOk();
 
         $this->assertEventSent();
     }
@@ -62,11 +91,13 @@ JSON;
             data: Stream::create($payload),
             headers: ['X-Buggregator-Event' => 'ray',],
         )->assertOk();
+
         $this->broadcastig->reset();
+
         $this->http->postJson(
             uri: '/',
             data: Stream::create($color),
-            headers: ['X-Buggregator-Event' => 'ray',],
+            headers: ['X-Buggregator-Event' => 'ray'],
         )->assertOk();
 
         $this->broadcastig->assertPushed('events', function (array $data) {
@@ -92,16 +123,16 @@ JSON;
         });
     }
 
-    public function assertEventSent(): void
+    public function assertEventSent(?string $project = null): void
     {
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed((string)new EventsChannel($project), function (array $data) use ($project) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('ray', $data['data']['type']);
+            $this->assertSame($project, $data['data']['project']);
 
             $this->assertSame('11325003-b9cf-4c06-83d0-8a18fe368ac4', $data['data']['payload']['uuid']);
             $this->assertSame('8.2.5', $data['data']['payload']['meta']['php_version']);
             $this->assertSame('1.40.1.0', $data['data']['payload']['meta']['ray_package_version']);
-
 
             $this->assertSame('log', $data['data']['payload']['payloads'][0]['type']);
             $this->assertSame(['foo'], $data['data']['payload']['payloads'][0]['content']['values']);

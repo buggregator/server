@@ -7,9 +7,11 @@ namespace Modules\Sentry\Interfaces\Http\Handler;
 use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Service\HttpHandler\HandlerInterface;
 use Modules\Sentry\Application\EventHandlerInterface;
+use Modules\Sentry\Application\SecretKeyValidator;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Spiral\Cqrs\CommandBusInterface;
+use Spiral\Http\Exception\ClientException\ForbiddenException;
 use Spiral\Http\ResponseWrapper;
 
 final readonly class JsEventHandler implements HandlerInterface
@@ -18,6 +20,7 @@ final readonly class JsEventHandler implements HandlerInterface
         private ResponseWrapper $responseWrapper,
         private EventHandlerInterface $handler,
         private CommandBusInterface $commands,
+        private SecretKeyValidator $secretKeyValidator,
     ) {
     }
 
@@ -26,10 +29,15 @@ final readonly class JsEventHandler implements HandlerInterface
         return 1;
     }
 
+    // TODO: add support for sentry project
     public function handle(ServerRequestInterface $request, \Closure $next): ResponseInterface
     {
         if (!$this->isValidRequest($request)) {
             return $next($request);
+        }
+
+        if (!$this->secretKeyValidator->validateRequest($request)) {
+            throw new ForbiddenException('Invalid secret key');
         }
 
         $payloads = \array_map(
