@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Webhooks\Application;
 
+use App\Application\Mode;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use Modules\Webhooks\Domain\DeliveryFactoryInterface;
@@ -86,11 +87,13 @@ final class WebhooksBootloader extends Bootloader
         ];
     }
 
-    public function init(ConsoleBootloader $console): void
+    public function init(ConsoleBootloader $console, Mode $mode): void
     {
-        $console->addConfigureSequence(
-            sequence: 'webhooks:register',
-            header: 'Register webhooks from configuration',
-        );
+        if ($mode->insideRoadRunner()) {
+            $console->addConfigureSequence(
+                sequence: 'webhooks:register',
+                header: 'Register webhooks from configuration',
+            );
+        }
     }
 }

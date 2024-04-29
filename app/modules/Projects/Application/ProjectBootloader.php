@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Projects\Application;
 
+use App\Application\Mode;
 use Modules\Projects\Domain\ProjectFactoryInterface;
 use Modules\Projects\Domain\ProjectLocatorInterface;
 use Spiral\Boot\Bootloader\Bootloader;
@@ -39,11 +40,13 @@ final class ProjectBootloader extends Bootloader
         ];
     }
 
-    public function init(ConsoleBootloader $console): void
+    public function init(ConsoleBootloader $console, Mode $mode): void
     {
-        $console->addConfigureSequence(
-            sequence: 'projects:register',
-            header: 'Register all projects in the system',
-        );
+        if ($mode->insideRoadRunner()) {
+            $console->addConfigureSequence(
+                sequence: 'projects:register',
+                header: 'Register all projects in the system',
+            );
+        }
     }
 }
