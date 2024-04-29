@@ -9,14 +9,22 @@ use Psr\Http\Message\ResponseInterface;
 use Spiral\Boot\EnvironmentInterface;
 use Spiral\Router\Annotation\Route;
 
-final class JavascriptAction
+final readonly class JavascriptAction
 {
-    #[Route(route: '/sentry/<id>.js', name: 'sentry.js', methods: 'GET', group: 'api')]
-    public function __invoke(EnvironmentInterface $env, mixed $id): ResponseInterface
+    #[Route(route: '/sentry/<project>.js', name: 'sentry.js', methods: 'GET', group: 'api')]
+    public function __invoke(EnvironmentInterface $env, string $project): ResponseInterface
     {
-        $jsSdkUrl = $env->get('SENTRY_JS_SDK_URL', 'https://browser.sentry-cdn.com/7.69.0/bundle.tracing.replay.min.js');
-        $host = $env->get('SENTRY_DSN_HOST', 'http://sentry@127.0.0.1:8000');
-        $url = \rtrim($host, '/') . '/' . $id;
+        $jsSdkUrl = $env->get(
+            'SENTRY_JS_SDK_URL',
+            'https://browser.sentry-cdn.com/7.69.0/bundle.tracing.replay.min.js',
+        );
+
+        $host = $env->get(
+            'SENTRY_JS_DSN_HOST',
+            'http://sentry@127.0.0.1:8000',
+        );
+
+        $url = \rtrim($host, '/') . '/' . $project;
 
         return new Response(
             status: 200,

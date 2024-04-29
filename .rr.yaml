@@ -6,6 +6,8 @@ rpc:
 server:
   command: 'php app.php'
   relay: pipes
+  env:
+    - MODE: 'roadrunner'
   on_init:
     command: "php app.php configure"
 
@@ -44,6 +46,9 @@ kv:
   local:
     driver: memory
     config: {}
+
+jobs:
+  consume: []
 
 service:
 #  frontend:

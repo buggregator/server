@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\HttpDumps\Interfaces\Http\Handler;
 
 use App\Application\Commands\HandleReceivedEvent;
+use App\Application\Event\EventType;
 use App\Application\Service\HttpHandler\HandlerInterface;
 use Carbon\Carbon;
 use Modules\HttpDumps\Application\EventHandlerInterface;
@@ -16,14 +17,14 @@ use Spiral\Http\ResponseWrapper;
 use Spiral\Storage\BucketInterface;
 use Spiral\Storage\StorageInterface;
 
-final class AnyHttpRequestDump implements HandlerInterface
+final readonly class AnyHttpRequestDump implements HandlerInterface
 {
-    private readonly BucketInterface $bucket;
+    private BucketInterface $bucket;
 
     public function __construct(
-        private readonly CommandBusInterface $commands,
-        private readonly EventHandlerInterface $handler,
-        private readonly ResponseWrapper $responseWrapper,
+        private CommandBusInterface $commands,
+        private EventHandlerInterface $handler,
+        private ResponseWrapper $responseWrapper,
         StorageInterface $storage,
     ) {
         $this->bucket = $storage->bucket('attachments');
@@ -34,16 +35,11 @@ final class AnyHttpRequestDump implements HandlerInterface
         return 0;
     }
 
-    private function isValidRequest(ServerRequestInterface $request): bool
-    {
-        return $request->getHeaderLine('X-Buggregator-Event') === 'http-dump'
-            || $request->getAttribute('event-type') === 'http-dump'
-            || $request->getUri()->getUserInfo() === 'http-dump';
-    }
-
     public function handle(ServerRequestInterface $request, \Closure $next): ResponseInterface
     {
-        if (!$this->isValidRequest($request)) {
+        $eventType = $this->listenEvent($request);
+
+        if ($eventType === null) {
             return $next($request);
         }
 
@@ -52,7 +48,7 @@ final class AnyHttpRequestDump implements HandlerInterface
         $event = $this->handler->handle($payload);
 
         $this->commands->dispatch(
-            new HandleReceivedEvent(type: 'http-dump', payload: $event),
+            new HandleReceivedEvent(type: $eventType->type, payload: $event, project: $eventType->project),
         );
 
         return $this->responseWrapper->create(200);
@@ -93,5 +89,17 @@ final class AnyHttpRequestDump implements HandlerInterface
                 ),
             ],
         ];
+    }
+
+    private function listenEvent(ServerRequestInterface $request): ?EventType
+    {
+        /** @var EventType|null $event */
+        $event = $request->getAttribute('event');
+
+        if ($event?->type === 'http-dump') {
+            return $event;
+        }
+
+        return null;
     }
 }

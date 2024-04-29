@@ -23,6 +23,12 @@ use OpenApi\Attributes as OA;
             required: false,
             schema: new OA\Schema(type: 'string'),
         ),
+        new OA\QueryParameter(
+            name: 'project',
+            description: 'Filter by event type',
+            required: false,
+            schema: new OA\Schema(type: 'string'),
+        ),
     ],
     responses: [
         new OA\Response(
@@ -54,14 +60,17 @@ use OpenApi\Attributes as OA;
         ),
     ]
 )]
-final class ListAction
+final readonly class ListAction
 {
-    #[Route(route: 'events', name: 'events.list', methods: 'GET', group: 'api')]
-    public function __invoke(EventsRequest $request, QueryBusInterface $bus): EventCollection
-    {
+    // todo: uncomment after implementing on frontend side
+    // #[Route(route: 'events', name: 'events.list', methods: 'GET', group: 'api')]
+    public function __invoke(
+        EventsRequest $request,
+        QueryBusInterface $bus,
+    ): EventCollection {
         return new EventCollection(
             $bus->ask(
-                new FindEvents(type: $request->type),
+                new FindEvents(type: $request->type, project: $request->project),
             ),
         );
     }

@@ -5,10 +5,16 @@ declare(strict_types=1);
 namespace Tests;
 
 use App\Application\Domain\ValueObjects\Uuid;
+use App\Application\Event\EventTypeMapperInterface;
 use App\Application\Service\ErrorHandler\Handler;
+use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Spiral\Core\Container;
 use Spiral\Core\ContainerScope;
+use Spiral\Cqrs\CommandBusInterface;
+use Spiral\Cqrs\CommandInterface;
+use Spiral\Cqrs\QueryBusInterface;
+use Spiral\Cqrs\QueryInterface;
 use Spiral\Testing\TestableKernelInterface;
 use Spiral\Testing\TestCase as BaseTestCase;
 use Tests\App\Broadcasting\BroadcastFaker;
@@ -94,5 +100,23 @@ class TestCase extends BaseTestCase
     protected function randomUuid(): Uuid
     {
         return Uuid::generate();
+    }
+
+    protected function dispatchCommand(CommandInterface $command): mixed
+    {
+        return $this->get(CommandBusInterface::class)->dispatch($command);
+    }
+
+    protected function dispatchQuery(QueryInterface $query): mixed
+    {
+        return $this->get(QueryBusInterface::class)->ask($query);
+    }
+
+    protected function mapEventTypeToPreview(Event $event): array|\JsonSerializable
+    {
+        return $this->get(EventTypeMapperInterface::class)->toPreview(
+            $event->getType(),
+            $event->getPayload(),
+        );
     }
 }

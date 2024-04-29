@@ -6,6 +6,7 @@ namespace Modules\Events\Interfaces\Http\Controllers;
 
 use App\Application\Commands\FindEventByUuid;
 use App\Application\Domain\ValueObjects\Uuid;
+use App\Application\Event\EventTypeMapperInterface;
 use App\Application\Exception\EntityNotFoundException;
 use Modules\Events\Interfaces\Http\Resources\EventResource;
 use Spiral\Cqrs\QueryBusInterface;
@@ -43,8 +44,11 @@ use OpenApi\Attributes as OA;
 final class ShowAction
 {
     #[Route(route: 'event/<uuid>', name: 'event.show', methods: 'GET', group: 'api')]
-    public function __invoke(QueryBusInterface $bus, Uuid $uuid): EventResource
-    {
+    public function __invoke(
+        EventTypeMapperInterface $mapper,
+        QueryBusInterface $bus,
+        Uuid $uuid,
+    ): EventResource {
         try {
             return new EventResource(
                 $bus->ask(new FindEventByUuid($uuid)),

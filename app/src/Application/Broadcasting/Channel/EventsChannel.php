@@ -6,8 +6,12 @@ namespace App\Application\Broadcasting\Channel;
 
 final class EventsChannel extends Channel
 {
-    public function __construct()
+    public function __construct(string|\Stringable|null $project = null)
     {
-        parent::__construct('events');
+        if ($project !== null) {
+            parent::__construct('events.project.' . $project);
+        } else {
+            parent::__construct('events');
+        }
     }
 }

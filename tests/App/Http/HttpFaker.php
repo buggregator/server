@@ -36,11 +36,15 @@ final class HttpFaker
         );
     }
 
-    public function clearEvents(?string $type = null, ?array $uuids = null): ResponseAssertions
+    public function clearEvents(?string $type = null, ?string $project = null, ?array $uuids = null): ResponseAssertions
     {
         $args = [];
         if ($type) {
             $args['type'] = $type;
+        }
+
+        if ($project) {
+            $args['project'] = $project;
         }
 
         if ($uuids) {

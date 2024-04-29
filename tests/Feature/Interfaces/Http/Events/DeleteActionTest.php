@@ -10,12 +10,19 @@ final class DeleteActionTest extends ControllerTestCase
 {
     public function testDeleteEvent(): void
     {
-        $uuid = $this->randomUuid();
-
-        $this->fakeEvents()->eventShouldBeDeleted($uuid);
+        $event = $this->createEvent();
 
         $this->http
-            ->deleteEvent($uuid)
+            ->deleteEvent($event->getUuid())
+            ->assertSuccessResource();
+
+        $this->assertEventMissing($event);
+    }
+
+    public function testDeleteNonExistEvent(): void
+    {
+        $this->http
+            ->deleteEvent($this->randomUuid())
             ->assertSuccessResource();
     }
 }

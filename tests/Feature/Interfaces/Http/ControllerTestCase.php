@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Interfaces\Http;
 
 use Tests\App\Http\HttpFaker;
-use Tests\TestCase;
+use Tests\DatabaseTestCase;
 
-abstract class ControllerTestCase extends TestCase
+abstract class ControllerTestCase extends DatabaseTestCase
 {
     protected HttpFaker $http;
 
@@ -15,6 +15,6 @@ abstract class ControllerTestCase extends TestCase
     {
         parent::setUp();
 
-        $this->http = new HttpFaker($this->fakeHttp(), $this);
+        $this->http = new HttpFaker($this->fakeHttp());
     }
 }

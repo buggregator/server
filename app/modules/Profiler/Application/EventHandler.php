@@ -7,14 +7,14 @@ namespace Modules\Profiler\Application;
 use Modules\Profiler\Application;
 use Psr\Container\ContainerInterface;
 
-class EventHandler implements Application\EventHandlerInterface
+final readonly class EventHandler implements Application\EventHandlerInterface
 {
     /**
      * @param class-string<\Modules\Sentry\Application\EventHandlerInterface>[] $handlers
      */
     public function __construct(
-        private readonly ContainerInterface $container,
-        private readonly array $handlers
+        private ContainerInterface $container,
+        private array $handlers
     ) {
     }
 

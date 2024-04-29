@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Interfaces\Http\HttpDumps;
 
+use App\Application\Broadcasting\Channel\EventsChannel;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;
 
 final class HttpDumpsActionTest extends ControllerTestCase
@@ -20,7 +21,54 @@ final class HttpDumpsActionTest extends ControllerTestCase
         $this->broadcastig->assertPushed('events', function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('http-dump', $data['data']['type']);
+            $this->assertSame(null, $data['data']['project']);
             $this->assertSame('{"foo":"bar"}', $data['data']['payload']['request']['body']);
+
+            return true;
+        });
+    }
+
+    public function testHttpDumpViaHttpUserWithProject(): void
+    {
+        $this->createProject('test');
+
+        $this->http
+            ->postJson(
+                uri: 'http://http-dump:test@localhost/',
+                data: ['foo' => 'bar'],
+            )
+            ->assertOk();
+
+        $this->broadcastig->assertPushed((string) new EventsChannel('test'), function (array $data) {
+            $this->assertSame('event.received', $data['event']);
+            $this->assertSame('http-dump', $data['data']['type']);
+            $this->assertSame('test', $data['data']['project']);
+            $this->assertSame('{"foo":"bar"}', $data['data']['payload']['request']['body']);
+
+            return true;
+        });
+    }
+
+    public function testHttpDumpWithProjectFromHeader(): void
+    {
+        $this->createProject('default');
+
+        $this->http
+            ->postJson(
+                uri: '/',
+                data: ['foo' => 'bar'],
+                headers: [
+                    'X-Buggregator-Event' => 'http-dump',
+                    'X-Buggregator-Project' => 'default',
+                ],
+                cookies: ['foo' => 'bar'],
+            )
+            ->assertOk();
+
+        $this->broadcastig->assertPushed((string) new EventsChannel('default'), function (array $data) {
+            $this->assertSame('event.received', $data['event']);
+            $this->assertSame('http-dump', $data['data']['type']);
+            $this->assertSame('default', $data['data']['project']);
 
             return true;
         });
@@ -40,6 +88,7 @@ final class HttpDumpsActionTest extends ControllerTestCase
         $this->broadcastig->assertPushed('events', function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('http-dump', $data['data']['type']);
+            $this->assertSame(null, $data['data']['project']);
             $this->assertSame('POST', $data['data']['payload']['request']['method']);
             $this->assertSame('', $data['data']['payload']['request']['uri']);
             $this->assertSame(['http-dump'], $data['data']['payload']['request']['headers']['X-Buggregator-Event']);

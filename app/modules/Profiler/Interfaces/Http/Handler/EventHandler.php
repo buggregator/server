@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Profiler\Interfaces\Http\Handler;
 
 use App\Application\Commands\HandleReceivedEvent;
+use App\Application\Event\EventType;
 use App\Application\Service\HttpHandler\HandlerInterface;
 use Modules\Profiler\Application\EventHandlerInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -28,7 +29,9 @@ final readonly class EventHandler implements HandlerInterface
 
     public function handle(ServerRequestInterface $request, \Closure $next): ResponseInterface
     {
-        if (!$this->isValidRequest($request)) {
+        $eventType = $this->listenEvent($request);
+
+        if ($eventType === null) {
             return $next($request);
         }
 
@@ -36,18 +39,28 @@ final readonly class EventHandler implements HandlerInterface
         $event = $this->handler->handle($payload);
 
         $this->commands->dispatch(
-            new HandleReceivedEvent(type: 'profiler', payload: $event)
+            new HandleReceivedEvent(type: $eventType->type, payload: $event, project: $eventType->project),
         );
 
         return $this->responseWrapper->create(200);
     }
 
-    private function isValidRequest(ServerRequestInterface $request): bool
+    private function listenEvent(ServerRequestInterface $request): ?EventType
     {
-        return $request->getHeaderLine('X-Buggregator-Event') === 'profiler'
-            || $request->getAttribute('event-type') === 'profiler'
-            || $request->getUri()->getUserInfo() === 'profiler'
-            || $request->hasHeader('X-Profiler-Dump')
-            || \str_ends_with($request->getUri()->getPath(), 'profiler/store');
+        /** @var EventType|null $event */
+        $event = $request->getAttribute('event');
+
+        if ($event?->type === 'profiler') {
+            return $event;
+        }
+
+        if (
+            $request->hasHeader('X-Profiler-Dump')
+            || \str_ends_with($request->getUri()->getPath(), 'profiler/store')
+        ) {
+            return new EventType(type: 'profiler');
+        }
+
+        return null;
     }
 }
