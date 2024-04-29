@@ -65,7 +65,11 @@ final readonly class EventHandler implements HandlerInterface
         $event = $this->handler->handle($data[0]);
 
         $this->commands->dispatch(
-            new HandleReceivedEvent(type: 'sentry', payload: $event, project: $eventType->project),
+            new HandleReceivedEvent(
+                type: 'sentry',
+                payload: $event,
+                project: $eventType->project,
+            ),
         );
     }
 

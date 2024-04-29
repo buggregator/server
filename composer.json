@@ -60,8 +60,9 @@
         "phpunit/phpunit": "^10.0",
         "qossmic/deptrac-shim": "^1.0",
         "rector/rector": "^1.0",
-        "spiral/testing": "^2.6",
+        "sentry/sentry": "^4.7",
         "spiral-packages/database-seeder": "^3.1",
+        "spiral/testing": "^2.6",
         "vimeo/psalm": "^5.16"
     },
     "autoload": {

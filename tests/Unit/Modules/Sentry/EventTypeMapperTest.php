@@ -14,7 +14,9 @@ final class EventTypeMapperTest extends DatabaseTestCase
         $data = $event->getPayload()->jsonSerialize();
 
         $this->assertSame([
+            'message' => null,
             'exception' => $data['exception'],
+            'level' => null,
             'platform' => $data['platform'],
             'environment' => $data['environment'],
             'server_name' => $data['server_name'],

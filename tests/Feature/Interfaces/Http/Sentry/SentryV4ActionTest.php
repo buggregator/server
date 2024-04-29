@@ -40,6 +40,8 @@ BODY;
             $this->assertSame('Test', $data['data']['payload']['server_name']);
             $this->assertSame('production', $data['data']['payload']['environment']);
 
+            $this->assertCount(3, $data['data']['payload']['exception']['values'][0]['stacktrace']['frames']);
+
             $this->assertNotEmpty($data['data']['uuid']);
             $this->assertNotEmpty($data['data']['timestamp']);
 
