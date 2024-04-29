@@ -38,6 +38,7 @@
         "mongodb/mongodb": "^1.18",
         "nesbot/carbon": "^2.64",
         "php-http/message": "^1.11",
+        "phpdocumentor/reflection-docblock": "^5.4",
         "spiral-packages/cqrs": "^2.0",
         "spiral-packages/league-event": "^1.0",
         "spiral-packages/symfony-serializer": "^2.2",
