@@ -70,6 +70,25 @@ HTML,
         });
     }
 
+    public function testSendDumpWithCodeHighlighting(): void
+    {
+        $message = $this->buildPayload(var: 'foo', context: ['language' => 'php']);
+        $this->handleVarDumperRequest($message);
+
+        $this->broadcastig->assertPushed(new EventsChannel(), function (array $data) {
+            $this->assertSame('event.received', $data['event']);
+            $this->assertSame('var-dump', $data['data']['type']);
+
+            $this->assertSame([
+                'type' => 'code',
+                'value' => 'foo',
+                'language' => 'php'
+            ], $data['data']['payload']['payload']);
+
+            return true;
+        });
+    }
+
     public function testSendDumpWithProject(): void
     {
         $this->createProject('default');
@@ -102,13 +121,12 @@ HTML,
         $this->handleVarDumperRequest('invalid');
     }
 
-    private function buildPayload(mixed $var = 'string', ?string $project = null): string
+    private function buildPayload(mixed $var = 'string', ?string $project = null, array $context = []): string
     {
         $cloner = new VarCloner();
         $cloner->addCasters(ReflectionCaster::UNSET_CLOSURE_FILE_INFO);
         $data = $cloner->cloneVar($var);
 
-        $context = [];
         if ($project !== null) {
             $context['project'] = $project;
         }

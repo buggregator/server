@@ -6,6 +6,7 @@ namespace Modules\Ray\Application;
 
 use App\Application\Service\HttpHandler\HandlerRegistryInterface;
 use Modules\Ray\Application\Handlers\MergeEventsHandler;
+use Modules\Ray\Application\Handlers\RemoveSfDumpScriptHandler;
 use Modules\Ray\EventHandler;
 use Modules\Ray\Interfaces\Http\Handler\EventHandler as HttpEventHandler;
 use Psr\Container\ContainerInterface;
@@ -20,6 +21,7 @@ final class RayBootloader extends Bootloader
                 ContainerInterface $container,
             ): EventHandlerInterface => new EventHandler($container, [
                 MergeEventsHandler::class,
+                RemoveSfDumpScriptHandler::class,
             ]),
         ];
     }
