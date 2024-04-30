@@ -14,6 +14,6 @@ final readonly class WebhookMetrics
 
     public function called(string $event, string $url, bool $success): void
     {
-        $this->metrics->add('webhooks', 1, [$event, $url, $success ? 'success' : 'failure']);
+        $this->metrics->add('webhooks', 1, [$event, $url, $success ? 'true' : 'false']);
     }
 }
