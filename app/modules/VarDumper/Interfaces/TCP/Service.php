@@ -50,10 +50,7 @@ final readonly class Service implements ServiceInterface
             new HandleReceivedEvent(
                 type: 'var-dump',
                 payload: [
-                    'payload' => [
-                        'type' => $payload->data->getType(),
-                        'value' => $this->convertToPrimitive($payload->data),
-                    ],
+                    'payload' => $this->prepareContent($payload),
                     'context' => $payload->context,
                 ],
                 project: $payload->context['project'] ?? null,
@@ -77,5 +74,20 @@ final readonly class Service implements ServiceInterface
         return new HtmlBody(
             value: $dumper->dump($data, true),
         );
+    }
+
+    private function prepareContent(ParsedPayload $payload): array
+    {
+        $payloadContent = [
+            'type' => $payload->data->getType(),
+            'value' => $this->convertToPrimitive($payload->data),
+        ];
+
+        if ($payload->data->getType() === 'string' && isset($payload->context['language'])) {
+            $payloadContent['type'] = 'code';
+            $payloadContent['language'] = $payload->context['language'];
+        }
+
+        return $payloadContent;
     }
 }
