@@ -21,6 +21,7 @@ return RectorConfig::configure()
         __DIR__ . '/app',
         __DIR__ . '/tests',
     ])
+    ->withCache(cacheDirectory: __DIR__ . '.cache/rector')
     // uncomment to reach your current PHP version
     // ->withPhpSets()
     ->withRules([

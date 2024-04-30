@@ -93,8 +93,8 @@
             "rr get-binary"
         ],
         "psalm": "vendor/bin/psalm --config=psalm.xml ./app",
-        "cs-check": "vendor/bin/php-cs-fixer fix ./app/src --rules=@PER-CS2.0 --dry-run",
-        "cs-fix": "vendor/bin/php-cs-fixer fix ./app/src --rules=@PER-CS2.0",
+        "cs-check": "vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --dry-run",
+        "cs-fix": "vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php -vvv --dry-run --using-cache=no",
         "deptrack": [
             "deptrac analyze --report-uncovered"
         ]

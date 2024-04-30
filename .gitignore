@@ -9,4 +9,4 @@ protoc-gen-php-grpc*
 .php-cs-fixer.cache
 .deptrac.cache
 .phpunit.cache
-build
+.cache

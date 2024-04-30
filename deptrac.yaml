@@ -1,4 +1,4 @@
-# deptrac.yaml
+# deptrac
 deptrac:
   paths:
     - ./app/src
