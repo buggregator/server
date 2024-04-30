@@ -32,6 +32,7 @@ RUN composer config --no-plugins allow-plugins.spiral/composer-publish-plugin fa
 RUN composer install --no-dev
 
 WORKDIR /app
+RUN mkdir /app/runtime/configs -p
 RUN php app.php configure
 
 EXPOSE 8082/tcp
