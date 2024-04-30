@@ -13,8 +13,7 @@ final readonly class BroadcastEventInterceptor implements CoreInterceptorInterfa
     public function __construct(
         private BroadcastInterface $broadcast,
         private EventMapperInterface $mapper,
-    ) {
-    }
+    ) {}
 
     public function process(string $controller, string $action, array $parameters, CoreInterface $core): mixed
     {
@@ -27,7 +26,7 @@ final readonly class BroadcastEventInterceptor implements CoreInterceptorInterfa
             $this->broadcast->publish(
                 $broadcastEvent->channel,
                 \json_encode([
-                    'event' => (string)$broadcastEvent->event,
+                    'event' => (string) $broadcastEvent->event,
                     'data' => $broadcastEvent->payload,
                 ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE),
             );

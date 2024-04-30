@@ -10,6 +10,6 @@ use Spiral\Cqrs\CommandInterface;
 final readonly class DeleteEvent implements CommandInterface
 {
     public function __construct(
-        public Uuid $uuid
+        public Uuid $uuid,
     ) {}
 }

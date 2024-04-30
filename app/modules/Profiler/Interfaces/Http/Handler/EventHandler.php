@@ -19,8 +19,7 @@ final readonly class EventHandler implements HandlerInterface
         private ResponseWrapper $responseWrapper,
         private EventHandlerInterface $handler,
         private CommandBusInterface $commands,
-    ) {
-    }
+    ) {}
 
     public function priority(): int
     {
@@ -35,7 +34,7 @@ final readonly class EventHandler implements HandlerInterface
             return $next($request);
         }
 
-        $payload = \json_decode((string)$request->getBody(), true);
+        $payload = \json_decode((string) $request->getBody(), true);
         $event = $this->handler->handle($payload);
 
         $this->commands->dispatch(

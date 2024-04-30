@@ -19,7 +19,7 @@ final class GzippedStreamFactory
         rewind($resource);
 
         return new GzippedStream(
-            new GzipDecodeStream(new Stream($resource))
+            new GzipDecodeStream(new Stream($resource)),
         );
     }
 }

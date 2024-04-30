@@ -18,8 +18,7 @@ final class Message
         public array $recipients = [],
         public ?string $from = null,
         public string $body = '',
-    ) {
-    }
+    ) {}
 
     public function setUsername(string $username): void
     {

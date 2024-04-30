@@ -15,8 +15,7 @@ final readonly class ClearEventsHandler
     public function __construct(
         private EventRepositoryInterface $events,
         private EventDispatcherInterface $dispatcher,
-    ) {
-    }
+    ) {}
 
     #[CommandHandler]
     public function __invoke(ClearEvents $command): void

@@ -13,17 +13,16 @@ use Spiral\Cqrs\Attribute\QueryHandler;
 final readonly class FindEventByUuidHandler
 {
     public function __construct(
-        private EventRepositoryInterface $events
-    ) {
-    }
+        private EventRepositoryInterface $events,
+    ) {}
 
     #[QueryHandler]
     public function __invoke(FindEventByUuid $query): Event
     {
-        $event = $this->events->findByPK((string)$query->uuid);
+        $event = $this->events->findByPK((string) $query->uuid);
         if ($event === null) {
             throw new EntityNotFoundException(
-                \sprintf('Event with given uuid [%s] was not found.', (string)$query->uuid)
+                \sprintf('Event with given uuid [%s] was not found.', (string) $query->uuid),
             );
         }
 

@@ -8,7 +8,6 @@ use Modules\Profiler\Application\EventHandlerInterface;
 
 final class CleanupEvent implements EventHandlerInterface
 {
-
     public function handle(array $event): array
     {
         unset($event['profile']);

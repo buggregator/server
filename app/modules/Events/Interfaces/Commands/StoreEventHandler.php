@@ -7,6 +7,7 @@ namespace Modules\Events\Interfaces\Commands;
 use App\Application\Commands\FindProjectByKey;
 use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Domain\Entity\Json;
+use Modules\Events\Application\EventMetrics;
 use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Modules\Events\Domain\Events\EventWasReceived;
@@ -21,8 +22,8 @@ final readonly class StoreEventHandler
         private EventDispatcherInterface $dispatcher,
         private EventRepositoryInterface $events,
         private QueryBusInterface $queryBus,
-    ) {
-    }
+        private EventMetrics $metrics,
+    ) {}
 
     #[CommandHandler]
     public function handle(HandleReceivedEvent $command): void
@@ -46,5 +47,7 @@ final readonly class StoreEventHandler
         $this->dispatcher->dispatch(
             new EventWasReceived($event),
         );
+
+        $this->metrics->newEvent(type: $event->getType());
     }
 }

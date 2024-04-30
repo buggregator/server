@@ -19,8 +19,7 @@ final readonly class InMemoryWebhookRepository implements WebhookRepositoryInter
     public function __construct(
         private LoggerInterface $logger,
         private CacheInterface $cache,
-    ) {
-    }
+    ) {}
 
     public function findByEvent(string $event): array
     {
@@ -36,7 +35,7 @@ final readonly class InMemoryWebhookRepository implements WebhookRepositoryInter
 
     public function findByUuid(Uuid $uuid): ?Webhook
     {
-        return $this->getWebhooks()[(string)$uuid] ?? null;
+        return $this->getWebhooks()[(string) $uuid] ?? null;
     }
 
     public function register(Webhook $webhook): void
@@ -46,10 +45,10 @@ final readonly class InMemoryWebhookRepository implements WebhookRepositoryInter
         }
 
         $webhooks = $this->getWebhooks();
-        $webhooks[(string)$webhook->uuid] = $webhook;
+        $webhooks[(string) $webhook->uuid] = $webhook;
 
         $this->logger->debug('Webhook registered', [
-            'uuid' => (string)$webhook->uuid,
+            'uuid' => (string) $webhook->uuid,
             'event' => $webhook->event,
             'url' => $webhook->url,
         ]);

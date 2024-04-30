@@ -55,6 +55,7 @@ ENV ENCRYPTER_KEY=def00000232ae92c8e8ec0699093fa06ce014cd48d39c3c62c279dd947db08
 ENV TOKENIZER_CACHE_TARGETS=true
 ENV AUTH_TOKEN_STORAGE=jwt
 ENV AUTH_TOKEN_TRANSPORT=header
+ENV METRICS_DRIVER=roadrunner
 
 LABEL org.opencontainers.image.source=$REPOSITORY
 LABEL org.opencontainers.image.description="Buggregator"

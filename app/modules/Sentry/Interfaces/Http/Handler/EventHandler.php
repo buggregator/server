@@ -26,8 +26,7 @@ final readonly class EventHandler implements HandlerInterface
         private EventHandlerInterface $handler,
         private CommandBusInterface $commands,
         private SecretKeyValidator $secretKeyValidator,
-    ) {
-    }
+    ) {}
 
     public function priority(): int
     {

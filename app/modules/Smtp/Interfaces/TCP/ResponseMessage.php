@@ -56,8 +56,7 @@ final readonly class ResponseMessage implements \Stringable
     public function __construct(
         public int $code,
         public string $message = '',
-    ) {
-    }
+    ) {}
 
     public function __toString(): string
     {

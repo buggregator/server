@@ -34,13 +34,13 @@ final class EventPreviewResource extends JsonResource
     protected function mapData(): array|\JsonSerializable
     {
         return [
-            'uuid' => (string)$this->data->getUuid(),
+            'uuid' => (string) $this->data->getUuid(),
             'project' => $this->data->getProject(),
             'type' => $this->data->getType(),
             'payload' => $this->mapper?->toPreview(
-                    type: $this->data->getType(),
-                    payload: $this->data->getPayload(),
-                ) ?? $this->data->getPayload(),
+                type: $this->data->getType(),
+                payload: $this->data->getPayload(),
+            ) ?? $this->data->getPayload(),
             'timestamp' => $this->data->getTimestamp(),
         ];
     }

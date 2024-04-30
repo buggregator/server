@@ -23,8 +23,7 @@ final readonly class Service implements ServiceInterface
         private CommandBusInterface $commands,
         private EmailBodyStorage $emailBodyStorage,
         private AttachmentStorage $attachments,
-    ) {
-    }
+    ) {}
 
     public function handle(Request $request): ResponseInterface
     {
@@ -102,6 +101,6 @@ final readonly class Service implements ServiceInterface
 
     private function send(ResponseMessage $message, bool $close = false): RespondMessage
     {
-        return new RespondMessage((string)$message, $close);
+        return new RespondMessage((string) $message, $close);
     }
 }

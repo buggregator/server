@@ -31,7 +31,7 @@ final class DeliveryResource extends JsonResource
     protected function mapData(): array|\JsonSerializable
     {
         return [
-            'uuid' => (string)$this->data->uuid,
+            'uuid' => (string) $this->data->uuid,
             'payload' => $this->data->payload,
             'response' => $this->data->response,
             'status' => $this->data->status,

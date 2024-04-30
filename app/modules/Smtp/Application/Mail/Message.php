@@ -23,8 +23,7 @@ final readonly class Message implements JsonSerializable
         public array $replyTo,
         public array $allRecipients,
         public array $attachments,
-    ) {
-    }
+    ) {}
 
     /**
      * BCCs are recipients passed as RCPTs but not

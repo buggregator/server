@@ -9,6 +9,5 @@ final readonly class WebhookEvent
     public function __construct(
         public string $event,
         public array $payload,
-    ) {
-    }
+    ) {}
 }

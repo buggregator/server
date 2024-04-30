@@ -14,6 +14,6 @@ use Spiral\Cqrs\QueryInterface;
 final readonly class FindEventByUuid implements QueryInterface
 {
     public function __construct(
-        public Uuid $uuid
+        public Uuid $uuid,
     ) {}
 }

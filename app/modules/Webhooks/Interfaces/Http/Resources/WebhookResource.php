@@ -32,7 +32,7 @@ final class WebhookResource extends JsonResource
     protected function mapData(): array|\JsonSerializable
     {
         return [
-            'uuid' => (string)$this->data->uuid,
+            'uuid' => (string) $this->data->uuid,
             'event' => $this->data->event,
             'url' => $this->data->url,
             'headers' => $this->data->headers,

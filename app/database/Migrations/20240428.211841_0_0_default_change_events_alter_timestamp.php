@@ -19,8 +19,6 @@ class OrmDefault4d821d8599782e856feb0c9b8b26b42f extends Migration
 
     public function down(): void
     {
-        $this->table('events')
-        ->alterColumn('timestamp', 'decimal', ['nullable' => false, 'defaultValue' => null, 'precision' => 10, 'scale' => 5])
-        ->update();
+
     }
 }

@@ -12,6 +12,5 @@ final readonly class JobPayload
         public UuidInterface $webhookUuid,
         public string $event,
         public array $payload,
-    ) {
-    }
+    ) {}
 }

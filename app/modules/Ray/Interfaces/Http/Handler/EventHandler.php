@@ -25,8 +25,7 @@ final readonly class EventHandler implements HandlerInterface
         private EventHandlerInterface $handler,
         private CommandBusInterface $commands,
         private CacheInterface $cache,
-    ) {
-    }
+    ) {}
 
     public function priority(): int
     {
@@ -52,7 +51,7 @@ final readonly class EventHandler implements HandlerInterface
 
     private function handleEvent(ServerRequestInterface $request, EventType $eventType): ResponseInterface
     {
-        $event = \json_decode((string)$request->getBody(), true);
+        $event = \json_decode((string) $request->getBody(), true);
 
         $type = $event['payloads'][0]['type'] ?? null;
 

@@ -10,6 +10,5 @@ final readonly class BroadcastEvent
         public iterable|string|\Stringable $channel,
         public string|\Stringable $event,
         public array|\JsonSerializable $payload = [],
-    ) {
-    }
+    ) {}
 }

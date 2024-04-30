@@ -20,7 +20,7 @@ final readonly class EventWasDeletedMapper implements EventMapperInterface
             channel: new EventsChannel($event->project),
             event: 'event.deleted',
             payload: [
-                'uuid' => (string)$event->uuid,
+                'uuid' => (string) $event->uuid,
                 'project' => $event->project,
             ],
         );

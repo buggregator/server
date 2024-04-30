@@ -13,8 +13,7 @@ final readonly class FindProjectByKeyHandler
 {
     public function __construct(
         private ProjectRepositoryInterface $projects,
-    ) {
-    }
+    ) {}
 
     #[QueryHandler]
     public function __invoke(FindProjectByKey $query): ?Project

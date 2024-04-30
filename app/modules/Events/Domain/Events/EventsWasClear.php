@@ -11,6 +11,5 @@ final readonly class EventsWasClear implements ShouldBroadcastInterface
     public function __construct(
         public ?string $type,
         public ?string $project = null,
-    ) {
-    }
+    ) {}
 }

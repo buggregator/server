@@ -15,7 +15,7 @@ final class DeleteAction
     {
         $cache->set($hash, [
             'active' => false,
-            'stop_execution' => (bool)$request->input('stop_execution')
+            'stop_execution' => (bool) $request->input('stop_execution'),
         ]);
     }
 }

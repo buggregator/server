@@ -7,6 +7,7 @@ namespace Modules\Webhooks\Application;
 use App\Application\Mode;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
+use Modules\Metrics\Application\CollectorRegistryInterface;
 use Modules\Webhooks\Domain\DeliveryFactoryInterface;
 use Modules\Webhooks\Domain\DeliveryRepositoryInterface;
 use Modules\Webhooks\Domain\WebhookFactoryInterface;
@@ -20,6 +21,7 @@ use Spiral\Boot\EnvironmentInterface;
 use Spiral\Cache\CacheStorageProviderInterface;
 use Spiral\Console\Bootloader\ConsoleBootloader;
 use Spiral\Core\FactoryInterface;
+use Spiral\RoadRunner\Metrics\Collector;
 
 final class WebhooksBootloader extends Bootloader
 {
@@ -87,13 +89,21 @@ final class WebhooksBootloader extends Bootloader
         ];
     }
 
-    public function init(ConsoleBootloader $console, Mode $mode): void
-    {
-        if ($mode->insideRoadRunner()) {
-            $console->addConfigureSequence(
-                sequence: 'webhooks:register',
-                header: 'Register webhooks from configuration',
-            );
-        }
+    public function init(
+        ConsoleBootloader $console,
+        CollectorRegistryInterface $collectorRegistry,
+        Mode $mode,
+    ): void {
+        $console->addConfigureSequence(
+            sequence: 'webhooks:register',
+            header: 'Register webhooks from configuration',
+        );
+
+        $collectorRegistry->register(
+            name: 'webhooks',
+            collector: Collector::counter()
+                ->withHelp('Webhooks counter')
+                ->withLabels('event', 'url', 'success'),
+        );
     }
 }

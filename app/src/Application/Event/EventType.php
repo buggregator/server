@@ -9,6 +9,5 @@ final readonly class EventType
     public function __construct(
         public string $type,
         public ?string $project = null,
-    ) {
-    }
+    ) {}
 }

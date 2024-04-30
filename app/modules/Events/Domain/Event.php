@@ -13,7 +13,7 @@ use Modules\Events\Domain\ValueObject\Timestamp;
 use Modules\Projects\Domain\ValueObject\Key;
 
 #[Entity(
-    repository: EventRepositoryInterface::class
+    repository: EventRepositoryInterface::class,
 )]
 #[Index(columns: ['type'])]
 #[Index(columns: ['project'])]
@@ -23,20 +23,15 @@ class Event
     public function __construct(
         #[Column(type: 'string(36)', primary: true, typecast: 'uuid')]
         private Uuid $uuid,
-
         #[Column(type: 'string(50)')]
         private string $type,
-
         #[Column(type: 'json', typecast: Json::class)]
         private Json $payload,
-
         #[Column(type: 'string(25)', typecast: Timestamp::class)]
         private Timestamp $timestamp,
-
         #[Column(type: 'string', nullable: true, typecast: Key::class)]
         private ?Key $project = null,
-    ) {
-    }
+    ) {}
 
     public function getUuid(): Uuid
     {

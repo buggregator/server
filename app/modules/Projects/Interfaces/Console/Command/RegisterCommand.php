@@ -12,7 +12,7 @@ use Spiral\Cqrs\CommandBusInterface;
 
 #[AsCommand(
     name: 'projects:register',
-    description: 'Find and register all projects in the system'
+    description: 'Find and register all projects in the system',
 )]
 final class RegisterCommand extends Command
 {
@@ -25,7 +25,7 @@ final class RegisterCommand extends Command
                 $this->writeln("Registering project: {$project->getName()}");
                 $bus->dispatch(
                     new CreateProject(
-                        key: (string)$project->getKey(),
+                        key: (string) $project->getKey(),
                         name: $project->getName(),
                     ),
                 );

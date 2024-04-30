@@ -28,8 +28,7 @@ final class RoutesBootloader extends BaseRoutesBootloader
 {
     public function __construct(
         private readonly Container $container,
-    ) {
-    }
+    ) {}
 
     public function defineDependencies(): array
     {

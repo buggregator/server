@@ -9,8 +9,7 @@ final readonly class PrimitiveBody implements BodyInterface
     public function __construct(
         private string $type,
         private string $value,
-    ) {
-    }
+    ) {}
 
     public function getType(): string
     {

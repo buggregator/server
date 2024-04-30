@@ -14,8 +14,7 @@ final readonly class MergeEventsHandler implements EventHandlerInterface
 {
     public function __construct(
         private QueryBusInterface $bus,
-    ) {
-    }
+    ) {}
 
     public function handle(array $event): array
     {
@@ -23,15 +22,16 @@ final readonly class MergeEventsHandler implements EventHandlerInterface
             /** @var \Modules\Events\Domain\Event $storedEvent */
             $storedEvent = $this->bus->ask(
                 new FindEventByUuid(
-                    Uuid::fromString($event['uuid'])
-                )
+                    Uuid::fromString($event['uuid']),
+                ),
             );
 
             $event['payloads'] = [
                 ...($storedEvent->getPayload()->jsonSerialize()['payloads'] ?? []),
-                ...($event['payloads'] ?? [])
+                ...($event['payloads'] ?? []),
             ];
-        } catch (EntityNotFoundException) {}
+        } catch (EntityNotFoundException) {
+        }
 
         return $event;
     }

@@ -25,8 +25,7 @@ final readonly class Service implements ServiceInterface
     public function __construct(
         private CommandBusInterface $commandBus,
         private DumpIdGeneratorInterface $dumpId,
-    ) {
-    }
+    ) {}
 
     public function handle(Request $request): ResponseInterface
     {

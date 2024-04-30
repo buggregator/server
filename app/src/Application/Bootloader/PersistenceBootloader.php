@@ -68,7 +68,7 @@ final class PersistenceBootloader extends Bootloader
                 EnvironmentInterface $env,
             ): EventRepositoryInterface => new CacheEventRepository(
                 cache: $provider->storage('events'),
-                ttl: (int)$env->get('EVENTS_CACHE_TTL', 60 * 60 * 2),
+                ttl: (int) $env->get('EVENTS_CACHE_TTL', 60 * 60 * 2),
             ),
 
             // Projects

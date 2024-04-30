@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd" bootstrap="vendor/autoload.php"
-         backupGlobals="false" colors="true" stderr="false" cacheDirectory=".phpunit.cache"
+         backupGlobals="false" colors="true" stderr="false" cacheDirectory=".cache/phpunit"
          backupStaticProperties="false">
     <php>
         <env name="BROADCAST_CONNECTION" value="in-memory"/>
@@ -13,7 +13,7 @@
         <env name="DB_LOG_QUERY_PARAMETERS" value="true"/>
         <env name="TOKENIZER_CACHE_TARGETS" value="true"/>
         <env name="APP_ENV" value="testing"/>
-        <env name="PERSISTENCE_DRIVER" value="db"/>
+        <env name="PERSISTENCE_DRIVER" value="memory"/>
         <env name="DB_DRIVER" value="sqlite"/>
         <env name="MONOLOG_DEFAULT_CHANNEL" value="stdout"/>
     </php>
@@ -31,13 +31,13 @@
         </testsuite>
     </testsuites>
     <logging>
-        <junit outputFile="build/report.junit.xml"/>
+        <junit outputFile=".cache/phpunit/report.junit.xml"/>
     </logging>
     <coverage>
         <report>
-            <html outputDirectory="build/coverage"/>
-            <text outputFile="build/coverage.txt"/>
-            <clover outputFile="build/logs/clover.xml"/>
+            <html outputDirectory=".cache/coverage"/>
+            <text outputFile=".cache/coverage.txt"/>
+            <clover outputFile=".cache/logs/clover.xml"/>
         </report>
     </coverage>
 </phpunit>

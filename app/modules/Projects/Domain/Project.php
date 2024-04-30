@@ -9,7 +9,7 @@ use Cycle\Annotated\Annotation\Entity;
 use Modules\Projects\Domain\ValueObject\Key;
 
 #[Entity(
-    repository: ProjectRepositoryInterface::class
+    repository: ProjectRepositoryInterface::class,
 )]
 class Project
 {
@@ -17,11 +17,9 @@ class Project
     public function __construct(
         #[Column(type: 'string(36)', primary: true, typecast: Key::class)]
         private Key $key,
-
         #[Column(type: 'string')]
         private string $name,
-    ) {
-    }
+    ) {}
 
     public function getKey(): Key
     {

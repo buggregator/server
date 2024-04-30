@@ -12,8 +12,7 @@ final readonly class SecretKeyValidator
 {
     public function __construct(
         private ?string $secret = null,
-    ) {
-    }
+    ) {}
 
     public function validateRequest(ServerRequestInterface $request): bool
     {

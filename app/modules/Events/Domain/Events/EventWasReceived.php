@@ -11,6 +11,5 @@ final readonly class EventWasReceived implements ShouldBroadcastInterface
 {
     public function __construct(
         public Event $event,
-    ) {
-    }
+    ) {}
 }

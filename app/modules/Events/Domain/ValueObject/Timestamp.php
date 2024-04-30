@@ -8,7 +8,7 @@ final readonly class Timestamp implements \JsonSerializable, \Stringable
 {
     public static function create(): self
     {
-        return new self((string)\microtime(true));
+        return new self((string) \microtime(true));
     }
 
     /**
@@ -25,12 +25,11 @@ final readonly class Timestamp implements \JsonSerializable, \Stringable
      */
     public function __construct(
         private string $value,
-    ) {
-    }
+    ) {}
 
     public function jsonSerialize(): float
     {
-        return (float)$this->value;
+        return (float) $this->value;
     }
 
     public function __toString(): string

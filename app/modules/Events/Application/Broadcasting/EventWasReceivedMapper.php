@@ -14,8 +14,7 @@ final readonly class EventWasReceivedMapper implements EventMapperInterface
 {
     public function __construct(
         private EventTypeMapperInterface $eventTypeMapper,
-    ) {
-    }
+    ) {}
 
     /**
      * @param EventWasReceived $event
@@ -26,7 +25,7 @@ final readonly class EventWasReceivedMapper implements EventMapperInterface
             channel: new EventsChannel($event->event->getProject()),
             event: 'event.received',
             payload: [
-                'uuid' => (string)$event->event->getUuid(),
+                'uuid' => (string) $event->event->getUuid(),
                 'project' => $event->event->getProject(),
                 'type' => $event->event->getType(),
                 'payload' => $this->eventTypeMapper->toPreview(

@@ -14,7 +14,7 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'status', type: 'boolean'),
     ],
-    type: 'object'
+    type: 'object',
 )]
 final class SuccessResource extends JsonResource
 {

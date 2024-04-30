@@ -13,9 +13,8 @@ final readonly class EventHandler implements Application\EventHandlerInterface
      */
     public function __construct(
         private ContainerInterface $container,
-        private array $handlers
-    ) {
-    }
+        private array $handlers,
+    ) {}
 
     public function handle(array $event): array
     {

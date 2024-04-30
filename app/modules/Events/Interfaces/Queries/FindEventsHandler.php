@@ -12,8 +12,7 @@ final class FindEventsHandler extends EventsHandler
 {
     public function __construct(
         private readonly EventRepositoryInterface $events,
-    ) {
-    }
+    ) {}
 
     #[QueryHandler]
     public function __invoke(FindEvents $query): iterable

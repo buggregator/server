@@ -36,7 +36,7 @@ final class ExtendedTypecast implements CastableInterface, UncastableInterface
             $values[$column] = match ($rule) {
                 'uuid' => Uuid::fromString($values[$column]),
                 'json' => new Json(\json_decode($values[$column], true)),
-                default => $values[$column]
+                default => $values[$column],
             };
         }
 
@@ -53,7 +53,7 @@ final class ExtendedTypecast implements CastableInterface, UncastableInterface
             $values[$column] = match ($rule) {
                 'uuid' => $this->uncastUuid($values[$column]),
                 'json' => $this->uncastJson($values[$column]),
-                default => $values[$column]
+                default => $values[$column],
             };
         }
 

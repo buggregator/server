@@ -16,31 +16,31 @@ use MongoDB\Database;
 use MongoDB\Model\CollectionInfo;
 use Spiral\Cache\CacheStorageProviderInterface;
 use Spiral\DatabaseSeeder\Database\Traits\DatabaseAsserts;
-use Spiral\DatabaseSeeder\Database\Traits\DatabaseMigrations;
 use Spiral\DatabaseSeeder\Database\Traits\ShowQueries;
 use Spiral\DatabaseSeeder\Database\Traits\Transactions;
 use Spiral\DatabaseSeeder\Database\Traits\Helper;
-use Spiral\DatabaseSeeder\Database\Traits\RefreshDatabase;
 
 abstract class DatabaseTestCase extends TestCase
 {
-    use DatabaseMigrations, RefreshDatabase, Transactions, Helper, DatabaseAsserts, ShowQueries;
+    use Transactions, Helper, DatabaseAsserts, ShowQueries;
+
+    private DriverEnum $dbDriver;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $dbDriver = $this->get(DriverEnum::class);
-        $this->getRefreshStrategy()->enableRefreshAttribute();
+        $this->dbDriver = $this->get(DriverEnum::class);
+//        $this->getRefreshStrategy()->enableRefreshAttribute();
 
         // TODO: refactor this
-        if ($dbDriver === DriverEnum::MongoDb) {
+        if ($this->dbDriver === DriverEnum::MongoDb) {
             $mongoDb = $this->get(Database::class);
             foreach ($mongoDb->listCollections() as $collection) {
                 /** @var CollectionInfo $collection */
                 $mongoDb->selectCollection($collection->getName())->drop();
             }
-        } elseif ($dbDriver === DriverEnum::InMemory) {
+        } elseif ($this->dbDriver === DriverEnum::InMemory) {
             $this->get(CacheStorageProviderInterface::class)->storage('events')->clear();
             $this->get(CacheStorageProviderInterface::class)->storage('projects')->clear();
         }
@@ -50,8 +50,10 @@ abstract class DatabaseTestCase extends TestCase
     {
         parent::tearDown();
 
-        $this->cleanIdentityMap();
-        $this->getCurrentDatabaseDriver()->disconnect();
+        if ($this->dbDriver === DriverEnum::Database) {
+            $this->cleanIdentityMap();
+            $this->getCurrentDatabaseDriver()->disconnect();
+        }
     }
 
     public function persist(object ...$entity): void

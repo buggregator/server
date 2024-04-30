@@ -13,8 +13,7 @@ final readonly class CompositeWebhookLocator implements WebhookLocatorInterface
      */
     public function __construct(
         private array $locators,
-    ) {
-    }
+    ) {}
 
     public function findAll(): iterable
     {

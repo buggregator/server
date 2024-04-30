@@ -15,8 +15,7 @@ final class Webhook
         public array $headers = [],
         public bool $verifySsl = false,
         public bool $retryOnFailure = true,
-    ) {
-    }
+    ) {}
 
     public function getHeaders(): array
     {
@@ -41,7 +40,7 @@ final class Webhook
     public function withHeader(string $name, $value): self
     {
         $clone = clone $this;
-        $clone->headers[$name] = (array)$value;
+        $clone->headers[$name] = (array) $value;
 
         return $clone;
     }

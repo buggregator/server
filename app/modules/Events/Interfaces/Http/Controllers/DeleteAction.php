@@ -30,7 +30,7 @@ use OpenApi\Attributes as OA;
             description: 'Success',
             content: new OA\JsonContent(ref: SuccessResource::class),
         ),
-    ]
+    ],
 )]
 final class DeleteAction
 {

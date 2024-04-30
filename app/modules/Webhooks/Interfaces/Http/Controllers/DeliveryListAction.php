@@ -39,7 +39,7 @@ use OpenApi\Attributes as OA;
                 ],
             ),
         ),
-    ]
+    ],
 )]
 final class DeliveryListAction
 {

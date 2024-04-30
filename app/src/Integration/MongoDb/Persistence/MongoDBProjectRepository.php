@@ -15,8 +15,7 @@ final readonly class MongoDBProjectRepository implements ProjectRepositoryInterf
 {
     public function __construct(
         private Collection $collection,
-    ) {
-    }
+    ) {}
 
     public function store(Project $project): bool
     {

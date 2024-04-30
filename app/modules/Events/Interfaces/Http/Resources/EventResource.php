@@ -32,7 +32,7 @@ final class EventResource extends JsonResource
     protected function mapData(): array|\JsonSerializable
     {
         return [
-            'uuid' => (string)$this->data->getUuid(),
+            'uuid' => (string) $this->data->getUuid(),
             'project' => $this->data->getProject(),
             'type' => $this->data->getType(),
             'payload' => $this->data->getPayload(),

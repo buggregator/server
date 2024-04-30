@@ -12,6 +12,5 @@ final readonly class EventWasDeleted implements ShouldBroadcastInterface
     public function __construct(
         public Uuid $uuid,
         public ?string $project = null,
-    ) {
-    }
+    ) {}
 }

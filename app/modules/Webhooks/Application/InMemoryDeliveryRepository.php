@@ -16,9 +16,8 @@ final readonly class InMemoryDeliveryRepository implements DeliveryRepositoryInt
     public function __construct(
         private CacheInterface $cache,
         private int $maxDeliveries = 10,
-        private int $ttl = 3600, // 1 hour in seconds
-    ) {
-    }
+        private int $ttl = 3600,
+    ) {}
 
     public function findAll(Uuid $webhookUuid): array
     {
