@@ -11,6 +11,7 @@ use App\Integration\MongoDb\Persistence\MongoDBEventRepository;
 use App\Integration\MongoDb\Persistence\MongoDBProjectRepository;
 use App\Integration\RoadRunner\Persistence\CacheEventRepository;
 use App\Integration\RoadRunner\Persistence\CacheProjectRepository;
+use App\Interfaces\Console\RegisterModulesCommand;
 use Cycle\ORM\EntityManagerInterface;
 use Cycle\ORM\ORMInterface;
 use Cycle\ORM\Select;
@@ -100,7 +101,8 @@ final class PersistenceBootloader extends Bootloader
     public function init(ConsoleBootloader $console, DriverEnum $driver): void
     {
         if ($driver === DriverEnum::Database) {
-            $console->addConfigureSequence(
+            $console->addSequence(
+                name: RegisterModulesCommand::SEQUENCE,
                 sequence: 'migrate',
                 header: 'Migration',
             );

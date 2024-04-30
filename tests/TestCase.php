@@ -11,6 +11,7 @@ use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Spiral\Core\Container;
 use Spiral\Core\ContainerScope;
+use Spiral\Core\InvokerInterface;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\Cqrs\CommandInterface;
 use Spiral\Cqrs\QueryBusInterface;
@@ -18,6 +19,7 @@ use Spiral\Cqrs\QueryInterface;
 use Spiral\Testing\TestableKernelInterface;
 use Spiral\Testing\TestCase as BaseTestCase;
 use Tests\App\Broadcasting\BroadcastFaker;
+use Tests\App\Console\SpyConsoleInvoker;
 use Tests\App\Events\EventsMocker;
 use Tests\App\TestKernel;
 
@@ -118,5 +120,17 @@ class TestCase extends BaseTestCase
             $event->getType(),
             $event->getPayload(),
         );
+    }
+
+    protected function spyConsole(\Closure $closure, array $commandsToRun): SpyConsoleInvoker
+    {
+        $this->getContainer()->runScope([
+            InvokerInterface::class => $fakeInvoker = new SpyConsoleInvoker(
+                $this->get(InvokerInterface::class),
+                $commandsToRun,
+            ),
+        ], $closure);
+
+        return $fakeInvoker;
     }
 }
