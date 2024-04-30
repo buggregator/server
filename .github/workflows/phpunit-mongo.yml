@@ -78,4 +78,4 @@ jobs:
         run: vendor/bin/phpunit
         env:
           PERSISTENCE_DRIVER: mongodb
-          MONGODB_CONNECTION: mongodb://mongo:secret@127.0.0.1:27017
+          MONGODB_CONNECTION: mongodb://mongo:secret@mongodb:27017

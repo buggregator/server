@@ -78,7 +78,7 @@ jobs:
         env:
           PERSISTENCE_DRIVER: db
           DB_DRIVER: pgsql
-          DB_HOST: 127.0.0.1
+          DB_HOST: postgres
           DB_PORT: 5432
           DB_DATABASE: buggregator
           DB_USERNAME: postgres
