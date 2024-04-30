@@ -5,7 +5,7 @@ name: phpunit
 
 jobs:
   phpunit:
-    name: "[Postgres] PHP 8.3-${{ matrix.os }}, ${{ matrix.stability }}"
+    name: "[Postgres:${{ matrix.pgsql-version }}] PHP 8.3-${{ matrix.os }}, ${{ matrix.stability }}"
     runs-on: ${{ matrix.os }}
 
     strategy:

@@ -31,13 +31,13 @@
         </testsuite>
     </testsuites>
     <logging>
-        <junit outputFile="build/report.junit.xml"/>
+        <junit outputFile=".cache/phpunit/report.junit.xml"/>
     </logging>
     <coverage>
         <report>
-            <html outputDirectory="build/coverage"/>
-            <text outputFile="build/coverage.txt"/>
-            <clover outputFile="build/logs/clover.xml"/>
+            <html outputDirectory=".cache/coverage"/>
+            <text outputFile=".cache/coverage.txt"/>
+            <clover outputFile=".cache/logs/clover.xml"/>
         </report>
     </coverage>
 </phpunit>
