@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Metrics\Application;
 
+use App\Application\Mode;
+use Cycle\ORM\FactoryInterface;
 use Modules\Metrics\Infrastructure\RoadRunner\Collector;
 use Spiral\Boot\Bootloader\Bootloader;
 use Spiral\Console\Bootloader\ConsoleBootloader;
@@ -27,18 +29,21 @@ final class MetricsBootloader extends Bootloader
     {
         return [
             MetricsInterface::class => static function (
+                MetricsDriverEnum $driver,
+                FactoryInterface $factory,
                 RPCInterface $rpc,
             ) {
-                $factory = new MetricsFactory();
-
-                return $factory->create(
-                    $rpc,
-                    new MetricsOptions(
-                        retryAttempts: 2,
-                        retrySleepMicroseconds: 300,
-                        suppressExceptions: true,
+                return match ($driver) {
+                    MetricsDriverEnum::RoadRunner => (new MetricsFactory())->create(
+                        $rpc,
+                        new MetricsOptions(
+                            retryAttempts: 2,
+                            retrySleepMicroseconds: 300,
+                            suppressExceptions: true,
+                        ),
                     ),
-                );
+                    MetricsDriverEnum::Null => new NullDriver(),
+                };
             },
 
             CollectorRepositoryInterface::class => Collector::class,

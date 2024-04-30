@@ -16,11 +16,9 @@ use MongoDB\Database;
 use MongoDB\Model\CollectionInfo;
 use Spiral\Cache\CacheStorageProviderInterface;
 use Spiral\DatabaseSeeder\Database\Traits\DatabaseAsserts;
-use Spiral\DatabaseSeeder\Database\Traits\DatabaseMigrations;
 use Spiral\DatabaseSeeder\Database\Traits\ShowQueries;
 use Spiral\DatabaseSeeder\Database\Traits\Transactions;
 use Spiral\DatabaseSeeder\Database\Traits\Helper;
-use Spiral\DatabaseSeeder\Database\Traits\RefreshDatabase;
 
 abstract class DatabaseTestCase extends TestCase
 {

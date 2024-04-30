@@ -7,6 +7,7 @@ namespace Modules\Webhooks\Interfaces\Job;
 use App\Application\Domain\ValueObjects\Uuid;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
+use Modules\Webhooks\Application\WebhookMetrics;
 use Modules\Webhooks\Domain\DeliveryFactoryInterface;
 use Modules\Webhooks\Domain\DeliveryRepositoryInterface;
 use Modules\Webhooks\Domain\Webhook;
@@ -26,6 +27,7 @@ final class WebhookHandler extends JobHandler
         private readonly ClientInterface $httpClient,
         private readonly ExceptionReporterInterface $reporter,
         private readonly LoggerInterface $logger,
+        private readonly WebhookMetrics $metrics,
     ) {
         parent::__construct($invoker);
     }
@@ -87,6 +89,7 @@ final class WebhookHandler extends JobHandler
             );
 
             $this->deliveries->store($delivery);
+            $this->metrics->called($payload->event, $webhook->url, !$failed);
         }
 
         if ($failed) {

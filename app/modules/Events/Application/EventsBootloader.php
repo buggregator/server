@@ -11,13 +11,16 @@ use Modules\Events\Application\Broadcasting\EventWasReceivedMapper;
 use Modules\Events\Domain\Events\EventsWasClear;
 use Modules\Events\Domain\Events\EventWasDeleted;
 use Modules\Events\Domain\Events\EventWasReceived;
+use Modules\Metrics\Application\CollectorRegistryInterface;
 use Spiral\Boot\Bootloader\Bootloader;
+use Spiral\RoadRunner\Metrics\Collector;
 
 final class EventsBootloader extends Bootloader
 {
     public function boot(
         EventMapperRegistryInterface $registry,
         EventWasReceivedMapper $eventWasReceivedMapper,
+        CollectorRegistryInterface $collectorRegistry,
     ): void {
         $registry->register(
             event: EventWasDeleted::class,
@@ -32,6 +35,13 @@ final class EventsBootloader extends Bootloader
         $registry->register(
             event: EventWasReceived::class,
             mapper: $eventWasReceivedMapper,
+        );
+
+        $collectorRegistry->register(
+            name: 'events',
+            collector: Collector::counter()
+                ->withHelp('Events counter')
+                ->withLabels('type'),
         );
     }
 }

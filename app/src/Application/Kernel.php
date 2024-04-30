@@ -13,6 +13,7 @@ use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
 use Modules\Events\Application\EventsBootloader;
 use Modules\Inspector\Application\InspectorBootloader;
+use Modules\Metrics\Application\MetricsBootloader;
 use Modules\Profiler\Application\ProfilerBootloader;
 use Modules\Projects\Application\ProjectBootloader;
 use Modules\Ray\Application\RayBootloader;
@@ -82,6 +83,7 @@ class Kernel extends \Spiral\Framework\Kernel
             SerializerBootloader::class,
             BroadcastingBootloader::class,
 
+            // Modules
             HttpHandlerBootloader::class,
             AppBootloader::class,
             InspectorBootloader::class,
@@ -97,6 +99,7 @@ class Kernel extends \Spiral\Framework\Kernel
             WebhooksBootloader::class,
             ProjectBootloader::class,
             EventsBootloader::class,
+            MetricsBootloader::class,
         ];
     }
 }

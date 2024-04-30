@@ -29,6 +29,7 @@ final readonly class CacheEventRepository implements EventRepositoryInterface
 
     public function __construct(
         private CacheInterface $cache,
+        // todo: use env variable
         private int $ttl = 60 * 60 * 2,
     ) {
     }
