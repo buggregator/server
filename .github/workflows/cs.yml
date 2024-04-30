@@ -1,0 +1,14 @@
+on:
+  pull_request: null
+  push:
+    branches:
+      - '*.*'
+
+name: Code style
+
+jobs:
+  cs:
+    uses: buggregator/gh-actions/.github/workflows/cs.yml@master
+    with:
+      os: >-
+        ['ubuntu-latest']
