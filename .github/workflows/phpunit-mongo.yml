@@ -4,9 +4,8 @@ on:
 name: phpunit
 
 jobs:
-  phpunit-db:
-    name: PHP 8.3-${{ matrix.os }}, ${{ matrix.stability }})
-
+  phpunit:
+    name: "[Mongo DB] PHP 8.3-${{ matrix.os }}, ${{ matrix.stability }}"
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -17,33 +16,6 @@ jobs:
         stability: [ 'prefer-stable' ]
 
     services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_PASSWORD: secret
-          POSTGRES_DB: buggregator
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      mysql:
-        image: mysql:8
-        env:
-          MYSQL_ROOT_PASSWORD: secret
-          MYSQL_DATABASE: buggregator
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd "mysqladmin ping -ppass"
-          --health-interval 10s
-          --health-start-period 10s
-          --health-timeout 5s
-          --health-retries 10
-
       mongodb:
         image: mongo
         env:
@@ -100,43 +72,6 @@ jobs:
           timeout_minutes: 5
           max_attempts: 5
           command: composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
-
-      # Execution SQLite
-      - name: Execute Tests on SQLite
-        run: vendor/bin/phpunit
-        env:
-          PERSISTENCE_DRIVER: db
-          DB_DRIVER: sqlite
-
-      # Execution in memory
-      - name: Execute Tests In memory
-        run: vendor/bin/phpunit
-        env:
-          PERSISTENCE_DRIVER: memory
-
-      # Execution pgsql
-      - name: Execute Tests on Postgres
-        run: vendor/bin/phpunit
-        env:
-          PERSISTENCE_DRIVER: db
-          DB_DRIVER: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_DATABASE: buggregator
-          DB_USERNAME: postgres
-          DB_PASSWORD: secret
-
-      # Execution mysql
-      - name: Execute Tests on MySQL
-        run: vendor/bin/phpunit
-        env:
-          PERSISTENCE_DRIVER: db
-          DB_DRIVER: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: buggregator
-          DB_USERNAME: root
-          DB_PASSWORD: secret
 
       # Execution mongo
       - name: Execute Tests on Mongo
