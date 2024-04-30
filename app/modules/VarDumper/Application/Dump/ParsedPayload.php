@@ -11,6 +11,5 @@ final readonly class ParsedPayload
     public function __construct(
         public Data $data,
         public array $context,
-    ) {
-    }
+    ) {}
 }

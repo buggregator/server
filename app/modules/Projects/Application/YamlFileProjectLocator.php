@@ -18,8 +18,7 @@ final readonly class YamlFileProjectLocator implements ProjectLocatorInterface
         private LoggerInterface $logger,
         private ProjectFactoryInterface $projectFactory,
         private string $directory,
-    ) {
-    }
+    ) {}
 
     public function findAll(): iterable
     {

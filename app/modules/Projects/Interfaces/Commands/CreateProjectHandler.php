@@ -17,8 +17,7 @@ final readonly class CreateProjectHandler
     public function __construct(
         private ProjectFactoryInterface $factory,
         private ProjectRepositoryInterface $projects,
-    ) {
-    }
+    ) {}
 
     #[CommandHandler]
     public function __invoke(CreateProject $command): Project

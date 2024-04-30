@@ -31,8 +31,7 @@ final readonly class CacheEventRepository implements EventRepositoryInterface
         private CacheInterface $cache,
         // todo: use env variable
         private int $ttl = 60 * 60 * 2,
-    ) {
-    }
+    ) {}
 
     public function findAll(array $scope = [], array $orderBy = [], int $limit = 30, int $offset = 0): iterable
     {
@@ -52,12 +51,12 @@ final readonly class CacheEventRepository implements EventRepositoryInterface
 
     public function store(Event $event): bool
     {
-        $id = (string)$event->getUuid();
+        $id = (string) $event->getUuid();
         $ids = $this->getEventIds();
         $ids[$id] = [
-            'uuid' => (string)$event->getUuid(),
+            'uuid' => (string) $event->getUuid(),
             'type' => $event->getType(),
-            'project' => $event->getProject() ? (string)$event->getProject() : null,
+            'project' => $event->getProject() ? (string) $event->getProject() : null,
             'timestamp' => $event->getTimestamp(),
         ];
 
@@ -66,7 +65,7 @@ final readonly class CacheEventRepository implements EventRepositoryInterface
         return $this->cache->set($id, [
             'id' => $id,
             'type' => $event->getType(),
-            'project' => (string)$event->getProject(),
+            'project' => (string) $event->getProject(),
             'timestamp' => $event->getTimestamp(),
             'payload' => $event->getPayload()->jsonSerialize(),
         ], Carbon::now()->addSeconds($this->ttl)->diffAsCarbonInterval());
@@ -109,7 +108,7 @@ final readonly class CacheEventRepository implements EventRepositoryInterface
      */
     public function findByPK(mixed $uuid): ?Event
     {
-        $uuid = (string)$uuid;
+        $uuid = (string) $uuid;
         $event = $this->cache->get($uuid);
 
         if (\is_array($event)) {
@@ -185,6 +184,6 @@ final readonly class CacheEventRepository implements EventRepositoryInterface
      */
     private function getEventIds(): array
     {
-        return (array)$this->cache->get(self::EVENT_IDS_KEY, []);
+        return (array) $this->cache->get(self::EVENT_IDS_KEY, []);
     }
 }

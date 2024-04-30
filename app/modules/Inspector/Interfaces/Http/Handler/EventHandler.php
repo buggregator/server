@@ -20,8 +20,7 @@ final readonly class EventHandler implements HandlerInterface
         private ResponseWrapper $responseWrapper,
         private CommandBusInterface $commands,
         private SecretKeyValidator $secretKeyValidator,
-    ) {
-    }
+    ) {}
 
     public function priority(): int
     {
@@ -39,7 +38,7 @@ final readonly class EventHandler implements HandlerInterface
             throw new ClientException\ForbiddenException('Invalid secret key');
         }
 
-        $data = \json_decode(\base64_decode((string)$request->getBody()), true)
+        $data = \json_decode(\base64_decode((string) $request->getBody()), true)
             ?? throw new ClientException\BadRequestException('Invalid data');
 
         $type = $data[0]['type'] ?? 'unknown';
@@ -52,7 +51,7 @@ final readonly class EventHandler implements HandlerInterface
             ),
         };
 
-        file_put_contents(directory('runtime') .'/inspectot.php', var_export($data, true));
+        file_put_contents(directory('runtime') . '/inspectot.php', var_export($data, true));
         $this->commands->dispatch(
             new HandleReceivedEvent(type: $eventType->type, payload: $data, project: $eventType->project),
         );
@@ -72,7 +71,7 @@ final readonly class EventHandler implements HandlerInterface
         if (
             $request->hasHeader('X-Inspector-Key')
             || $request->hasHeader('X-Inspector-Version')
-            || \str_ends_with((string)$request->getUri(), 'inspector')
+            || \str_ends_with((string) $request->getUri(), 'inspector')
         ) {
             return new EventType(type: 'inspector');
         }

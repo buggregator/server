@@ -66,7 +66,7 @@ final readonly class AnyHttpRequestDump implements HandlerInterface
                 'method' => $request->getMethod(),
                 'uri' => $uri,
                 'headers' => $request->getHeaders(),
-                'body' => (string)$request->getBody(),
+                'body' => (string) $request->getBody(),
                 'query' => $request->getQueryParams(),
                 'post' => $request->getParsedBody() ?? [],
                 'cookies' => $request->getCookieParams(),

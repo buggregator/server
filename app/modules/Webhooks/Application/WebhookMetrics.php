@@ -10,8 +10,7 @@ final readonly class WebhookMetrics
 {
     public function __construct(
         private MetricsInterface $metrics,
-    ) {
-    }
+    ) {}
 
     public function called(string $event, string $url, bool $success): void
     {

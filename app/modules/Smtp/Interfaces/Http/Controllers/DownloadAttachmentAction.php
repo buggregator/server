@@ -20,8 +20,7 @@ final readonly class DownloadAttachmentAction
 {
     public function __construct(
         private StorageInterface $storage,
-    ) {
-    }
+    ) {}
 
     #[Route(route: 'smtp/<uuid>/attachment/<id>', name: 'smtp.attachment.download', group: 'api_guest')]
     public function __invoke(
@@ -50,7 +49,7 @@ final readonly class DownloadAttachmentAction
             ->withHeader('Content-Length', $file->getSize())
             ->withHeader(
                 'Content-Disposition',
-                'attachment; filename="' . \addcslashes($attachment['name'], '"') . '"'
+                'attachment; filename="' . \addcslashes($attachment['name'], '"') . '"',
             )->withBody(Stream::create($stream));
     }
 }

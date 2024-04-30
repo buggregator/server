@@ -17,8 +17,7 @@ final readonly class ConnectService implements ServiceInterface
 {
     public function __construct(
         private QueryBusInterface $bus,
-    ) {
-    }
+    ) {}
 
     /**
      * @param Request\Connect $request
@@ -36,9 +35,9 @@ final readonly class ConnectService implements ServiceInterface
         try {
             $request->respond(
                 new ConnectResponse(
-                    user: (string)$request->getAttribute('user_id'),
+                    user: (string) $request->getAttribute('user_id'),
                     channels: \array_map(
-                        static fn(EventsChannel $channel) => (string)$channel,
+                        static fn(EventsChannel $channel) => (string) $channel,
                         $channels,
                     ),
                 ),

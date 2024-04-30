@@ -25,9 +25,9 @@ final readonly class Parser
         /** @var AddressHeader|null $ccHeader */
         $ccHeader = $message->getHeader('cc');
         $ccs = $this->joinNameAndEmail($ccHeader ? $ccHeader->getAddresses() : []);
-        $subject = (string)$message->getHeaderValue('subject');
-        $html = (string)$message->getHtmlContent();
-        $text = (string)$message->getTextContent();
+        $subject = (string) $message->getHeaderValue('subject');
+        $html = (string) $message->getHtmlContent();
+        $text = (string) $message->getTextContent();
         /** @var AbstractHeader|null $replyToHeader */
         $replyToHeader = $message->getHeader('reply-to')?->getParts()[0] ?? null;
         $replyTo = $replyToHeader ? [
@@ -43,8 +43,16 @@ final readonly class Parser
 
         return new Message(
             $message->getHeader('Message - Id')?->getValue(),
-            $body, $from, $recipients, $ccs, $subject,
-            $html, $text, $replyTo, $allRecipients, $attachments,
+            $body,
+            $from,
+            $recipients,
+            $ccs,
+            $subject,
+            $html,
+            $text,
+            $replyTo,
+            $allRecipients,
+            $attachments,
         );
     }
 

@@ -13,7 +13,7 @@ final readonly class Attachment
     public function __construct(
         private ?string $filename,
         private string $content,
-        private string $type
+        private string $type,
     ) {
         $this->id = (string) Uuid::uuid4();
     }

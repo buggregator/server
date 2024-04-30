@@ -25,7 +25,7 @@ use OpenApi\Attributes as OA;
             description: 'Success',
             content: new OA\JsonContent(ref: SuccessResource::class),
         ),
-    ]
+    ],
 )]
 final readonly class ClearAction
 {

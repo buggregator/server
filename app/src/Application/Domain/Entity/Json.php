@@ -8,8 +8,7 @@ final readonly class Json implements \JsonSerializable, \Stringable
 {
     public function __construct(
         private array|\JsonSerializable $data = [],
-    ) {
-    }
+    ) {}
 
     /**
      * Create from data storage raw value

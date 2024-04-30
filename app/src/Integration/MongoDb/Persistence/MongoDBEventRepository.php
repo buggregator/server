@@ -17,19 +17,18 @@ final readonly class MongoDBEventRepository implements EventRepositoryInterface
 {
     public function __construct(
         private Collection $collection,
-    ) {
-    }
+    ) {}
 
     public function store(Event $event): bool
     {
         if ($this->findByPK($event->getUuid()) !== null) {
             $this->collection->replaceOne(
-                ['_id' => (string)$event->getUuid()],
+                ['_id' => (string) $event->getUuid()],
                 [
-                    '_id' => (string)$event->getUuid(),
+                    '_id' => (string) $event->getUuid(),
                     'type' => $event->getType(),
-                    'project' => $event->getProject() ? (string)$event->getProject() : null,
-                    'timestamp' => (string)$event->getTimestamp(),
+                    'project' => $event->getProject() ? (string) $event->getProject() : null,
+                    'timestamp' => (string) $event->getTimestamp(),
                     'payload' => $event->getPayload()->jsonSerialize(),
                 ],
             );
@@ -38,10 +37,10 @@ final readonly class MongoDBEventRepository implements EventRepositoryInterface
         }
 
         $result = $this->collection->insertOne([
-            '_id' => (string)$event->getUuid(),
+            '_id' => (string) $event->getUuid(),
             'type' => $event->getType(),
-            'project' => $event->getProject() ? (string)$event->getProject() : null,
-            'timestamp' => (string)$event->getTimestamp(),
+            'project' => $event->getProject() ? (string) $event->getProject() : null,
+            'timestamp' => (string) $event->getTimestamp(),
             'payload' => $event->getPayload()->jsonSerialize(),
         ]);
 
@@ -80,7 +79,7 @@ final readonly class MongoDBEventRepository implements EventRepositoryInterface
 
     public function findByPK(mixed $uuid): ?Event
     {
-        return $this->findOne(['_id' => (string)$uuid]);
+        return $this->findOne(['_id' => (string) $uuid]);
     }
 
     public function findOne(array $scope = []): ?Event
@@ -99,7 +98,7 @@ final readonly class MongoDBEventRepository implements EventRepositoryInterface
         return new Event(
             uuid: Uuid::fromString($document['_id']),
             type: $document['type'],
-            payload: new Json((array)$document['payload']),
+            payload: new Json((array) $document['payload']),
             timestamp: new Timestamp($document['timestamp']),
             project: $document['project'] ? new Key($document['project']) : null,
         );

@@ -17,8 +17,7 @@ final readonly class InMemoryDeliveryRepository implements DeliveryRepositoryInt
         private CacheInterface $cache,
         private int $maxDeliveries = 10,
         private int $ttl = 3600,
-    ) {
-    }
+    ) {}
 
     public function findAll(Uuid $webhookUuid): array
     {

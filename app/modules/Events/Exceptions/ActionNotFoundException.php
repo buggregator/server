@@ -6,6 +6,4 @@ namespace Modules\Events\Exceptions;
 
 use DomainException;
 
-final class ActionNotFoundException extends DomainException
-{
-}
+final class ActionNotFoundException extends DomainException {}

@@ -9,6 +9,6 @@ use Spiral\Cqrs\QueryInterface;
 final readonly class FinUserByUsername implements QueryInterface
 {
     public function __construct(
-        public string $username
+        public string $username,
     ) {}
 }

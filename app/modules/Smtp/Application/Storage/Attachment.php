@@ -12,8 +12,7 @@ final readonly class Attachment implements \JsonSerializable
         public int $size,
         public string $mime,
         public string $id,
-    ) {
-    }
+    ) {}
 
     public function jsonSerialize(): array
     {

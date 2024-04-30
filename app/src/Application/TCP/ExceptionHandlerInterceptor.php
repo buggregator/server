@@ -13,7 +13,7 @@ use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
 final readonly class ExceptionHandlerInterceptor implements CoreInterceptorInterface
 {
     public function __construct(
-        private ExceptionReporterInterface $reporter
+        private ExceptionReporterInterface $reporter,
     ) {}
 
     public function process(string $controller, string $action, array $parameters, CoreInterface $core): ResponseInterface

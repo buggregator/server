@@ -11,8 +11,7 @@ final readonly class AttachmentStorage
 {
     public function __construct(
         private StorageInterface $storage,
-    ) {
-    }
+    ) {}
 
     /**
      * @param MailAttachment[] $attachments

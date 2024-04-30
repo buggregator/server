@@ -46,7 +46,7 @@ final class WebhookHandler extends JobHandler
         while ($totalRetries > 0) {
             try {
                 $this->send($webhook, $payload);
-                $this->logger->debug('Webhook sent', ['webhook' => (string)$webhook->uuid]);
+                $this->logger->debug('Webhook sent', ['webhook' => (string) $webhook->uuid]);
                 break;
             } catch (\Throwable) {
                 \sleep($delay);
@@ -62,7 +62,7 @@ final class WebhookHandler extends JobHandler
         try {
             $headers = [
                 'Content-Type' => 'application/json',
-                'X-Webhook-Id' => (string)$webhook->uuid,
+                'X-Webhook-Id' => (string) $webhook->uuid,
                 'X-Webhook-Event' => $payload->event,
             ];
 

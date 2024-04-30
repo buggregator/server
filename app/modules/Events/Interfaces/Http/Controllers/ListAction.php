@@ -58,7 +58,7 @@ use OpenApi\Attributes as OA;
                 ref: '#/components/schemas/NotFoundError',
             ),
         ),
-    ]
+    ],
 )]
 final readonly class ListAction
 {

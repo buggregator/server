@@ -13,8 +13,7 @@ final readonly class CompositeProjectLocator implements ProjectLocatorInterface
      */
     public function __construct(
         private array $locators,
-    ) {
-    }
+    ) {}
 
     public function findAll(): iterable
     {

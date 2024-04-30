@@ -12,7 +12,7 @@ use Spiral\RoadRunner\Metrics\MetricsInterface;
 
 #[AsCommand(
     name: 'metrics:declare',
-    description: 'Declare metrics'
+    description: 'Declare metrics',
 )]
 final class DeclareCommand extends Command
 {

@@ -20,7 +20,7 @@ class ResourceCollection implements ResourceInterface
     public function __construct(
         protected readonly iterable $data,
         protected string|\Closure $resourceClass = JsonResource::class,
-        mixed ...$args
+        mixed ...$args,
     ) {
         $this->args = $args;
     }

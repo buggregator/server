@@ -14,8 +14,7 @@ final readonly class WebhookEventInterceptor implements CoreInterceptorInterface
 {
     public function __construct(
         private WebhookServiceInterface $service,
-    ) {
-    }
+    ) {}
 
     public function process(string $controller, string $action, array $parameters, CoreInterface $core): mixed
     {
@@ -28,7 +27,7 @@ final readonly class WebhookEventInterceptor implements CoreInterceptorInterface
             $webhookEvent = new WebhookEvent(
                 event: $event->event->getType() . '.received',
                 payload: [
-                    'uuid' => (string)$event->event->getUuid(),
+                    'uuid' => (string) $event->event->getUuid(),
                     'type' => $event->event->getType(),
                     'payload' => $event->event->getPayload(),
                     'timestamp' => $event->event->getTimestamp(),

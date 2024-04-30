@@ -11,6 +11,5 @@ final readonly class UrlTemplate
 {
     public function __construct(
         public string $template,
-    ) {
-    }
+    ) {}
 }

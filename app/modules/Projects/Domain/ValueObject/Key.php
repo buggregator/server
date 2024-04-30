@@ -46,8 +46,7 @@ final readonly class Key implements \JsonSerializable, \Stringable
      */
     public function __construct(
         public string $value,
-    ) {
-    }
+    ) {}
 
     /**
      * Create from data storage raw value

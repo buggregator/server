@@ -17,8 +17,7 @@ final readonly class YamlFileWebhookLocator implements WebhookLocatorInterface
         private LoggerInterface $logger,
         private WebhookFactoryInterface $webhookFactory,
         private string $directory,
-    ) {
-    }
+    ) {}
 
     public function findAll(): iterable
     {
@@ -40,8 +39,8 @@ final readonly class YamlFileWebhookLocator implements WebhookLocatorInterface
                 $webhook = $this->webhookFactory->create(
                     event: $data['webhook']['event'],
                     url: $data['webhook']['url'],
-                    verifySsl: (bool)($data['webhook']['verify_ssl'] ?? false),
-                    retryOnFailure: (bool)($data['webhook']['retry_on_failure'] ?? true),
+                    verifySsl: (bool) ($data['webhook']['verify_ssl'] ?? false),
+                    retryOnFailure: (bool) ($data['webhook']['retry_on_failure'] ?? true),
                 );
 
                 foreach ($data['webhook']['headers'] ?? [] as $name => $value) {

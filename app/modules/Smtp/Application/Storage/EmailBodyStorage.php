@@ -11,8 +11,7 @@ final readonly class EmailBodyStorage
 {
     public function __construct(
         private CacheInterface $cache,
-    ) {
-    }
+    ) {}
 
     public function getMessage(string $uuid): Message
     {

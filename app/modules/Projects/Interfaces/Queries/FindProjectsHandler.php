@@ -12,8 +12,7 @@ final readonly class FindProjectsHandler
 {
     public function __construct(
         private ProjectRepositoryInterface $projects,
-    ) {
-    }
+    ) {}
 
     #[QueryHandler]
     public function __invoke(FindAllProjects $query): iterable

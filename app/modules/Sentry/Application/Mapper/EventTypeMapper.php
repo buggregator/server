@@ -10,8 +10,7 @@ final readonly class EventTypeMapper implements EventTypeMapperInterface
 {
     public function __construct(
         public int $maxExceptions = 3,
-    ) {
-    }
+    ) {}
 
     public function toPreview(string $type, array|\JsonSerializable $payload): array|\JsonSerializable
     {

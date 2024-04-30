@@ -18,8 +18,7 @@ final readonly class CacheProjectRepository implements ProjectRepositoryInterfac
 
     public function __construct(
         private CacheInterface $cache,
-    ) {
-    }
+    ) {}
 
     public function store(Project $project): bool
     {
@@ -32,7 +31,7 @@ final readonly class CacheProjectRepository implements ProjectRepositoryInterfac
         $projects = $this->getProjects();
 
         $projects[] = [
-            'key' => (string)$project->getKey(),
+            'key' => (string) $project->getKey(),
             'name' => $project->getName(),
         ];
 
@@ -61,7 +60,7 @@ final readonly class CacheProjectRepository implements ProjectRepositoryInterfac
         $projects = $this->getProjects();
 
         foreach ($projects as $document) {
-            if ($document['key'] === (string)$key) {
+            if ($document['key'] === (string) $key) {
                 return $this->mapDocumentIntoProject($document);
             }
         }

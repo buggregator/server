@@ -14,4 +14,3 @@ final class DeliveryCollection extends ResourceCollection
         parent::__construct($data, DeliveryResource::class);
     }
 }
-

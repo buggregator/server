@@ -18,7 +18,7 @@ final class SubscribeService implements ServiceInterface
     {
         try {
             $request->respond(
-                new SubscribeResponse()
+                new SubscribeResponse(),
             );
         } catch (\Throwable $e) {
             $request->error($e->getCode(), $e->getMessage());

@@ -13,6 +13,6 @@ use Spiral\Cqrs\QueryInterface;
 final readonly class FindProjectByKey implements QueryInterface
 {
     public function __construct(
-        public string $key
+        public string $key,
     ) {}
 }

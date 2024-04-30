@@ -11,8 +11,7 @@ final readonly class PayloadParser
 {
     public function __construct(
         private GzippedStreamFactory $gzippedStreamFactory,
-    ) {
-    }
+    ) {}
 
     public function parse(ServerRequestInterface $request): array
     {
@@ -24,7 +23,7 @@ final readonly class PayloadParser
                 return \iterator_to_array($this->gzippedStreamFactory->createFromRequest($request)->getPayload());
             }
 
-            $payloads = \explode("\n", (string)$request->getBody());
+            $payloads = \explode("\n", (string) $request->getBody());
 
             return \array_map(
                 static fn(string $payload): array => \json_decode($payload, true),

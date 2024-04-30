@@ -9,7 +9,7 @@ use Spiral\Boot\DirectoriesInterface;
 final readonly class AppDirectories
 {
     public function __construct(
-        private DirectoriesInterface $directories
+        private DirectoriesInterface $directories,
     ) {}
 
     /**

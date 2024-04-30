@@ -11,9 +11,8 @@ use Spiral\Cqrs\Attribute\QueryHandler;
 final class CountEventsHandler extends EventsHandler
 {
     public function __construct(
-        private readonly EventRepositoryInterface $events
-    ) {
-    }
+        private readonly EventRepositoryInterface $events,
+    ) {}
 
     #[QueryHandler]
     public function __invoke(CountEvents $query): int

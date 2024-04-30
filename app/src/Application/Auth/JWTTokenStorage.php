@@ -19,7 +19,7 @@ final class JWTTokenStorage implements TokenStorageInterface
         private readonly string $secret,
         private readonly string $algorithm = 'HS256',
         private readonly string $expiresAt = '+30 days',
-        callable $time = null
+        callable $time = null,
     ) {
         $this->time = $time ?? static fn(string $offset): \DateTimeImmutable => new \DateTimeImmutable($offset);
     }
@@ -47,7 +47,7 @@ final class JWTTokenStorage implements TokenStorageInterface
             $token,
             (array) $token['data'],
             (new \DateTimeImmutable())->setTimestamp($token['iat']),
-            (new \DateTimeImmutable())->setTimestamp($token['exp'])
+            (new \DateTimeImmutable())->setTimestamp($token['exp']),
         );
     }
 
@@ -66,7 +66,7 @@ final class JWTTokenStorage implements TokenStorageInterface
             $token,
             $payload,
             $issuedAt,
-            $expiresAt
+            $expiresAt,
         );
     }
 

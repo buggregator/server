@@ -11,6 +11,5 @@ final readonly class AppVersion
 {
     public function __construct(
         public string $version,
-    ) {
-    }
+    ) {}
 }

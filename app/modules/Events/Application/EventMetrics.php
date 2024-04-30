@@ -10,8 +10,7 @@ final readonly class EventMetrics
 {
     public function __construct(
         private MetricsInterface $metrics,
-    ) {
-    }
+    ) {}
 
     public function newEvent(string $type): void
     {

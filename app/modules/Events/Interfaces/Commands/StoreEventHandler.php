@@ -23,8 +23,7 @@ final readonly class StoreEventHandler
         private EventRepositoryInterface $events,
         private QueryBusInterface $queryBus,
         private EventMetrics $metrics,
-    ) {
-    }
+    ) {}
 
     #[CommandHandler]
     public function handle(HandleReceivedEvent $command): void

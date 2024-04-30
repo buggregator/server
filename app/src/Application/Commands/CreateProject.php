@@ -11,6 +11,5 @@ final readonly class CreateProject implements CommandInterface
     public function __construct(
         public string $key,
         public string $name,
-    ) {
-    }
+    ) {}
 }

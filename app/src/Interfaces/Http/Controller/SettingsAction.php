@@ -20,12 +20,11 @@ final class SettingsAction
         AuthSettings $settings,
         UrlTemplate $ideUrl,
         AppVersion $appVersion,
-    ): ResourceInterface
-    {
+    ): ResourceInterface {
         return new JsonResource([
             'auth' => [
                 'enabled' => $settings->enabled,
-                'login_url' => (string)$settings->loginUrl,
+                'login_url' => (string) $settings->loginUrl,
             ],
             'ide' => [
                 'url_template' => $ideUrl->template,

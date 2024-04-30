@@ -21,8 +21,7 @@ final readonly class JsEventHandler implements HandlerInterface
         private EventHandlerInterface $handler,
         private CommandBusInterface $commands,
         private SecretKeyValidator $secretKeyValidator,
-    ) {
-    }
+    ) {}
 
     public function priority(): int
     {
@@ -42,7 +41,7 @@ final readonly class JsEventHandler implements HandlerInterface
 
         $payloads = \array_map(
             static fn(string $payload): array => \json_decode($payload, true, 512, \JSON_THROW_ON_ERROR),
-            \explode("\n", (string)$request->getBody()),
+            \explode("\n", (string) $request->getBody()),
         );
 
         if (!isset($payloads[1]['type'])) {
