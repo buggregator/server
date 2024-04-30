@@ -9,6 +9,7 @@ use Tests\TestCase;
 
 final class RegisterModulesTest extends TestCase
 {
+    #[Env('PERSISTENCE_DRIVER', 'memory')]
     public function testCommand(): void
     {
         $this->spyConsole(function () {
