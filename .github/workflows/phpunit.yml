@@ -22,13 +22,27 @@ jobs:
         env:
           POSTGRES_PASSWORD: secret
           POSTGRES_DB: buggregator
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: secret
+          MYSQL_DATABASE: buggregator
         ports:
-          - 5432:5432
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -ppass"
+          --health-interval 10s
+          --health-start-period 10s
+          --health-timeout 5s
+          --health-retries 10
 
       mongodb:
         image: mongo
@@ -38,11 +52,11 @@ jobs:
           MONGO_INITDB_DATABASE: buggregator
         ports:
           - 27017:27017
-        options: >-
-          --health-cmd mongo
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+#        options: >-
+#          --health-cmd mongo
+#          --health-interval 10s
+#          --health-timeout 5s
+#          --health-retries 5
 
     steps:
       # General Steps
@@ -108,7 +122,20 @@ jobs:
           DB_DRIVER: pgsql
           DB_HOST: postgres
           DB_PORT: 5432
+          DB_DATABASE: buggregator
           DB_USERNAME: postgres
+          DB_PASSWORD: secret
+
+      # Execution mysql
+      - name: Execute Tests on MySQL
+        run: vendor/bin/phpunit
+        env:
+          PERSISTENCE_DRIVER: db
+          DB_DRIVER: mysql
+          DB_HOST: postgres
+          DB_PORT: 3306
+          DB_DATABASE: buggregator
+          DB_USERNAME: root
           DB_PASSWORD: secret
 
       # Execution mongo
