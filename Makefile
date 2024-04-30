@@ -1,4 +1,20 @@
 build:
+	if [ ! -d "runtime" ]; then \
+		mkdir runtime/configs -p; \
+		chmod 0777 -R runtime; \
+	fi
+	chmod +x bin/get-binaries.sh; \
+	if [ ! -f "bin/centrifugo" ]; then \
+		cd bin; \
+		./get-binaries.sh; \
+		cd ../; \
+	fi
+	if [ ! -f "rr" ]; then \
+		vendor/bin/rr get;\
+	fi
+	if [ ! -d "vendor" ]; then \
+	    composer i --ignore-platform-reqs; \
+	fi
 	docker compose up --no-start;
 
 start:

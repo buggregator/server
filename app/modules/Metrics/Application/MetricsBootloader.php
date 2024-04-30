@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Metrics\Application;
 
-use App\Application\Mode;
+use App\Interfaces\Console\RegisterModulesCommand;
 use Cycle\ORM\FactoryInterface;
 use Modules\Metrics\Infrastructure\RoadRunner\Collector;
 use Spiral\Boot\Bootloader\Bootloader;
@@ -54,7 +54,8 @@ final class MetricsBootloader extends Bootloader
 
     public function init(ConsoleBootloader $console): void
     {
-        $console->addConfigureSequence(
+        $console->addSequence(
+            name: RegisterModulesCommand::SEQUENCE,
             sequence: 'metrics:declare',
             header: 'Declare metrics',
         );

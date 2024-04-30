@@ -9,10 +9,8 @@ metrics:
 server:
   command: 'php app.php'
   relay: pipes
-  env:
-    - MODE: roadrunner
   on_init:
-    command: "php app.php configure"
+    command: "php app.php register:modules"
 
 logs:
   level: ${RR_LOG_LEVEL:-info}

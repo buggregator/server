@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Webhooks\Application;
 
-use App\Application\Mode;
+use App\Interfaces\Console\RegisterModulesCommand;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use Modules\Metrics\Application\CollectorRegistryInterface;
@@ -92,9 +92,9 @@ final class WebhooksBootloader extends Bootloader
     public function init(
         ConsoleBootloader $console,
         CollectorRegistryInterface $collectorRegistry,
-        Mode $mode,
     ): void {
-        $console->addConfigureSequence(
+        $console->addSequence(
+            name: RegisterModulesCommand::SEQUENCE,
             sequence: 'webhooks:register',
             header: 'Register webhooks from configuration',
         );
