@@ -14,15 +14,16 @@ jobs:
         php: [ '8.3' ]
         os: [ 'ubuntu-latest' ]
         stability: [ 'prefer-stable' ]
+        pgsql-version: [ '14','15','16' ]
 
     services:
       postgres:
-        image: postgres
+        image: postgres:${{ matrix.pgsql-version }}
         env:
           POSTGRES_PASSWORD: secret
           POSTGRES_DB: buggregator
         ports:
-          - 5432:5432
+          - 15432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -79,7 +80,7 @@ jobs:
           PERSISTENCE_DRIVER: db
           DB_DRIVER: pgsql
           DB_HOST: 127.0.0.1
-          DB_PORT: 5432
+          DB_PORT: 15432
           DB_DATABASE: buggregator
           DB_USERNAME: postgres
           DB_PASSWORD: secret
