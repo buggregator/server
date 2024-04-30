@@ -109,7 +109,7 @@ jobs:
           DB_DRIVER: sqlite
 
       # Execution in memory
-      - name: Execute Tests on SQLite
+      - name: Execute Tests In memory
         run: vendor/bin/phpunit
         env:
           PERSISTENCE_DRIVER: memory
@@ -120,7 +120,7 @@ jobs:
         env:
           PERSISTENCE_DRIVER: db
           DB_DRIVER: pgsql
-          DB_HOST: postgres
+          DB_HOST: 127.0.0.1
           DB_PORT: 5432
           DB_DATABASE: buggregator
           DB_USERNAME: postgres
@@ -132,7 +132,7 @@ jobs:
         env:
           PERSISTENCE_DRIVER: db
           DB_DRIVER: mysql
-          DB_HOST: postgres
+          DB_HOST: 127.0.0.1
           DB_PORT: 3306
           DB_DATABASE: buggregator
           DB_USERNAME: root
@@ -143,4 +143,4 @@ jobs:
         run: vendor/bin/phpunit
         env:
           PERSISTENCE_DRIVER: mongodb
-          MONGODB_CONNECTION: mongodb://mongo:secret@mongodb:27017
+          MONGODB_CONNECTION: mongodb://mongo:secret@127.0.0.1:27017
