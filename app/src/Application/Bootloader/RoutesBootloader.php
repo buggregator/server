@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Application\Bootloader;
 
 use App\Application\Auth\AuthSettings;
+use App\Application\HTTP\Middleware\ApiAuthMiddleware;
 use App\Application\HTTP\Middleware\DetectEventTypeMiddleware;
 use App\Application\HTTP\Middleware\JsonPayloadMiddleware;
 use App\Interfaces\Http\EventHandlerAction;
-use Spiral\Auth\Middleware\AuthMiddleware;
 use Spiral\Auth\Middleware\Firewall\ExceptionFirewall;
 use Spiral\Bootloader\Http\RoutesBootloader as BaseRoutesBootloader;
 use Spiral\Core\Container;
@@ -56,7 +56,7 @@ final class RoutesBootloader extends BaseRoutesBootloader
     {
         return [
             'auth' => [
-                AuthMiddleware::class,
+                ApiAuthMiddleware::class,
             ],
             'guest' => [
                 'middleware:auth',

@@ -17,7 +17,7 @@ abstract class RayTestCase extends ControllerTestCase
     {
         parent::setUp();
 
-        $this->client = new FakeClient(new HttpFaker($this->fakeHttp()));
+        $this->client = new FakeClient(new HttpFaker($this->fakeHttp(), $this));
     }
 
     protected function buildRay(): Ray

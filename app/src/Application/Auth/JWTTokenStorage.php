@@ -51,7 +51,7 @@ final class JWTTokenStorage implements TokenStorageInterface
         );
     }
 
-    public function create(array $payload, \DateTimeInterface $expiresAt = null): TokenInterface
+    public function create(array|\JsonSerializable $payload, \DateTimeInterface $expiresAt = null): TokenInterface
     {
         $issuedAt = ($this->time)('now');
         $expiresAt = $expiresAt ?? ($this->time)($this->expiresAt);

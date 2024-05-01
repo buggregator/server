@@ -5,8 +5,14 @@ declare(strict_types=1);
 namespace Tests\App\Http;
 
 use App\Application\Domain\ValueObjects\Uuid;
+use App\Application\OAuth\User;
+use App\Application\Security\Permission;
 use Carbon\Carbon;
+use Database\Factory\UserFactory;
+use Database\Factory\UserRoleFactory;
 use Ramsey\Uuid\UuidInterface;
+use Spiral\Auth\TokenStorageInterface;
+use Spiral\Auth\TokenStorageProviderInterface;
 use Spiral\Testing\Http\FakeHttp;
 use Spiral\Testing\Http\TestResponse;
 use Tests\TestCase;
@@ -18,8 +24,46 @@ final class HttpFaker
 {
     private bool $dumpResponse = false;
 
-    public function __construct(private FakeHttp $http)
+    public function __construct(
+        private FakeHttp $http,
+        private TestCase $tests,
+    ) {}
+
+    public function authenticate(
+        ?User $user = null,
+    ): self {
+        $user ??= new User(
+            provider: 'fake',
+            username: 'johndoe',
+            avatar: 'https://example.com/avatar',
+            email: 'user',
+        );
+
+        $hash = \Ramsey\Uuid\Uuid::uuid7()->toString();
+
+        $tokenStorageProvider = $this->tests->mockContainer(TokenStorageProviderInterface::class);
+        $tokenStorageProvider->shouldReceive('getStorage')->once()->andReturn(
+            $tokenStorage = \Mockery::mock(TokenStorageInterface::class),
+        );
+        $tokenStorage->shouldReceive('load')->once()->with($hash)->andReturn(
+            $token = \Mockery::mock(\Spiral\Auth\TokenInterface::class),
+        );
+        $token->shouldReceive('getID')->andReturn($hash);
+        $token->shouldReceive('getExpiresAt')->andReturnNull();
+        $token->shouldReceive('getPayload')->andReturn($user->jsonSerialize());
+
+        $self = clone $this;
+        $self->http = $this->http->withHeader('x-auth-token', $hash);
+
+        return $self;
+    }
+
+    public function withWrongToken(string $token = 'auth-token'): self
     {
+        $self = clone $this;
+        $self->http = $this->http->withHeader('x-auth-token', $token);
+
+        return $self;
     }
 
     public function showEvent(Uuid $uuid): ResponseAssertions
@@ -70,6 +114,10 @@ final class HttpFaker
             return $this;
         }
 
+        if ($name === 'getCookies') {
+            return $this->getCookies();
+        }
+
         return $this->makeResponse(
             $this->http->$name(...$arguments),
         );
@@ -78,7 +126,7 @@ final class HttpFaker
     private function makeResponse(TestResponse $response): ResponseAssertions
     {
         if ($this->dumpResponse) {
-            $body = (string)$response;
+            $body = (string) $response;
 
             try {
                 $body = \json_decode($body, true, 512, JSON_THROW_ON_ERROR);

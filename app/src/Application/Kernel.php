@@ -11,6 +11,8 @@ use App\Application\Bootloader\BroadcastingBootloader;
 use App\Application\Bootloader\HttpHandlerBootloader;
 use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
+use App\Integration\Auth0\Auth0Bootloader;
+use App\Integration\Kinde\KindeBootloader;
 use Modules\Events\Application\EventsBootloader;
 use Modules\Inspector\Application\InspectorBootloader;
 use Modules\Metrics\Application\MetricsBootloader;
@@ -83,6 +85,10 @@ class Kernel extends \Spiral\Framework\Kernel
             SerializerBootloader::class,
             BroadcastingBootloader::class,
 
+            // Auth
+            Auth0Bootloader::class,
+            KindeBootloader::class,
+
             // Modules
             HttpHandlerBootloader::class,
             AppBootloader::class,
@@ -95,7 +101,6 @@ class Kernel extends \Spiral\Framework\Kernel
             ProfilerBootloader::class,
             MongoDBBootloader::class,
             PersistenceBootloader::class,
-            AuthBootloader::class,
             WebhooksBootloader::class,
             ProjectBootloader::class,
             EventsBootloader::class,

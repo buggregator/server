@@ -15,6 +15,6 @@ abstract class ControllerTestCase extends DatabaseTestCase
     {
         parent::setUp();
 
-        $this->http = new HttpFaker($this->fakeHttp());
+        $this->http = new HttpFaker($this->fakeHttp(), $this);
     }
 }
