@@ -7,6 +7,7 @@ namespace Tests\App\Http;
 use App\Application\HTTP\Response\ResourceInterface;
 use App\Application\HTTP\Response\SuccessResource;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\UriInterface;
 use Spiral\Testing\Http\TestResponse;
 
 /**
@@ -16,12 +17,11 @@ final readonly class ResponseAssertions
 {
     public function __construct(
         private TestResponse $response,
-    ) {
-    }
+    ) {}
 
     public function dump(): self
     {
-        dump((string)$this->response);
+        dump((string) $this->response);
 
         return $this;
     }
@@ -43,7 +43,7 @@ final readonly class ResponseAssertions
         $needle = \json_encode($resource);
         TestCase::assertSame(
             $needle,
-            (string)$this->response,
+            (string) $this->response,
             \sprintf('Response is not same with [%s]', $needle),
         );
 
@@ -77,7 +77,7 @@ final readonly class ResponseAssertions
     public function assertCollectionHasResource(ResourceInterface $resource): self
     {
         $needle = \json_encode($resource);
-        $responseData = \json_decode((string)$this->response, true);
+        $responseData = \json_decode((string) $this->response, true);
 
         foreach ($responseData['data'] as $item) {
             if ($needle === \json_encode($item)) {
@@ -93,7 +93,7 @@ final readonly class ResponseAssertions
     public function assertCollectionMissingResource(ResourceInterface $resource): self
     {
         $needle = \json_encode($resource);
-        $responseData = \json_decode((string)$this->response, true);
+        $responseData = \json_decode((string) $this->response, true);
 
         foreach ($responseData['data'] as $item) {
             if ($needle === \json_encode($item)) {
@@ -111,7 +111,7 @@ final readonly class ResponseAssertions
         $needle = \json_encode($data);
         TestCase::assertSame(
             $needle,
-            (string)$this->response,
+            (string) $this->response,
             \sprintf('Response is not same with [%s]', $needle),
         );
 
@@ -121,7 +121,7 @@ final readonly class ResponseAssertions
     public function assertJsonResponseContains(array $data): self
     {
         $needle = \json_encode($data);
-        $responseData = \json_decode((string)$this->response, true);
+        $responseData = \json_decode((string) $this->response, true);
 
         $intersection = \array_intersect_key($responseData, $data);
 
@@ -144,7 +144,7 @@ final readonly class ResponseAssertions
 
     public function assertValidationErrors(array $errors = []): self
     {
-        $responseData = \json_decode((string)$this->response, true);
+        $responseData = \json_decode((string) $this->response, true);
 
         if (!\array_is_list($errors)) {
             foreach ($errors as $key => $value) {
@@ -183,15 +183,29 @@ final readonly class ResponseAssertions
         return $this->assertOk()->assertResource(new SuccessResource($status));
     }
 
-    public function assertRedirect(int $status = 302, ?string $uri = null): self
+    public function assertRedirect(int $status = 302, string|UriInterface|\Closure $uri = null): self
     {
         $this->assertStatus($status);
 
         if ($uri !== null) {
-            $this->assertHasHeader('Location', $uri);
+            if ($uri instanceof \Closure) {
+                TestCase::assertTrue(
+                    $uri(
+                        $this->response->getOriginalResponse()->getHeaderLine('Location'),
+                    ),
+                    'Location header does not match',
+                );
+            } elseif ($uri instanceof UriInterface) {
+                $this->assertHasHeader('Location', (string) $uri);
+            }
         }
 
         return $this;
+    }
+
+    public function getCookies(): array
+    {
+        return $this->response->getCookies();
     }
 
     public function __call(string $name, array $arguments): self

@@ -8,42 +8,31 @@ use App\Application\Auth\AuthSettings;
 use App\Application\Auth\JWTTokenStorage;
 use App\Application\Auth\SuccessRedirect;
 use App\Application\OAuth\ActorProvider;
-use App\Application\OAuth\SessionStore;
+use App\Application\OAuth\AuthProviderInterface;
+use App\Application\OAuth\AuthProviderRegistryInterface;
+use App\Application\OAuth\AuthProviderService;
 use Psr\Http\Message\UriFactoryInterface;
 use Spiral\Boot\Bootloader\Bootloader;
-
-use Auth0\SDK\Auth0;
-use Auth0\SDK\Configuration\SdkConfiguration;
 use Spiral\Boot\EnvironmentInterface;
 use Spiral\Bootloader\Auth\HttpAuthBootloader;
 use Spiral\Core\Container\Autowire;
 use Spiral\Http\ResponseWrapper;
-use Spiral\Session\SessionScope;
 
 final class AuthBootloader extends Bootloader
 {
-    public function defineBindings(): array
-    {
-        return [
-            Auth0::class => static fn(SdkConfiguration $config, SessionScope $session) => new Auth0(
-                $config->setTransientStorage(new SessionStore($session)),
-            ),
-
-            SdkConfiguration::class => static fn(EnvironmentInterface $env) => new SdkConfiguration(
-                strategy: $env->get('AUTH_STRATEGY', SdkConfiguration::STRATEGY_REGULAR),
-                domain: $env->get('AUTH_PROVIDER_URL'),
-                clientId: $env->get('AUTH_CLIENT_ID'),
-                redirectUri: $env->get('AUTH_CALLBACK_URL'),
-                clientSecret: $env->get('AUTH_CLIENT_SECRET'),
-                scope: \explode(',', $env->get('AUTH_SCOPES', 'openid,profile,email')),
-                cookieSecret: $env->get('AUTH_COOKIE_SECRET', $env->get('ENCRYPTER_KEY') ?? 'secret'),
-            ),
-        ];
-    }
-
     public function defineSingletons(): array
     {
         return [
+            AuthProviderInterface::class => static fn(
+                EnvironmentInterface $env,
+                AuthProviderService $service,
+            ) => $service->get(
+                name: $env->get('AUTH_PROVIDER', 'auth0'),
+            ),
+
+            AuthProviderService::class => AuthProviderService::class,
+            AuthProviderRegistryInterface::class => AuthProviderService::class,
+
             AuthSettings::class => static fn(
                 EnvironmentInterface $env,
                 UriFactoryInterface $factory,

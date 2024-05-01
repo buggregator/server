@@ -2,16 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Application\OAuth;
+namespace App\Integration\Auth0;
 
 use Auth0\SDK\Contract\StoreInterface;
-use Spiral\Session\SessionScope;
+use Spiral\Session\SessionSectionInterface;
 
 final readonly class SessionStore implements StoreInterface
 {
     public function __construct(
-        private SessionScope $session,
-        private string $sessionPrefix = 'auth0',
+        private SessionSectionInterface $session,
     ) {}
 
     /**
@@ -33,7 +32,7 @@ final readonly class SessionStore implements StoreInterface
     public function delete(
         string $key,
     ): void {
-        $this->session->getSection($this->sessionPrefix)->delete($key);
+        $this->session->delete($key);
     }
 
     /**
@@ -49,7 +48,7 @@ final readonly class SessionStore implements StoreInterface
         string $key,
         $default = null,
     ) {
-        return $this->session->getSection($this->sessionPrefix)->get($key, $default);
+        return $this->session->get($key, $default);
     }
 
     /**
@@ -57,7 +56,7 @@ final readonly class SessionStore implements StoreInterface
      */
     public function purge(): void
     {
-        $this->session->getSection($this->sessionPrefix)->clear();
+        $this->session->clear();
     }
 
     /**
@@ -70,6 +69,6 @@ final readonly class SessionStore implements StoreInterface
         string $key,
         $value,
     ): void {
-        $this->session->getSection($this->sessionPrefix)->set($key, $value);
+        $this->session->set($key, $value);
     }
 }
