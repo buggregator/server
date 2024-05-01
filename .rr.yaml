@@ -41,30 +41,24 @@ tcp:
       addr: 127.0.0.1:1025
 
 kv:
-  events:
-    driver: memory
-    config: {}
   local:
     driver: memory
-    config: {}
+    config: { }
 
 jobs:
-  consume: []
+  consume: [ ]
 
 service:
-#  frontend:
-#    service_name_in_log: true
-#    remain_after_exit: true
-#    restart_sec: 1
-#    command: "npm run dev"
-#    env:
-#      VITE_EVENTS_WS_API: ws://127.0.0.1:8089/connection/websocket
-#      VITE_EVENTS_REST_API: http://127.0.0.1:8082
   centrifuge:
     service_name_in_log: true
     remain_after_exit: true
     restart_sec: 1
     command: "./bin/centrifugo --config=centrifugo.json"
+  dolt:
+    service_name_in_log: true
+    remain_after_exit: true
+    restart_sec: 1
+    command: "./bin/dolt sql-server --data-dir=.db"
 
 centrifuge:
   proxy_address: "tcp://127.0.0.1:10001"

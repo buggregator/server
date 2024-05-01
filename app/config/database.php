@@ -14,7 +14,7 @@ return [
 
     'databases' => [
         'default' => [
-            'driver' => env('DB_DRIVER', 'pgsql'),
+            'driver' => env('DB_DRIVER', 'mysql'),
         ],
     ],
 
@@ -52,7 +52,7 @@ return [
         // Only for testing purposes
         // SQLite does not support multiple connections in the same time
         'sqlite' => new Config\SQLiteDriverConfig(
-            connection: new Config\SQLite\MemoryConnectionConfig(),
+            connection: new Config\SQLite\FileConnectionConfig(database: directory('runtime') . 'test.db'),
             options: [
                 'logQueryParameters' => env('DB_LOG_QUERY_PARAMETERS', false),
             ],

@@ -43,9 +43,6 @@ tcp:
     num_workers: ${RR_TCP_NUM_WORKERS}
 
 kv:
-  events:
-    driver: memory
-    config: { }
   local:
     driver: memory
     config: { }
@@ -64,6 +61,11 @@ service:
     remain_after_exit: true
     restart_sec: 1
     command: "./bin/centrifugo --config=centrifugo.json"
+  dolt:
+    service_name_in_log: true
+    remain_after_exit: true
+    restart_sec: 1
+    command: "./bin/dolt sql-server --data-dir=.db"
 
 centrifuge:
   proxy_address: ${RR_CENTRIFUGE_PROXY_ADDRESS}

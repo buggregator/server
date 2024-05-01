@@ -40,9 +40,6 @@ abstract class DatabaseTestCase extends TestCase
                 /** @var CollectionInfo $collection */
                 $mongoDb->selectCollection($collection->getName())->drop();
             }
-        } elseif ($this->dbDriver === DriverEnum::InMemory) {
-            $this->get(CacheStorageProviderInterface::class)->storage('events')->clear();
-            $this->get(CacheStorageProviderInterface::class)->storage('projects')->clear();
         }
     }
 

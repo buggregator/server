@@ -37,6 +37,7 @@ final class SymfonyV7Test extends TCPTestCase
     public function testSendObjectDump(): void
     {
         $generator = $this->mockContainer(DumpIdGeneratorInterface::class);
+
         $generator->shouldReceive('generate')->andReturn('sf-dump-730421088');
         $object = (object)['type' => 'string', 'value' => 'foo'];
         $message = $this->buildPayload($object);
@@ -125,6 +126,7 @@ HTML,
     {
         $cloner = new VarCloner();
         $cloner->addCasters(ReflectionCaster::UNSET_CLOSURE_FILE_INFO);
+
         $data = $cloner->cloneVar($var);
 
         if ($project !== null) {
