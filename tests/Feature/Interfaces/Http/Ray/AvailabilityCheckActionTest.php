@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Interfaces\Http\Ray;
 
-use Tests\Feature\Interfaces\Http\ControllerTestCase;
-
-final class AvailabilityCheckActionTest extends ControllerTestCase
+final class AvailabilityCheckActionTest extends RayTestCase
 {
     public function testCheck(): void
     {

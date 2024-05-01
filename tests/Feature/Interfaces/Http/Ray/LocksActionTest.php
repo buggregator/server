@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Interfaces\Http\Ray;
 
 use Psr\SimpleCache\CacheInterface;
-use Tests\Feature\Interfaces\Http\ControllerTestCase;
 
-final class LocksActionTest extends ControllerTestCase
+final class LocksActionTest extends RayTestCase
 {
     public function testCheck(): void
     {
