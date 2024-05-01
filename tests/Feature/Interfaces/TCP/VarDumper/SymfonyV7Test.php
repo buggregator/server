@@ -37,6 +37,7 @@ final class SymfonyV7Test extends TCPTestCase
     public function testSendObjectDump(): void
     {
         $generator = $this->mockContainer(DumpIdGeneratorInterface::class);
+
         $generator->shouldReceive('generate')->andReturn('sf-dump-730421088');
         $object = (object)['type' => 'string', 'value' => 'foo'];
         $message = $this->buildPayload($object);
@@ -74,7 +75,7 @@ HTML,
     {
         $message = $this->buildPayload(var: 'foo', context: ['language' => 'php']);
         $this->handleVarDumperRequest($message);
-        dump($message);
+
         $this->broadcastig->assertPushed(new EventsChannel(), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('var-dump', $data['data']['type']);
