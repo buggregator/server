@@ -9,14 +9,12 @@ use Spiral\Boot\Injector\ProvideFrom;
 #[ProvideFrom('detect')]
 enum DriverEnum implements InjectableEnumInterface
 {
-    case InMemory;
     case Database;
     case MongoDb;
 
     public static function detect(EnvironmentInterface $env): self
     {
-        return match ($env->get('PERSISTENCE_DRIVER', 'memory')) {
-            'cache', 'memory', 'in-memory' => self::InMemory,
+        return match ($env->get('PERSISTENCE_DRIVER', 'db')) {
             'cycle', 'database', 'db' => self::Database,
             'mongodb', 'mongo' => self::MongoDb,
         };

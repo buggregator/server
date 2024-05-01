@@ -9,18 +9,6 @@ use Tests\TestCase;
 
 final class RegisterModulesTest extends TestCase
 {
-    #[Env('PERSISTENCE_DRIVER', 'memory')]
-    public function testCommand(): void
-    {
-        $this->spyConsole(function () {
-            $this->getConsole()->run('register:modules');
-        }, ['register:modules'])
-            ->assertCommandNotRun('migrate')
-            ->assertCommandRun('webhooks:register')
-            ->assertCommandRun('metrics:declare')
-            ->assertCommandRun('projects:register');
-    }
-
     #[Env('PERSISTENCE_DRIVER', 'mongodb')]
     public function testCommandWithMongoDriver(): void
     {

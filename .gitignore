@@ -10,3 +10,5 @@ protoc-gen-php-grpc*
 .deptrac.cache
 .phpunit.cache
 .cache
+.db
+.sqlhistory

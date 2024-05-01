@@ -13,7 +13,7 @@
         <env name="DB_LOG_QUERY_PARAMETERS" value="true"/>
         <env name="TOKENIZER_CACHE_TARGETS" value="true"/>
         <env name="APP_ENV" value="testing"/>
-        <env name="PERSISTENCE_DRIVER" value="memory"/>
+        <env name="PERSISTENCE_DRIVER" value="db"/>
         <env name="DB_DRIVER" value="sqlite"/>
         <env name="MONOLOG_DEFAULT_CHANNEL" value="stdout"/>
     </php>

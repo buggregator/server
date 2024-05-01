@@ -74,7 +74,7 @@ HTML,
     {
         $message = $this->buildPayload(var: 'foo', context: ['language' => 'php']);
         $this->handleVarDumperRequest($message);
-
+        dump($message);
         $this->broadcastig->assertPushed(new EventsChannel(), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('var-dump', $data['data']['type']);
@@ -125,6 +125,7 @@ HTML,
     {
         $cloner = new VarCloner();
         $cloner->addCasters(ReflectionCaster::UNSET_CLOSURE_FILE_INFO);
+
         $data = $cloner->cloneVar($var);
 
         if ($project !== null) {

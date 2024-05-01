@@ -1,9 +1,12 @@
 ARG ROAD_RUNNER_IMAGE=2023.3.7
 ARG CENTRIFUGO_IMAGE=v4
+ARG DOLT_IMAGE=latest
 ARG FRONTEND_IMAGE_TAG=latest
 
 # Build centrifugo binary
 FROM centrifugo/centrifugo:$CENTRIFUGO_IMAGE as centrifugo
+# Build dolt binary
+FROM dolthub/dolt:$DOLT_IMAGE as dolt
 # Build rr binary
 FROM ghcr.io/roadrunner-server/roadrunner:$ROAD_RUNNER_IMAGE as rr
 # Build JS files
@@ -22,6 +25,7 @@ COPY --from=git /app /app
 COPY --from=frontend /app /app/frontend
 COPY --from=rr /usr/bin/rr /app
 COPY --from=centrifugo /usr/local/bin/centrifugo /app/bin
+COPY --from=dolt /usr/local/bin/dolt /app/bin
 
 ARG APP_VERSION=v1.0
 ENV COMPOSER_ALLOW_SUPERUSER=1
@@ -34,6 +38,9 @@ RUN composer install --no-dev
 WORKDIR /app
 RUN mkdir /app/runtime/configs -p
 RUN php app.php configure
+
+RUN mkdir .db
+RUN bin/dolt --data-dir=.db sql -q "create database buggregator;"
 
 EXPOSE 8082/tcp
 

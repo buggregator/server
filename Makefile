@@ -15,6 +15,12 @@ build:
 	if [ ! -d "vendor" ]; then \
 	    composer i --ignore-platform-reqs; \
 	fi
+	if [ ! -d ".db" ]; then \
+		mkdir .db; \
+		chmod 0777 -R .db; \
+		bin/dolt --data-dir=.db sql -q "create database buggregator;"; \
+	fi
+
 	docker compose up --no-start;
 
 start:
@@ -39,6 +45,9 @@ log-tail:
 
 pull-latest:
 	docker compose pull;
+
+build-server:
+	docker compose build buggregator-server --no-cache;
 
 # =========================
 
