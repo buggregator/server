@@ -61,6 +61,7 @@
         "qossmic/deptrac-shim": "^1.0",
         "rector/rector": "^1.0",
         "sentry/sentry": "^4.7",
+        "spatie/ray": "^1.41",
         "spiral-packages/database-seeder": "^3.1",
         "spiral/roadrunner-cli": "^2.6",
         "spiral/testing": "^2.6",

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ray\Application\Handlers;
 
+use Modules\Ray\Application\DumpIdParser;
 use Modules\Sentry\Application\EventHandlerInterface;
 
 final class RemoveSfDumpScriptHandler implements EventHandlerInterface
@@ -19,7 +20,7 @@ final class RemoveSfDumpScriptHandler implements EventHandlerInterface
                 foreach ($payload['content'] as $k => $value) {
                     if ($k === 'values') {
                         foreach ($value as $j => $val) {
-                            if (!\str_contains($val, 'Sfdump')) {
+                            if (!\is_string($val) || !\str_contains($val, 'Sfdump')) {
                                 continue;
                             }
                             $event['payloads'][$i]['content'][$k][$j] = $this->cleanHtml($val);
@@ -27,7 +28,7 @@ final class RemoveSfDumpScriptHandler implements EventHandlerInterface
                         continue;
                     }
 
-                    if (\is_array($value) || !\str_contains($value, 'Sfdump')) {
+                    if (\is_array($value) || !\is_string($value) || !\str_contains($value, 'Sfdump')) {
                         continue;
                     }
                     $event['payloads'][$i]['content'][$k] = $this->cleanHtml($value);
@@ -40,12 +41,8 @@ final class RemoveSfDumpScriptHandler implements EventHandlerInterface
 
     private function cleanHtml(string $html): string
     {
-        // Regex to find all instances of sf-dump- followed by digits
-        $pattern = '/sf-dump-\d+/';
-        // Perform the search
-        \preg_match($pattern, $html, $matches);
+        $sfDumpId = DumpIdParser::find($html);
 
-        $sfDumpId = $matches[0] ?? null;
         // Remove everything except <pre> tags and their content
         return \preg_replace(
             '/(?s)(.*?)(<pre[^>]*>.*?<\/pre>)(.*)|(?s)(.*)/',
