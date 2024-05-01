@@ -26,7 +26,7 @@ final class EventPreviewResource extends JsonResource
 {
     public function __construct(
         Event $data,
-        private readonly ?EventTypeMapperInterface $mapper = null,
+        private readonly EventTypeMapperInterface $mapper,
     ) {
         parent::__construct($data);
     }
@@ -37,10 +37,10 @@ final class EventPreviewResource extends JsonResource
             'uuid' => (string) $this->data->getUuid(),
             'project' => $this->data->getProject(),
             'type' => $this->data->getType(),
-            'payload' => $this->mapper?->toPreview(
+            'payload' => $this->mapper->toPreview(
                 type: $this->data->getType(),
                 payload: $this->data->getPayload(),
-            ) ?? $this->data->getPayload(),
+            ),
             'timestamp' => $this->data->getTimestamp(),
         ];
     }

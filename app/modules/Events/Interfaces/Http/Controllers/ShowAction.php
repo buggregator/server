@@ -52,6 +52,7 @@ final class ShowAction
         try {
             return new EventResource(
                 $bus->ask(new FindEventByUuid($uuid)),
+                $mapper,
             );
         } catch (EntityNotFoundException $e) {
             throw new NotFoundException($e->getMessage());

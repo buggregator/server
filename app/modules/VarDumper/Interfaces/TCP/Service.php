@@ -23,8 +23,9 @@ use Symfony\Component\VarDumper\Cloner\Data;
 final readonly class Service implements ServiceInterface
 {
     public function __construct(
-        private CommandBusInterface $commandBus,
-        private DumpIdGeneratorInterface $dumpId,
+        private CommandBusInterface $bus,
+        private DumpIdGeneratorInterface $idGenerator,
+        private int $previewMaxDepth = 3,
     ) {}
 
     public function handle(Request $request): ResponseInterface
@@ -38,19 +39,20 @@ final readonly class Service implements ServiceInterface
         foreach ($messages as $message) {
             $payload = (new MessageParser())->parse($message);
 
-            $this->fireEvent($payload);
+            $this->fireEvent($payload, $message);
         }
 
         return new ContinueRead();
     }
 
-    private function fireEvent(ParsedPayload $payload): void
+    private function fireEvent(ParsedPayload $payload, string $message): void
     {
-        $this->commandBus->dispatch(
+        $this->bus->dispatch(
             new HandleReceivedEvent(
                 type: 'var-dump',
                 payload: [
                     'payload' => $this->prepareContent($payload),
+                    'message' => $message,
                     'context' => $payload->context,
                 ],
                 project: $payload->context['project'] ?? null,
@@ -68,7 +70,8 @@ final readonly class Service implements ServiceInterface
         }
 
         $dumper = new HtmlDumper(
-            generator: $this->dumpId,
+            generator: $this->idGenerator,
+            maxDepth: $this->previewMaxDepth,
         );
 
         return new HtmlBody(

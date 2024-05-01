@@ -27,8 +27,10 @@ final class HtmlDumper extends CliDumper
     ];
     private array $extraDisplayOptions = [];
 
-    public function __construct(DumpIdGeneratorInterface $generator)
-    {
+    public function __construct(
+        DumpIdGeneratorInterface $generator = new MtRandDumpIdGenerator(),
+        private int $maxDepth = 20,
+    ) {
         AbstractDumper::__construct(null, null, 0);
         $this->dumpId = $generator->generate();
         $this->displayOptions['fileLinkFormat'] = \ini_get('xdebug.file_link_format') ?: get_cfg_var(
@@ -45,27 +47,22 @@ final class HtmlDumper extends CliDumper
      * Configures display options.
      *
      * @param array $displayOptions A map of display options to customize the behavior
-     *
-     * @return void
      */
-    public function setDisplayOptions(array $displayOptions)
+    public function setDisplayOptions(array $displayOptions): void
     {
         $this->displayOptions = $displayOptions + $this->displayOptions;
     }
 
-    public function dump(Data $data, $output = null, array $extraDisplayOptions = []): ?string
+    public function dump(Data $data, $output = true, array $extraDisplayOptions = []): ?string
     {
         $this->extraDisplayOptions = $extraDisplayOptions;
-        $result = parent::dump($data, $output);
+        $result = parent::dump($data->withMaxDepth($this->maxDepth), $output);
         $this->dumpId = 'sf-dump-' . mt_rand();
 
         return $result;
     }
 
-    /**
-     * @return void
-     */
-    public function dumpString(Cursor $cursor, string $str, bool $bin, int $cut)
+    public function dumpString(Cursor $cursor, string $str, bool $bin, int $cut): void
     {
         if ('' === $str && isset($cursor->attr['img-data'], $cursor->attr['content-type'])) {
             $this->dumpKey($cursor);
@@ -73,10 +70,10 @@ final class HtmlDumper extends CliDumper
             $this->line .= $cursor->depth >= $this->displayOptions['maxDepth'] ? ' <samp class=sf-dump-compact>' : ' <samp class=sf-dump-expanded>';
             $this->endValue($cursor);
             $this->line .= $this->indentPad;
-            $this->line .= sprintf(
+            $this->line .= \sprintf(
                 '<img src="data:%s;base64,%s" /></samp>',
                 $cursor->attr['content-type'],
-                base64_encode($cursor->attr['img-data']),
+                \base64_encode($cursor->attr['img-data']),
             );
             $this->endValue($cursor);
         } else {
@@ -84,14 +81,12 @@ final class HtmlDumper extends CliDumper
         }
     }
 
-    /**
-     * @return void
-     */
-    public function enterHash(Cursor $cursor, int $type, string|int|null $class, bool $hasChild)
+    public function enterHash(Cursor $cursor, int $type, string|int|null $class, bool $hasChild): void
     {
         if (Cursor::HASH_OBJECT === $type) {
             $cursor->attr['depth'] = $cursor->depth;
         }
+
         parent::enterHash($cursor, $type, $class, false);
 
         if ($cursor->skipChildren || $cursor->depth >= $this->displayOptions['maxDepth']) {
@@ -115,10 +110,7 @@ final class HtmlDumper extends CliDumper
         }
     }
 
-    /**
-     * @return void
-     */
-    public function leaveHash(Cursor $cursor, int $type, string|int|null $class, bool $hasChild, int $cut)
+    public function leaveHash(Cursor $cursor, int $type, string|int|null $class, bool $hasChild, int $cut): void
     {
         $this->dumpEllipsis($cursor, $hasChild, $cut);
         if ($hasChild) {
@@ -183,26 +175,26 @@ final class HtmlDumper extends CliDumper
 
         $map = static::$controlCharsMap;
         $v = "<span class=sf-dump-{$style}>" . preg_replace_callback(static::$controlCharsRx, function ($c) use ($map) {
-            $s = $b = '<span class="sf-dump-default';
-            $c = $c[$i = 0];
-            if ($ns = "\r" === $c[$i] || "\n" === $c[$i]) {
-                $s .= ' sf-dump-ns';
-            }
-            $s .= '">';
-            do {
-                if (("\r" === $c[$i] || "\n" === $c[$i]) !== $ns) {
-                    $s .= '</span>' . $b;
-                    if ($ns = !$ns) {
-                        $s .= ' sf-dump-ns';
-                    }
-                    $s .= '">';
+                $s = $b = '<span class="sf-dump-default';
+                $c = $c[$i = 0];
+                if ($ns = "\r" === $c[$i] || "\n" === $c[$i]) {
+                    $s .= ' sf-dump-ns';
                 }
+                $s .= '">';
+                do {
+                    if (("\r" === $c[$i] || "\n" === $c[$i]) !== $ns) {
+                        $s .= '</span>' . $b;
+                        if ($ns = !$ns) {
+                            $s .= ' sf-dump-ns';
+                        }
+                        $s .= '">';
+                    }
 
-                $s .= $map[$c[$i]] ?? sprintf('\x%02X', \ord($c[$i]));
-            } while (isset($c[++$i]));
+                    $s .= $map[$c[$i]] ?? sprintf('\x%02X', \ord($c[$i]));
+                } while (isset($c[++$i]));
 
-            return $s . '</span>';
-        }, $v) . '</span>';
+                return $s . '</span>';
+            }, $v) . '</span>';
 
         if (!($attr['binary'] ?? false)) {
             $v = preg_replace_callback(static::$unicodeCharsRx, function ($c) {
@@ -235,26 +227,23 @@ final class HtmlDumper extends CliDumper
         return $v;
     }
 
-    /**
-     * @return void
-     */
-    protected function dumpLine(int $depth, bool $endOfValue = false)
+    protected function dumpLine(int $depth, bool $endOfValue = false): void
     {
         if (-1 === $this->lastDepth) {
-            $this->line = sprintf($this->dumpPrefix, $this->dumpId, $this->indentPad) . $this->line;
+            $this->line = \sprintf($this->dumpPrefix, $this->dumpId, $this->indentPad) . $this->line;
         }
 
         if (-1 === $depth) {
             $args = ['"' . $this->dumpId . '"'];
             if ($this->extraDisplayOptions) {
-                $args[] = json_encode($this->extraDisplayOptions, \JSON_FORCE_OBJECT);
+                $args[] = \json_encode($this->extraDisplayOptions, \JSON_FORCE_OBJECT);
             }
             // Replace is for BC
-            $this->line .= sprintf(str_replace('"%s"', '%s', $this->dumpSuffix), implode(', ', $args));
+            $this->line .= \sprintf(\str_replace('"%s"', '%s', $this->dumpSuffix), \implode(', ', $args));
         }
         $this->lastDepth = $depth;
 
-        $this->line = mb_encode_numericentity($this->line, [0x80, 0x10FFFF, 0, 0x1FFFFF], 'UTF-8');
+        $this->line = \mb_encode_numericentity($this->line, [0x80, 0x10FFFF, 0, 0x1FFFFF], 'UTF-8');
 
         if (-1 === $depth) {
             AbstractDumper::dumpLine(0);

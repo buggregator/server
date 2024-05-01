@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Sentry\Application\Mapper;
 
-use App\Application\Event\EventTypeMapperInterface;
+use App\Application\Event\AbstractEventTypeMapper;
 
-final readonly class EventTypeMapper implements EventTypeMapperInterface
+final readonly class EventTypeMapper extends AbstractEventTypeMapper
 {
     public function __construct(
         public int $maxExceptions = 3,

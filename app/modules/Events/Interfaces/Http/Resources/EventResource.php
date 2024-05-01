@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Events\Interfaces\Http\Resources;
 
+use App\Application\Event\EventTypeMapperInterface;
 use App\Application\HTTP\Response\JsonResource;
 use Modules\Events\Domain\Event;
 use OpenApi\Attributes as OA;
@@ -25,6 +26,7 @@ final class EventResource extends JsonResource
 {
     public function __construct(
         Event $data,
+        private readonly EventTypeMapperInterface $mapper,
     ) {
         parent::__construct($data);
     }
@@ -35,7 +37,10 @@ final class EventResource extends JsonResource
             'uuid' => (string) $this->data->getUuid(),
             'project' => $this->data->getProject(),
             'type' => $this->data->getType(),
-            'payload' => $this->data->getPayload(),
+            'payload' => $this->mapper->toFull(
+                type: $this->data->getType(),
+                payload: $this->data->getPayload(),
+            ),
             'timestamp' => $this->data->getTimestamp(),
         ];
     }

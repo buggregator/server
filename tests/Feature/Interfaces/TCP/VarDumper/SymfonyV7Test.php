@@ -64,6 +64,8 @@ HTML,
                 ),
             ], $data['data']['payload']['payload']);
 
+            $this->assertFalse(isset($data['data']['payload']['message']));
+
             $this->assertNotEmpty($data['data']['uuid']);
             $this->assertNotEmpty($data['data']['timestamp']);
 

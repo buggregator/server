@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Application\Mapper;
 
-use App\Application\Event\EventTypeMapperInterface;
+use App\Application\Event\AbstractEventTypeMapper;
 
-final readonly class EventTypeMapper implements EventTypeMapperInterface
+final readonly class EventTypeMapper extends AbstractEventTypeMapper
 {
     public function toPreview(string $type, array|\JsonSerializable $payload): array|\JsonSerializable
     {
