@@ -18,12 +18,12 @@ final readonly class ResponseMessage implements \Stringable
         return new self(self::READY, $message);
     }
 
-    public static function ok(string $message = ''): self
+    public static function ok(string $message = '', string $separator = ' '): self
     {
-        return new self(self::OK, $message);
+        return new self(self::OK, $message, $separator);
     }
 
-    public static function authRequired(string $message = 'AUTH LOGIN PLAIN CRAM-MD5'): self
+    public static function authRequired(string $message = 'AUTH LOGIN PLAIN'): self
     {
         return new self(self::OK, $message);
     }
@@ -56,10 +56,16 @@ final readonly class ResponseMessage implements \Stringable
     public function __construct(
         public int $code,
         public string $message = '',
+        public string $separator = " ",
     ) {}
 
     public function __toString(): string
     {
-        return \sprintf("%d %s\r\n", $this->code, empty($this->message) ? '' : $this->message . ' ');
+        return \sprintf(
+            "%d%s%s\r\n",
+            $this->code,
+            $this->separator,
+            empty($this->message) ? '' : $this->message . ' ',
+        );
     }
 }

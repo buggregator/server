@@ -41,8 +41,14 @@ final readonly class Service implements ServiceInterface
 
             return new CloseConnection();
         } elseif (\preg_match('/^(EHLO|HELO)/', $request->body)) {
+            $response = $this->sendMultiply(
+                ResponseMessage::ok(separator: '-buggregator'),
+                ResponseMessage::authRequired(),
+            );
+        } elseif (\preg_match('/^MAIL FROM:\s*<(.*)>/', $request->body, $matches)) {
+            $message->setFrom($matches[1]);
             $response = $this->send(ResponseMessage::ok());
-        } elseif ($request->body === "AUTH LOGIN\r\n") {
+        } elseif (\str_starts_with($request->body, 'AUTH')) {
             $response = $this->send(ResponseMessage::enterUsername());
             $message->waitUsername = true;
         } elseif ($message->waitUsername) {
@@ -51,10 +57,7 @@ final readonly class Service implements ServiceInterface
         } elseif ($message->waitPassword) {
             $message->setPassword($request->body);
             $response = $this->send(ResponseMessage::authenticated());
-        } elseif (\preg_match('/^MAIL FROM:<(.*)>/', $request->body, $matches)) {
-            $message->setFrom($matches[1]);
-            $response = $this->send(ResponseMessage::ok());
-        } elseif (\preg_match('/^RCPT TO:<(.*)>/', $request->body, $matches)) {
+        } elseif (\preg_match('/^RCPT TO:\s*<(.*)>/', $request->body, $matches)) {
             $message->addRecipient($matches[1]);
             $response = $this->send(ResponseMessage::ok());
         } elseif (\str_starts_with($request->body, 'QUIT')) {
@@ -67,7 +70,7 @@ final readonly class Service implements ServiceInterface
             $message->appendBody($request->body);
 
             if ($message->bodyHasEos()) {
-                $this->dispatchMessage($message->parse());
+                $this->dispatchMessage($message->parse(), project: $message->username);
                 $dispatched = true;
             }
         }
@@ -102,5 +105,10 @@ final readonly class Service implements ServiceInterface
     private function send(ResponseMessage $message, bool $close = false): RespondMessage
     {
         return new RespondMessage((string) $message, $close);
+    }
+
+    private function sendMultiply(ResponseMessage...$message): RespondMessage
+    {
+        return new RespondMessage(\implode("", $message));
     }
 }

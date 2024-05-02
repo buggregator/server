@@ -7,9 +7,14 @@ namespace Tests\Feature\Interfaces\TCP\Smtp;
 use App\Application\Broadcasting\Channel\EventsChannel;
 use Modules\Smtp\Application\Storage\EmailBodyStorage;
 use Modules\Smtp\Application\Storage\Message;
-use Modules\Smtp\Interfaces\TCP\ResponseMessage;
+use Modules\Smtp\Interfaces\TCP\Service as SmtpService;
+use Ramsey\Uuid\Uuid;
 use Spiral\RoadRunner\Tcp\TcpEvent;
 use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;
+use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
+use Symfony\Component\Mime\Address;
+use Symfony\Component\Mime\Email;
+use Tests\App\Smtp\FakeStream;
 use Tests\Feature\Interfaces\TCP\TCPTestCase;
 
 final class EmailTest extends TCPTestCase
@@ -18,51 +23,46 @@ final class EmailTest extends TCPTestCase
     {
         $this->createProject('default');
 
-        $body = <<<'BODY'
-To: "Alice Example" <alice@example.com>, barney@example.com, "John Doe" <john@example.com>
-Cc: theboss@example.com, "Customer" <customer@example.com>
-Subject: Test message
-From: "Bob Example" <no-reply@site.com>
-Message-ID: <30ec7d32c60314812bd8de2d26e8e751@local.host>
-MIME-Version: 1.0
-Date: Sun, 28 Apr 2024 07:21:26 +0000
-Content-Type: text/html; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-BODY;
+        $email = (new Email)
+            ->subject('Test message')
+            ->date(new \DateTimeImmutable('2024-05-02 16:01:33'))
+            ->addTo(
+                new Address('alice@example.com', 'Alice Doe'),
+                'barney@example.com',
+                new Address('john@example.com', 'John Doe'),
+            )
+            ->addCc(
+                new Address('customer@example.com', 'Customer'),
+                'theboss@example.com',
+            )
+            ->addFrom(
+                new Address('no-reply@site.com', 'Bob Example'),
+            )
+            ->text(
+                body: 'Hello Alice.<br>This is a test message with 5 header fields and 4 lines in the message body.'
+            );
 
-        $response = $this->handleSmtpRequest(message: 'EHLO site.com', event: TcpEvent::Connected);
-        $this->assertSame((string)ResponseMessage::ready(), $response->getBody());
+        $email->getHeaders()->addIdHeader('Message-ID', $email->generateMessageId());
+        $id = $email->getHeaders()->get('Message-ID')->getBody()[0];
 
-        $flow = [
-            'HELO site.com' => ResponseMessage::ok(),
-            'MAIL FROM:<no-reply@site.com>' => ResponseMessage::ok(),
-            'RCPT TO:<alice@example.com>' => ResponseMessage::ok(),
-            'RCPT TO:<barney@example.com>' => ResponseMessage::ok(),
-            'RCPT TO:<john@example.com>' => ResponseMessage::ok(),
-            // 250 AUTH LOGIN PLAIN CRAM-MD5 \r\n
-            "AUTH LOGIN\r\n" => ResponseMessage::enterUsername(),
-            \base64_encode('default') . "\r\n" => ResponseMessage::enterPassword(),
-            \base64_encode('password') . "\r\n" => ResponseMessage::authenticated(),
-            "DATA\r\n" => ResponseMessage::provideBody(),
-            $body => ResponseMessage::ok(),
-            "<!doctype html><html><body>Hello Alice.\nThis is a test message with 5 header fields and 4 lines in the message body.</body></html>\r\n.\r\n" => ResponseMessage::ok(
+        $client = new EsmtpTransport(
+            stream: new FakeStream(
+                service: $this->get(SmtpService::class),
+                uuid: $uuid = Uuid::uuid7()->toString(),
             ),
-        ];
+        );
 
-        foreach ($flow as $message => $resp) {
-            $response = $this->handleSmtpRequest(message: $message);
-            $this->assertSame((string)$resp, $response->getBody());
-        }
+        $client->setUsername('default');
+        $client->setPassword('password');
 
-        $this->validateMessage();
+        $client->send($email);
 
-        $response = $this->handleSmtpRequest(message: 'QUIT');
-        $this->assertSame((string)ResponseMessage::closing(), $response->getBody());
+        $this->validateMessage($id, $uuid);
 
         $response = $this->handleSmtpRequest(message: '', event: TCPEvent::Close);
         $this->assertInstanceOf(CloseConnection::class, $response);
 
-        $this->assertEventPushed();
+        $this->assertEventPushed('default');
     }
 
     private function getEmailMessage(string $uuid): Message
@@ -70,16 +70,23 @@ BODY;
         return $this->get(EmailBodyStorage::class)->getMessage($uuid);
     }
 
-    private function validateMessage(): void
+    private function validateMessage(string $messageId, string $uuid): void
     {
-        $messageData = $this->getEmailMessage('018f2586-4be9-7168-942e-0ce0c104961');
+        $messageData = $this->getEmailMessage($uuid);
+
         $this->assertSame('default', $messageData->username);
         $this->assertSame('password', $messageData->password);
         $this->assertSame('no-reply@site.com', $messageData->from);
-        $this->assertSame(['alice@example.com', 'barney@example.com', 'john@example.com'], $messageData->recipients);
+        $this->assertSame([
+            'alice@example.com',
+            'barney@example.com',
+            'john@example.com',
+            'customer@example.com',
+            'theboss@example.com',
+        ], $messageData->recipients);
 
         $this->assertSame([
-            'id' => '30ec7d32c60314812bd8de2d26e8e751@local.host',
+            'id' => $messageId,
             'from' => [
                 [
                     'email' => 'no-reply@site.com',
@@ -90,7 +97,7 @@ BODY;
             'subject' => 'Test message',
             'to' => [
                 [
-                    'name' => 'Alice Example',
+                    'name' => 'Alice Doe',
                     'email' => 'alice@example.com',
                 ],
                 [
@@ -104,27 +111,30 @@ BODY;
             ],
             'cc' => [
                 [
-                    'name' => '',
-                    'email' => 'theboss@example.com',
-                ],
-                [
                     'name' => 'Customer',
                     'email' => 'customer@example.com',
                 ],
+                [
+                    'name' => '',
+                    'email' => 'theboss@example.com',
+                ],
             ],
             'bcc' => [],
-            'text' => '',
+            'text' => 'Hello Alice.<br>This is a test message with 5 header fields and 4 lines in the message body.',
             'html' => '',
-            'raw' => "To: \"Alice Example\" <alice@example.com>, barney@example.com, \"John Doe\" <john@example.com>
-Cc: theboss@example.com, \"Customer\" <customer@example.com>
-Subject: Test message
-From: \"Bob Example\" <no-reply@site.com>
-Message-ID: <30ec7d32c60314812bd8de2d26e8e751@local.host>
-MIME-Version: 1.0
-Date: Sun, 28 Apr 2024 07:21:26 +0000
-Content-Type: text/html; charset=utf-8
-Content-Transfer-Encoding: quoted-printable<!doctype html><html><body>Hello Alice.
-This is a test message with 5 header fields and 4 lines in the message body.</body></html>",
+            'raw' => "Subject: Test message\r
+Date: Thu, 02 May 2024 16:01:33 +0000\r
+To: Alice Doe <alice@example.com>, barney@example.com, John Doe\r
+ <john@example.com>\r
+Cc: Customer <customer@example.com>, theboss@example.com\r
+From: Bob Example <no-reply@site.com>\r
+Message-ID: <$messageId>\r
+MIME-Version: 1.0\r
+Content-Type: text/plain; charset=utf-8\r
+Content-Transfer-Encoding: quoted-printable\r
+\r
+Hello Alice.<br>This is a test message with 5 header fields and 4 lines in =\r
+the message body.",
         ], $messageData->parse()->jsonSerialize());
     }
 
@@ -145,7 +155,7 @@ This is a test message with 5 header fields and 4 lines in the message body.</bo
                 ],
                 'to' => [
                     [
-                        'name' => 'Alice Example',
+                        'name' => 'Alice Doe',
                         'email' => 'alice@example.com',
                     ],
                     [
