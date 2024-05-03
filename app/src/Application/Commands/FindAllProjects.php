@@ -10,4 +10,4 @@ use Spiral\Cqrs\QueryInterface;
 /**
  * @implements QueryInterface<Project[]>
  */
-final class FindAllProjects implements QueryInterface { }
+final class FindAllProjects implements QueryInterface {}
