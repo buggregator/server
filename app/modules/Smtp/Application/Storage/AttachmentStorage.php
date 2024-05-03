@@ -4,38 +4,49 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Application\Storage;
 
-use Modules\Smtp\Application\Mail\Attachment as MailAttachment;
-use Spiral\Storage\StorageInterface;
+use App\Application\Domain\ValueObjects\Uuid;
+use Modules\Smtp\Domain\AttachmentFactoryInterface;
+use Modules\Smtp\Domain\AttachmentRepositoryInterface;
+use Modules\Smtp\Domain\AttachmentStorageInterface;
+use Spiral\Storage\BucketInterface;
 
-final readonly class AttachmentStorage
+final readonly class AttachmentStorage implements AttachmentStorageInterface
 {
     public function __construct(
-        private StorageInterface $storage,
+        private BucketInterface $bucket,
+        private AttachmentRepositoryInterface $attachments,
+        private AttachmentFactoryInterface $factory,
     ) {}
 
-    /**
-     * @param MailAttachment[] $attachments
-     * @return array<non-empty-string, Attachment>
-     */
-    public function store(string $id, array $attachments): array
+    public function store(Uuid $eventUuid, array $attachments): void
     {
-        $storedAttachments = [];
-
         foreach ($attachments as $attachment) {
-            $file = $this->storage->write(
-                $filename = $id . '/' . $attachment->getFilename(),
-                $attachment->getContent(),
+            $file = $this->bucket->write(
+                pathname: $eventUuid . '/' . $attachment->getFilename(),
+                content: $attachment->getContent(),
             );
 
-            $storedAttachments[$attachment->getId()] = new Attachment(
-                name: $attachment->getFilename(),
-                uri: $filename,
-                size: $file->getSize(),
-                mime: $file->getMimeType(),
-                id: $attachment->getId(),
+            $this->attachments->store(
+                $this->factory->create(
+                    eventUuid: $eventUuid,
+                    name: $attachment->getFilename(),
+                    path: $file->getPathname(),
+                    size: $file->getSize(),
+                    mime: $file->getMimeType(),
+                    id: $attachment->getId(),
+                ),
             );
         }
+    }
 
-        return $storedAttachments;
+    public function deleteByEvent(Uuid $eventUuid): void
+    {
+        $attachments = $this->attachments->findByEvent($eventUuid);
+        foreach ($attachments as $attachment) {
+            $this->bucket->delete(
+                pathname: $attachment->getPath(),
+                clean: true,
+            );
+        }
     }
 }

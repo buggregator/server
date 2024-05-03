@@ -19,6 +19,11 @@ final class FakeStream extends AbstractStream
         $this->out = \fopen('php://memory', 'w+');
     }
 
+    public function getUuid(): string
+    {
+        return $this->uuid;
+    }
+
     public function initialize(): void
     {
         $this->err = \fopen('php://memory', 'w+');

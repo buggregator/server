@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Application\Bootloader;
 
 use App\Application\Persistence\DriverEnum;
+use App\Integration\CycleOrm\Persistence\CycleOrmAttachmentRepository;
 use App\Integration\CycleOrm\Persistence\CycleOrmEventRepository;
 use App\Integration\CycleOrm\Persistence\CycleOrmProjectRepository;
+use App\Integration\MongoDb\Persistence\MongoDBAttachmentRepository;
 use App\Integration\MongoDb\Persistence\MongoDBEventRepository;
 use App\Integration\MongoDb\Persistence\MongoDBProjectRepository;
 use App\Interfaces\Console\RegisterModulesCommand;
@@ -17,6 +19,8 @@ use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Modules\Projects\Domain\Project;
 use Modules\Projects\Domain\ProjectRepositoryInterface;
+use Modules\Smtp\Domain\Attachment;
+use Modules\Smtp\Domain\AttachmentRepositoryInterface;
 use MongoDB\Database;
 use Spiral\Boot\Bootloader\Bootloader;
 use Spiral\Console\Bootloader\ConsoleBootloader;
@@ -77,6 +81,25 @@ final class PersistenceBootloader extends Bootloader
             ): ProjectRepositoryInterface => new MongoDBProjectRepository(
                 $database->selectCollection('projects'),
             ),
+
+            // SMTP
+            CycleOrmAttachmentRepository::class => static fn(
+                ORMInterface $orm,
+                EntityManagerInterface $manager,
+            ): AttachmentRepositoryInterface => new CycleOrmAttachmentRepository(
+                $manager,
+                new Select($orm, Attachment::class),
+            ),
+            AttachmentRepositoryInterface::class => static fn(
+                FactoryInterface $factory,
+                DriverEnum $driver,
+                Database $database,
+            ): AttachmentRepositoryInterface => match ($driver) {
+                DriverEnum::Database => $factory->make(CycleOrmAttachmentRepository::class),
+                DriverEnum::MongoDb => new MongoDBAttachmentRepository(
+                    $database->selectCollection('attachments'),
+                ),
+            },
         ];
     }
 

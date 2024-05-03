@@ -10,6 +10,8 @@ use Spiral\Cqrs\QueryInterface;
 
 /**
  * @implements QueryInterface<Event>
+ *
+ * @throws \App\Application\Exception\EntityNotFoundException if event with given uuid was not found
  */
 final readonly class FindEventByUuid implements QueryInterface
 {

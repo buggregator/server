@@ -7,9 +7,13 @@ namespace Tests\Feature\Interfaces\TCP;
 use Modules\Monolog\Interfaces\TCP\Service as MonologService;
 use Modules\VarDumper\Interfaces\TCP\Service as VarDumperService;
 use Modules\Smtp\Interfaces\TCP\Service as SmtpService;
+use Ramsey\Uuid\Uuid;
+use Ramsey\Uuid\UuidInterface;
 use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpEvent;
 use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
+use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
+use Tests\App\Smtp\FakeStream;
 use Tests\DatabaseTestCase;
 
 abstract class TCPTestCase extends DatabaseTestCase
@@ -44,5 +48,20 @@ abstract class TCPTestCase extends DatabaseTestCase
             connectionUuid: '018f2586-4be9-7168-942e-0ce0c104961',
             server: 'localhost',
         );
+    }
+
+    protected function buildSmtpClient(string $username = 'homestead', ?UuidInterface $uuid = null): EsmtpTransport
+    {
+        $client = new EsmtpTransport(
+            stream: new FakeStream(
+                service: $this->get(SmtpService::class),
+                uuid: (string) $uuid ?? Uuid::uuid7(),
+            ),
+        );
+
+        $client->setUsername($username);
+        $client->setPassword('password');
+
+        return $client;
     }
 }

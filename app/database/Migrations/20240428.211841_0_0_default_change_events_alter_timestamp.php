@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Migration;
+namespace Database\Migration;
 
 use Cycle\Migrations\Migration;
 
