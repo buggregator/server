@@ -93,13 +93,15 @@ final class PersistenceBootloader extends Bootloader
             AttachmentRepositoryInterface::class => static fn(
                 FactoryInterface $factory,
                 DriverEnum $driver,
-                Database $database,
             ): AttachmentRepositoryInterface => match ($driver) {
                 DriverEnum::Database => $factory->make(CycleOrmAttachmentRepository::class),
-                DriverEnum::MongoDb => new MongoDBAttachmentRepository(
-                    $database->selectCollection('attachments'),
-                ),
+                DriverEnum::MongoDb => $factory->make(MongoDBAttachmentRepository::class),
             },
+            MongoDBAttachmentRepository::class => static fn(
+                Database $database,
+            ): AttachmentRepositoryInterface => new MongoDBAttachmentRepository(
+                $database->selectCollection('attachments'),
+            ),
         ];
     }
 
