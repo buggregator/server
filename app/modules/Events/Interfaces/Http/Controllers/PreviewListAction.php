@@ -6,6 +6,7 @@ namespace Modules\Events\Interfaces\Http\Controllers;
 
 use App\Application\Commands\FindEvents;
 use App\Application\Event\EventTypeMapperInterface;
+use App\Application\HTTP\Response\ErrorResource;
 use Modules\Events\Interfaces\Http\Request\EventsRequest;
 use Modules\Events\Interfaces\Http\Resources\EventPreviewCollection;
 use Modules\Events\Interfaces\Http\Resources\EventPreviewResource;
@@ -56,7 +57,7 @@ use OpenApi\Attributes as OA;
             response: 404,
             description: 'Not found',
             content: new OA\JsonContent(
-                ref: '#/components/schemas/NotFoundError',
+                ref: ErrorResource::class,
             ),
         ),
     ],

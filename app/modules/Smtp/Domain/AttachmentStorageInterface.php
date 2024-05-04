@@ -15,4 +15,9 @@ interface AttachmentStorageInterface
     public function store(Uuid $eventUuid, array $attachments): void;
 
     public function deleteByEvent(Uuid $eventUuid): void;
+
+    /**
+     * @return resource Content of the file as a stream
+     */
+    public function getContent(string $path);
 }

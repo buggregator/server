@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Interfaces\Http\Controllers\Attachments;
 
-use App\Application\Commands\FindAttachmentsByEventUuid;
+use App\Application\Commands\FindSmtpAttachmentsByEventUuid;
 use App\Application\Domain\ValueObjects\Uuid;
+use App\Application\HTTP\Response\ErrorResource;
 use App\Application\HTTP\Response\ResourceCollection;
 use App\Application\HTTP\Response\ResourceInterface;
 use Modules\Smtp\Interfaces\Http\Resources\AttachmentResource;
@@ -50,7 +51,7 @@ use OpenApi\Attributes as OA;
             response: 404,
             description: 'Not found',
             content: new OA\JsonContent(
-                ref: '#/components/schemas/NotFoundError',
+                ref: ErrorResource::class,
             ),
         ),
     ],
@@ -61,7 +62,7 @@ final readonly class ListAction
     public function __invoke(QueryBusInterface $bus, Uuid $uuid): ResourceInterface
     {
         return new ResourceCollection(
-            $bus->ask(new FindAttachmentsByEventUuid($uuid)),
+            $bus->ask(new FindSmtpAttachmentsByEventUuid($uuid)),
             AttachmentResource::class,
         );
     }

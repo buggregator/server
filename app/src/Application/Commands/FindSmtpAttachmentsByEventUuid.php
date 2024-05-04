@@ -11,7 +11,7 @@ use Spiral\Cqrs\QueryInterface;
 /**
  * @implements QueryInterface<Attachment[]>
  */
-final readonly class FindAttachmentsByEventUuid implements QueryInterface
+final readonly class FindSmtpAttachmentsByEventUuid implements QueryInterface
 {
     public function __construct(public Uuid $uuid) {}
 }

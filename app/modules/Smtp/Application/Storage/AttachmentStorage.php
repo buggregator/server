@@ -49,4 +49,12 @@ final readonly class AttachmentStorage implements AttachmentStorageInterface
             );
         }
     }
+
+    /**
+     * @throws \Spiral\Storage\Exception\FileOperationException
+     */
+    public function getContent(string $path)
+    {
+        return $this->bucket->getStream($path);
+    }
 }

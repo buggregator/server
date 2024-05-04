@@ -8,6 +8,7 @@ use App\Application\Commands\FindEventByUuid;
 use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Event\EventTypeMapperInterface;
 use App\Application\Exception\EntityNotFoundException;
+use App\Application\HTTP\Response\ErrorResource;
 use Modules\Events\Interfaces\Http\Resources\EventResource;
 use Spiral\Cqrs\QueryBusInterface;
 use Spiral\Http\Exception\ClientException\NotFoundException;
@@ -36,7 +37,7 @@ use OpenApi\Attributes as OA;
             response: 404,
             description: 'Not found',
             content: new OA\JsonContent(
-                ref: '#/components/schemas/NotFoundError',
+                ref: ErrorResource::class,
             ),
         ),
     ],

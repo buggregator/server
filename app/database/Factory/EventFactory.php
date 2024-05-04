@@ -19,7 +19,8 @@ use Modules\Projects\Domain\ValueObject\Key;
 use Spiral\DatabaseSeeder\Factory\AbstractFactory;
 
 /**
- * @implements AbstractFactory<Event>
+ * @template TEntity of Event
+ * @extends  AbstractFactory<Event>
  */
 final class EventFactory extends AbstractFactory
 {

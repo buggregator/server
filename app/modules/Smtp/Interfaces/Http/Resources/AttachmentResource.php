@@ -15,6 +15,7 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(
     schema: 'Attachment',
     properties: [
+        new OA\Property(property: 'uuid', type: 'string', format: 'uuid'),
         new OA\Property(property: 'name', type: 'string'),
         new OA\Property(property: 'path', type: 'string'),
         new OA\Property(property: 'size', type: 'integer'),
@@ -31,7 +32,8 @@ final class AttachmentResource extends JsonResource
     protected function mapData(): array|JsonSerializable
     {
         return [
-            'name' => $this->data->getName(),
+            'uuid' => (string) $this->data->getUuid(),
+            'name' => $this->data->getFilename(),
             'path' => $this->data->getPath(),
             'size' => $this->data->getSize(),
             'mime' => $this->data->getMime(),

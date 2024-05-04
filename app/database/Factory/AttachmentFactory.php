@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Database\Factory;
 
 use App\Application\Domain\ValueObjects\Uuid;
+use Modules\Events\Domain\Event;
 use Modules\Smtp\Domain\Attachment;
 use Spiral\DatabaseSeeder\Factory\AbstractFactory;
 
 /**
- * @implements AbstractFactory<Attachment>
+ * @template TEntity of Attachment
+ * @extends AbstractFactory<Attachment>
  */
 final class AttachmentFactory extends AbstractFactory
 {
@@ -51,8 +53,10 @@ final class AttachmentFactory extends AbstractFactory
         ];
     }
 
-    public function forEvent(Uuid $uuid): self
+    public function forEvent(Uuid|Event $uuid): self
     {
+        $uuid = $uuid instanceof Event ? $uuid->getUuid() : $uuid;
+
         return $this->state(fn(\Faker\Generator $faker, array $definition) => [
             'event_uuid' => $uuid,
         ]);

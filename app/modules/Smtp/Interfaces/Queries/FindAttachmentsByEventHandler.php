@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Interfaces\Queries;
 
-use App\Application\Commands\FindAttachmentsByEventUuid;
+use App\Application\Commands\FindSmtpAttachmentsByEventUuid;
 use App\Application\Commands\FindEventByUuid;
 use Modules\Smtp\Domain\AttachmentRepositoryInterface;
 use Spiral\Cqrs\Attribute\QueryHandler;
@@ -18,7 +18,7 @@ final readonly class FindAttachmentsByEventHandler
     ) {}
 
     #[QueryHandler]
-    public function __invoke(FindAttachmentsByEventUuid $query): iterable
+    public function __invoke(FindSmtpAttachmentsByEventUuid $query): iterable
     {
         $this->bus->ask(new FindEventByUuid($query->uuid));
 

@@ -8,7 +8,7 @@ use App\Application\Persistence\DriverEnum;
 use App\Integration\CycleOrm\Persistence\CycleOrmAttachmentRepository;
 use App\Integration\CycleOrm\Persistence\CycleOrmEventRepository;
 use App\Integration\CycleOrm\Persistence\CycleOrmProjectRepository;
-use App\Integration\MongoDb\Persistence\MongoDBAttachmentRepository;
+use App\Integration\MongoDb\Persistence\MongoDBSmtpAttachmentRepository;
 use App\Integration\MongoDb\Persistence\MongoDBEventRepository;
 use App\Integration\MongoDb\Persistence\MongoDBProjectRepository;
 use App\Interfaces\Console\RegisterModulesCommand;
@@ -60,9 +60,10 @@ final class PersistenceBootloader extends Bootloader
             ): CycleOrmEventRepository => new CycleOrmEventRepository($manager, new Select($orm, Event::class)),
             MongoDBEventRepository::class => static fn(
                 Database $database,
-            ): MongoDBEventRepository => new MongoDBEventRepository(
-                $database->selectCollection('events'),
-            ),
+                FactoryInterface $factory,
+            ): MongoDBEventRepository => $factory->make(MongoDBEventRepository::class, [
+                'collection' => $database->selectCollection('events'),
+            ]),
 
             // Projects
             ProjectRepositoryInterface::class => static fn(
@@ -78,9 +79,10 @@ final class PersistenceBootloader extends Bootloader
             ): ProjectRepositoryInterface => new CycleOrmProjectRepository($manager, new Select($orm, Project::class)),
             MongoDBProjectRepository::class => static fn(
                 Database $database,
-            ): ProjectRepositoryInterface => new MongoDBProjectRepository(
-                $database->selectCollection('projects'),
-            ),
+                FactoryInterface $factory,
+            ): ProjectRepositoryInterface => $factory->make(MongoDBProjectRepository::class, [
+                'collection' => $database->selectCollection('projects'),
+            ]),
 
             // SMTP
             CycleOrmAttachmentRepository::class => static fn(
@@ -95,13 +97,14 @@ final class PersistenceBootloader extends Bootloader
                 DriverEnum $driver,
             ): AttachmentRepositoryInterface => match ($driver) {
                 DriverEnum::Database => $factory->make(CycleOrmAttachmentRepository::class),
-                DriverEnum::MongoDb => $factory->make(MongoDBAttachmentRepository::class),
+                DriverEnum::MongoDb => $factory->make(MongoDBSmtpAttachmentRepository::class),
             },
-            MongoDBAttachmentRepository::class => static fn(
+            MongoDBSmtpAttachmentRepository::class => static fn(
                 Database $database,
-            ): AttachmentRepositoryInterface => new MongoDBAttachmentRepository(
-                $database->selectCollection('attachments'),
-            ),
+                FactoryInterface $factory,
+            ): AttachmentRepositoryInterface => $factory->make(MongoDBSmtpAttachmentRepository::class, [
+                'collection' => $database->selectCollection('smtp_attachments'),
+            ]),
         ];
     }
 

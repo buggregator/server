@@ -46,7 +46,7 @@ final class EmailTest extends TCPTestCase
             ->once()
             ->with(
                 \Mockery::on(function (Attachment $attachment) {
-                    $this->assertSame('hello.txt', $attachment->getName());
+                    $this->assertSame('hello.txt', $attachment->getFilename());
                     $this->assertSame(13, $attachment->getSize());
                     $this->assertSame('text/plain', $attachment->getMime());
 
@@ -62,7 +62,7 @@ final class EmailTest extends TCPTestCase
             ->once()
             ->with(
                 \Mockery::on(function (Attachment $attachment) {
-                    $this->assertSame('logo.svg', $attachment->getName());
+                    $this->assertSame('logo.svg', $attachment->getFilename());
                     $this->assertSame('image/svg+xml', $attachment->getMime());
                     $this->assertSame(1206, $attachment->getSize());
                     $this->bucket->assertCreated($attachment->getPath());

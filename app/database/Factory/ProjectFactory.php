@@ -8,6 +8,10 @@ use Modules\Projects\Domain\Project;
 use Modules\Projects\Domain\ValueObject\Key;
 use Spiral\DatabaseSeeder\Factory\AbstractFactory;
 
+/**
+ * @template TEntity of Project
+ * @extends  AbstractFactory<Project>
+ */
 final class ProjectFactory extends AbstractFactory
 {
     public function entity(): string

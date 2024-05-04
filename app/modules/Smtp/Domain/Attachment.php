@@ -44,7 +44,7 @@ class Attachment
         return $this->eventUuid;
     }
 
-    public function getName(): string
+    public function getFilename(): string
     {
         return $this->name;
     }
