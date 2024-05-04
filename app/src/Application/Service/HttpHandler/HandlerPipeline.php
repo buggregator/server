@@ -55,6 +55,7 @@ final class HandlerPipeline implements HandlerRegistryInterface, CoreHandlerInte
     private function handlePipeline(ServerRequestInterface $request): ResponseInterface
     {
         $handler = $this->handlers[$this->position] ?? null;
+        \assert($handler instanceof HandlerInterface);
         $this->position++;
 
         if ($handler === null) {
@@ -69,7 +70,9 @@ final class HandlerPipeline implements HandlerRegistryInterface, CoreHandlerInte
 
     public function listen(\ReflectionClass $class): void
     {
-        $this->register($this->factory->make($class->getName()));
+        $handler = $this->factory->make($class->getName());
+        \assert($handler instanceof HandlerInterface);
+        $this->register($handler);
     }
 
     public function finalize(): void

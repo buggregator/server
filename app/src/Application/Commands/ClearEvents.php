@@ -6,6 +6,9 @@ namespace App\Application\Commands;
 
 use Spiral\Cqrs\CommandInterface;
 
+/**
+ * @implements CommandInterface<void>
+ */
 final readonly class ClearEvents implements CommandInterface
 {
     public function __construct(

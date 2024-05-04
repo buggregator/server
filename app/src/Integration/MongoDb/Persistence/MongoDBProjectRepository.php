@@ -41,6 +41,7 @@ final readonly class MongoDBProjectRepository implements ProjectRepositoryInterf
 
     public function findOne(array $scope = []): ?object
     {
+        /** @var BSONDocument|null $document */
         $document = $this->collection->findOne($scope);
 
         if ($document === null) {
@@ -65,6 +66,7 @@ final readonly class MongoDBProjectRepository implements ProjectRepositoryInterf
 
     public function mapDocumentIntoProject(BSONDocument $document): Project
     {
+        /** @psalm-suppress InternalMethod */
         return new Project(
             key: new Key($document['_id']),
             name: $document['name'],

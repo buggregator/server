@@ -10,6 +10,10 @@ use Cycle\ORM\Select\Repository;
 use Modules\Projects\Domain\Project;
 use Modules\Projects\Domain\ProjectRepositoryInterface;
 
+/**
+ * @template TEntity of Project
+ * @extends Repository<Project>
+ */
 final class CycleOrmProjectRepository extends Repository implements ProjectRepositoryInterface
 {
     public function __construct(

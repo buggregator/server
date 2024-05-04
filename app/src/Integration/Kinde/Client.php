@@ -95,7 +95,7 @@ final readonly class Client
         $this->storage->clear();
     }
 
-    public function getToken(array $queryParams): object
+    public function getToken(array $queryParams): object|array
     {
         if ($this->isAuthenticated()) {
             $token = $this->storage->getToken(false);

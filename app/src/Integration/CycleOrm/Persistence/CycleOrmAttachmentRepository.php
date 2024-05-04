@@ -11,6 +11,10 @@ use Cycle\ORM\Select\Repository;
 use Modules\Smtp\Domain\Attachment;
 use Modules\Smtp\Domain\AttachmentRepositoryInterface;
 
+/**
+ * @template TEntity of Attachment
+ * @extends Repository<Attachment>
+ */
 final class CycleOrmAttachmentRepository extends Repository implements AttachmentRepositoryInterface
 {
     public function __construct(

@@ -19,6 +19,7 @@ final class InMemoryDriver extends AbstractBroadcast
 
         foreach ($topics as $topic) {
             foreach ($this->toArray($messages) as $message) {
+                \assert(\is_string($message));
                 self::$published[$topic][] = \json_decode($message, true);
             }
         }

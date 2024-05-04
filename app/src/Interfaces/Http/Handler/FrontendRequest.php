@@ -13,13 +13,7 @@ use Spiral\Http\Exception\ClientException\NotFoundException;
 
 final class FrontendRequest implements HandlerInterface
 {
-    /**
-     * @var array<non-empty-string, array{
-     *     len: int<0, max>,
-     *     content:non-empty-string,
-     *     mime: non-empty-string
-     * }>
-     */
+    /** @var array<string, Content> */
     private array $fileContent = [];
 
     public function __construct(
@@ -37,6 +31,7 @@ final class FrontendRequest implements HandlerInterface
             return $next($request);
         }
 
+        /** @var non-empty-string $path */
         $path = $request->getUri()->getPath();
 
         if ($path === '/') {
@@ -51,21 +46,20 @@ final class FrontendRequest implements HandlerInterface
             }
 
             $body = \file_get_contents($path);
-            $this->fileContent[$path] = [
-                'len' => \strlen($body),
-                'content' => $body,
-                'mime' => MimeType::fromFilename($path),
-            ];
+            $this->fileContent[$path] = new Content(
+                content: $body,
+                mime: MimeType::fromFilename($path) ?? 'text/plain',
+            );
         }
 
         return new Response(
             200,
             [
                 'Cache-Control' => 'public, max-age=300',
-                'Content-Type' => $this->fileContent[$path]['mime'] . '; charset=utf-8',
-                'Content-Length' => $this->fileContent[$path]['len'],
+                'Content-Type' => $this->fileContent[$path]->contentType,
+                'Content-Length' => $this->fileContent[$path]->len,
             ],
-            $this->fileContent[$path]['content'],
+            (string) $this->fileContent[$path],
         );
     }
 

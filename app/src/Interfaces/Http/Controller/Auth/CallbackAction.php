@@ -9,6 +9,7 @@ use App\Application\OAuth\AuthProviderInterface;
 use Psr\Http\Message\ResponseInterface;
 use Spiral\Auth\AuthScope;
 use Spiral\Auth\TokenStorageInterface;
+use Spiral\Http\Exception\ClientException\UnauthorizedException;
 use Spiral\Http\Request\InputManager;
 use Spiral\Router\Annotation\Route;
 
@@ -24,8 +25,13 @@ final readonly class CallbackAction
     ): ResponseInterface {
         $auth->authenticate($input);
 
+        $user = $auth->getUser();
+        if (null === $user) {
+            throw new UnauthorizedException('User not found');
+        }
+
         $authScope->start(
-            $token = $tokens->create($auth->getUser()->jsonSerialize()),
+            $token = $tokens->create($user->jsonSerialize()),
         );
 
         return $successRedirect->makeResponse($token->getID());

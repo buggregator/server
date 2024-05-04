@@ -11,17 +11,16 @@ use Spiral\RoadRunnerBridge\Centrifugo\ServiceInterface;
 
 final class SubscribeService implements ServiceInterface
 {
-    /**
-     * @param Request\Subscribe $request
-     */
     public function handle(RequestInterface $request): void
     {
+        \assert($request instanceof Request\Subscribe);
+
         try {
             $request->respond(
                 new SubscribeResponse(),
             );
         } catch (\Throwable $e) {
-            $request->error($e->getCode(), $e->getMessage());
+            $request->error((int) $e->getCode(), $e->getMessage());
         }
     }
 }

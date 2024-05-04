@@ -60,7 +60,7 @@ final readonly class MongoDBAttachmentRepository implements AttachmentRepository
      */
     public function findOne(array $scope = []): ?object
     {
-        /** @var Attachment|null $document */
+        /** @var BSONDocument|null $document */
         $document = $this->collection->findOne($scope);
 
         if ($document === null) {
@@ -85,6 +85,7 @@ final readonly class MongoDBAttachmentRepository implements AttachmentRepository
 
     private function mapDocumentIntoAttachment(BSONDocument $document): Attachment
     {
+        /** @psalm-suppress InternalMethod */
         return new Attachment(
             uuid: new Uuid($document['_id']),
             eventUuid: new Uuid($document['event_uuid']),
@@ -96,7 +97,7 @@ final readonly class MongoDBAttachmentRepository implements AttachmentRepository
         );
     }
 
-    private function mapOrderBy($orderBy): array
+    private function mapOrderBy(array $orderBy): array
     {
         $result = [];
 

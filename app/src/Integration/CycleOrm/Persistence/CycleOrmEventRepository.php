@@ -10,6 +10,10 @@ use Cycle\ORM\Select\Repository;
 use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 
+/**
+ * @template TEntity of Event
+ * @extends Repository<Event>
+ */
 final class CycleOrmEventRepository extends Repository implements EventRepositoryInterface
 {
     public function __construct(

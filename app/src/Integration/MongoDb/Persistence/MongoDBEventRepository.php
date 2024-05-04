@@ -77,6 +77,9 @@ final readonly class MongoDBEventRepository implements EventRepositoryInterface
         }
     }
 
+    /**
+     * @psalm-suppress ParamNameMismatch
+     */
     public function findByPK(mixed $uuid): ?Event
     {
         return $this->findOne(['_id' => (string) $uuid]);
@@ -84,6 +87,7 @@ final readonly class MongoDBEventRepository implements EventRepositoryInterface
 
     public function findOne(array $scope = []): ?Event
     {
+        /** @var BSONDocument|null $document */
         $document = $this->collection->findOne($this->buildScope($scope));
 
         if ($document === null) {
@@ -95,6 +99,7 @@ final readonly class MongoDBEventRepository implements EventRepositoryInterface
 
     public function mapDocumentIntoEvent(BSONDocument $document): Event
     {
+        /** @psalm-suppress InternalMethod */
         return new Event(
             uuid: Uuid::fromString($document['_id']),
             type: $document['type'],
