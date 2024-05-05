@@ -31,7 +31,7 @@ final readonly class Message implements JsonSerializable
      *
      * @return non-empty-string[]
      */
-    private function getBccs(): array
+    public function getBccs(): array
     {
         return \array_values(
             \array_filter($this->allRecipients, function (string $recipient) {

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Application\Bootloader;
 
 use App\Application\Persistence\DriverEnum;
+use App\Integration\CycleOrm\Persistence\CycleOrmAttachmentRepository;
 use App\Integration\CycleOrm\Persistence\CycleOrmEventRepository;
 use App\Integration\CycleOrm\Persistence\CycleOrmProjectRepository;
+use App\Integration\MongoDb\Persistence\MongoDBSmtpAttachmentRepository;
 use App\Integration\MongoDb\Persistence\MongoDBEventRepository;
 use App\Integration\MongoDb\Persistence\MongoDBProjectRepository;
 use App\Interfaces\Console\RegisterModulesCommand;
@@ -17,6 +19,8 @@ use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Modules\Projects\Domain\Project;
 use Modules\Projects\Domain\ProjectRepositoryInterface;
+use Modules\Smtp\Domain\Attachment;
+use Modules\Smtp\Domain\AttachmentRepositoryInterface;
 use MongoDB\Database;
 use Spiral\Boot\Bootloader\Bootloader;
 use Spiral\Console\Bootloader\ConsoleBootloader;
@@ -56,9 +60,10 @@ final class PersistenceBootloader extends Bootloader
             ): CycleOrmEventRepository => new CycleOrmEventRepository($manager, new Select($orm, Event::class)),
             MongoDBEventRepository::class => static fn(
                 Database $database,
-            ): MongoDBEventRepository => new MongoDBEventRepository(
-                $database->selectCollection('events'),
-            ),
+                FactoryInterface $factory,
+            ): MongoDBEventRepository => $factory->make(MongoDBEventRepository::class, [
+                'collection' => $database->selectCollection('events'),
+            ]),
 
             // Projects
             ProjectRepositoryInterface::class => static fn(
@@ -74,9 +79,32 @@ final class PersistenceBootloader extends Bootloader
             ): ProjectRepositoryInterface => new CycleOrmProjectRepository($manager, new Select($orm, Project::class)),
             MongoDBProjectRepository::class => static fn(
                 Database $database,
-            ): ProjectRepositoryInterface => new MongoDBProjectRepository(
-                $database->selectCollection('projects'),
+                FactoryInterface $factory,
+            ): ProjectRepositoryInterface => $factory->make(MongoDBProjectRepository::class, [
+                'collection' => $database->selectCollection('projects'),
+            ]),
+
+            // SMTP
+            CycleOrmAttachmentRepository::class => static fn(
+                ORMInterface $orm,
+                EntityManagerInterface $manager,
+            ): AttachmentRepositoryInterface => new CycleOrmAttachmentRepository(
+                $manager,
+                new Select($orm, Attachment::class),
             ),
+            AttachmentRepositoryInterface::class => static fn(
+                FactoryInterface $factory,
+                DriverEnum $driver,
+            ): AttachmentRepositoryInterface => match ($driver) {
+                DriverEnum::Database => $factory->make(CycleOrmAttachmentRepository::class),
+                DriverEnum::MongoDb => $factory->make(MongoDBSmtpAttachmentRepository::class),
+            },
+            MongoDBSmtpAttachmentRepository::class => static fn(
+                Database $database,
+                FactoryInterface $factory,
+            ): AttachmentRepositoryInterface => $factory->make(MongoDBSmtpAttachmentRepository::class, [
+                'collection' => $database->selectCollection('smtp_attachments'),
+            ]),
         ];
     }
 

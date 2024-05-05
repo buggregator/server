@@ -12,9 +12,9 @@ use Modules\Events\Domain\EventRepositoryInterface;
 use Modules\Projects\Domain\Project;
 use Modules\Projects\Domain\ProjectRepositoryInterface;
 use Modules\Projects\Domain\ValueObject\Key;
+use Modules\Smtp\Domain\AttachmentRepositoryInterface;
 use MongoDB\Database;
 use MongoDB\Model\CollectionInfo;
-use Spiral\Cache\CacheStorageProviderInterface;
 use Spiral\DatabaseSeeder\Database\Traits\DatabaseAsserts;
 use Spiral\DatabaseSeeder\Database\Traits\ShowQueries;
 use Spiral\DatabaseSeeder\Database\Traits\Transactions;
@@ -112,5 +112,10 @@ abstract class DatabaseTestCase extends TestCase
         }
 
         return $this;
+    }
+
+    protected function getSmtpAttachmentRepository(): AttachmentRepositoryInterface
+    {
+        return $this->get(AttachmentRepositoryInterface::class);
     }
 }

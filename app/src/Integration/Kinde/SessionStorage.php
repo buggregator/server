@@ -7,10 +7,10 @@ namespace App\Integration\Kinde;
 use Kinde\KindeSDK\Sdk\Enums\StorageEnums;
 use Spiral\Session\SessionSectionInterface;
 
-final class SessionStorage
+final readonly class SessionStorage
 {
     public function __construct(
-        private readonly SessionSectionInterface $section,
+        private SessionSectionInterface $section,
     ) {}
 
     public function getToken($associative = true): array|object|null
@@ -40,6 +40,7 @@ final class SessionStorage
     public function getRefreshToken(): ?string
     {
         $token = $this->getToken();
+
         return empty($token) ? null : $token['refresh_token'];
     }
 

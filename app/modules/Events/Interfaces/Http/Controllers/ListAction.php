@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Events\Interfaces\Http\Controllers;
 
 use App\Application\Commands\FindEvents;
+use App\Application\HTTP\Response\ErrorResource;
 use Modules\Events\Interfaces\Http\Request\EventsRequest;
 use Modules\Events\Interfaces\Http\Resources\EventCollection;
 use Modules\Events\Interfaces\Http\Resources\EventResource;
@@ -55,7 +56,7 @@ use OpenApi\Attributes as OA;
             response: 404,
             description: 'Not found',
             content: new OA\JsonContent(
-                ref: '#/components/schemas/NotFoundError',
+                ref: ErrorResource::class,
             ),
         ),
     ],

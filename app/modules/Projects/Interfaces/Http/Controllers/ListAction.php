@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Projects\Interfaces\Http\Controllers;
 
 use App\Application\Commands\FindAllProjects;
+use App\Application\HTTP\Response\ErrorResource;
 use Modules\Projects\Interfaces\Http\Resources\ProjectCollection;
 use Modules\Projects\Interfaces\Http\Resources\ProjectResource;
 use Spiral\Cqrs\QueryBusInterface;
@@ -40,7 +41,7 @@ use OpenApi\Attributes as OA;
             response: 404,
             description: 'Not found',
             content: new OA\JsonContent(
-                ref: '#/components/schemas/NotFoundError',
+                ref: ErrorResource::class,
             ),
         ),
     ],

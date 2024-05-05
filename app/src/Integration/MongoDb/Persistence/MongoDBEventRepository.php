@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace App\Integration\MongoDb\Persistence;
 
-use App\Application\Domain\Entity\Json;
-use App\Application\Domain\ValueObjects\Uuid;
+use App\Integration\MongoDb\Mappers\EventMapper;
 use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
-use Modules\Events\Domain\ValueObject\Timestamp;
-use Modules\Projects\Domain\ValueObject\Key;
 use MongoDB\Collection;
 use MongoDB\Model\BSONDocument;
 
 final readonly class MongoDBEventRepository implements EventRepositoryInterface
 {
+    use HelpersTrait;
+
     public function __construct(
         private Collection $collection,
+        private EventMapper $mapper,
     ) {}
 
     public function store(Event $event): bool
@@ -24,25 +24,13 @@ final readonly class MongoDBEventRepository implements EventRepositoryInterface
         if ($this->findByPK($event->getUuid()) !== null) {
             $this->collection->replaceOne(
                 ['_id' => (string) $event->getUuid()],
-                [
-                    '_id' => (string) $event->getUuid(),
-                    'type' => $event->getType(),
-                    'project' => $event->getProject() ? (string) $event->getProject() : null,
-                    'timestamp' => (string) $event->getTimestamp(),
-                    'payload' => $event->getPayload()->jsonSerialize(),
-                ],
+                $this->mapper->toDocument($event),
             );
 
             return true;
         }
 
-        $result = $this->collection->insertOne([
-            '_id' => (string) $event->getUuid(),
-            'type' => $event->getType(),
-            'project' => $event->getProject() ? (string) $event->getProject() : null,
-            'timestamp' => (string) $event->getTimestamp(),
-            'payload' => $event->getPayload()->jsonSerialize(),
-        ]);
+        $result = $this->collection->insertOne($this->mapper->toDocument($event));
 
         return $result->getInsertedCount() > 0;
     }
@@ -66,17 +54,23 @@ final readonly class MongoDBEventRepository implements EventRepositoryInterface
 
     public function findAll(array $scope = [], array $orderBy = [], int $limit = 30, int $offset = 0): iterable
     {
-        $cursor = $this->collection->find($this->buildScope($scope), [
-            'sort' => $this->mapOrderBy($orderBy),
-            'limit' => $limit,
-            'skip' => $offset,
-        ]);
+        $cursor = $this->collection->find(
+            $this->buildScope($scope),
+            $this->makeOptions(
+                orderBy: $orderBy,
+                limit: $limit,
+                offset: $offset,
+            ),
+        );
 
         foreach ($cursor as $document) {
-            yield $this->mapDocumentIntoEvent($document);
+            yield $this->mapper->toEvent($document);
         }
     }
 
+    /**
+     * @psalm-suppress ParamNameMismatch
+     */
     public function findByPK(mixed $uuid): ?Event
     {
         return $this->findOne(['_id' => (string) $uuid]);
@@ -84,35 +78,14 @@ final readonly class MongoDBEventRepository implements EventRepositoryInterface
 
     public function findOne(array $scope = []): ?Event
     {
+        /** @var BSONDocument|null $document */
         $document = $this->collection->findOne($this->buildScope($scope));
 
         if ($document === null) {
             return null;
         }
 
-        return $this->mapDocumentIntoEvent($document);
-    }
-
-    public function mapDocumentIntoEvent(BSONDocument $document): Event
-    {
-        return new Event(
-            uuid: Uuid::fromString($document['_id']),
-            type: $document['type'],
-            payload: new Json((array) $document['payload']),
-            timestamp: new Timestamp($document['timestamp']),
-            project: $document['project'] ? new Key($document['project']) : null,
-        );
-    }
-
-    private function mapOrderBy(array $orderBy): array
-    {
-        $result = [];
-
-        foreach ($orderBy as $key => $order) {
-            $result[$key] = $order === 'asc' ? 1 : -1;
-        }
-
-        return $result;
+        return $this->mapper->toEvent($document);
     }
 
     private function buildScope(array $scope): array

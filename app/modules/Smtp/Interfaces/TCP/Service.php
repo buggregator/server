@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Modules\Smtp\Interfaces\TCP;
 
 use App\Application\Commands\HandleReceivedEvent;
+use App\Application\Domain\ValueObjects\Uuid;
 use Modules\Smtp\Application\Mail\Message;
-use Modules\Smtp\Application\Storage\AttachmentStorage;
 use Modules\Smtp\Application\Storage\EmailBodyStorage;
+use Modules\Smtp\Domain\AttachmentStorageInterface;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpEvent;
@@ -20,9 +21,9 @@ use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
 final readonly class Service implements ServiceInterface
 {
     public function __construct(
-        private CommandBusInterface $commands,
+        private CommandBusInterface $bus,
         private EmailBodyStorage $emailBodyStorage,
-        private AttachmentStorage $attachments,
+        private AttachmentStorageInterface $attachments,
     ) {}
 
     public function handle(Request $request): ResponseInterface
@@ -90,15 +91,18 @@ final readonly class Service implements ServiceInterface
 
     private function dispatchMessage(Message $message, ?string $project = null): void
     {
+        $uuid = Uuid::generate();
         $data = $message->jsonSerialize();
 
-        $data['attachments'] = $this->attachments->store(
-            id: $message->id,
-            attachments: $message->attachments,
-        );
+        $this->attachments->store(eventUuid: $uuid, attachments: $message->attachments);
 
-        $this->commands->dispatch(
-            new HandleReceivedEvent(type: 'smtp', payload: $data, project: $project),
+        $this->bus->dispatch(
+            new HandleReceivedEvent(
+                type: 'smtp',
+                payload: $data,
+                project: $project,
+                uuid: $uuid,
+            ),
         );
     }
 

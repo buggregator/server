@@ -1,0 +1,31 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Smtp\Application;
+
+use App\Application\Domain\ValueObjects\Uuid;
+use Modules\Smtp\Domain\Attachment;
+use Modules\Smtp\Domain\AttachmentFactoryInterface;
+
+final readonly class AttachmentFactory implements AttachmentFactoryInterface
+{
+    public function create(
+        Uuid $eventUuid,
+        string $name,
+        string $path,
+        int $size,
+        string $mime,
+        string $id,
+    ): Attachment {
+        return new Attachment(
+            uuid: Uuid::generate(),
+            eventUuid: $eventUuid,
+            name: $name,
+            path: $path,
+            size: $size,
+            mime: $mime,
+            id: $id,
+        );
+    }
+}

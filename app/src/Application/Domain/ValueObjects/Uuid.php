@@ -8,16 +8,16 @@ use Ramsey\Uuid\UuidInterface;
 
 final class Uuid implements \Stringable
 {
+    private UuidInterface $uuid;
+
     public static function generate(): self
     {
         return new self();
     }
 
-    public function __construct(private ?UuidInterface $uuid = null)
+    public function __construct(?UuidInterface $uuid = null)
     {
-        if (!$uuid instanceof \Ramsey\Uuid\UuidInterface) {
-            $this->uuid = \Ramsey\Uuid\Uuid::uuid7();
-        }
+        $this->uuid = $uuid ?? \Ramsey\Uuid\Uuid::uuid7();
     }
 
     public function equals(self $uuid): bool
@@ -35,7 +35,7 @@ final class Uuid implements \Stringable
         return new self(\Ramsey\Uuid\Uuid::fromString($uuid));
     }
 
-    public function __toString()
+    public function __toString(): string
     {
         return $this->uuid->toString();
     }

@@ -19,31 +19,29 @@ final readonly class ConnectService implements ServiceInterface
         private QueryBusInterface $bus,
     ) {}
 
-    /**
-     * @param Request\Connect $request
-     */
     public function handle(RequestInterface $request): void
     {
+        \assert($request instanceof Request\Connect);
+
         /** @var Project[] $projects */
         $projects = $this->bus->ask(new FindAllProjects());
-        $channels = [new EventsChannel()];
+
+        /** @var non-empty-string[] $channels */
+        $channels = [(string) new EventsChannel()];
 
         foreach ($projects as $project) {
-            $channels[] = new EventsChannel($project->getKey());
+            $channels[] = (string) new EventsChannel($project->getKey());
         }
 
         try {
             $request->respond(
                 new ConnectResponse(
                     user: (string) $request->getAttribute('user_id'),
-                    channels: \array_map(
-                        static fn(EventsChannel $channel) => (string) $channel,
-                        $channels,
-                    ),
+                    channels: $channels,
                 ),
             );
         } catch (\Throwable $e) {
-            $request->error($e->getCode(), $e->getMessage());
+            $request->error((int) $e->getCode(), $e->getMessage());
         }
     }
 }

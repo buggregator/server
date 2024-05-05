@@ -7,57 +7,72 @@ namespace Tests\Feature\Interfaces\TCP\Smtp;
 use App\Application\Broadcasting\Channel\EventsChannel;
 use Modules\Smtp\Application\Storage\EmailBodyStorage;
 use Modules\Smtp\Application\Storage\Message;
-use Modules\Smtp\Interfaces\TCP\Service as SmtpService;
+use Modules\Smtp\Domain\Attachment;
+use Modules\Smtp\Domain\AttachmentRepositoryInterface;
 use Ramsey\Uuid\Uuid;
 use Spiral\RoadRunner\Tcp\TcpEvent;
 use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;
-use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
-use Tests\App\Smtp\FakeStream;
 use Tests\Feature\Interfaces\TCP\TCPTestCase;
 
 final class EmailTest extends TCPTestCase
 {
+    private \Spiral\Storage\BucketInterface $bucket;
+    private \Mockery\MockInterface|AttachmentRepositoryInterface $accounts;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->bucket = $this->fakeStorage()->bucket('attachments');
+        $this->accounts = $this->mockContainer(AttachmentRepositoryInterface::class);
+    }
+
     public function testSendEmail(): void
     {
-        $this->createProject('default');
+        $project = $this->createProject('default');
 
-        $email = (new Email)
-            ->subject('Test message')
-            ->date(new \DateTimeImmutable('2024-05-02 16:01:33'))
-            ->addTo(
-                new Address('alice@example.com', 'Alice Doe'),
-                'barney@example.com',
-                new Address('john@example.com', 'John Doe'),
-            )
-            ->addCc(
-                new Address('customer@example.com', 'Customer'),
-                'theboss@example.com',
-            )
-            ->addFrom(
-                new Address('no-reply@site.com', 'Bob Example'),
-            )
-            ->text(
-                body: 'Hello Alice.<br>This is a test message with 5 header fields and 4 lines in the message body.'
-            );
+        $email = $this->buildEmail();
+        $email->getHeaders()->addIdHeader('Message-ID', $id = $email->generateMessageId());
 
-        $email->getHeaders()->addIdHeader('Message-ID', $email->generateMessageId());
-        $id = $email->getHeaders()->get('Message-ID')->getBody()[0];
-
-        $client = new EsmtpTransport(
-            stream: new FakeStream(
-                service: $this->get(SmtpService::class),
-                uuid: $uuid = Uuid::uuid7()->toString(),
-            ),
+        $client = $this->buildSmtpClient(
+            username: (string) $project->getKey(),
+            uuid: $connectionUuid = Uuid::uuid7(),
         );
 
-        $client->setUsername('default');
-        $client->setPassword('password');
+        // Assert hello.txt is persisted to a database
+        $this->accounts->shouldReceive('store')
+            ->once()
+            ->with(
+                \Mockery::on(function (Attachment $attachment) {
+                    $this->assertSame('hello.txt', $attachment->getFilename());
+                    $this->assertSame(13, $attachment->getSize());
+                    $this->assertSame('text/plain', $attachment->getMime());
+
+                    // Check attachments storage
+                    $this->bucket->assertCreated($attachment->getPath());
+                    return true;
+                }),
+            );
+
+
+        // Assert world.txt is persisted to a database
+        $this->accounts->shouldReceive('store')
+            ->once()
+            ->with(
+                \Mockery::on(function (Attachment $attachment) {
+                    $this->assertSame('logo.svg', $attachment->getFilename());
+                    $this->assertSame('image/svg+xml', $attachment->getMime());
+                    $this->assertSame(1206, $attachment->getSize());
+                    $this->bucket->assertCreated($attachment->getPath());
+
+                    return true;
+                }),
+            );
 
         $client->send($email);
-
-        $this->validateMessage($id, $uuid);
+        $this->validateMessage($id, (string) $connectionUuid);
 
         $response = $this->handleSmtpRequest(message: '', event: TCPEvent::Close);
         $this->assertInstanceOf(CloseConnection::class, $response);
@@ -85,57 +100,63 @@ final class EmailTest extends TCPTestCase
             'theboss@example.com',
         ], $messageData->recipients);
 
-        $this->assertSame([
-            'id' => $messageId,
-            'from' => [
+        $parsedMessage = $messageData->parse();
+
+        $this->assertSame($messageId, $parsedMessage->id);
+        $this->assertSame(
+            [
                 [
                     'email' => 'no-reply@site.com',
                     'name' => 'Bob Example',
                 ],
             ],
-            'reply_to' => [],
-            'subject' => 'Test message',
-            'to' => [
-                [
-                    'name' => 'Alice Doe',
-                    'email' => 'alice@example.com',
-                ],
-                [
-                    'name' => '',
-                    'email' => 'barney@example.com',
-                ],
-                [
-                    'name' => 'John Doe',
-                    'email' => 'john@example.com',
-                ],
+            $parsedMessage->sender,
+        );
+        $this->assertSame([], $parsedMessage->replyTo);
+        $this->assertSame('Test message', $parsedMessage->subject);
+        $this->assertSame([
+            [
+                'name' => 'Alice Doe',
+                'email' => 'alice@example.com',
             ],
-            'cc' => [
-                [
-                    'name' => 'Customer',
-                    'email' => 'customer@example.com',
-                ],
-                [
-                    'name' => '',
-                    'email' => 'theboss@example.com',
-                ],
+            [
+                'name' => '',
+                'email' => 'barney@example.com',
             ],
-            'bcc' => [],
-            'text' => 'Hello Alice.<br>This is a test message with 5 header fields and 4 lines in the message body.',
-            'html' => '',
-            'raw' => "Subject: Test message\r
+            [
+                'name' => 'John Doe',
+                'email' => 'john@example.com',
+            ],
+        ], $parsedMessage->recipients);
+        $this->assertSame([
+            [
+                'name' => 'Customer',
+                'email' => 'customer@example.com',
+            ],
+            [
+                'name' => '',
+                'email' => 'theboss@example.com',
+            ],
+        ], $parsedMessage->ccs);
+
+        $this->assertSame([], $parsedMessage->getBccs());
+
+        $this->assertSame(
+            'Hello Alice.<br>This is a test message with 5 header fields and 4 lines in the message body.',
+            $parsedMessage->textBody,
+        );
+
+        $this->assertSame('', $parsedMessage->htmlBody);
+        $this->assertStringContainsString(
+            "Subject: Test message\r
 Date: Thu, 02 May 2024 16:01:33 +0000\r
 To: Alice Doe <alice@example.com>, barney@example.com, John Doe\r
  <john@example.com>\r
 Cc: Customer <customer@example.com>, theboss@example.com\r
 From: Bob Example <no-reply@site.com>\r
-Message-ID: <$messageId>\r
-MIME-Version: 1.0\r
-Content-Type: text/plain; charset=utf-8\r
-Content-Transfer-Encoding: quoted-printable\r
-\r
-Hello Alice.<br>This is a test message with 5 header fields and 4 lines in =\r
-the message body.",
-        ], $messageData->parse()->jsonSerialize());
+Message-ID: <$messageId>\r",
+            $parsedMessage->raw,
+        );
     }
 
     private function assertEventPushed(?string $project = null): void
@@ -174,5 +195,27 @@ the message body.",
 
             return true;
         });
+    }
+
+    public function buildEmail(): Email
+    {
+        return (new Email)
+            ->subject('Test message')
+            ->date(new \DateTimeImmutable('2024-05-02 16:01:33'))
+            ->addTo(
+                new Address('alice@example.com', 'Alice Doe'),
+                'barney@example.com',
+                new Address('john@example.com', 'John Doe'),
+            )
+            ->addCc(
+                new Address('customer@example.com', 'Customer'),
+                'theboss@example.com',
+            )
+            ->addFrom(new Address('no-reply@site.com', 'Bob Example'),)
+            ->attachFromPath(path: __DIR__ . '/hello.txt',)
+            ->attachFromPath(path: __DIR__ . '/logo.svg',)
+            ->text(
+                body: 'Hello Alice.<br>This is a test message with 5 header fields and 4 lines in the message body.',
+            );
     }
 }
