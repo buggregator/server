@@ -36,15 +36,19 @@ use OpenApi\Attributes as OA;
         ),
     ],
     responses: [
-        // TODO: Add response for file download
-//        new OA\Response(
-//            response: 200,
-//            description: 'Success',
-//            content: new OA\Schema(
-//                type: 'file',
-//                format: 'binary',
-//            ),
-//        ),
+        new OA\Response(
+            response: 200,
+            description: 'Success',
+            headers: [
+                new OA\Header(header: 'Content-Type', schema: new OA\Schema(type: 'string', format: 'binary')),
+                new OA\Header(header: 'Content-Length', schema: new OA\Schema(type: 'string', format: 'binary')),
+                new OA\Header(header: 'Content-Disposition', schema: new OA\Schema(type: 'string', format: 'binary')),
+            ],
+            content: new OA\MediaType(
+                mediaType: 'application/octet-stream',
+                schema: new OA\Schema(type: 'string', format: 'binary'),
+            ),
+        ),
         new OA\Response(
             response: 404,
             description: 'Not found',
