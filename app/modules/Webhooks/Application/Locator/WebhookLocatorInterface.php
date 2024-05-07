@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Webhooks\Domain;
+namespace Modules\Webhooks\Application\Locator;
 
 interface WebhookLocatorInterface
 {

@@ -49,7 +49,7 @@ final class DeliveryListAction
         Uuid $uuid,
     ): DeliveryCollection {
         return new DeliveryCollection(
-            $repository->findAll($uuid),
+            $repository->findByWebhook($uuid),
         );
     }
 }

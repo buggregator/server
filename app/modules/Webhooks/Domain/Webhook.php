@@ -4,18 +4,42 @@ declare(strict_types=1);
 
 namespace Modules\Webhooks\Domain;
 
+use App\Application\Domain\Entity\Json;
 use App\Application\Domain\ValueObjects\Uuid;
+use Cycle\Annotated\Annotation\Column;
+use Cycle\Annotated\Annotation\Entity;
+use Cycle\Annotated\Annotation\Table\Index;
+use Modules\Webhooks\Domain\ValueObject\Url;
 
-final class Webhook
+#[Entity(
+    repository: WebhookRepositoryInterface::class,
+    table: 'webhooks'
+)]
+#[Index(columns: ['key'], unique: true)]
+class Webhook
 {
+    /**  @internal */
     public function __construct(
+        #[Column(type: 'string(36)', primary: true, typecast: 'uuid')]
         public Uuid $uuid,
+        #[Column(type: 'string(50)')]
+        public string $key,
+        #[Column(type: 'string(50)')]
         public string $event,
-        public string $url,
-        public array $headers = [],
+        #[Column(type: 'text', typecast: Url::class)]
+        public Url $url,
+        #[Column(type: 'json', default: [], typecast: Json::class)]
+        public Json $headers = new Json(),
+        #[Column(type: 'boolean', default: false, typecast: 'bool')]
         public bool $verifySsl = false,
+        #[Column(type: 'boolean', default: true, typecast: 'bool')]
         public bool $retryOnFailure = true,
     ) {}
+
+    public function getUuid(): Uuid
+    {
+        return $this->uuid;
+    }
 
     public function getHeaders(): array
     {
@@ -37,10 +61,10 @@ final class Webhook
         return \implode(',', $this->headers[$name] ?? []);
     }
 
-    public function withHeader(string $name, $value): self
+    public function withHeader(string $name, string|\Stringable|array $value): self
     {
         $clone = clone $this;
-        $clone->headers[$name] = (array) $value;
+        $clone->headers[$name] = \array_map(\strval(...), (array) $value);
 
         return $clone;
     }

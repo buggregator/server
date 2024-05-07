@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Webhooks\Application;
-
-use Modules\Webhooks\Domain\WebhookLocatorInterface;
+namespace Modules\Webhooks\Application\Locator;
 
 final readonly class CompositeWebhookLocator implements WebhookLocatorInterface
 {

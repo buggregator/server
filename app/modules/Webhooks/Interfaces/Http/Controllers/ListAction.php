@@ -7,8 +7,8 @@ namespace Modules\Webhooks\Interfaces\Http\Controllers;
 use Modules\Webhooks\Domain\WebhookRepositoryInterface;
 use Modules\Webhooks\Interfaces\Http\Resources\WebhookCollection;
 use Modules\Webhooks\Interfaces\Http\Resources\WebhookResource;
-use Spiral\Router\Annotation\Route;
 use OpenApi\Attributes as OA;
+use Spiral\Router\Annotation\Route;
 
 #[OA\Get(
     path: '/api/webhooks',

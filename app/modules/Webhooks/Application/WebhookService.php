@@ -35,7 +35,7 @@ final readonly class WebhookService implements WebhookServiceInterface
         }
     }
 
-    public function sendWebhook(Uuid $uuid, WebhookEvent $event): void
+    private function sendWebhook(Uuid $uuid, WebhookEvent $event): void
     {
         $webhook = $this->webhooks->getByUuid($uuid);
 

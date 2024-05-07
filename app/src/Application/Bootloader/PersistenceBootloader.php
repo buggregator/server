@@ -8,6 +8,9 @@ use App\Application\Persistence\DriverEnum;
 use App\Integration\CycleOrm\Persistence\CycleOrmAttachmentRepository;
 use App\Integration\CycleOrm\Persistence\CycleOrmEventRepository;
 use App\Integration\CycleOrm\Persistence\CycleOrmProjectRepository;
+use App\Integration\CycleOrm\Persistence\CycleOrmWebhookDeliveryRepository;
+use App\Integration\CycleOrm\Persistence\CycleOrmWebhookRepository;
+use App\Integration\CycleOrm\Webhooks\CycleOrmWebhookRegistry;
 use App\Integration\MongoDb\Persistence\MongoDBSmtpAttachmentRepository;
 use App\Integration\MongoDb\Persistence\MongoDBEventRepository;
 use App\Integration\MongoDb\Persistence\MongoDBProjectRepository;
@@ -21,6 +24,8 @@ use Modules\Projects\Domain\Project;
 use Modules\Projects\Domain\ProjectRepositoryInterface;
 use Modules\Smtp\Domain\Attachment;
 use Modules\Smtp\Domain\AttachmentRepositoryInterface;
+use Modules\Webhooks\Application\Locator\WebhookRegistryInterface;
+use Modules\Webhooks\Domain as Webhooks;
 use MongoDB\Database;
 use Spiral\Boot\Bootloader\Bootloader;
 use Spiral\Console\Bootloader\ConsoleBootloader;
@@ -105,6 +110,39 @@ final class PersistenceBootloader extends Bootloader
             ): AttachmentRepositoryInterface => $factory->make(MongoDBSmtpAttachmentRepository::class, [
                 'collection' => $database->selectCollection('smtp_attachments'),
             ]),
+
+            // Webhooks
+            CycleOrmWebhookRepository::class => static fn(
+                ORMInterface $orm,
+                EntityManagerInterface $manager,
+            ): Webhooks\WebhookRepositoryInterface => new CycleOrmWebhookRepository(
+                $manager,
+                new Select($orm, Webhooks\Webhook::class),
+            ),
+            CycleOrmWebhookDeliveryRepository::class => static fn(
+                ORMInterface $orm,
+                EntityManagerInterface $manager,
+            ): Webhooks\DeliveryRepositoryInterface => new CycleOrmWebhookDeliveryRepository(
+                $manager,
+                new Select($orm, Webhooks\Delivery::class),
+            ),
+            Webhooks\WebhookRepositoryInterface::class => static fn(
+                FactoryInterface $factory,
+                DriverEnum $driver,
+            ): Webhooks\WebhookRepositoryInterface => match ($driver) {
+                DriverEnum::Database => $factory->make(CycleOrmWebhookRepository::class),
+                default => throw new \RuntimeException('Unsupported driver'),
+            },
+
+            Webhooks\DeliveryRepositoryInterface::class => static fn(
+                FactoryInterface $factory,
+                DriverEnum $driver,
+            ): Webhooks\DeliveryRepositoryInterface => match ($driver) {
+                DriverEnum::Database => $factory->make(CycleOrmWebhookDeliveryRepository::class),
+                default => throw new \RuntimeException('Unsupported driver'),
+            },
+
+            WebhookRegistryInterface::class => CycleOrmWebhookRegistry::class,
         ];
     }
 
