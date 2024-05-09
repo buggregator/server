@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace App\Interfaces\Console;
 
-use App\Application\Commands\HandleReceivedEvent;
 use Psr\Container\ContainerInterface;
 use Spiral\Console\Attribute\AsCommand;
 use Spiral\Console\Command\SequenceCommand;
 use Spiral\Console\Config\ConsoleConfig;
-use Spiral\Cqrs\CommandBusInterface;
 
 #[AsCommand(
     name: 'register:modules',

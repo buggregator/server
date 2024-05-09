@@ -23,6 +23,7 @@ final readonly class WebhookEventInterceptor implements CoreInterceptorInterface
         $result = $core->callAction($controller, $action, $parameters);
 
         $webhookEvent = null;
+        // Todo: use mapper to map event to webhook event
         if ($event instanceof EventWasReceived) {
             $webhookEvent = new WebhookEvent(
                 event: $event->event->getType() . '.received',
@@ -34,7 +35,6 @@ final readonly class WebhookEventInterceptor implements CoreInterceptorInterface
                 ],
             );
         }
-
 
         if ($webhookEvent) {
             $this->service->send($webhookEvent);

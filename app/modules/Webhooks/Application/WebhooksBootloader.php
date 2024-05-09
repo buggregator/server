@@ -19,31 +19,41 @@ use Modules\Webhooks\Domain\WebhookFactoryInterface;
 use Modules\Webhooks\Domain\WebhookServiceInterface;
 use Spiral\Boot\Bootloader\Bootloader;
 use Spiral\Boot\DirectoriesInterface;
-use Spiral\Boot\EnvironmentInterface;
 use Spiral\Console\Bootloader\ConsoleBootloader;
 use Spiral\Core\FactoryInterface;
+use Spiral\Queue\QueueConnectionProviderInterface;
 use Spiral\RoadRunner\Metrics\Collector;
 
 final class WebhooksBootloader extends Bootloader
 {
     private const CACHE_ALIAS = 'webhooks';
+    private const QUEUE_ALIAS = 'webhooks';
 
     public function defineSingletons(): array
     {
         return [
             ClientInterface::class => static fn(
-                EnvironmentInterface $env,
+                HttpClientSettings $settings,
             ): ClientInterface => new Client([
-                'timeout' => 5,
+                'timeout' => $settings->getTimeout(),
                 'connect_timeout' => 5,
                 'headers' => [
-                    'User-Agent' => $env->get('WEBHOOK_USER_AGENT', 'Buggregator\Webhooks'),
-                    'Content-Type' => 'application/json',
+                    'User-Agent' => $settings->getUserAgent(),
+                    'Content-Type' => $settings->getContentType(),
                 ],
             ]),
 
             WebhookFactoryInterface::class => WebhookFactory::class,
-            WebhookServiceInterface::class => WebhookService::class,
+            WebhookServiceInterface::class => static fn(
+                FactoryInterface $factory,
+                QueueConnectionProviderInterface $provider,
+            ): WebhookServiceInterface => $factory->make(
+                WebhookService::class,
+                [
+                    'queue' => $provider->getConnection(self::QUEUE_ALIAS),
+                ],
+            ),
+
 
             YamlFileWebhookLocator::class => static fn(
                 FactoryInterface $factory,

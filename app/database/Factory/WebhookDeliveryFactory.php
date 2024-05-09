@@ -6,6 +6,7 @@ namespace Database\Factory;
 
 use App\Application\Domain\ValueObjects\Uuid;
 use Modules\Webhooks\Domain\Delivery;
+use Modules\Webhooks\Domain\Webhook;
 use Spiral\DatabaseSeeder\Factory\AbstractFactory;
 
 /**
@@ -40,5 +41,12 @@ final class WebhookDeliveryFactory extends AbstractFactory
             'response' => $this->faker->text(),
             'status' => $this->faker->numberBetween(200, 500),
         ];
+    }
+
+    public function forWebhook(Webhook|Uuid $uuid): self
+    {
+        return $this->state(static fn() => [
+            'webhook_uuid' => $uuid instanceof Uuid ? $uuid : $uuid->uuid,
+        ]);
     }
 }

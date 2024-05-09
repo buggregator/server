@@ -12,7 +12,7 @@ $defaultConnection = env('QUEUE_DEFAULT_CONNECTION', 'roadrunner');
 return [
     'default' => env('QUEUE_CONNECTION', 'memory'),
     'aliases' => [
-        'webhook' => $defaultConnection,
+        'webhooks' => $defaultConnection,
         'events' => $defaultConnection,
     ],
     'pipelines' => [

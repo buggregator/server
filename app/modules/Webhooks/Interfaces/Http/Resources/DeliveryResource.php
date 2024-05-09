@@ -31,11 +31,11 @@ final class DeliveryResource extends JsonResource
     protected function mapData(): array|\JsonSerializable
     {
         return [
-            'uuid' => (string) $this->data->uuid,
-            'payload' => $this->data->payload,
-            'response' => $this->data->response,
-            'status' => $this->data->status,
-            'created_at' => $this->data->createdAt->format(\DateTimeInterface::W3C),
+            'uuid' => (string) $this->data->getUuid(),
+            'payload' => $this->data->getPayload(),
+            'response' => $this->data->getResponse(),
+            'status' => $this->data->getStatus(),
+            'created_at' => $this->data->getCreatedAt()->format(\DateTimeInterface::W3C),
         ];
     }
 }

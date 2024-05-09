@@ -4,7 +4,4 @@ declare(strict_types=1);
 
 namespace Modules\Webhooks\Exceptions;
 
-final class WebhooksAlreadyExistsException extends WebhooksException
-{
-
-}
+final class WebhooksAlreadyExistsException extends WebhooksException {}

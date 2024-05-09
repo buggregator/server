@@ -28,6 +28,7 @@ final class WebhookHandler extends JobHandler
         private readonly ExceptionReporterInterface $reporter,
         private readonly LoggerInterface $logger,
         private readonly WebhookMetrics $metrics,
+        private readonly RetryPolicy $retryPolicy,
     ) {
         parent::__construct($invoker);
     }
@@ -38,20 +39,17 @@ final class WebhookHandler extends JobHandler
 
         $webhook = $this->webhooks->getByUuid($uuid);
 
-        $totalRetries = $webhook->retryOnFailure ? 3 : 1;
+        if (!$webhook->retryOnFailure) {
+            $this->retryPolicy->setMaxRetries(1);
+        }
 
-        $retryMultiplier = 2;
-        $delay = 5;
-
-        while ($totalRetries > 0) {
+        while ($this->retryPolicy->canRetry()) {
             try {
                 $this->send($webhook, $payload);
                 $this->logger->debug('Webhook sent', ['webhook' => (string) $webhook->uuid]);
                 break;
             } catch (\Throwable) {
-                \sleep($delay);
-                $delay *= $retryMultiplier;
-                $totalRetries--;
+                $this->retryPolicy->nextRetry();
             }
         }
     }
@@ -63,15 +61,15 @@ final class WebhookHandler extends JobHandler
             $headers = [
                 'Content-Type' => 'application/json',
                 'X-Webhook-Id' => (string) $webhook->uuid,
-                'X-Webhook-Event' => $payload->event,
+                'X-Webhook-Event' => $payload->event->event,
             ];
 
             foreach ($webhook->getHeaders() as $header => $value) {
                 $headers[$header] = $webhook->getHeaderLine($header);
             }
 
-            $response = $this->httpClient->request('POST', $webhook->url, [
-                'json' => $payload->payload,
+            $response = $this->httpClient->request('POST', (string) $webhook->url, [
+                'json' => $payload->event->payload,
                 'verify' => $webhook->verifySsl,
                 'headers' => $headers,
             ]);
@@ -83,13 +81,13 @@ final class WebhookHandler extends JobHandler
         } finally {
             $delivery = $this->deliveryFactory->create(
                 webhookUuid: $webhook->uuid,
-                payload: \json_encode($payload->payload),
-                response: $response->getBody()->getContents(),
-                status: $response->getStatusCode(),
+                payload: \json_encode($payload->event->payload),
+                response: (string) $response->getBody()->getContents(),
+                status: $response?->getStatusCode() ?? 500,
             );
 
             $this->deliveries->store($delivery);
-            $this->metrics->called($payload->event, $webhook->url, !$failed);
+            $this->metrics->called($payload->event->event, (string) $webhook->url, !$failed);
         }
 
         if ($failed) {

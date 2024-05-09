@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Webhooks\Interfaces\Http\Controllers;
 
+use App\Application\Commands\FindWebhookDeliveries;
 use App\Application\Domain\ValueObjects\Uuid;
-use Modules\Webhooks\Domain\DeliveryRepositoryInterface;
 use Modules\Webhooks\Interfaces\Http\Resources\DeliveryCollection;
 use Modules\Webhooks\Interfaces\Http\Resources\DeliveryResource;
+use Spiral\Cqrs\QueryBusInterface;
 use Spiral\Router\Annotation\Route;
 use OpenApi\Attributes as OA;
 
@@ -41,15 +42,15 @@ use OpenApi\Attributes as OA;
         ),
     ],
 )]
-final class DeliveryListAction
+final readonly class DeliveryListAction
 {
     #[Route(route: 'webhook/<uuid>/deliveries', name: 'webhooks.delivery.list', methods: 'GET', group: 'api')]
     public function __invoke(
-        DeliveryRepositoryInterface $repository,
+        QueryBusInterface $bus,
         Uuid $uuid,
     ): DeliveryCollection {
-        return new DeliveryCollection(
-            $repository->findByWebhook($uuid),
-        );
+        $deliveries = $bus->ask(new FindWebhookDeliveries(webhookUuid: $uuid));
+
+        return new DeliveryCollection($deliveries);
     }
 }

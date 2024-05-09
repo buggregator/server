@@ -6,11 +6,6 @@ namespace Tests\App\Http;
 
 use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\OAuth\User;
-use App\Application\Security\Permission;
-use Carbon\Carbon;
-use Database\Factory\UserFactory;
-use Database\Factory\UserRoleFactory;
-use Ramsey\Uuid\UuidInterface;
 use Spiral\Auth\TokenStorageInterface;
 use Spiral\Auth\TokenStorageProviderInterface;
 use Spiral\Testing\Http\FakeHttp;
@@ -64,6 +59,20 @@ final class HttpFaker
         $self->http = $this->http->withHeader('x-auth-token', $token);
 
         return $self;
+    }
+
+    public function listWebhooks(): ResponseAssertions
+    {
+        return $this->makeResponse(
+            $this->http->getJson(uri: '/api/webhooks'),
+        );
+    }
+
+    public function listWebhookDeliveries(Uuid $webhookUuid): ResponseAssertions
+    {
+        return $this->makeResponse(
+            $this->http->getJson(uri: '/api/webhook/' . $webhookUuid . '/deliveries'),
+        );
     }
 
     public function showEvent(Uuid $uuid): ResponseAssertions

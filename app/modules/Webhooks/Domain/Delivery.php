@@ -11,13 +11,13 @@ use Cycle\Annotated\Annotation\ForeignKey;
 
 #[Entity(
     repository: DeliveryRepositoryInterface::class,
-    table: 'webhook_deliveries'
+    table: 'webhook_deliveries',
 )]
 #[ForeignKey(target: Webhook::class, innerKey: 'webhook_uuid', outerKey: 'uuid')]
 class Delivery
 {
     #[Column(type: 'datetime')]
-    public \DateTimeInterface $createdAt;
+    private \DateTimeInterface $createdAt;
 
     /**  @internal */
     public function __construct(
@@ -58,5 +58,10 @@ class Delivery
     public function getStatus(): int
     {
         return $this->status;
+    }
+
+    public function getCreatedAt(): \DateTimeInterface
+    {
+        return $this->createdAt;
     }
 }

@@ -13,7 +13,7 @@ use Modules\Webhooks\Domain\ValueObject\Url;
 
 #[Entity(
     repository: WebhookRepositoryInterface::class,
-    table: 'webhooks'
+    table: 'webhooks',
 )]
 #[Index(columns: ['key'], unique: true)]
 class Webhook
@@ -41,7 +41,7 @@ class Webhook
         return $this->uuid;
     }
 
-    public function getHeaders(): array
+    public function getHeaders(): Json
     {
         return $this->headers;
     }
