@@ -36,7 +36,7 @@ final class WebhookDeliveryFactory extends AbstractFactory
     public function definition(): array
     {
         return [
-            'webhook_uuid' => Uuid::generate(),
+            'webhook_uuid' => static fn() => WebhookFactory::new()->createOne()->uuid,
             'payload' => $this->faker->text(),
             'response' => $this->faker->text(),
             'status' => $this->faker->numberBetween(200, 500),
