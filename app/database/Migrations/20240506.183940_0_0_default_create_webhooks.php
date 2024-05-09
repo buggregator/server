@@ -17,7 +17,7 @@ class OrmDefaultFe65025ced69992a1d1d9088b9137d1d extends Migration
             ->addColumn('key', 'string', ['nullable' => false, 'defaultValue' => null, 'size' => 50])
             ->addColumn('event', 'string', ['nullable' => false, 'defaultValue' => null, 'size' => 50])
             ->addColumn('url', 'text', ['nullable' => false, 'defaultValue' => null])
-            ->addColumn('headers', 'json', ['nullable' => false, 'defaultValue' => ''])
+            ->addColumn('headers', 'json', ['nullable' => false])
             ->addColumn('verify_ssl', 'boolean', ['nullable' => false, 'defaultValue' => false])
             ->addColumn('retry_on_failure', 'boolean', ['nullable' => false, 'defaultValue' => true])
             ->addIndex(['key'], ['name' => 'webhooks_index_key_663923eccdd6a', 'unique' => true])
