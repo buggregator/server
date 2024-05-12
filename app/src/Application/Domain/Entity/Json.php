@@ -13,9 +13,17 @@ final readonly class Json implements \JsonSerializable, \Stringable
     /**
      * Create from data storage raw value
      */
-    final public static function typecast(mixed $value): static
+    final public static function typecast(mixed $value): self
     {
-        return new self(\json_decode($value, true));
+        if (empty($value)) {
+            return new self();
+        }
+
+        try {
+            return new self(\json_decode($value, true));
+        } catch (\JsonException $e) {
+            throw new \InvalidArgumentException($e->getMessage(), $e->getCode(), $e);
+        }
     }
 
     public function jsonSerialize(): array

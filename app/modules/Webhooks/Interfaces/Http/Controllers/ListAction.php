@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Webhooks\Interfaces\Http\Controllers;
 
-use Modules\Webhooks\Domain\WebhookRepositoryInterface;
+use App\Application\Commands\FindWebhooks;
 use Modules\Webhooks\Interfaces\Http\Resources\WebhookCollection;
 use Modules\Webhooks\Interfaces\Http\Resources\WebhookResource;
-use Spiral\Router\Annotation\Route;
 use OpenApi\Attributes as OA;
+use Spiral\Cqrs\QueryBusInterface;
+use Spiral\Router\Annotation\Route;
 
 #[OA\Get(
     path: '/api/webhooks',
@@ -32,14 +33,14 @@ use OpenApi\Attributes as OA;
         ),
     ],
 )]
-final class ListAction
+final readonly class ListAction
 {
     #[Route(route: 'webhooks', name: 'webhooks.list', methods: 'GET', group: 'api')]
     public function __invoke(
-        WebhookRepositoryInterface $repository,
+        QueryBusInterface $bus,
     ): WebhookCollection {
-        return new WebhookCollection(
-            $repository->findAll(),
-        );
+        $webhooks = $bus->ask(new FindWebhooks());
+
+        return new WebhookCollection($webhooks);
     }
 }

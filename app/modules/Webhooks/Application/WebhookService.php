@@ -11,20 +11,15 @@ use Modules\Webhooks\Domain\WebhookServiceInterface;
 use Modules\Webhooks\Interfaces\Job\JobPayload;
 use Modules\Webhooks\Interfaces\Job\WebhookHandler;
 use Psr\Log\LoggerInterface;
-use Spiral\Queue\QueueConnectionProviderInterface;
 use Spiral\Queue\QueueInterface;
 
 final readonly class WebhookService implements WebhookServiceInterface
 {
-    private QueueInterface $queue;
-
     public function __construct(
         private WebhookRepositoryInterface $webhooks,
         private LoggerInterface $logger,
-        QueueConnectionProviderInterface $provider,
-    ) {
-        $this->queue = $provider->getConnection('webhook');
-    }
+        private QueueInterface $queue,
+    ) {}
 
     public function send(WebhookEvent $event): void
     {
@@ -35,18 +30,17 @@ final readonly class WebhookService implements WebhookServiceInterface
         }
     }
 
-    public function sendWebhook(Uuid $uuid, WebhookEvent $event): void
+    private function sendWebhook(Uuid $uuid, WebhookEvent $event): void
     {
         $webhook = $this->webhooks->getByUuid($uuid);
 
         $this->logger->debug('Sending webhook', ['webhook' => $event->event, 'uuid' => (string) $webhook->uuid]);
 
         $this->queue->push(
-            WebhookHandler::class,
-            new JobPayload(
-                $webhook->uuid->toObject(),
-                $event->event,
-                $event->payload,
+            name: WebhookHandler::class,
+            payload: new JobPayload(
+                webhookUuid: $webhook->uuid->toObject(),
+                event: $event,
             ),
         );
     }

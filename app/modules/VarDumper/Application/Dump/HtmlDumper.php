@@ -174,7 +174,7 @@ final class HtmlDumper extends CliDumper
             $v = sprintf('<span class=%s>%s</span>', $class, substr($v, 0, -\strlen($label)));
 
             if (!empty($attr['ellipsis-tail'])) {
-                $tail = \strlen(esc(substr($value, -$attr['ellipsis'], $attr['ellipsis-tail'])));
+                $tail = \strlen(esc(substr($value, -$attr['ellipsis'], (int) $attr['ellipsis-tail'])));
                 $v .= sprintf('<span class=%s>%s</span>%s', $class, substr($label, 0, $tail), substr($label, $tail));
             } else {
                 $v .= $label;
@@ -262,7 +262,7 @@ final class HtmlDumper extends CliDumper
         AbstractDumper::dumpLine($depth);
     }
 
-    private function getSourceLink(string $file, int $line): string|false
+    private function getSourceLink(string $file, int|string $line): string|false
     {
         $options = $this->extraDisplayOptions + $this->displayOptions;
 

@@ -12,3 +12,4 @@ protoc-gen-php-grpc*
 .cache
 .db
 .sqlhistory
+*Zone.Identifier

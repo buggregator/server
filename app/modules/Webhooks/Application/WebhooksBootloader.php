@@ -4,66 +4,74 @@ declare(strict_types=1);
 
 namespace Modules\Webhooks\Application;
 
+use App\Application\Finder\Finder;
 use App\Interfaces\Console\RegisterModulesCommand;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use Modules\Metrics\Application\CollectorRegistryInterface;
+use Modules\Webhooks\Application\Locator\CompositeWebhookLocator;
+use Modules\Webhooks\Application\Locator\WebhookFilesFinderInterface;
+use Modules\Webhooks\Application\Locator\WebhookLocatorInterface;
+use Modules\Webhooks\Application\Locator\WebhookFilesFinder;
+use Modules\Webhooks\Application\Locator\YamlFileWebhookLocator;
 use Modules\Webhooks\Domain\DeliveryFactoryInterface;
-use Modules\Webhooks\Domain\DeliveryRepositoryInterface;
 use Modules\Webhooks\Domain\WebhookFactoryInterface;
-use Modules\Webhooks\Domain\WebhookLocatorInterface;
-use Modules\Webhooks\Domain\WebhookRegistryInterface;
-use Modules\Webhooks\Domain\WebhookRepositoryInterface;
 use Modules\Webhooks\Domain\WebhookServiceInterface;
 use Spiral\Boot\Bootloader\Bootloader;
 use Spiral\Boot\DirectoriesInterface;
-use Spiral\Boot\EnvironmentInterface;
-use Spiral\Cache\CacheStorageProviderInterface;
 use Spiral\Console\Bootloader\ConsoleBootloader;
 use Spiral\Core\FactoryInterface;
+use Spiral\Queue\QueueConnectionProviderInterface;
 use Spiral\RoadRunner\Metrics\Collector;
 
 final class WebhooksBootloader extends Bootloader
 {
     private const CACHE_ALIAS = 'webhooks';
+    private const QUEUE_ALIAS = 'webhooks';
 
     public function defineSingletons(): array
     {
         return [
             ClientInterface::class => static fn(
-                EnvironmentInterface $env,
+                HttpClientSettings $settings,
             ): ClientInterface => new Client([
-                'timeout' => 5,
+                'timeout' => $settings->getTimeout(),
                 'connect_timeout' => 5,
                 'headers' => [
-                    'User-Agent' => $env->get('WEBHOOK_USER_AGENT', 'Buggregator\Webhooks'),
-                    'Content-Type' => 'application/json',
+                    'User-Agent' => $settings->getUserAgent(),
+                    'Content-Type' => $settings->getContentType(),
                 ],
             ]),
 
             WebhookFactoryInterface::class => WebhookFactory::class,
-
-            WebhookServiceInterface::class => WebhookService::class,
-
-            InMemoryWebhookRepository::class => static fn(
+            WebhookServiceInterface::class => static fn(
                 FactoryInterface $factory,
-                CacheStorageProviderInterface $storageProvider,
-            ): InMemoryWebhookRepository => $factory->make(
-                InMemoryWebhookRepository::class,
+                QueueConnectionProviderInterface $provider,
+            ): WebhookServiceInterface => $factory->make(
+                WebhookService::class,
                 [
-                    'cache' => $storageProvider->storage(self::CACHE_ALIAS),
+                    'queue' => $provider->getConnection(self::QUEUE_ALIAS),
                 ],
             ),
-            WebhookRepositoryInterface::class => InMemoryWebhookRepository::class,
-            WebhookRegistryInterface::class => InMemoryWebhookRepository::class,
+
 
             YamlFileWebhookLocator::class => static fn(
                 FactoryInterface $factory,
                 DirectoriesInterface $dirs,
-            ): YamlFileWebhookLocator => $factory->make(
-                YamlFileWebhookLocator::class,
+            ): YamlFileWebhookLocator => $factory->make(YamlFileWebhookLocator::class),
+
+            WebhookFilesFinderInterface::class => static fn(
+                FactoryInterface $factory,
+                DirectoriesInterface $dirs,
+            ): WebhookFilesFinderInterface => $factory->make(
+                WebhookFilesFinder::class,
                 [
-                    'directory' => $dirs->get('runtime') . '/configs',
+                    'finder' => new Finder(
+                        finder: \Symfony\Component\Finder\Finder::create()
+                            ->files()
+                            ->in($dirs->get('runtime') . '/configs')
+                            ->name('*.webhook.yaml'),
+                    ),
                 ],
             ),
 
@@ -74,16 +82,6 @@ final class WebhooksBootloader extends Bootloader
                     $locator,
                 ]);
             },
-
-            DeliveryRepositoryInterface::class => static fn(
-                FactoryInterface $factory,
-                CacheStorageProviderInterface $storageProvider,
-            ): DeliveryRepositoryInterface => $factory->make(
-                InMemoryDeliveryRepository::class,
-                [
-                    'cache' => $storageProvider->storage(self::CACHE_ALIAS),
-                ],
-            ),
 
             DeliveryFactoryInterface::class => DeliveryFactory::class,
         ];
