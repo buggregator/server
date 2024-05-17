@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Integration\CycleOrm\Persistence;
+namespace Modules\Smtp\Integration\CycleOrm;
 
 use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\ORM\EntityManagerInterface;
@@ -15,7 +15,7 @@ use Modules\Smtp\Domain\AttachmentRepositoryInterface;
  * @template TEntity of Attachment
  * @extends Repository<Attachment>
  */
-final class CycleOrmAttachmentRepository extends Repository implements AttachmentRepositoryInterface
+final class AttachmentRepository extends Repository implements AttachmentRepositoryInterface
 {
     public function __construct(
         private readonly EntityManagerInterface $em,

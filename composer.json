@@ -36,7 +36,6 @@
         "firebase/php-jwt": "^6.10",
         "guzzlehttp/guzzle": "^7.8",
         "kinde-oss/kinde-auth-php": "^1.2",
-        "mongodb/mongodb": "^1.18",
         "nesbot/carbon": "^2.64",
         "php-http/message": "^1.11",
         "phpdocumentor/reflection-docblock": "^5.4",

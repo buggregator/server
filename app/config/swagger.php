@@ -67,5 +67,6 @@ return [
         directory('app') . 'modules/Projects/Interfaces/Http',
         directory('app') . 'modules/Webhooks/Interfaces/Http',
         directory('app') . 'modules/Smtp/Interfaces/Http',
+        directory('app') . 'modules/HttpDumps/Interfaces/Http',
     ],
 ];

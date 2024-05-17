@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Integration\CycleOrm\Persistence;
+namespace Modules\Events\Integration\CycleOrm;
 
 use Cycle\ORM\EntityManagerInterface;
 use Cycle\ORM\Select;
@@ -14,7 +14,7 @@ use Modules\Events\Domain\EventRepositoryInterface;
  * @template TEntity of Event
  * @extends Repository<Event>
  */
-final class CycleOrmEventRepository extends Repository implements EventRepositoryInterface
+final class EventRepository extends Repository implements EventRepositoryInterface
 {
     public function __construct(
         private readonly EntityManagerInterface $em,

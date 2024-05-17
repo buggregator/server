@@ -5,30 +5,27 @@ declare(strict_types=1);
 namespace Modules\HttpDumps\Interfaces\Http\Handler;
 
 use App\Application\Commands\HandleReceivedEvent;
+use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Event\EventType;
 use App\Application\Service\HttpHandler\HandlerInterface;
 use Carbon\Carbon;
 use Modules\HttpDumps\Application\EventHandlerInterface;
+use Modules\HttpDumps\Domain\Attachment;
+use Modules\HttpDumps\Domain\AttachmentStorageInterface;
+use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\UploadedFileInterface;
 use Spiral\Cqrs\CommandBusInterface;
 use Spiral\Http\ResponseWrapper;
-use Spiral\Storage\BucketInterface;
-use Spiral\Storage\StorageInterface;
 
 final readonly class AnyHttpRequestDump implements HandlerInterface
 {
-    private BucketInterface $bucket;
-
     public function __construct(
         private CommandBusInterface $commands,
         private EventHandlerInterface $handler,
         private ResponseWrapper $responseWrapper,
-        StorageInterface $storage,
-    ) {
-        $this->bucket = $storage->bucket('attachments');
-    }
+        private ContainerInterface $container,
+    ) {}
 
     public function priority(): int
     {
@@ -57,7 +54,10 @@ final readonly class AnyHttpRequestDump implements HandlerInterface
     private function createPayload(ServerRequestInterface $request): array
     {
         $uri = \ltrim($request->getUri()->getPath(), '/');
-        $id = \md5(Carbon::now()->toDateTimeString());
+
+        $uuid = Uuid::generate();
+        $result = $this->container->get(AttachmentStorageInterface::class)
+            ->store(eventUuid: $uuid, attachments: $request->getUploadedFiles());
 
         return [
             'received_at' => Carbon::now()->toDateTimeString(),
@@ -71,21 +71,15 @@ final readonly class AnyHttpRequestDump implements HandlerInterface
                 'post' => $request->getParsedBody() ?? [],
                 'cookies' => $request->getCookieParams(),
                 'files' => \array_map(
-                    function (UploadedFileInterface $attachment) use ($id) {
-                        $this->bucket->write(
-                            $filename = $id . '/' . $attachment->getClientFilename(),
-                            $attachment->getStream(),
-                        );
-
+                    function (Attachment $attachment) {
                         return [
-                            'id' => \md5($filename),
-                            'name' => $attachment->getClientFilename(),
-                            'uri' => $filename,
+                            'uuid' => (string) $attachment->getUuid(),
+                            'name' => $attachment->getFilename(),
                             'size' => $attachment->getSize(),
-                            'mime' => $attachment->getClientMediaType(),
+                            'mime' => $attachment->getMime(),
                         ];
                     },
-                    $request->getUploadedFiles(),
+                    $result,
                 ),
             ],
         ];

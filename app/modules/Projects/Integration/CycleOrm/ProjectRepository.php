@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Integration\CycleOrm\Persistence;
+namespace Modules\Projects\Integration\CycleOrm;
 
 use Cycle\ORM\EntityManagerInterface;
 use Cycle\ORM\Select;
@@ -14,7 +14,7 @@ use Modules\Projects\Domain\ProjectRepositoryInterface;
  * @template TEntity of Project
  * @extends Repository<Project>
  */
-final class CycleOrmProjectRepository extends Repository implements ProjectRepositoryInterface
+final class ProjectRepository extends Repository implements ProjectRepositoryInterface
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,

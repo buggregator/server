@@ -6,10 +6,8 @@ namespace App\Application;
 
 use App\Application\Bootloader\AppBootloader;
 use App\Application\Bootloader\AttributesBootloader;
-use App\Application\Bootloader\AuthBootloader;
 use App\Application\Bootloader\BroadcastingBootloader;
 use App\Application\Bootloader\HttpHandlerBootloader;
-use App\Application\Bootloader\MongoDBBootloader;
 use App\Application\Bootloader\PersistenceBootloader;
 use App\Integration\Auth0\Auth0Bootloader;
 use App\Integration\Kinde\KindeBootloader;
@@ -99,7 +97,6 @@ class Kernel extends \Spiral\Framework\Kernel
             RayBootloader::class,
             HttpDumpsBootloader::class,
             ProfilerBootloader::class,
-            MongoDBBootloader::class,
             PersistenceBootloader::class,
             WebhooksBootloader::class,
             ProjectBootloader::class,
