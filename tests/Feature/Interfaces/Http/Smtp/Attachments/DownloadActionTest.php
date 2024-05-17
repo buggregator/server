@@ -22,7 +22,7 @@ final class DownloadActionTest extends ControllerTestCase
         ])->forEvent($event)->createOne();
 
         /** @var FakeBucket $bucket */
-        $bucket = $storage->bucket('attachments');
+        $bucket = $storage->bucket('smtp');
 
         $bucket->write($attachment->getPath(), $content = 'Downloaded content');
 

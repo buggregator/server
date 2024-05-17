@@ -25,7 +25,7 @@ final class EmailTest extends TCPTestCase
     {
         parent::setUp();
 
-        $this->bucket = $this->fakeStorage()->bucket('attachments');
+        $this->bucket = $this->fakeStorage()->bucket('smtp');
         $this->accounts = $this->mockContainer(AttachmentRepositoryInterface::class);
     }
 
