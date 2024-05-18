@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Integration\CycleOrm\Persistence;
+namespace Modules\Webhooks\Integartion\CycleOrm;
 
 use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Exception\EntityNotFoundException;
@@ -17,7 +17,7 @@ use Modules\Webhooks\Domain\WebhookRepositoryInterface;
  * @template TEntity of Webhook
  * @extends RepositoryInterface<Webhook>
  */
-final class CycleOrmWebhookRepository extends Repository implements WebhookRepositoryInterface
+final class WebhookRepository extends Repository implements WebhookRepositoryInterface
 {
     public function __construct(
         private readonly EntityManagerInterface $em,

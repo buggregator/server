@@ -5,22 +5,22 @@ declare(strict_types=1);
 namespace Tests\Unit\Modules\Smtp;
 
 use App\Application\Domain\ValueObjects\Uuid;
-use App\Integration\CycleOrm\Persistence\CycleOrmAttachmentRepository;
 use Database\Factory\AttachmentFactory;
 use Modules\Smtp\Domain\Attachment;
+use Modules\Smtp\Integration\CycleOrm\AttachmentRepository;
 use Spiral\DatabaseSeeder\Database\EntityAssertion;
 use Tests\DatabaseTestCase;
 
 final class CycleOrmAttachmentRepositoryTest extends DatabaseTestCase
 {
     private EntityAssertion $assertion;
-    private CycleOrmAttachmentRepository $repository;
+    private AttachmentRepository $repository;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->repository = $this->get(CycleOrmAttachmentRepository::class);
+        $this->repository = $this->get(AttachmentRepository::class);
         $this->assertion = $this->assertEntity(Attachment::class);
     }
 

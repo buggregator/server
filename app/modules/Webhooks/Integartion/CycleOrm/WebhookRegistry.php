@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Integration\CycleOrm\Webhooks;
+namespace Modules\Webhooks\Integartion\CycleOrm;
 
 use App\Application\Domain\Entity\Json;
 use App\Application\Domain\ValueObjects\Uuid;
@@ -13,7 +13,7 @@ use Modules\Webhooks\Domain\WebhookFactoryInterface;
 use Modules\Webhooks\Domain\WebhookRepositoryInterface;
 use Modules\Webhooks\Exceptions\WebhooksAlreadyExistsException;
 
-final readonly class CycleOrmWebhookRegistry implements WebhookRegistryInterface
+final readonly class WebhookRegistry implements WebhookRegistryInterface
 {
     public function __construct(
         private WebhookRepositoryInterface $webhooks,

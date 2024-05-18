@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 return [
     'directories' => [
-        directory('app'),
+        directory('app') . '/src',
         directory('modules'),
     ],
     'exclude' => [
         directory('resources'),
         directory('config'),
         'tests',
-        'migrations',
     ],
 ];

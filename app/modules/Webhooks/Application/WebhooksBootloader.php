@@ -5,18 +5,27 @@ declare(strict_types=1);
 namespace Modules\Webhooks\Application;
 
 use App\Application\Finder\Finder;
+use App\Application\Persistence\DriverEnum;
 use App\Interfaces\Console\RegisterModulesCommand;
+use Cycle\ORM\EntityManagerInterface;
+use Cycle\ORM\ORMInterface;
+use Cycle\ORM\Select;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use Modules\Metrics\Application\CollectorRegistryInterface;
 use Modules\Webhooks\Application\Locator\CompositeWebhookLocator;
+use Modules\Webhooks\Application\Locator\WebhookFilesFinder;
 use Modules\Webhooks\Application\Locator\WebhookFilesFinderInterface;
 use Modules\Webhooks\Application\Locator\WebhookLocatorInterface;
-use Modules\Webhooks\Application\Locator\WebhookFilesFinder;
+use Modules\Webhooks\Application\Locator\WebhookRegistryInterface;
 use Modules\Webhooks\Application\Locator\YamlFileWebhookLocator;
+use Modules\Webhooks\Domain as Webhooks;
 use Modules\Webhooks\Domain\DeliveryFactoryInterface;
 use Modules\Webhooks\Domain\WebhookFactoryInterface;
 use Modules\Webhooks\Domain\WebhookServiceInterface;
+use Modules\Webhooks\Integartion\CycleOrm\WebhookRegistry;
+use Modules\Webhooks\Integartion\CycleOrm\DeliveryRepository;
+use Modules\Webhooks\Integartion\CycleOrm\WebhookRepository;
 use Spiral\Boot\Bootloader\Bootloader;
 use Spiral\Boot\DirectoriesInterface;
 use Spiral\Console\Bootloader\ConsoleBootloader;
@@ -84,6 +93,39 @@ final class WebhooksBootloader extends Bootloader
             },
 
             DeliveryFactoryInterface::class => DeliveryFactory::class,
+
+            // Persistence
+            WebhookRepository::class => static fn(
+                ORMInterface $orm,
+                EntityManagerInterface $manager,
+            ): Webhooks\WebhookRepositoryInterface => new WebhookRepository(
+                $manager,
+                new Select($orm, Webhooks\Webhook::class),
+            ),
+            DeliveryRepository::class => static fn(
+                ORMInterface $orm,
+                EntityManagerInterface $manager,
+            ): Webhooks\DeliveryRepositoryInterface => new DeliveryRepository(
+                $manager,
+                new Select($orm, Webhooks\Delivery::class),
+            ),
+            Webhooks\WebhookRepositoryInterface::class => static fn(
+                FactoryInterface $factory,
+                DriverEnum $driver,
+            ): Webhooks\WebhookRepositoryInterface => match ($driver) {
+                DriverEnum::Database => $factory->make(WebhookRepository::class),
+                default => throw new \RuntimeException('Unsupported driver'),
+            },
+
+            Webhooks\DeliveryRepositoryInterface::class => static fn(
+                FactoryInterface $factory,
+                DriverEnum $driver,
+            ): Webhooks\DeliveryRepositoryInterface => match ($driver) {
+                DriverEnum::Database => $factory->make(DeliveryRepository::class),
+                default => throw new \RuntimeException('Unsupported driver'),
+            },
+
+            WebhookRegistryInterface::class => WebhookRegistry::class,
         ];
     }
 

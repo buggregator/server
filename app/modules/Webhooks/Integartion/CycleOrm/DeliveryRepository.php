@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Integration\CycleOrm\Persistence;
+namespace Modules\Webhooks\Integartion\CycleOrm;
 
 use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\ORM\EntityManagerInterface;
@@ -15,7 +15,7 @@ use Modules\Webhooks\Domain\DeliveryRepositoryInterface;
  * @template TEntity of Delivery
  * @extends Repository<Delivery>
  */
-final class CycleOrmWebhookDeliveryRepository extends Repository implements DeliveryRepositoryInterface
+final class DeliveryRepository extends Repository implements DeliveryRepositoryInterface
 {
     public function __construct(
         private readonly EntityManagerInterface $em,

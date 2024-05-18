@@ -19,7 +19,11 @@ return [
     ],
 
     'buckets' => [
-        'attachments' => [
+        'smtp' => [
+            'server' => 'attachments',
+            'prefix' => 'attachments',
+        ],
+        'http_dumps' => [
             'server' => 'attachments',
             'prefix' => 'attachments',
         ],

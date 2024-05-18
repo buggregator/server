@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Modules\Smtp\Interfaces\Queries;
+namespace Modules\HttpDumps\Interfaces\Queries;
 
-use App\Application\Commands\FindSmtpAttachmentByUuid;
+use App\Application\Commands\FindHttpDumpAttachmentByUuid;
 use App\Application\Exception\EntityNotFoundException;
-use Modules\Smtp\Domain\Attachment;
-use Modules\Smtp\Domain\AttachmentRepositoryInterface;
+use Modules\HttpDumps\Domain\Attachment;
+use Modules\HttpDumps\Domain\AttachmentRepositoryInterface;
 use Spiral\Cqrs\Attribute\QueryHandler;
 
-final readonly class FindSmtpAttachmentByUuidHandler
+final readonly class FindAttachmentByUuidHandler
 {
     public function __construct(
         private AttachmentRepositoryInterface $attachments,
     ) {}
 
     #[QueryHandler]
-    public function __invoke(FindSmtpAttachmentByUuid $query): Attachment
+    public function __invoke(FindHttpDumpAttachmentByUuid $query): Attachment
     {
         $attachment = $this->attachments->findByPK((string) $query->uuid);
 

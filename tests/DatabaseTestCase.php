@@ -32,15 +32,6 @@ abstract class DatabaseTestCase extends TestCase
 
         $this->dbDriver = $this->get(DriverEnum::class);
 //        $this->getRefreshStrategy()->enableRefreshAttribute();
-
-        // TODO: refactor this
-        if ($this->dbDriver === DriverEnum::MongoDb) {
-            $mongoDb = $this->get(Database::class);
-            foreach ($mongoDb->listCollections() as $collection) {
-                /** @var CollectionInfo $collection */
-                $mongoDb->selectCollection($collection->getName())->drop();
-            }
-        }
     }
 
     protected function tearDown(): void
