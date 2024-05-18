@@ -7,13 +7,14 @@ namespace Modules\Webhooks\Application\Broadcasting;
 use Modules\Events\Domain\Events\EventWasReceived;
 use Modules\Webhooks\Domain\WebhookEvent;
 use Modules\Webhooks\Domain\WebhookServiceInterface;
+use Psr\Container\ContainerInterface;
 use Spiral\Core\CoreInterceptorInterface;
 use Spiral\Core\CoreInterface;
 
 final readonly class WebhookEventInterceptor implements CoreInterceptorInterface
 {
     public function __construct(
-        private WebhookServiceInterface $service,
+        private ContainerInterface $container,
     ) {}
 
     public function process(string $controller, string $action, array $parameters, CoreInterface $core): mixed
@@ -37,7 +38,7 @@ final readonly class WebhookEventInterceptor implements CoreInterceptorInterface
         }
 
         if ($webhookEvent) {
-            $this->service->send($webhookEvent);
+            $this->container->get(WebhookServiceInterface::class)->send($webhookEvent);
         }
 
         return $result;
