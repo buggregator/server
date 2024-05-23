@@ -9,8 +9,10 @@ use App\Application\HTTP\Interceptor\JsonResourceInterceptor;
 use App\Application\HTTP\Interceptor\StringToIntParametersInterceptor;
 use App\Application\HTTP\Interceptor\UuidParametersConverterInterceptor;
 use App\Application\Ide\UrlTemplate;
+use App\Interfaces\Console\RegisterModulesCommand;
 use Spiral\Boot\EnvironmentInterface;
 use Spiral\Bootloader\DomainBootloader;
+use Spiral\Console\Bootloader\ConsoleBootloader;
 use Spiral\Core\CoreInterface;
 
 final class AppBootloader extends DomainBootloader
@@ -45,5 +47,14 @@ final class AppBootloader extends DomainBootloader
             UuidParametersConverterInterceptor::class,
             JsonResourceInterceptor::class,
         ];
+    }
+
+    public function init(ConsoleBootloader $console): void
+    {
+        $console->addSequence(
+            name: RegisterModulesCommand::SEQUENCE,
+            sequence: 'database:check-connection',
+            header: 'Check database connection',
+        );
     }
 }
