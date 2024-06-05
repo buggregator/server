@@ -39,7 +39,7 @@ final class SymfonyV7Test extends TCPTestCase
         $generator = $this->mockContainer(DumpIdGeneratorInterface::class);
 
         $generator->shouldReceive('generate')->andReturn('sf-dump-730421088');
-        $object = (object)['type' => 'string', 'value' => 'foo'];
+        $object = (object) ['type' => 'string', 'value' => 'foo'];
         $message = $this->buildPayload($object);
         $this->handleVarDumperRequest($message);
         $objectId = \spl_object_id($object);
@@ -83,7 +83,7 @@ HTML,
             $this->assertSame([
                 'type' => 'code',
                 'value' => 'foo',
-                'language' => 'php'
+                'language' => 'php',
             ], $data['data']['payload']['payload']);
 
             return true;
@@ -133,6 +133,6 @@ HTML,
             $context['project'] = $project;
         }
 
-        return \base64_encode(\serialize([$data, $context])) . "\n";
+        return \base64_encode(\serialize([$data->withContext($context), []])) . "\n";
     }
 }
