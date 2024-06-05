@@ -14,6 +14,7 @@ final readonly class Attachment
         private ?string $filename,
         private string $content,
         private string $type,
+        private ?string $contentId,
     ) {
         $this->id = (string) Uuid::uuid4();
     }
@@ -36,5 +37,10 @@ final readonly class Attachment
     public function getId(): string
     {
         return $this->id;
+    }
+
+    public function getContentId(): ?string
+    {
+        return $this->contentId;
     }
 }

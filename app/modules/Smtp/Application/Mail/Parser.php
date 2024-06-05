@@ -66,6 +66,7 @@ final readonly class Parser
             $part->getFilename(),
             $part->getContent(),
             $part->getContentType(),
+            $part->getContentId(),
         ), $attachments);
     }
 

@@ -94,7 +94,10 @@ final readonly class Service implements ServiceInterface
         $uuid = Uuid::generate();
         $data = $message->jsonSerialize();
 
-        $this->attachments->store(eventUuid: $uuid, attachments: $message->attachments);
+        // TODO: Refactor this
+        foreach ($this->attachments->store(eventUuid: $uuid, attachments: $message->attachments) as $cid => $url) {
+            $data['html'] = \str_replace("cid:$cid", $url, $data['html']);
+        }
 
         $this->bus->dispatch(
             new HandleReceivedEvent(

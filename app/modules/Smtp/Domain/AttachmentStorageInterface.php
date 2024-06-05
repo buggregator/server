@@ -11,8 +11,9 @@ interface AttachmentStorageInterface
 {
     /**
      * @param MailAttachment[] $attachments
+     * @return iterable<string, string>
      */
-    public function store(Uuid $eventUuid, array $attachments): void;
+    public function store(Uuid $eventUuid, array $attachments): iterable;
 
     public function deleteByEvent(Uuid $eventUuid): void;
 
