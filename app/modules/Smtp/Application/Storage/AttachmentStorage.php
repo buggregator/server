@@ -20,6 +20,7 @@ final readonly class AttachmentStorage implements AttachmentStorageInterface
 
     public function store(Uuid $eventUuid, array $attachments): iterable
     {
+        $result = [];
         foreach ($attachments as $attachment) {
             $file = $this->bucket->write(
                 pathname: $eventUuid . '/' . $attachment->getFilename(),
@@ -41,12 +42,14 @@ final readonly class AttachmentStorage implements AttachmentStorageInterface
                 continue;
             }
 
-            yield $attachment->getContentId() => \sprintf(
+            $result[$attachment->getContentId()] = \sprintf(
                 '/api/smtp/%s/attachments/preview/%s',
                 $eventUuid,
                 $a->getUuid(),
             );
         }
+
+        return $result;
     }
 
     public function deleteByEvent(Uuid $eventUuid): void

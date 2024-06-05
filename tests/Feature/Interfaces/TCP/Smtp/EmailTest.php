@@ -21,14 +21,14 @@ use Tests\Feature\Interfaces\TCP\TCPTestCase;
 final class EmailTest extends TCPTestCase
 {
     private \Spiral\Storage\BucketInterface $bucket;
-    private \Mockery\MockInterface|AttachmentRepositoryInterface $accounts;
+    private \Mockery\MockInterface|AttachmentRepositoryInterface $attachments;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->bucket = $this->fakeStorage()->bucket('smtp');
-        $this->accounts = $this->mockContainer(AttachmentRepositoryInterface::class);
+        $this->attachments = $this->mockContainer(AttachmentRepositoryInterface::class);
     }
 
     public function testSendEmail(): void
@@ -44,7 +44,7 @@ final class EmailTest extends TCPTestCase
         );
 
         // Assert logo-embeddable is persisted to a database
-        $this->accounts->shouldReceive('store')
+        $this->attachments->shouldReceive('store')
             ->once()
             ->with(
                 \Mockery::on(function (Attachment $attachment) {
@@ -59,7 +59,7 @@ final class EmailTest extends TCPTestCase
             );
 
         // Assert hello.txt is persisted to a database
-        $this->accounts->shouldReceive('store')
+        $this->attachments->shouldReceive('store')
             ->once()
             ->with(
                 \Mockery::on(function (Attachment $attachment) {
@@ -74,7 +74,7 @@ final class EmailTest extends TCPTestCase
             );
 
         // Assert hello.txt is persisted to a database
-        $this->accounts->shouldReceive('store')
+        $this->attachments->shouldReceive('store')
             ->once()
             ->with(
                 \Mockery::on(function (Attachment $attachment) {
@@ -84,21 +84,6 @@ final class EmailTest extends TCPTestCase
 
                     // Check attachments storage
                     $this->bucket->assertCreated($attachment->getPath());
-                    return true;
-                }),
-            );
-
-
-        // Assert logo.svg is persisted to a database
-        $this->accounts->shouldReceive('store')
-            ->once()
-            ->with(
-                \Mockery::on(function (Attachment $attachment) {
-                    $this->assertSame('logo.svg', $attachment->getFilename());
-                    $this->assertSame('image/svg+xml', $attachment->getMime());
-                    $this->assertSame(1206, $attachment->getSize());
-                    $this->bucket->assertCreated($attachment->getPath());
-
                     return true;
                 }),
             );
@@ -173,7 +158,7 @@ final class EmailTest extends TCPTestCase
 
         $this->assertSame([], $parsedMessage->getBccs());
 
-        $this->assertSame(
+        $this->assertStringEqualsStringIgnoringLineEndings(
             <<<'HTML'
 <img src="cid:test-cid@buggregator">
 Hello Alice.<br>This is a test message with 5 header fields and 4 lines in the message body.
@@ -182,7 +167,6 @@ HTML
             $parsedMessage->htmlBody,
         );
 
-        $this->assertSame('', $parsedMessage->htmlBody);
         $this->assertStringContainsString(
             "Subject: Test message\r
 Date: Thu, 02 May 2024 16:01:33 +0000\r

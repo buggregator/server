@@ -38,6 +38,7 @@ final class AttachmentStorageTest extends TestCase
             filename: 'file1.txt',
             content: 'Hello, world!',
             type: 'text/plain',
+            contentId: 'file1@buggregator',
         );
 
         $attachment2 = new Attachment(
@@ -64,10 +65,12 @@ final class AttachmentStorageTest extends TestCase
                 $path1,
                 12,
                 'text/plain',
-                $attachment1->getId(),
+                $attachment1->getContentId(),
             )
             ->once()
             ->andReturn($entity1 = $this->mockContainer(\Modules\Smtp\Domain\Attachment::class));
+
+        $entity1->shouldReceive('getUuid')->andReturn($uuid = Uuid::generate());
 
         $this->bucket->shouldReceive('write')
             ->with($path2 = $eventUuid . '/image.png', 'image content')
@@ -93,7 +96,11 @@ final class AttachmentStorageTest extends TestCase
         $this->attachments->shouldReceive('store')->with($entity1)->once();
         $this->attachments->shouldReceive('store')->with($entity2)->once();
 
-        $this->storage->store($eventUuid, [$attachment1, $attachment2]);
+        $result = $this->storage->store($eventUuid, [$attachment1, $attachment2]);
+
+        $this->assertSame([
+            'file1@buggregator' => '/api/smtp/' . $eventUuid . '/attachments/preview/' . $uuid,
+        ], $result);
     }
 
     public function testRemove(): void

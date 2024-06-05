@@ -14,7 +14,7 @@ final readonly class Attachment
         private ?string $filename,
         private string $content,
         private string $type,
-        private ?string $contentId,
+        private ?string $contentId = null,
     ) {
         $this->id = (string) Uuid::uuid4();
     }
