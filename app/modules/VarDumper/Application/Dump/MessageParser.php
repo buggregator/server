@@ -22,9 +22,6 @@ final class MessageParser
             throw new InvalidPayloadException("Unable to decode the message.");
         }
 
-        // $payload[1] - is a global context
-        // $payload[0]->getContext() - variable context
-
         if (
             !\is_array($payload)
             || \count($payload) < 2
@@ -34,9 +31,14 @@ final class MessageParser
             throw new InvalidPayloadException("Invalid payload structure.");
         }
 
+        // $payload[1] - is a global context
+        // $payload[0]->getContext() - variable context
+
+        [$data, $context] = $payload;
+
         return new ParsedPayload(
-            data: $payload[0],
-            context: $payload[0]->getContext(),
+            data: $data,
+            context: $context,
         );
     }
 }

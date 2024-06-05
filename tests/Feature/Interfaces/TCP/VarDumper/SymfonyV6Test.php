@@ -22,6 +22,7 @@ final class SymfonyV6Test extends TCPTestCase
             $this->assertSame([
                 'type' => 'string',
                 'value' => 'foo',
+                'label' => null,
             ], $data['data']['payload']['payload']);
 
             $this->assertNotEmpty($data['data']['uuid']);
