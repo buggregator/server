@@ -18,8 +18,9 @@ final readonly class AttachmentStorage implements AttachmentStorageInterface
         private AttachmentFactoryInterface $factory,
     ) {}
 
-    public function store(Uuid $eventUuid, array $attachments): void
+    public function store(Uuid $eventUuid, array $attachments): iterable
     {
+        $result = [];
         foreach ($attachments as $attachment) {
             $file = $this->bucket->write(
                 pathname: $eventUuid . '/' . $attachment->getFilename(),
@@ -27,16 +28,28 @@ final readonly class AttachmentStorage implements AttachmentStorageInterface
             );
 
             $this->attachments->store(
-                $this->factory->create(
+                $a = $this->factory->create(
                     eventUuid: $eventUuid,
                     name: $attachment->getFilename(),
                     path: $file->getPathname(),
                     size: $file->getSize(),
                     mime: $file->getMimeType(),
-                    id: $attachment->getId(),
+                    id: $attachment->getContentId() ?? $attachment->getId(),
                 ),
             );
+
+            if ($attachment->getContentId() === null) {
+                continue;
+            }
+
+            $result[$attachment->getContentId()] = \sprintf(
+                '/api/smtp/%s/attachments/preview/%s',
+                $eventUuid,
+                $a->getUuid(),
+            );
         }
+
+        return $result;
     }
 
     public function deleteByEvent(Uuid $eventUuid): void
