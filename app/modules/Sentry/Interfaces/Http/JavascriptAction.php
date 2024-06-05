@@ -12,7 +12,7 @@ use Spiral\Router\Annotation\Route;
 final readonly class JavascriptAction
 {
     #[Route(route: '/sentry/<project>.js', name: 'sentry.js', methods: 'GET', group: 'api')]
-    public function __invoke(EnvironmentInterface $env, string $project): ResponseInterface
+    public function __invoke(EnvironmentInterface $env, string|int $project): ResponseInterface
     {
         $jsSdkUrl = $env->get(
             'SENTRY_JS_SDK_URL',
