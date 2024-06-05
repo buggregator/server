@@ -53,7 +53,7 @@ final readonly class Service implements ServiceInterface
                     'payload' => $this->prepareContent($payload),
                     'context' => $payload->context,
                 ],
-                project: $payload->context['project'] ?? null,
+                project: $payload->data->getContext()['project'] ?? null,
             ),
         );
     }
@@ -81,11 +81,17 @@ final readonly class Service implements ServiceInterface
         $payloadContent = [
             'type' => $payload->data->getType(),
             'value' => $this->convertToPrimitive($payload->data),
+            'label' => $payload->data->getContext()['label'] ?? null,
         ];
 
-        if ($payload->data->getType() === 'string' && isset($payload->context['language'])) {
+        $language = $payload->data->getContext()['language'] ?? null;
+
+        if (
+            $payload->data->getType() === 'string'
+            && $language !== null
+        ) {
             $payloadContent['type'] = 'code';
-            $payloadContent['language'] = $payload->context['language'];
+            $payloadContent['language'] = $language;
         }
 
         return $payloadContent;

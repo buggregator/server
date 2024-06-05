@@ -31,6 +31,14 @@ final class MessageParser
             throw new InvalidPayloadException("Invalid payload structure.");
         }
 
-        return new ParsedPayload(data: $payload[0], context: $payload[1]);
+        // $payload[1] - is a global context
+        // $payload[0]->getContext() - variable context
+
+        [$data, $context] = $payload;
+
+        return new ParsedPayload(
+            data: $data,
+            context: $context,
+        );
     }
 }

@@ -25,6 +25,7 @@ final class SymfonyV7Test extends TCPTestCase
             $this->assertSame([
                 'type' => 'string',
                 'value' => 'foo',
+                'label' => 'Some label',
             ], $data['data']['payload']['payload']);
 
             $this->assertNotEmpty($data['data']['uuid']);
@@ -39,7 +40,7 @@ final class SymfonyV7Test extends TCPTestCase
         $generator = $this->mockContainer(DumpIdGeneratorInterface::class);
 
         $generator->shouldReceive('generate')->andReturn('sf-dump-730421088');
-        $object = (object)['type' => 'string', 'value' => 'foo'];
+        $object = (object) ['type' => 'string', 'value' => 'foo'];
         $message = $this->buildPayload($object);
         $this->handleVarDumperRequest($message);
         $objectId = \spl_object_id($object);
@@ -53,7 +54,7 @@ final class SymfonyV7Test extends TCPTestCase
                 'type' => 'stdClass',
                 'value' => \sprintf(
                     <<<HTML
-<pre class=sf-dump id=sf-dump-730421088 data-indent-pad="  ">{<a class=sf-dump-ref>#%s</a><samp data-depth=1 class=sf-dump-expanded>
+<pre class=sf-dump id=sf-dump-730421088 data-indent-pad="  "><span class=sf-dump-label>Some label</span> {<a class=sf-dump-ref>#%s</a><samp data-depth=1 class=sf-dump-expanded>
   +"<span class=sf-dump-public>type</span>": "<span class=sf-dump-str>string</span>"
   +"<span class=sf-dump-public>value</span>": "<span class=sf-dump-str>foo</span>"
 </samp>}
@@ -62,6 +63,7 @@ final class SymfonyV7Test extends TCPTestCase
 HTML,
                     $objectId,
                 ),
+                'label' => 'Some label',
             ], $data['data']['payload']['payload']);
 
             $this->assertNotEmpty($data['data']['uuid']);
@@ -83,7 +85,8 @@ HTML,
             $this->assertSame([
                 'type' => 'code',
                 'value' => 'foo',
-                'language' => 'php'
+                'label' => 'Some label',
+                'language' => 'php',
             ], $data['data']['payload']['payload']);
 
             return true;
@@ -133,6 +136,8 @@ HTML,
             $context['project'] = $project;
         }
 
-        return \base64_encode(\serialize([$data, $context])) . "\n";
+        $context['label'] = 'Some label';
+
+        return \base64_encode(\serialize([$data->withContext($context), []])) . "\n";
     }
 }
