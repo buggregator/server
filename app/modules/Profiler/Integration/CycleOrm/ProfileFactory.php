@@ -11,7 +11,6 @@ use Modules\Profiler\Domain\ProfileFactoryInterface;
 
 final readonly class ProfileFactory implements ProfileFactoryInterface
 {
-
     public function create(string $name, array $tags, Peaks $peaks): Profile
     {
         return new Profile(

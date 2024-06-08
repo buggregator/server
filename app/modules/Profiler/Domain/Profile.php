@@ -24,7 +24,7 @@ class Profile
         innerKey: 'uuid',
         outerKey: 'profile_uuid',
         orderBy: ['order' => 'ASC'],
-        fkOnDelete: 'CASCADE'
+        fkOnDelete: 'CASCADE',
     )]
     public ArrayCollection $edges;
 
