@@ -14,6 +14,7 @@ return [
     'aliases' => [
         'webhooks' => $defaultConnection,
         'events' => $defaultConnection,
+        'profiler' => $defaultConnection,
     ],
     'pipelines' => [
         'memory' => [

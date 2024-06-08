@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Modules\Profiler\Interfaces\Http\Handler;
 
 use App\Application\Commands\HandleReceivedEvent;
+use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Event\EventType;
 use App\Application\Service\HttpHandler\HandlerInterface;
 use Modules\Profiler\Application\EventHandlerInterface;
+use Modules\Profiler\Domain\ProfileManagerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Spiral\Cqrs\CommandBusInterface;
@@ -36,9 +38,15 @@ final readonly class EventHandler implements HandlerInterface
 
         $payload = \json_decode((string) $request->getBody(), true);
         $event = $this->handler->handle($payload);
+        $profileUuid = Uuid::fromString($event['profile_uuid']);
 
         $this->commands->dispatch(
-            new HandleReceivedEvent(type: $eventType->type, payload: $event, project: $eventType->project),
+            new HandleReceivedEvent(
+                type: $eventType->type,
+                payload: $event,
+                project: $eventType->project,
+                uuid: $profileUuid,
+            ),
         );
 
         return $this->responseWrapper->create(200);

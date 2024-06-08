@@ -10,6 +10,7 @@ return [
     'exclude' => [
         directory('resources'),
         directory('config'),
+        directory('vendor'),
         'tests',
     ],
 ];

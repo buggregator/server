@@ -6,6 +6,7 @@ namespace Modules\Profiler\Application\Handlers;
 
 use Modules\Profiler\Application\EventHandlerInterface;
 
+// TODO: fix diff calculation
 final class CalculateDiffsBetweenEdges implements EventHandlerInterface
 {
     public function handle(array $event): array
