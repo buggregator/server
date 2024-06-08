@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Events\Domain;
 
-use App\Application\Domain\Entity\Json;
+use App\Application\Domain\ValueObjects\Json;
 use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\Annotated\Annotation\Column;
 use Cycle\Annotated\Annotation\Entity;

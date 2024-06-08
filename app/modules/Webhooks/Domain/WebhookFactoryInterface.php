@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Webhooks\Domain;
 
-use App\Application\Domain\Entity\Json;
+use App\Application\Domain\ValueObjects\Json;
 use Modules\Webhooks\Domain\ValueObject\Url;
 
 interface WebhookFactoryInterface
