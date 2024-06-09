@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factory;
 
-use App\Application\Domain\Entity\Json;
+use App\Application\Domain\ValueObjects\Json;
 use App\Application\Domain\ValueObjects\Uuid;
 use Modules\Webhooks\Domain\ValueObject\Url;
 use Modules\Webhooks\Domain\Webhook;

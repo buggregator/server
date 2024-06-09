@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Domain\Entity;
 
+use App\Application\Domain\ValueObjects\Json;
 use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\ORM\Parser\CastableInterface;
 use Cycle\ORM\Parser\UncastableInterface;

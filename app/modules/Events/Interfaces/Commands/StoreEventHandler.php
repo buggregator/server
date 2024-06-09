@@ -6,7 +6,7 @@ namespace Modules\Events\Interfaces\Commands;
 
 use App\Application\Commands\FindProjectByKey;
 use App\Application\Commands\HandleReceivedEvent;
-use App\Application\Domain\Entity\Json;
+use App\Application\Domain\ValueObjects\Json;
 use Modules\Events\Application\EventMetrics;
 use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Domain\Entity;
+namespace App\Application\Domain\ValueObjects;
 
 final readonly class Json implements \JsonSerializable, \Stringable
 {
@@ -20,7 +20,9 @@ final readonly class Json implements \JsonSerializable, \Stringable
         }
 
         try {
-            return new self(\json_decode($value, true));
+            return new self(
+                (array) \json_decode($value, true),
+            );
         } catch (\JsonException $e) {
             throw new \InvalidArgumentException($e->getMessage(), $e->getCode(), $e);
         }
