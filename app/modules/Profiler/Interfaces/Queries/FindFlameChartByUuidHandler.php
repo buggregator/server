@@ -34,7 +34,8 @@ final readonly class FindFlameChartByUuidHandler
 
         $waterfall = [];
         $eventCache = [];
-        $metric = 'cpu';
+        // TODO: send metric from the frontend side
+        $metric = 'wt';
 
         foreach ($edges as $edge) {
             $duration = $edge->getCost()->{$metric} ?? 0;

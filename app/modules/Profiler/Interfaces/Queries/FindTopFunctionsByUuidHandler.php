@@ -83,11 +83,11 @@ final class FindTopFunctionsByUuidHandler
         foreach ($functions as $function => $m) {
             foreach ($metrics as $metric) {
                 $functions[$function]['p_' . $metric] = \round(
-                    $functions[$function][$metric] / $overallTotals[$metric] * 100,
+                    $functions[$function][$metric] > 0 ? $functions[$function][$metric] / $overallTotals[$metric] * 100 : 0,
                     3,
                 );
                 $functions[$function]['p_excl_' . $metric] = \round(
-                    $functions[$function]['excl_' . $metric] / $overallTotals[$metric] * 100,
+                    $functions[$function]['excl_' . $metric] > 0 ? $functions[$function]['excl_' . $metric] / $overallTotals[$metric] * 100 : 0,
                     3,
                 );
             }
