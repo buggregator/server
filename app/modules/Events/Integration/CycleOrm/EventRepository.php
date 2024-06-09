@@ -43,8 +43,16 @@ final class EventRepository extends Repository implements EventRepositoryInterfa
             ->where($this->buildScope($scope))
             ->fetchAll();
 
+        $batchSize = 100;
+
+        $batch = 0;
         foreach ($events as $event) {
             $this->em->delete($event);
+
+            if ($batch++ % $batchSize === 0) {
+                $this->em->run();
+                $batch = 0;
+            }
         }
 
         $this->em->run();
@@ -58,8 +66,7 @@ final class EventRepository extends Repository implements EventRepositoryInterfa
             return false;
         }
 
-        $this->em->delete($event);
-        $this->em->run();
+        $this->em->delete($event)->run();
 
         return true;
     }

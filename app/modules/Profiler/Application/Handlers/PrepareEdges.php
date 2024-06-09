@@ -13,24 +13,38 @@ final class PrepareEdges implements EventHandlerInterface
         $data = \array_reverse($event['profile'] ?? []);
 
         $event['edges'] = [];
+        $parents = [];
+
+        $prev = null;
 
         $id = 1;
         foreach ($data as $name => $values) {
             [$parent, $func] = $this->splitName($name);
-            $values = \array_merge($values, [
-                'p_cpu' => round($values['cpu'] > 0 ? ($values['cpu'] / $event['peaks']['cpu'] * 100) : 0, 2),
-                'p_mu' => round($values['mu'] > 0 ? ($values['mu'] / $event['peaks']['mu'] * 100) : 0, 2),
-                'p_pmu' => round($values['pmu'] > 0 ? ($values['pmu'] / $event['peaks']['pmu'] * 100) : 0, 2),
-                'p_wt' => round($values['wt'] > 0 ? ($values['wt'] / $event['peaks']['wt'] * 100) : 0, 2),
-            ]);
+
+            $parentId = $parents[$parent] ?? $prev;
+
+            foreach (['cpu', 'mu', 'pmu', 'wt'] as $key) {
+                $values['p_' . $key] = \round(
+                    $values[$key] > 0 ? ($values[$key]) / $event['peaks'][$key] * 100 : 0,
+                    3,
+                );
+            }
+
             $event['edges']['e' . $id] = [
+                'id' => 'e' . $id,
                 'caller' => $parent,
                 'callee' => $func,
                 'cost' => $values,
+                'parent' => $parentId,
             ];
+
+            $parents[$func] = 'e' . $id;
+            $prev = 'e' . $id;
 
             $id++;
         }
+
+        $event['total_edges'] = \count($event['edges']);
 
         return $event;
     }
