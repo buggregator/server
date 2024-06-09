@@ -1,3 +1,5 @@
+# ====== Docker ========
+
 build:
 	if [ ! -d "runtime" ]; then \
 		mkdir runtime/configs -p; \
@@ -48,6 +50,27 @@ pull-latest:
 
 build-server:
 	docker compose build buggregator-server --no-cache;
+
+# ====== Database ========
+
+recreate-db:
+	rm -rf .db;
+	mkdir .db;
+	chmod 0777 -R .db;
+	bin/dolt --data-dir=.db sql -q "create database buggregator;";
+
+# ======= Runtime ========
+
+cleanup-attachments:
+	rm -rf runtime/attachments/*;
+
+cleanup-cache:
+	rm -rf runtime/cache;
+
+cleanup-snapshots:
+	rm -rf runtime/snapshots;
+
+cleanup: cleanup-attachments cleanup-cache cleanup-snapshots;
 
 # =========================
 

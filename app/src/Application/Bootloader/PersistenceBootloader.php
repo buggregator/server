@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Application\Bootloader;
 
+use App\Application\Database\CleanerInterface;
 use App\Application\Persistence\DriverEnum;
+use App\Integration\CycleOrm\DatabaseCleaner;
 use App\Interfaces\Console\RegisterModulesCommand;
 use Spiral\Boot\Bootloader\Bootloader;
 use Spiral\Console\Bootloader\ConsoleBootloader;
@@ -23,6 +25,13 @@ final class PersistenceBootloader extends Bootloader
             CycleBridge\SchemaBootloader::class,
             CycleBridge\CycleOrmBootloader::class,
             CycleBridge\AnnotatedBootloader::class,
+        ];
+    }
+
+    public function defineSingletons(): array
+    {
+        return [
+            CleanerInterface::class => DatabaseCleaner::class,
         ];
     }
 
