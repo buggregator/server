@@ -25,7 +25,7 @@ final class PrepareEdges implements EventHandlerInterface
 
             foreach (['cpu', 'mu', 'pmu', 'wt'] as $key) {
                 $values['p_' . $key] = \round(
-                    ($values[$key]) / $event['peaks'][$key] * 100,
+                    $values[$key] > 0 ? ($values[$key]) / $event['peaks'][$key] * 100 : 0,
                     3,
                 );
             }

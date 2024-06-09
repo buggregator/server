@@ -60,6 +60,28 @@ final readonly class FindCallGraphByUuidHandler
                 return $carry;
             },
             [
+                'toolbar' => [
+                    [
+                        'label' => 'CPU',
+                        'metric' => 'cpu',
+                        'description' => 'CPU time in ms.',
+                    ],
+                    [
+                        'label' => 'Wall time',
+                        'metric' => 'wt',
+                        'description' => 'Wall time in ms.',
+                    ],
+                    [
+                        'label' => 'Memory',
+                        'metric' => 'mu',
+                        'description' => 'Memory usage in bytes.',
+                    ],
+                    [
+                        'label' => 'Memory peak',
+                        'metric' => 'pmu',
+                        'description' => 'Memory peak usage in bytes.',
+                    ],
+                ],
                 'nodes' => [],
                 'edges' => [],
             ],
