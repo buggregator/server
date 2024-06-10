@@ -17,24 +17,34 @@ final class SymfonyV7Test extends TCPTestCase
     public static function variablesDataProvider(): iterable
     {
         yield 'string' => ['foo', 'string', 'foo'];
-        yield 'int' => [1, 'integer', 1];
-        yield 'float' => [1.1, 'double', 1.1];
-        yield 'array' => [['foo' => 'bar'], 'array', <<<'HTML'
+        yield 'true' => [true, 'boolean', '1'];
+        yield 'false' => [false, 'boolean', '0'];
+        yield 'int' => [1, 'integer', '1'];
+        yield 'float' => [1.1, 'double', '1.1'];
+        yield 'array' => [
+            ['foo' => 'bar'],
+            'array',
+            <<<'HTML'
 <pre class=sf-dump id=sf-dump-730421088 data-indent-pad="  "><span class=sf-dump-label>Some label</span> <span class=sf-dump-note>array:1</span> [<samp data-depth=1 class=sf-dump-expanded>
   "<span class=sf-dump-key>foo</span>" => "<span class=sf-dump-str>bar</span>"
 </samp>]
 </pre><script>Sfdump("sf-dump-730421088")</script>
 
 HTML
+            ,
         ];
-        yield 'object' => [(object) ['type' => 'string', 'value' => 'foo'], 'stdClass', <<<HTML
-<pre class=sf-dump id=sf-dump-730421088 data-indent-pad="  "><span class=sf-dump-label>Some label</span> {<a class=sf-dump-ref>#208</a><samp data-depth=1 class=sf-dump-expanded>
+        yield 'object' => [
+            (object) ['type' => 'string', 'value' => 'foo'],
+            'stdClass',
+            <<<HTML
+<pre class=sf-dump id=sf-dump-730421088 data-indent-pad="  "><span class=sf-dump-label>Some label</span> {<a class=sf-dump-ref>#%s</a><samp data-depth=1 class=sf-dump-expanded>
   +"<span class=sf-dump-public>type</span>": "<span class=sf-dump-str>string</span>"
   +"<span class=sf-dump-public>value</span>": "<span class=sf-dump-str>foo</span>"
 </samp>}
 </pre><script>Sfdump("sf-dump-730421088")</script>
 
 HTML
+            ,
         ];
     }
 
@@ -46,6 +56,10 @@ HTML
 
         $message = $this->buildPayload(var: $value);
         $this->handleVarDumperRequest($message);
+
+        if (\is_object($value)) {
+            $expected = \sprintf($expected, \spl_object_id($value));
+        }
 
         $this->broadcastig->assertPushed(new EventsChannel(), function (array $data) use ($value, $type, $expected) {
             $this->assertSame('event.received', $data['event']);

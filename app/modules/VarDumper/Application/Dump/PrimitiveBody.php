@@ -23,7 +23,11 @@ final readonly class PrimitiveBody implements BodyInterface
 
     public function __toString(): string
     {
-        return (string) $this->value;
+        return match (true) {
+            $this->value === true => '1',
+            $this->value === false => '0',
+            default => (string) $this->value,
+        };
     }
 
     public function jsonSerialize(): string
