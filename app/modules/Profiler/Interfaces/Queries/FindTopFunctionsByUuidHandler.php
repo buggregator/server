@@ -67,6 +67,11 @@ final class FindTopFunctionsByUuidHandler
 
             foreach ($metrics as $metric) {
                 $field = 'excl_' . $metric;
+
+                if (!isset($functions[$edge->getCaller()][$field])) {
+                    $functions[$edge->getCaller()][$field] = 0;
+                }
+
                 $functions[$edge->getCaller()][$field] -= $edge->getCost()->{$metric};
 
                 if ($functions[$edge->getCaller()][$field] < 0) {
@@ -76,7 +81,7 @@ final class FindTopFunctionsByUuidHandler
         }
 
         $sortMetric = $query->metric->value;
-        \usort($functions, static fn(array $a, array $b) => $b[$sortMetric] <=> $a[$sortMetric]);
+        \usort($functions, static fn(array $a, array $b) => ($b[$sortMetric] ?? 0) <=> ($a[$sortMetric] ?? 0));
 
         $functions = \array_slice($functions, 0, $query->limit);
 
