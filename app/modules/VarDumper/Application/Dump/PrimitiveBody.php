@@ -8,7 +8,7 @@ final readonly class PrimitiveBody implements BodyInterface
 {
     public function __construct(
         private string $type,
-        private string $value,
+        private mixed $value,
     ) {}
 
     public function getType(): string
@@ -23,11 +23,11 @@ final readonly class PrimitiveBody implements BodyInterface
 
     public function __toString(): string
     {
-        return $this->value;
+        return (string) $this->value;
     }
 
     public function jsonSerialize(): string
     {
-        return $this->__toString();
+        return (string) $this;
     }
 }

@@ -12,10 +12,15 @@ final class MessageParser
 {
     /**
      * @throws \RuntimeException
+     * @throws InvalidPayloadException
      */
     public function parse(string $message): ParsedPayload
     {
-        $payload = @\unserialize(\base64_decode($message), ['allowed_classes' => [Data::class, Stub::class]]);
+        try {
+            $payload = \unserialize(\base64_decode($message), ['allowed_classes' => [Data::class, Stub::class]]);
+        } catch (\Throwable) {
+            $payload = false;
+        }
 
         // Impossible to decode the message, give up.
         if (false === $payload) {
