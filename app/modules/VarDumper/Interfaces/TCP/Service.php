@@ -60,7 +60,7 @@ final readonly class Service implements ServiceInterface
 
     private function convertToPrimitive(Data $data): BodyInterface|null
     {
-        if (\in_array($data->getType(), ['string', 'boolean'])) {
+        if (\in_array($data->getType(), ['string', 'boolean', 'integer', 'double'])) {
             return new PrimitiveBody(
                 type: $data->getType(),
                 value: $data->getValue(),

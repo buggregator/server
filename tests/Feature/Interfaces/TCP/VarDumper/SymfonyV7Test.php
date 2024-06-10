@@ -7,62 +7,67 @@ namespace Tests\Feature\Interfaces\TCP\VarDumper;
 use App\Application\Broadcasting\Channel\EventsChannel;
 use Modules\VarDumper\Application\Dump\DumpIdGeneratorInterface;
 use Modules\VarDumper\Exception\InvalidPayloadException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\VarDumper\Caster\ReflectionCaster;
 use Symfony\Component\VarDumper\Cloner\VarCloner;
 use Tests\Feature\Interfaces\TCP\TCPTestCase;
 
 final class SymfonyV7Test extends TCPTestCase
 {
-    public function testSendDump(): void
+    public static function variablesDataProvider(): iterable
     {
-        $message = $this->buildPayload(var: 'foo');
-        $this->handleVarDumperRequest($message);
+        yield 'string' => ['foo', 'string', 'foo'];
+        yield 'true' => [true, 'boolean', '1'];
+        yield 'false' => [false, 'boolean', '0'];
+        yield 'int' => [1, 'integer', '1'];
+        yield 'float' => [1.1, 'double', '1.1'];
+        yield 'array' => [
+            ['foo' => 'bar'],
+            'array',
+            <<<'HTML'
+<pre class=sf-dump id=sf-dump-730421088 data-indent-pad="  "><span class=sf-dump-label>Some label</span> <span class=sf-dump-note>array:1</span> [<samp data-depth=1 class=sf-dump-expanded>
+  "<span class=sf-dump-key>foo</span>" => "<span class=sf-dump-str>bar</span>"
+</samp>]
+</pre><script>Sfdump("sf-dump-730421088")</script>
 
-        $this->broadcastig->assertPushed(new EventsChannel(), function (array $data) {
-            $this->assertSame('event.received', $data['event']);
-            $this->assertSame('var-dump', $data['data']['type']);
-
-            $this->assertSame([
-                'type' => 'string',
-                'value' => 'foo',
-                'label' => 'Some label',
-            ], $data['data']['payload']['payload']);
-
-            $this->assertNotEmpty($data['data']['uuid']);
-            $this->assertNotEmpty($data['data']['timestamp']);
-
-            return true;
-        });
-    }
-
-    public function testSendObjectDump(): void
-    {
-        $generator = $this->mockContainer(DumpIdGeneratorInterface::class);
-
-        $generator->shouldReceive('generate')->andReturn('sf-dump-730421088');
-        $object = (object) ['type' => 'string', 'value' => 'foo'];
-        $message = $this->buildPayload($object);
-        $this->handleVarDumperRequest($message);
-        $objectId = \spl_object_id($object);
-
-        $this->broadcastig->assertPushed(new EventsChannel(), function (array $data) use ($objectId) {
-            $this->assertSame('event.received', $data['event']);
-            $this->assertSame('var-dump', $data['data']['type']);
-            $this->assertSame(null, $data['data']['project']);
-
-            $this->assertSame([
-                'type' => 'stdClass',
-                'value' => \sprintf(
-                    <<<HTML
+HTML
+            ,
+        ];
+        yield 'object' => [
+            (object) ['type' => 'string', 'value' => 'foo'],
+            'stdClass',
+            <<<HTML
 <pre class=sf-dump id=sf-dump-730421088 data-indent-pad="  "><span class=sf-dump-label>Some label</span> {<a class=sf-dump-ref>#%s</a><samp data-depth=1 class=sf-dump-expanded>
   +"<span class=sf-dump-public>type</span>": "<span class=sf-dump-str>string</span>"
   +"<span class=sf-dump-public>value</span>": "<span class=sf-dump-str>foo</span>"
 </samp>}
 </pre><script>Sfdump("sf-dump-730421088")</script>
 
-HTML,
-                    $objectId,
-                ),
+HTML
+            ,
+        ];
+    }
+
+    #[DataProvider('variablesDataProvider')]
+    public function testSendDump(mixed $value, string $type, mixed $expected): void
+    {
+        $generator = $this->mockContainer(DumpIdGeneratorInterface::class);
+        $generator->shouldReceive('generate')->andReturn('sf-dump-730421088');
+
+        $message = $this->buildPayload(var: $value);
+        $this->handleVarDumperRequest($message);
+
+        if (\is_object($value)) {
+            $expected = \sprintf($expected, \spl_object_id($value));
+        }
+
+        $this->broadcastig->assertPushed(new EventsChannel(), function (array $data) use ($value, $type, $expected) {
+            $this->assertSame('event.received', $data['event']);
+            $this->assertSame('var-dump', $data['data']['type']);
+
+            $this->assertSame([
+                'type' => $type,
+                'value' => $expected,
                 'label' => 'Some label',
             ], $data['data']['payload']['payload']);
 
