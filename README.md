@@ -6,16 +6,19 @@
 [![phpunit](https://github.com/buggregator/server/actions/workflows/phpunit.yml/badge.svg)](https://github.com/buggregator/server/actions/workflows/phpunit.yml)
 [![Downloads](https://img.shields.io/docker/pulls/butschster/buggregator.svg)](https://hub.docker.com/repository/docker/butschster/buggregator)
 
-**Buggregator is a lightweight, standalone server that offers a range of debugging features for PHP applications. Think of it as a Swiss Army knife for developers. What makes it special is that it offers a range of features that you would usually find in various paid tools, but it's available for free.**
+**Buggregator is a free, multi-purpose server tool designed primarily for debugging PHP applications, but it's also compatible with other programming languages. Think of it as a Swiss Army knife for developers. What makes it special is that it offers a range of features that you would usually find in various paid tools, but it's available for free.**
+
+Just start from watching our introduction video on [YouTube](https://www.youtube.com/watch?v=yKWbuw8xN_c)!
 
 ![Cover image](https://github.com/buggregator/server/assets/773481/47491a3c-57a3-4b40-b82e-37976afdf708)
-
 
 ## Key Features[​](https://docs.buggregator.dev/#key-features)
 
 Buggregator is not just a debugging server; it's a comprehensive suite of tools that cater to various aspects of application development and maintenance, all available at no cost. Here’s what you can expect:
 
 ### 1. [Xhprof Profiler](https://docs.buggregator.dev/config/xhprof.html)[​](https://docs.buggregator.dev/#_1-xhprof-profiler)
+
+Watch our intro video about profiler on [YouTube](https://www.youtube.com/watch?v=2QbgjIVnz78&pp=ygULYnVnZ3JlZ2F0b3I%3D).
 
 ![xhprof](https://github.com/buggregator/server/assets/773481/d69e1158-599d-4546-96a9-40a42cb060f4)
 
