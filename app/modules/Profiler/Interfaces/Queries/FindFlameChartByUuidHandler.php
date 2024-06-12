@@ -42,7 +42,7 @@ final readonly class FindFlameChartByUuidHandler
             $eventData = [
                 'name' => $edge->getCallee(),
                 'start' => 0,  // Temporarily zero, will adjust based on the parent later
-                'duration' => $duration,
+                'duration' => $duration > 0 ? \round($duration / 1_000, 3) : 0,
                 'type' => 'task',
                 'children' => [],
                 'cost' => [
@@ -72,7 +72,7 @@ final readonly class FindFlameChartByUuidHandler
         return $waterfall;
     }
 
-    private function adjustStartTimes(&$eventList, $startTime): void
+    private function adjustStartTimes(array &$eventList, float|int $startTime): void
     {
         foreach ($eventList as &$event) {
             $event['start'] = $startTime;
