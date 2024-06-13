@@ -23,9 +23,9 @@ final readonly class EventTypeMapper implements EventTypeMapperInterface
                 max: $this->maxExceptions,
             ),
             'level' => $data['level'] ?? null,
-            'platform' => $data['platform'],
-            'environment' => $data['environment'],
-            'server_name' => $data['server_name'],
+            'platform' => $data['platform'] ?? null,
+            'environment' => $data['environment'] ?? null,
+            'server_name' => $data['server_name'] ?? null,
             'event_id' => $data['event_id'] ?? null,
         ];
     }
