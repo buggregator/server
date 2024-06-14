@@ -11,7 +11,7 @@ use Nyholm\Psr7\Stream;
 use Tests\App\Http\ResponseAssertions;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;
 
-final class SentryVueActionTest extends ControllerTestCase
+final class SentryVueEventActionTest extends ControllerTestCase
 {
     protected const JSON = <<<'BODY'
 {"event_id":"9ac5bb343cfe45c19a7a59d45fb6ec89","sent_at":"2024-06-13T19:54:00.923Z","sdk":{"name":"sentry.javascript.vue","version":"8.9.2"},"trace":{"environment":"production","public_key":"sentry","trace_id":"8d53b11dcc1d47d2a02d2cbf0fe8c5bd","replay_id":"ad0f6efd15354b1b8886bed21fc64389","sample_rate":"1","transaction":"home","sampled":"true"}}
@@ -59,12 +59,10 @@ BODY;
     {
         return $this->http
             ->postJson(
-                uri: '/api/' . $project . '/envelope/',
+                uri: '/api/' . $project . '/envelope/?sentry_key=' . $secret . '&sentry_version=7&sentry_client=sentry.javascript.vue%2F8.9.2',
                 data: Stream::create(self::JSON),
                 headers: [
-                    'X-Buggregator-Event' => 'sentry',
-                    'Content-Type' => 'application/x-sentry-envelope',
-                    'X-Sentry-Auth' => 'Sentry sentry_version=7, sentry_client=sentry.php/4.0.1, sentry_key=' . $secret,
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
                 ],
             );
     }

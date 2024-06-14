@@ -61,7 +61,7 @@ BODY;
         $this->broadcastig->assertPushed(new EventsChannel($project), function (array $data) use ($project) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
-            $this->assertSame($project ? (string)$project : null, $data['data']['project']);
+            $this->assertSame($project ? (string) $project : null, $data['data']['project']);
 
             $this->assertSame('f7b7f09d40e645c79a8a2846e2111c81', $data['data']['payload']['event_id']);
             $this->assertSame('php', $data['data']['payload']['platform']);
@@ -82,7 +82,9 @@ BODY;
             ->postJson(
                 uri: '/api/' . $project . '/store/',
                 data: Stream::create(self::PAYLOAD),
-                headers: ['X-Sentry-Auth' => 'Sentry sentry_version=7, sentry_client=sentry.php/4.0.1, sentry_key=' . $secret],
+                headers: [
+                    'X-Sentry-Auth' => 'Sentry sentry_version=7, sentry_client=sentry.php/4.0.1, sentry_key=' . $secret,
+                ],
             );
     }
 }

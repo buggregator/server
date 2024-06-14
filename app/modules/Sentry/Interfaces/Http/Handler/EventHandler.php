@@ -7,6 +7,9 @@ namespace Modules\Sentry\Interfaces\Http\Handler;
 use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Event\EventType;
 use App\Application\Service\HttpHandler\HandlerInterface;
+use Modules\Sentry\Application\DTO\Payload;
+use Modules\Sentry\Application\DTO\PayloadChunkInterface;
+use Modules\Sentry\Application\DTO\Type;
 use Modules\Sentry\Application\EventHandlerInterface;
 use Modules\Sentry\Application\PayloadParser;
 use Modules\Sentry\Application\SecretKeyValidator;
@@ -48,24 +51,24 @@ final readonly class EventHandler implements HandlerInterface
 
         $event = new EventType(type: 'sentry', project: $project);
 
-        $payloads = $this->payloadParser->parse($request);
+        $payload = $this->payloadParser->parse($request);
 
         match (true) {
-            \str_ends_with($url, '/envelope') => $this->handleEnvelope($payloads, $event),
-            \str_ends_with($url, '/store') => $this->handleEvent($payloads, $event),
+            \str_ends_with($url, '/envelope') => $this->handleEnvelope($payload, $event),
+            \str_ends_with($url, '/store') => $this->handleEvent($payload->getMeta(), $event),
             default => null,
         };
 
         return $this->responseWrapper->create(200);
     }
 
-    private function handleEvent(array $data, EventType $eventType): void
+    private function handleEvent(PayloadChunkInterface $chunk, EventType $eventType): void
     {
-        $event = $this->handler->handle($data[0]);
+        $event = $this->handler->handle($chunk->jsonSerialize());
 
         $this->commands->dispatch(
             new HandleReceivedEvent(
-                type: 'sentry',
+                type: $eventType->type,
                 payload: $event,
                 project: $eventType->project,
             ),
@@ -75,13 +78,11 @@ final readonly class EventHandler implements HandlerInterface
     /**
      * TODO handle sentry transaction and session
      */
-    private function handleEnvelope(array $data, EventType $eventType): void
+    private function handleEnvelope(Payload $data, EventType $eventType): void
     {
-        if (\count($data) == 3) {
-            match ($data[1]['type']) {
-                'event' => $this->handleEvent([$data[2]], $eventType),
-                default => null,
-            };
-        }
+        match ($data->type()) {
+            Type::Event => $this->handleEvent($data->getPayload(), $eventType),
+            default => null,
+        };
     }
 }

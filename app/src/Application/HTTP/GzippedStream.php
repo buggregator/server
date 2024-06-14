@@ -12,12 +12,20 @@ final readonly class GzippedStream
         private StreamInterface $stream,
     ) {}
 
-    public function getPayload(): \Traversable
+    /**
+     * @return iterable<array|string>
+     */
+    public function getPayload(): iterable
     {
         $payloads = \array_filter(\explode("\n", (string) $this->stream));
 
         foreach ($payloads as $payload) {
-            yield \json_decode($payload, true);
+            if (!\json_validate($payload)) {
+                yield $payload;
+                continue;
+            }
+
+            yield \json_decode($payload, true, 512, \JSON_THROW_ON_ERROR);
         }
     }
 }
