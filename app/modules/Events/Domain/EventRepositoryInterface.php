@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Events\Domain;
 
+use App\Application\Event\StackStrategy;
 use Cycle\ORM\RepositoryInterface;
 
 /**
@@ -16,7 +17,7 @@ interface EventRepositoryInterface extends RepositoryInterface
 
     public function countAll(array $scope = []): int;
 
-    public function store(Event $event): bool;
+    public function store(Event $event, StackStrategy $stackStrategy): bool;
 
     public function deleteAll(array $scope = []): void;
 

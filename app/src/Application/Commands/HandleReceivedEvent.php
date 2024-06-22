@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Commands;
 
 use App\Application\Domain\ValueObjects\Uuid;
+use App\Application\Event\StackStrategy;
 use Spiral\Cqrs\CommandInterface;
 
 final readonly class HandleReceivedEvent implements CommandInterface, \JsonSerializable
@@ -17,6 +18,8 @@ final readonly class HandleReceivedEvent implements CommandInterface, \JsonSeria
         public array|\JsonSerializable $payload,
         public ?string $project = null,
         ?Uuid $uuid = null,
+        public ?string $groupId = null,
+        public StackStrategy $stackStrategy = StackStrategy::None,
     ) {
         $this->uuid = $uuid ?? Uuid::generate();
         $this->timestamp = \microtime(true);
@@ -30,6 +33,7 @@ final readonly class HandleReceivedEvent implements CommandInterface, \JsonSeria
             'payload' => $this->payload,
             'uuid' => (string) $this->uuid,
             'timestamp' => $this->timestamp,
+            'groupId' => $this->groupId,
         ];
     }
 }

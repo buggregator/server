@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace Modules\Sentry\Application;
 
 use App\Application\HTTP\GzippedStreamFactory;
-use Modules\Sentry\Application\DTO\BlobChunk;
 use Modules\Sentry\Application\DTO\JsonChunk;
 use Modules\Sentry\Application\DTO\Payload;
-use Modules\Sentry\Application\DTO\TypeChunk;
+use Modules\Sentry\Application\DTO\PayloadFactory;
 use Psr\Http\Message\ServerRequestInterface;
 
 final readonly class PayloadParser
@@ -22,32 +21,16 @@ final readonly class PayloadParser
         $isV4 = $request->getHeaderLine('Content-Type') === 'application/x-sentry-envelope' ||
             \str_contains($request->getHeaderLine('X-Sentry-Auth'), 'sentry_client=sentry.php');
 
-        if ($isV4) {
-            if ($request->getHeaderLine('Content-Encoding') === 'gzip') {
-                $chunks = [];
-
-                foreach ($this->gzippedStreamFactory->createFromRequest($request)->getPayload() as $payload) {
-                    if (\is_string($payload)) {
-                        $chunks[] = new BlobChunk($payload);
-                        continue;
-                    }
-
-                    if (isset($payload['type'])) {
-                        $chunks[] = new TypeChunk($payload);
-                        continue;
-                    }
-
-                    $chunks[] = new JsonChunk($payload);
-                }
-
-                return new Payload($chunks);
-            }
-
-            return Payload::parse((string) $request->getBody());
+        if (!$isV4) {
+            throw new \InvalidArgumentException('Unsupported Sentry protocol version');
         }
 
-        return new Payload(
-            [new JsonChunk($request->getParsedBody())],
-        );
+        if ($request->getHeaderLine('Content-Encoding') === 'gzip') {
+            return PayloadFactory::parseJson(
+                $this->gzippedStreamFactory->createFromRequest($request)->getPayload(),
+            );
+        }
+
+        return PayloadFactory::parseJson((string) $request->getBody());
     }
 }

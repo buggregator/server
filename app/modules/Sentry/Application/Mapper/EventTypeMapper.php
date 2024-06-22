@@ -22,6 +22,8 @@ final readonly class EventTypeMapper implements EventTypeMapperInterface
                 exception: $data['exception'] ?? null,
                 max: $this->maxExceptions,
             ),
+            'tags' => $data['tags'] ?? [],
+            'fingerprint' => $data['fingerprint'] ?? null,
             'level' => $data['level'] ?? null,
             'platform' => $data['platform'] ?? null,
             'environment' => $data['environment'] ?? null,
