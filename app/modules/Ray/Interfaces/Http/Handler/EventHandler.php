@@ -8,6 +8,7 @@ use App\Application\Commands\ClearEvents;
 use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Event\EventType;
+use App\Application\Event\StackStrategy;
 use App\Application\Service\HttpHandler\HandlerInterface;
 use Carbon\CarbonInterval;
 use Modules\Ray\Application\EventHandlerInterface;
@@ -70,7 +71,9 @@ final readonly class EventHandler implements HandlerInterface
                 type: $eventType->type,
                 payload: $event,
                 project: $eventType->project,
-                uuid: Uuid::fromString($event['uuid']),
+//                uuid: Uuid::fromString($event['uuid']),
+                groupId: $event['uuid'],
+                stackStrategy: StackStrategy::All,
             ),
         );
 

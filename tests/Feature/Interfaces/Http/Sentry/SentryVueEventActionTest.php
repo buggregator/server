@@ -33,6 +33,7 @@ BODY;
         $this->makeRequest(project: $this->project->getKey())->assertOk();
 
         $this->broadcastig->assertPushed(new EventsChannel($this->project->getKey()), function (array $data) {
+
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
             $this->assertSame('default', $data['data']['project']);

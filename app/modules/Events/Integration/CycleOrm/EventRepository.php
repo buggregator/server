@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Events\Integration\CycleOrm;
 
+use App\Application\Event\StackStrategy;
 use Cycle\ORM\EntityManagerInterface;
 use Cycle\ORM\Select;
 use Cycle\ORM\Select\Repository;
@@ -23,10 +24,33 @@ final class EventRepository extends Repository implements EventRepositoryInterfa
         parent::__construct($select);
     }
 
-    public function store(Event $event): bool
+    public function store(Event $event, StackStrategy $stackStrategy): bool
     {
-        if ($found = $this->findByPK($event->getUuid())) {
-            $found->setPayload($event->getPayload());
+        $found = null;
+        if ($event->getGroupId() !== null && $stackStrategy === StackStrategy::All) {
+            $found = $this->findOne(['group_id' => $event->getGroupId()]);
+            if (!$found) {
+                $found = $event;
+            } else {
+                $found->setPayload($event->getPayload());
+                $found->updateTimestamp();
+            }
+        } elseif ($event->getGroupId() !== null && $stackStrategy === StackStrategy::OnlyLatest) {
+            $found = $this->findLatest();
+            if ($found && $found->getGroupId() === $event->getGroupId()) {
+                $found->setPayload($event->getPayload());
+                $found->updateTimestamp();
+            } else {
+                $found = $event;
+            }
+        }
+
+//        if (!$found && $found = $this->findByPK($event->getUuid())) {
+//            $found->setPayload($event->getPayload());
+//            $found->updateTimestamp();
+//        }
+
+        if ($found) {
             $this->em->persist($found);
         } else {
             $this->em->persist($event);
@@ -97,5 +121,12 @@ final class EventRepository extends Repository implements EventRepositoryInterfa
         }
 
         return $newScope;
+    }
+
+    private function findLatest(): ?Event
+    {
+        return $this->select()
+            ->orderBy(['timestamp' => 'DESC'])
+            ->fetchOne();
     }
 }

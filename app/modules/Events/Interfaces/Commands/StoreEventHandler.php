@@ -40,8 +40,10 @@ final readonly class StoreEventHandler
                 type: $command->type,
                 payload: new Json($command->payload),
                 timestamp: Timestamp::create(),
+                groupId: $command->groupId,
                 project: $project?->getKey(),
             ),
+            $command->stackStrategy,
         );
 
         $this->dispatcher->dispatch(

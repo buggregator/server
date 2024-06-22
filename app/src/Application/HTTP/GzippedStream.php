@@ -13,19 +13,10 @@ final readonly class GzippedStream
     ) {}
 
     /**
-     * @return iterable<array|string>
+     * @return string
      */
-    public function getPayload(): iterable
+    public function getPayload(): string
     {
-        $payloads = \array_filter(\explode("\n", (string) $this->stream));
-
-        foreach ($payloads as $payload) {
-            if (!\json_validate($payload)) {
-                yield $payload;
-                continue;
-            }
-
-            yield \json_decode($payload, true, 512, \JSON_THROW_ON_ERROR);
-        }
+        return (string) $this->stream;
     }
 }

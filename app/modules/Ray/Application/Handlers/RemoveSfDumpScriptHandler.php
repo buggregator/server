@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ray\Application\Handlers;
 
 use Modules\Ray\Application\DumpIdParser;
-use Modules\Sentry\Application\EventHandlerInterface;
+use Modules\Ray\Application\EventHandlerInterface;
 
 final class RemoveSfDumpScriptHandler implements EventHandlerInterface
 {
@@ -45,9 +45,9 @@ final class RemoveSfDumpScriptHandler implements EventHandlerInterface
 
         // Remove everything except <pre> tags and their content
         return \preg_replace(
-            '/(?s)(.*?)(<pre[^>]*>.*?<\/pre>)(.*)|(?s)(.*)/',
-            '$2',
-            $html,
-        ) . '<script>Sfdump("' . $sfDumpId . '")</script>';
+                '/(?s)(.*?)(<pre[^>]*>.*?<\/pre>)(.*)|(?s)(.*)/',
+                '$2',
+                $html,
+            ) . '<script>Sfdump("' . $sfDumpId . '")</script>';
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Sentry;
 
+use App\Application\Event\EventType;
+use Modules\Sentry\Application\DTO\Payload;
 use Psr\Container\ContainerInterface;
 
 final readonly class EventHandler implements Application\EventHandlerInterface
@@ -16,12 +18,12 @@ final readonly class EventHandler implements Application\EventHandlerInterface
         private array $handlers,
     ) {}
 
-    public function handle(array $event): array
+    public function handle(Payload $payload, EventType $event): Payload
     {
         foreach ($this->handlers as $handler) {
-            $event = $this->container->get($handler)->handle($event);
+            $payload = $this->container->get($handler)->handle($payload, $event);
         }
 
-        return $event;
+        return $payload;
     }
 }

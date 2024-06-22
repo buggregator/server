@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Domain\ValueObjects;
 
-final readonly class Json implements \JsonSerializable, \Stringable
+readonly class Json implements \JsonSerializable, \Stringable
 {
     public function __construct(
         private array|\JsonSerializable $data = [],
@@ -16,11 +16,11 @@ final readonly class Json implements \JsonSerializable, \Stringable
     final public static function typecast(mixed $value): self
     {
         if (empty($value)) {
-            return new self();
+            return new static();
         }
 
         try {
-            return new self(
+            return new static(
                 (array) \json_decode($value, true),
             );
         } catch (\JsonException $e) {

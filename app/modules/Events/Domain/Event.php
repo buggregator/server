@@ -17,6 +17,7 @@ use Modules\Projects\Domain\ValueObject\Key;
 )]
 #[Index(columns: ['type'])]
 #[Index(columns: ['project'])]
+#[Index(columns: ['group_id'])]
 class Event
 {
     /**  @internal */
@@ -29,6 +30,8 @@ class Event
         private Json $payload,
         #[Column(type: 'string(25)', typecast: Timestamp::class)]
         private Timestamp $timestamp,
+        #[Column(type: 'string', name: 'group_id', nullable: true)]
+        private ?string $groupId = null,
         #[Column(type: 'string', nullable: true, typecast: Key::class)]
         private ?Key $project = null,
     ) {}
@@ -58,8 +61,18 @@ class Event
         return $this->timestamp;
     }
 
+    public function updateTimestamp(?Timestamp $timestamp = null): void
+    {
+        $this->timestamp = $timestamp ?? Timestamp::create();
+    }
+
     public function getProject(): ?Key
     {
         return $this->project;
+    }
+
+    public function getGroupId(): ?string
+    {
+        return $this->groupId;
     }
 }

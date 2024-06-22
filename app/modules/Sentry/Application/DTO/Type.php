@@ -7,6 +7,7 @@ namespace Modules\Sentry\Application\DTO;
 enum Type
 {
     case Event;
+    case CheckIn;
     case Transaction;
     case ReplyEvent;
     case ReplayRecording;
