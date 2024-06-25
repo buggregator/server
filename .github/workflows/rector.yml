@@ -67,6 +67,5 @@ jobs:
           max_attempts: 5
           command: composer install --prefer-dist --no-interaction --no-progress
 
-      # Execution
-      - name: Execute Tests
-        run: vendor/bin/rector process
+      - name: Run Rector checks
+        run: vendor/bin/rector process --dry-run
