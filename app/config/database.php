@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Cycle\Database\Config\PostgresDriverConfig;
 use Cycle\Database\Config\Postgres\TcpConnectionConfig as PgTcpConnectionConfig;
-use Cycle\Database\Config\Mysql\TcpConnectionConfig as MysqlTcpConnectionConfig;
+use Cycle\Database\Config\MySQL\TcpConnectionConfig as MysqlTcpConnectionConfig;
 use Cycle\Database\Config\MySQLDriverConfig;
 use Cycle\Database\Config\SQLiteDriverConfig;
 use Cycle\Database\Config\SQLite\FileConnectionConfig;
