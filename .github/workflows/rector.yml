@@ -1,0 +1,67 @@
+on:
+  pull_request: null
+  push:
+    branches:
+      - '*.*'
+
+name: Rector
+
+jobs:
+  rector:
+    name: PHP ${{ matrix.php }}-${{ matrix.os }}, ${{ matrix.stability }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ${{ fromJson(inputs.php) }}
+        os: ${{ fromJson(inputs.os) }}
+        stability: ${{ fromJson(inputs.stability) }}
+    steps:
+      # General Steps
+      - name: Set Git To Use LF
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure environment
+        run: |
+          export COMPOSER_ROOT_VERSION=$(/usr/bin/jq --null-input --raw-output 'first(inputs["extra"]["branch-alias"])[]' composer.json)
+          echo COMPOSER_ROOT_VERSION=$COMPOSER_ROOT_VERSION >> $GITHUB_ENV
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          # PHP Extras
+          extensions: ${{ inputs.extensions }}
+          coverage: ${{ matrix.coverage }}
+          tools: pecl
+          ini-values: ${{ matrix.ini-values }}
+
+      - name: Validate Composer
+        run: composer validate
+
+      - name: Get Composer Cache Directory
+        id: composer-cache
+        run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+
+      - name: Restore Composer Cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-${{ matrix.php }}-composer-${{ hashFiles('**/composer.json') }}
+          restore-keys: ${{ runner.os }}-${{ matrix.php }}-composer
+
+      - name: Install Dependencies
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          command: composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
+
+      # Execution
+      - name: Execute Tests
+        run: vendor/bin/rector process
