@@ -7,11 +7,6 @@ on:
         default: sockets
         required: false
         type: string
-      ini-values:
-        description: Initial values for PHP configuration.
-        default: memory_limit=-1
-        required: false
-        type: string
   push:
     branches:
       - '*.*'
@@ -20,8 +15,6 @@ name: Rector
 
 jobs:
   rector:
-    name: PHP ${{ matrix.php }}-${{ matrix.os }}
-
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -38,16 +31,6 @@ jobs:
         run: |
           export COMPOSER_ROOT_VERSION=$(/usr/bin/jq --null-input --raw-output 'first(inputs["extra"]["branch-alias"])[]' composer.json)
           echo COMPOSER_ROOT_VERSION=$COMPOSER_ROOT_VERSION >> $GITHUB_ENV
-
-      - name: Setup PHP ${{ matrix.php }}
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
-          # PHP Extras
-          extensions: ${{ inputs.extensions }}
-          coverage: ${{ matrix.coverage }}
-          tools: pecl
-          ini-values: ${{ matrix.ini-values }}
 
       - name: Get Composer Cache Directory
         id: composer-cache
