@@ -1,43 +1,42 @@
-on:
-  pull_request: null
-  workflow_call:
-    inputs:
-      extensions:
-        description: List of extensions to PHP.
-        default: sockets
-        required: false
-        type: string
-      ini-values:
-        description: Initial values for PHP configuration.
-        default: memory_limit=-1
-        required: false
-        type: string
-      os:
-        description: Os to test, separated by comma.
-        required: true
-        type: string
-      php:
-        description: PHP versions to test, separated by comma.
-        default: '["8.1","8.2","8.3"]'
-        required: false
-        type: string
-      stability:
-        description: Stability to test, separated by comma.
-        required: true
-        type: string
-      tools:
-        description: Tools to test, separated by comma.
-        default: composer:v2
-        required: false
-        type: string
-  push:
-    branches:
-      - '*.*'
-
 name: Rector
 
 jobs:
   rector:
+    on:
+      pull_request: null
+      workflow_call:
+        inputs:
+          extensions:
+            description: List of extensions to PHP.
+            default: sockets
+            required: false
+            type: string
+          ini-values:
+            description: Initial values for PHP configuration.
+            default: memory_limit=-1
+            required: false
+            type: string
+          os:
+            description: Os to test, separated by comma.
+            required: true
+            type: string
+          php:
+            description: PHP versions to test, separated by comma.
+            default: '["8.1","8.2","8.3"]'
+            required: false
+            type: string
+          stability:
+            description: Stability to test, separated by comma.
+            required: true
+            type: string
+          tools:
+            description: Tools to test, separated by comma.
+            default: composer:v2
+            required: false
+            type: string
+      push:
+        branches:
+          - '*.*'
     with:
       os: >-
         ['ubuntu-latest']
