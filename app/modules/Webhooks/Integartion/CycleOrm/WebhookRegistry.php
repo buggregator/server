@@ -22,7 +22,7 @@ final readonly class WebhookRegistry implements WebhookRegistryInterface
 
     public function register(Webhook $webhook): Uuid
     {
-        if ($this->webhooks->findByKey($webhook->key) !== null) {
+        if ($this->webhooks->findByKey($webhook->key) instanceof \Modules\Webhooks\Domain\Webhook) {
             throw new WebhooksAlreadyExistsException(
                 \sprintf('Webhook with key %s already exists', $webhook->key),
             );

@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Sentry;
 
+use Modules\Sentry\Application\EventHandlerInterface;
 use Psr\Container\ContainerInterface;
 
-final readonly class EventHandler implements Application\EventHandlerInterface
+final readonly class EventHandler implements EventHandlerInterface
 {
     /**
-     * @param class-string<\Modules\Sentry\Application\EventHandlerInterface>[] $handlers
+     * @param class-string<EventHandlerInterface>[] $handlers
      */
     public function __construct(
         private ContainerInterface $container,

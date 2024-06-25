@@ -82,7 +82,7 @@ final class WebhookHandler extends JobHandler
             $delivery = $this->deliveryFactory->create(
                 webhookUuid: $webhook->uuid,
                 payload: \json_encode($payload->event->payload),
-                response: (string) $response->getBody()->getContents(),
+                response: $response->getBody()->getContents(),
                 status: $response?->getStatusCode() ?? 500,
             );
 

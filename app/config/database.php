@@ -2,7 +2,11 @@
 
 declare(strict_types=1);
 
-use Cycle\Database\Config;
+use Cycle\Database\Config\PostgresDriverConfig;
+use Cycle\Database\Config\Postgres\TcpConnectionConfig;
+use Cycle\Database\Config\MySQLDriverConfig;
+use Cycle\Database\Config\SQLiteDriverConfig;
+use Cycle\Database\Config\SQLite\FileConnectionConfig;
 
 return [
     'logger' => [
@@ -19,8 +23,8 @@ return [
     ],
 
     'drivers' => [
-        'pgsql' => new Config\PostgresDriverConfig(
-            connection: new Config\Postgres\TcpConnectionConfig(
+        'pgsql' => new PostgresDriverConfig(
+            connection: new TcpConnectionConfig(
                 database: env('DB_DATABASE', 'buggregator'),
                 host: env('DB_HOST', '127.0.0.1'),
                 port: env('DB_PORT', 5432),
@@ -34,8 +38,8 @@ return [
                 'logQueryParameters' => env('DB_LOG_QUERY_PARAMETERS', false),
             ],
         ),
-        'mysql' => new Config\MySQLDriverConfig(
-            connection: new Config\MySQL\TcpConnectionConfig(
+        'mysql' => new MySQLDriverConfig(
+            connection: new TcpConnectionConfig(
                 database: env('DB_DATABASE', 'buggregator'),
                 host: env('DB_HOST', '127.0.0.1'),
                 port: env('DB_PORT', 3306),
@@ -51,8 +55,8 @@ return [
 
         // Only for testing purposes
         // SQLite does not support multiple connections in the same time
-        'sqlite' => new Config\SQLiteDriverConfig(
-            connection: new Config\SQLite\FileConnectionConfig(database: directory('runtime') . 'test.db'),
+        'sqlite' => new SQLiteDriverConfig(
+            connection: new FileConnectionConfig(database: directory('runtime') . 'test.db'),
             options: [
                 'logQueryParameters' => env('DB_LOG_QUERY_PARAMETERS', false),
             ],

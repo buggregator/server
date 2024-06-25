@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+use Modules\Webhooks\Application\Broadcasting\WebhookEventInterceptor;
+use App\Application\Broadcasting\BroadcastEventInterceptor;
+
 return [
     'interceptors' => [
-        \Modules\Webhooks\Application\Broadcasting\WebhookEventInterceptor::class,
-        \App\Application\Broadcasting\BroadcastEventInterceptor::class,
+        WebhookEventInterceptor::class,
+        BroadcastEventInterceptor::class,
     ]
 ];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\App\Http;
 
+use Spiral\Auth\TokenInterface;
 use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\OAuth\User;
 use Spiral\Auth\TokenStorageInterface;
@@ -41,7 +42,7 @@ final class HttpFaker
             $tokenStorage = \Mockery::mock(TokenStorageInterface::class),
         );
         $tokenStorage->shouldReceive('load')->once()->with($hash)->andReturn(
-            $token = \Mockery::mock(\Spiral\Auth\TokenInterface::class),
+            $token = \Mockery::mock(TokenInterface::class),
         );
         $token->shouldReceive('getID')->andReturn($hash);
         $token->shouldReceive('getExpiresAt')->andReturnNull();

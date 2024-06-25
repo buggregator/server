@@ -29,7 +29,7 @@ final class HtmlDumper extends CliDumper
 
     public function __construct(DumpIdGeneratorInterface $generator)
     {
-        AbstractDumper::__construct(null, null, 0);
+        AbstractDumper::__construct(null, null, 0); // CliDumper? parent??
         $this->dumpId = $generator->generate();
         $this->displayOptions['fileLinkFormat'] = \ini_get('xdebug.file_link_format') ?: get_cfg_var(
             'xdebug.file_link_format',
@@ -45,10 +45,8 @@ final class HtmlDumper extends CliDumper
      * Configures display options.
      *
      * @param array $displayOptions A map of display options to customize the behavior
-     *
-     * @return void
      */
-    public function setDisplayOptions(array $displayOptions)
+    public function setDisplayOptions(array $displayOptions): void
     {
         $this->displayOptions = $displayOptions + $this->displayOptions;
     }
@@ -62,10 +60,7 @@ final class HtmlDumper extends CliDumper
         return $result;
     }
 
-    /**
-     * @return void
-     */
-    public function dumpString(Cursor $cursor, string $str, bool $bin, int $cut)
+    public function dumpString(Cursor $cursor, string $str, bool $bin, int $cut): void
     {
         if ('' === $str && isset($cursor->attr['img-data'], $cursor->attr['content-type'])) {
             $this->dumpKey($cursor);
@@ -84,10 +79,7 @@ final class HtmlDumper extends CliDumper
         }
     }
 
-    /**
-     * @return void
-     */
-    public function enterHash(Cursor $cursor, int $type, string|int|null $class, bool $hasChild)
+    public function enterHash(Cursor $cursor, int $type, string|int|null $class, bool $hasChild): void
     {
         if (Cursor::HASH_OBJECT === $type) {
             $cursor->attr['depth'] = $cursor->depth;
@@ -115,10 +107,7 @@ final class HtmlDumper extends CliDumper
         }
     }
 
-    /**
-     * @return void
-     */
-    public function leaveHash(Cursor $cursor, int $type, string|int|null $class, bool $hasChild, int $cut)
+    public function leaveHash(Cursor $cursor, int $type, string|int|null $class, bool $hasChild, int $cut): void
     {
         $this->dumpEllipsis($cursor, $hasChild, $cut);
         if ($hasChild) {
@@ -205,9 +194,7 @@ final class HtmlDumper extends CliDumper
         }, $v) . '</span>';
 
         if (!($attr['binary'] ?? false)) {
-            $v = preg_replace_callback(static::$unicodeCharsRx, function ($c) {
-                return '<span class=sf-dump-default>\u{' . strtoupper(dechex(mb_ord($c[0]))) . '}</span>';
-            }, $v);
+            $v = preg_replace_callback(static::$unicodeCharsRx, fn($c) => '<span class=sf-dump-default>\u{' . strtoupper(dechex(mb_ord($c[0]))) . '}</span>', $v);
         }
 
         if (isset($attr['file']) && $href = $this->getSourceLink($attr['file'], $attr['line'] ?? 0)) {
@@ -235,10 +222,7 @@ final class HtmlDumper extends CliDumper
         return $v;
     }
 
-    /**
-     * @return void
-     */
-    protected function dumpLine(int $depth, bool $endOfValue = false)
+    protected function dumpLine(int $depth, bool $endOfValue = false): void
     {
         if (-1 === $this->lastDepth) {
             $this->line = sprintf($this->dumpPrefix, $this->dumpId, $this->indentPad) . $this->line;

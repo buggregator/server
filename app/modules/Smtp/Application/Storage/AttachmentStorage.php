@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Application\Storage;
 
+use Spiral\Storage\Exception\FileOperationException;
 use App\Application\Domain\ValueObjects\Uuid;
 use Modules\Smtp\Domain\AttachmentFactoryInterface;
 use Modules\Smtp\Domain\AttachmentRepositoryInterface;
@@ -64,7 +65,7 @@ final readonly class AttachmentStorage implements AttachmentStorageInterface
     }
 
     /**
-     * @throws \Spiral\Storage\Exception\FileOperationException
+     * @throws FileOperationException
      */
     public function getContent(string $path)
     {

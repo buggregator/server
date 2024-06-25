@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Interfaces\TCP\Smtp;
 
+use Spiral\Storage\BucketInterface;
+use Mockery\MockInterface;
 use App\Application\Broadcasting\Channel\EventsChannel;
 use Modules\Smtp\Application\Storage\EmailBodyStorage;
 use Modules\Smtp\Application\Storage\Message;
@@ -20,8 +22,8 @@ use Tests\Feature\Interfaces\TCP\TCPTestCase;
 
 final class EmailTest extends TCPTestCase
 {
-    private \Spiral\Storage\BucketInterface $bucket;
-    private \Mockery\MockInterface|AttachmentRepositoryInterface $attachments;
+    private BucketInterface $bucket;
+    private MockInterface|AttachmentRepositoryInterface $attachments;
 
     protected function setUp(): void
     {

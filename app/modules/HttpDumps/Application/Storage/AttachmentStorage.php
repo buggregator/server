@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\HttpDumps\Application\Storage;
 
+use Spiral\Storage\Exception\FileOperationException;
 use App\Application\Domain\ValueObjects\Uuid;
 use Modules\HttpDumps\Domain\AttachmentFactoryInterface;
 use Modules\HttpDumps\Domain\AttachmentRepositoryInterface;
@@ -59,7 +60,7 @@ final readonly class AttachmentStorage implements AttachmentStorageInterface
     }
 
     /**
-     * @throws \Spiral\Storage\Exception\FileOperationException
+     * @throws FileOperationException
      */
     public function getContent(string $path)
     {

@@ -23,7 +23,7 @@ final class UserResource extends JsonResource
             'username' => $this->user->username,
             'avatar' => $this->user->avatar,
             'email' => $this->user->email,
-            'logout' => $this->logoutUrl ? (string) $this->logoutUrl : null,
+            'logout' => $this->logoutUrl instanceof UriInterface ? (string) $this->logoutUrl : null,
         ];
     }
 }

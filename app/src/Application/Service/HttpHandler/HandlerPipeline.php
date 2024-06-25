@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Application\Service\HttpHandler;
 
-use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Spiral\Core\FactoryInterface;
@@ -57,10 +56,6 @@ final class HandlerPipeline implements HandlerRegistryInterface, CoreHandlerInte
         $handler = $this->handlers[$this->position] ?? null;
         \assert($handler instanceof HandlerInterface);
         $this->position++;
-
-        if ($handler === null) {
-            return new Response(404);
-        }
 
         return $handler->handle(
             $request,

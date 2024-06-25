@@ -6,9 +6,7 @@ namespace Modules\Profiler\Interfaces\Http\Controllers;
 
 use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Exception\EntityNotFoundException;
-use Modules\Profiler\Application\Query\FindCallGraphByUuid;
 use Modules\Profiler\Application\Query\FindTopFunctionsByUuid;
-use Modules\Profiler\Interfaces\Http\Request\CallGraphRequest;
 use Modules\Profiler\Interfaces\Http\Request\TopFunctionsRequest;
 use Spiral\Cqrs\QueryBusInterface;
 use Spiral\Http\Exception\ClientException\NotFoundException;

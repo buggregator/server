@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factory;
 
+use Faker\Generator;
 use App\Application\Domain\ValueObjects\Uuid;
 use Modules\Events\Domain\Event;
 use Modules\Smtp\Domain\Attachment;
@@ -57,7 +58,7 @@ final class AttachmentFactory extends AbstractFactory
     {
         $uuid = $uuid instanceof Event ? $uuid->getUuid() : $uuid;
 
-        return $this->state(fn(\Faker\Generator $faker, array $definition) => [
+        return $this->state(fn(Generator $faker, array $definition) => [
             'event_uuid' => $uuid,
         ]);
     }

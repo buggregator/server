@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application;
 
+use App\Application\Bootloader\ExceptionHandlerBootloader;
+use App\Application\Bootloader\RoutesBootloader;
 use App\Application\Bootloader\AppBootloader;
 use App\Application\Bootloader\AttributesBootloader;
 use App\Application\Bootloader\BroadcastingBootloader;
@@ -48,7 +50,7 @@ class Kernel extends \Spiral\Framework\Kernel
     protected function defineBootloaders(): array
     {
         return [
-            Bootloader\ExceptionHandlerBootloader::class,
+            ExceptionHandlerBootloader::class,
 
             // RoadRunner
             RoadRunnerBridge\CacheBootloader::class,
@@ -76,7 +78,7 @@ class Kernel extends \Spiral\Framework\Kernel
             RoadRunnerBridge\CommandBootloader::class,
 
             // Configure route groups, middleware for route groups
-            Bootloader\RoutesBootloader::class,
+            RoutesBootloader::class,
 
             StorageBootloader::class,
             DistributionBootloader::class,

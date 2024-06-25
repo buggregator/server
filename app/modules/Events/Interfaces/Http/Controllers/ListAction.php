@@ -10,7 +10,6 @@ use Modules\Events\Interfaces\Http\Request\EventsRequest;
 use Modules\Events\Interfaces\Http\Resources\EventCollection;
 use Modules\Events\Interfaces\Http\Resources\EventResource;
 use Spiral\Cqrs\QueryBusInterface;
-use Spiral\Router\Annotation\Route;
 use OpenApi\Attributes as OA;
 
 #[OA\Get(

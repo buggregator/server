@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Profiler\Interfaces\Queries;
 
+use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\ORM\ORMInterface;
 use Modules\Profiler\Application\CallGraph\Node;
 use Modules\Profiler\Application\Query\FindCallGraphByUuid;
@@ -43,7 +44,7 @@ final readonly class FindCallGraphByUuidHandler
 
                 $registered[] = (string) $edge->getUuid();
 
-                if ($edge->getParentUuid() !== null && \in_array((string) $edge->getParentUuid(), $registered, true)) {
+                if ($edge->getParentUuid() instanceof Uuid && \in_array((string) $edge->getParentUuid(), $registered, true)) {
                     $carry['edges'][] = [
                         'data' => [
                             'source' => (string) $edge->getParentUuid(),
