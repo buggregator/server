@@ -38,6 +38,17 @@ name: Rector
 
 jobs:
   rector:
+    name: PHP ${{ matrix.php }}-${{ matrix.os }}, ${{ matrix.stability }})
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ${{ fromJson(inputs.php) }}
+        os: ${{ fromJson(inputs.os) }}
+        stability: ${{ fromJson(inputs.stability) }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
