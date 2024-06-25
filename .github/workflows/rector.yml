@@ -38,6 +38,9 @@ name: Rector
 
 jobs:
   rector:
+    with:
+      os: >-
+        ['ubuntu-latest']
     name: PHP ${{ matrix.php }}-${{ matrix.os }}, ${{ matrix.stability }})
 
     runs-on: ${{ matrix.os }}
