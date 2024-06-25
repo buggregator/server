@@ -38,16 +38,7 @@ name: Rector
 
 jobs:
   rector:
-    with:
-      os: >-
-        ['ubuntu-latest']
     steps:
-      # General Steps
-      - name: Set Git To Use LF
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -85,7 +76,7 @@ jobs:
         with:
           timeout_minutes: 5
           max_attempts: 5
-          command: composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
+          command: composer install --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
 
       # Execution
       - name: Execute Tests
