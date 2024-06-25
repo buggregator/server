@@ -12,25 +12,6 @@ on:
         default: memory_limit=-1
         required: false
         type: string
-      os:
-        description: Os to test, separated by comma.
-        required: true
-        type: string
-        default: ubuntu-latest
-      php:
-        description: PHP versions to test, separated by comma.
-        default: '["8.1","8.2","8.3"]'
-        required: false
-        type: string
-      stability:
-        description: Stability to test, separated by comma.
-        required: true
-        type: string
-      tools:
-        description: Tools to test, separated by comma.
-        default: composer:v2
-        required: false
-        type: string
   push:
     branches:
       - '*.*'
@@ -39,16 +20,15 @@ name: Rector
 
 jobs:
   rector:
-    name: PHP ${{ matrix.php }}-${{ matrix.os }}, ${{ matrix.stability }})
+    name: PHP ${{ matrix.php }}-${{ matrix.os }}
 
     runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
-        php: ${{ fromJson(inputs.php) }}
-        os: ${{ fromJson(inputs.os) }}
-        stability: ${{ fromJson(inputs.stability) }}
+        php: [ '8.3' ]
+        os: [ 'ubuntu-latest' ]
 
     steps:
       - name: Checkout
@@ -69,9 +49,6 @@ jobs:
           tools: pecl
           ini-values: ${{ matrix.ini-values }}
 
-      - name: Validate Composer
-        run: composer validate
-
       - name: Get Composer Cache Directory
         id: composer-cache
         run: echo "::set-output name=dir::$(composer config cache-files-dir)"
@@ -88,7 +65,7 @@ jobs:
         with:
           timeout_minutes: 5
           max_attempts: 5
-          command: composer install --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
+          command: composer install --prefer-dist --no-interaction --no-progress
 
       # Execution
       - name: Execute Tests
