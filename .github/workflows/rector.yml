@@ -32,6 +32,14 @@ jobs:
           export COMPOSER_ROOT_VERSION=$(/usr/bin/jq --null-input --raw-output 'first(inputs["extra"]["branch-alias"])[]' composer.json)
           echo COMPOSER_ROOT_VERSION=$COMPOSER_ROOT_VERSION >> $GITHUB_ENV
 
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          # PHP Extras
+          coverage: ${{ matrix.coverage }}
+          tools: pecl
+
       - name: Get Composer Cache Directory
         id: composer-cache
         run: echo "::set-output name=dir::$(composer config cache-files-dir)"
