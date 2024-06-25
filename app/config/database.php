@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 use Cycle\Database\Config\PostgresDriverConfig;
-use Cycle\Database\Config\Postgres\TcpConnectionConfig;
+use Cycle\Database\Config\Postgres\TcpConnectionConfig as PgTcpConnectionConfig;
+use Cycle\Database\Config\Mysql\TcpConnectionConfig as MysqlTcpConnectionConfig;
 use Cycle\Database\Config\MySQLDriverConfig;
 use Cycle\Database\Config\SQLiteDriverConfig;
 use Cycle\Database\Config\SQLite\FileConnectionConfig;
@@ -24,7 +25,7 @@ return [
 
     'drivers' => [
         'pgsql' => new PostgresDriverConfig(
-            connection: new TcpConnectionConfig(
+            connection: new PgTcpConnectionConfig(
                 database: env('DB_DATABASE', 'buggregator'),
                 host: env('DB_HOST', '127.0.0.1'),
                 port: env('DB_PORT', 5432),
@@ -39,7 +40,7 @@ return [
             ],
         ),
         'mysql' => new MySQLDriverConfig(
-            connection: new TcpConnectionConfig(
+            connection: new MysqlTcpConnectionConfig(
                 database: env('DB_DATABASE', 'buggregator'),
                 host: env('DB_HOST', '127.0.0.1'),
                 port: env('DB_PORT', 3306),
