@@ -12,8 +12,10 @@ use Tests\DatabaseTestCase;
 
 final class WebhookRegistryTest extends DatabaseTestCase
 {
-    public $registry;
-    public $assert;
+    private $registry;
+
+    private $assert;
+
     protected function setUp(): void
     {
         parent::setUp();

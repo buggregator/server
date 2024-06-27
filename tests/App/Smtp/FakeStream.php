@@ -15,7 +15,8 @@ final class FakeStream extends AbstractStream
     /**
      * @var ResponseInterface[]
      */
-    public $response;
+    private array $response = [];
+
     public function __construct(
         private readonly SmtpService $service,
         private readonly string $uuid,

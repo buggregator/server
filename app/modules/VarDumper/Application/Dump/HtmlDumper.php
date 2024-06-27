@@ -29,7 +29,7 @@ final class HtmlDumper extends CliDumper
 
     public function __construct(DumpIdGeneratorInterface $generator)
     {
-        AbstractDumper::__construct(null, null, 0); // CliDumper? parent??
+        AbstractDumper::__construct(null, null, 0);
         $this->dumpId = $generator->generate();
         $this->displayOptions['fileLinkFormat'] = \ini_get('xdebug.file_link_format') ?: get_cfg_var(
             'xdebug.file_link_format',
