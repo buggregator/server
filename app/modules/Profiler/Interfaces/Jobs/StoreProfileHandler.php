@@ -38,9 +38,14 @@ final class StoreProfileHandler extends JobHandler
         $profileUuid = Uuid::fromString($event['profile_uuid']);
         $parents = [];
 
+        $edges = &$event['edges'];
+
+        !\array_key_exists('main()', $edges) && \array_key_exists('value', $edges) and $edges['main()'] = $edges['value'];
+        unset($edges['value']);
+
         $batchSize = 0;
         $i = 0;
-        foreach ($event['edges'] as $id => $edge) {
+        foreach ($edges as $id => $edge) {
             $this->em->persist(
                 $edge = $this->edgeFactory->create(
                     profileUuid: $profileUuid,
