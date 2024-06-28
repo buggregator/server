@@ -25,6 +25,6 @@ final class EventMapper implements EventMapperInterface, EventMapperRegistryInte
             }
         }
 
-        throw new \RuntimeException('No mapper found for event ' . \get_class($event));
+        throw new \RuntimeException('No mapper found for event ' . $event::class);
     }
 }

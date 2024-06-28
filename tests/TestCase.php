@@ -90,7 +90,7 @@ class TestCase extends BaseTestCase
 
     public function fakeEvents(): EventsMocker
     {
-        if (!$this->events instanceof \Tests\App\Events\EventsMocker) {
+        if (!$this->events instanceof EventsMocker) {
             $this->events = new EventsMocker(
                 $this->mockContainer(EventRepositoryInterface::class),
             );

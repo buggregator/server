@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Modules\Webhooks;
 
+use Mockery\MockInterface;
 use Modules\Webhooks\Application\Locator\WebhookYamlParser;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Yaml\Parser;
@@ -19,7 +20,7 @@ webhook:
   retry_on_failure: true
 YAML;
 
-    private \Mockery\MockInterface|Parser $yamlParser;
+    private MockInterface|Parser $yamlParser;
     private WebhookYamlParser $parser;
 
     protected function setUp(): void

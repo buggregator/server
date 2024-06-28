@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Profiler\Interfaces\Jobs;
 
+use Modules\Profiler\Domain\Edge\Cost;
+use Modules\Profiler\Domain\Edge\Diff;
+use Modules\Profiler\Domain\Edge\Percents;
 use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\ORM\EntityManagerInterface;
 use Cycle\ORM\ORMInterface;
 use Modules\Profiler\Application\Query\FindTopFunctionsByUuid;
 use Modules\Profiler\Domain\EdgeFactoryInterface;
-use Modules\Profiler\Domain\Edge;
 use Modules\Profiler\Domain\Profile;
 use Spiral\Core\InvokerInterface;
 use Spiral\Cqrs\QueryBusInterface;
@@ -43,21 +45,21 @@ final class StoreProfileHandler extends JobHandler
                 $edge = $this->edgeFactory->create(
                     profileUuid: $profileUuid,
                     order: $i++,
-                    cost: new Edge\Cost(
+                    cost: new Cost(
                         cpu: $edge['cost']['cpu'] ?? 0,
                         wt: $edge['cost']['wt'] ?? 0,
                         ct: $edge['cost']['ct'] ?? 0,
                         mu: $edge['cost']['mu'] ?? 0,
                         pmu: $edge['cost']['pmu'] ?? 0,
                     ),
-                    diff: new Edge\Diff(
+                    diff: new Diff(
                         cpu: $edge['cost']['d_cpu'] ?? 0,
                         wt: $edge['cost']['d_wt'] ?? 0,
                         ct: $edge['cost']['d_ct'] ?? 0,
                         mu: $edge['cost']['d_mu'] ?? 0,
                         pmu: $edge['cost']['d_pmu'] ?? 0,
                     ),
-                    percents: new Edge\Percents(
+                    percents: new Percents(
                         cpu: $edge['cost']['p_cpu'] ?? 0,
                         wt: $edge['cost']['p_wt'] ?? 0,
                         ct: $edge['cost']['p_ct'] ?? 0,

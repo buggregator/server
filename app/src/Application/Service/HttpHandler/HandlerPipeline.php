@@ -55,7 +55,7 @@ final class HandlerPipeline implements HandlerRegistryInterface, CoreHandlerInte
     private function handlePipeline(ServerRequestInterface $request): ResponseInterface
     {
         $handler = $this->handlers[$this->position] ?? null;
-        \assert($handler instanceof HandlerInterface);
+
         $this->position++;
 
         if ($handler === null) {

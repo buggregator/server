@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sentry\Application;
 
+use Modules\Sentry\Application\Mapper\EventTypeMapper;
 use App\Application\Event\EventTypeRegistryInterface;
 use Modules\Sentry\EventHandler;
 use Psr\Container\ContainerInterface;
@@ -29,6 +30,6 @@ final class SentryBootloader extends Bootloader
 
     public function boot(EventTypeRegistryInterface $registry): void
     {
-        $registry->register('sentry', new Mapper\EventTypeMapper());
+        $registry->register('sentry', new EventTypeMapper());
     }
 }

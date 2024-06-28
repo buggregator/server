@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\HttpDumps;
 
+use Modules\HttpDumps\Application\EventHandlerInterface;
 use Psr\Container\ContainerInterface;
 
-final readonly class EventHandler implements Application\EventHandlerInterface
+final readonly class EventHandler implements EventHandlerInterface
 {
     /**
      * @param class-string<\Modules\Sentry\Application\EventHandlerInterface>[] $handlers

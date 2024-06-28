@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Profiler\Application;
 
-use Modules\Profiler\Application;
 use Psr\Container\ContainerInterface;
 
-final readonly class EventHandler implements Application\EventHandlerInterface
+final readonly class EventHandler implements EventHandlerInterface
 {
     /**
      * @param class-string<\Modules\Sentry\Application\EventHandlerInterface>[] $handlers

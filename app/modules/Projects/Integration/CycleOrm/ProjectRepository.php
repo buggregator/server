@@ -35,7 +35,7 @@ final class ProjectRepository extends Repository implements ProjectRepositoryInt
     {
         $project = $this->findByPK($key);
 
-        if (!$project) {
+        if ($project === null) {
             return false;
         }
 

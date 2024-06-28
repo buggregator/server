@@ -36,7 +36,7 @@ final readonly class EventHandler implements HandlerInterface
     {
         $event = $this->listenEvent($request);
 
-        if ($event === null) {
+        if (!$event instanceof EventType) {
             return $next($request);
         }
 

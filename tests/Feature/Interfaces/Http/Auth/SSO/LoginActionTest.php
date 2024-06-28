@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Interfaces\Http\Auth\SSO;
 
+use Mockery\MockInterface;
 use App\Application\OAuth\AuthProviderInterface;
 use App\Application\OAuth\User;
 use Nyholm\Psr7\Uri;
@@ -12,7 +13,7 @@ use Tests\Feature\Interfaces\Http\ControllerTestCase;
 
 final class LoginActionTest extends ControllerTestCase
 {
-    private \Mockery\MockInterface|AuthProviderInterface $auth;
+    private MockInterface|AuthProviderInterface $auth;
 
     protected function setUp(): void
     {

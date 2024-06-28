@@ -37,15 +37,15 @@ final readonly class Client
             throw new \InvalidArgumentException("Please provide valid redirect_uri");
         }
 
-        if (empty($this->clientSecret)) {
+        if ($this->clientSecret === '' || $this->clientSecret === '0') {
             throw new \InvalidArgumentException("Please provide client_secret");
         }
 
-        if (empty($this->clientId)) {
+        if ($this->clientId === '' || $this->clientId === '0') {
             throw new \InvalidArgumentException("Please provide client_id");
         }
 
-        if (empty($this->logoutRedirectUri)) {
+        if ($this->logoutRedirectUri === null || $this->logoutRedirectUri === '' || $this->logoutRedirectUri === '0') {
             throw new \InvalidArgumentException("Please provide logout_redirect_uri");
         }
 
@@ -119,7 +119,7 @@ final readonly class Client
         $error = $queryParams['error'] ?? '';
         if (!empty($error)) {
             $errorDescription = $queryParams['error_description'] ?? '';
-            $msg = !empty($errorDescription) ? $errorDescription : $error;
+            $msg = empty($errorDescription) ? $error : $errorDescription;
             throw new OAuthException($msg);
         }
 
@@ -131,7 +131,7 @@ final readonly class Client
         $formParams['code'] = $authorizationCode;
         $codeVerifier = $this->storage->getCodeVerifier();
 
-        if (!empty($codeVerifier)) {
+        if ($codeVerifier !== null && $codeVerifier !== '' && $codeVerifier !== '0') {
             $formParams['code_verifier'] = $codeVerifier;
         }
 
@@ -176,7 +176,7 @@ final readonly class Client
     public function isAuthenticated(): bool
     {
         $accessToken = $this->tokenParser->parse($this->storage->getAccessToken() ?? '');
-        $timeExpired = empty($accessToken) ? 0 : $accessToken['exp'] ?? 0;
+        $timeExpired = $accessToken === null || $accessToken === [] ? 0 : $accessToken['exp'] ?? 0;
         $authenticated = $timeExpired > \time();
 
         if ($authenticated) {
@@ -186,7 +186,7 @@ final readonly class Client
         // Using refresh token to get new access token
         try {
             $refreshToken = $this->storage->getRefreshToken();
-            if (!empty($refreshToken)) {
+            if ($refreshToken !== null && $refreshToken !== '' && $refreshToken !== '0') {
                 $formParams = [
                     'client_id' => $this->clientId,
                     'client_secret' => $this->clientSecret,
@@ -195,11 +195,11 @@ final readonly class Client
                 ];
 
                 $token = $this->fetchToken($formParams);
-                if (!empty($token) && $token->expires_in > 0) {
+                if ($token->expires_in > 0) {
                     return true;
                 }
             }
-        } catch (\Throwable $th) {
+        } catch (\Throwable) {
         }
 
         return false;
@@ -209,7 +209,7 @@ final readonly class Client
     {
         $storageOAuthState = $this->storage->getState();
 
-        if (empty($storageOAuthState) || $stateServer !== $storageOAuthState) {
+        if ($storageOAuthState === null || $storageOAuthState === '' || $storageOAuthState === '0' || $stateServer !== $storageOAuthState) {
             throw new OAuthException("Authentication failed because it tries to validate state");
         }
     }

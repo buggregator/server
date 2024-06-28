@@ -20,7 +20,7 @@ final readonly class JwtTokenParser
             $jwks = \json_decode($jwksJson, true);
 
             return \json_decode(\json_encode(JWT::decode($token, JWK::parseKeySet($jwks))), true);
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return null;
         }
     }

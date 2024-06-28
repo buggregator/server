@@ -10,16 +10,9 @@ use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Return_;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\ArrayItem;
-use PhpParser\Node\Name;
-use PhpParser\Node\Expr\Closure;
-use PhpParser\Node\Param;
-use PhpParser\Node\Expr\New_;
-use PhpParser\Node\Expr\Variable;
 use PHPStan\Type\ObjectType;
 use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
-
-use function PHPUnit\Framework\matches;
 
 final class BootloaderConstantsFixesRule extends AbstractRector
 {

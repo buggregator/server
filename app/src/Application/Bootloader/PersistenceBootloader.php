@@ -37,12 +37,10 @@ final class PersistenceBootloader extends Bootloader
 
     public function init(ConsoleBootloader $console, DriverEnum $driver): void
     {
-        if ($driver === DriverEnum::Database) {
-            $console->addSequence(
-                name: RegisterModulesCommand::SEQUENCE,
-                sequence: 'migrate',
-                header: 'Migration',
-            );
-        }
+        $console->addSequence(
+            name: RegisterModulesCommand::SEQUENCE,
+            sequence: 'migrate',
+            header: 'Migration',
+        );
     }
 }
