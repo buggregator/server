@@ -27,7 +27,9 @@ final readonly class Node implements \JsonSerializable
     }
 
     public string $color;
+
     public string $textColor;
+
     public string $label;
 
     public function __construct(

@@ -22,7 +22,7 @@ final class ListActionTest extends ControllerTestCase
             ->assertOk()
             ->assertCollectionContainResources(
                 \array_map(
-                    fn(Attachment $attachment) => new AttachmentResource($attachment),
+                    static fn(Attachment $attachment) => new AttachmentResource($attachment),
                     $attachments,
                 ),
             )

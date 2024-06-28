@@ -8,12 +8,11 @@ use App\Application\Exception\EntityNotFoundException;
 use Mockery\CompositeExpectation;
 use Modules\Events\Domain\Event;
 
-final class EventExpectation
+final readonly class EventExpectation
 {
     public function __construct(
         private CompositeExpectation $expectation,
-    ) {
-    }
+    ) {}
 
     public function andReturnEvent(Event $event): void
     {

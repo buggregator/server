@@ -17,7 +17,7 @@ final readonly class SessionStorage
     {
         $token = $this->get(StorageEnums::TOKEN);
 
-        return empty($token) ? null : \json_decode($token, $associative);
+        return empty($token) ? null : \json_decode((string) $token, $associative);
     }
 
     public function setToken(string $token): void

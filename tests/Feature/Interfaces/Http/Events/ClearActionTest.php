@@ -65,10 +65,10 @@ final class ClearActionTest extends ControllerTestCase
 
         $this->http
             ->clearEvents(uuids: [
-                (string)$event1->getUuid(),
-                (string)$event2->getUuid(),
-                (string)$event3->getUuid(),
-                (string)$event4->getUuid(),
+                (string) $event1->getUuid(),
+                (string) $event2->getUuid(),
+                (string) $event3->getUuid(),
+                (string) $event4->getUuid(),
             ])
             ->assertSuccessResource();
 
@@ -87,9 +87,9 @@ final class ClearActionTest extends ControllerTestCase
 
         $this->http
             ->clearEvents(type: 'foo', uuids: [
-                (string)$event1->getUuid(),
-                (string)$event2->getUuid(),
-                (string)$event3->getUuid(),
+                (string) $event1->getUuid(),
+                (string) $event2->getUuid(),
+                (string) $event3->getUuid(),
             ])
             ->assertSuccessResource();
 

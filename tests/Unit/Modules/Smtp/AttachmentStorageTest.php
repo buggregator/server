@@ -18,8 +18,11 @@ use Tests\TestCase;
 final class AttachmentStorageTest extends TestCase
 {
     private AttachmentStorage $storage;
+
     private MockInterface|BucketInterface $bucket;
+
     private MockInterface|AttachmentRepositoryInterface $attachments;
+
     private MockInterface|AttachmentFactoryInterface $factory;
 
     protected function setUp(): void

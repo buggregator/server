@@ -24,7 +24,7 @@ abstract class SentryControllerTestCase extends ControllerTestCase
     {
         $client = $this->getClient();
 
-        $level = $level ?? Severity::info();
+        $level ??= Severity::info();
 
         $scope = new Scope();
 

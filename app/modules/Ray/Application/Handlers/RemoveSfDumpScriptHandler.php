@@ -23,14 +23,17 @@ final class RemoveSfDumpScriptHandler implements EventHandlerInterface
                             if (!\is_string($val) || !\str_contains($val, 'Sfdump')) {
                                 continue;
                             }
+
                             $event['payloads'][$i]['content'][$k][$j] = $this->cleanHtml($val);
                         }
+
                         continue;
                     }
 
                     if (\is_array($value) || !\is_string($value) || !\str_contains($value, 'Sfdump')) {
                         continue;
                     }
+
                     $event['payloads'][$i]['content'][$k] = $this->cleanHtml($value);
                 }
             }

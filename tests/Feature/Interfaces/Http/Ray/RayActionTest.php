@@ -236,7 +236,7 @@ HTML,
         $this->dump($object);
         $id = \spl_object_id($object);
 
-        $this->broadcastig->assertPushed((string) new EventsChannel(), function (array $data) use($id) {
+        $this->broadcastig->assertPushed((string) new EventsChannel(), function (array $data) use ($id) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('ray', $data['data']['type']);
 

@@ -16,9 +16,9 @@ class Project
     /**  @internal */
     public function __construct(
         #[Column(type: 'string(36)', primary: true, typecast: Key::class)]
-        private Key $key,
+        private readonly Key $key,
         #[Column(type: 'string')]
-        private string $name,
+        private readonly string $name,
     ) {}
 
     public function getKey(): Key

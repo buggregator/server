@@ -13,6 +13,7 @@ use Ramsey\Uuid\UuidInterface;
 final class ExtendedTypecast implements CastableInterface, UncastableInterface
 {
     private array $rules = [];
+
     private array $availableRules = ['uuid', 'json'];
 
     public function setRules(array $rules): array
@@ -36,7 +37,7 @@ final class ExtendedTypecast implements CastableInterface, UncastableInterface
 
             $data[$column] = match ($rule) {
                 'uuid' => Uuid::fromString($data[$column]),
-                'json' => new Json(\json_decode($data[$column], true)),
+                'json' => new Json(\json_decode((string) $data[$column], true)),
                 default => $data[$column],
             };
         }

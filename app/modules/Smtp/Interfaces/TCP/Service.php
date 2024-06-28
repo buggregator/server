@@ -98,7 +98,7 @@ final readonly class Service implements ServiceInterface
         $result = $this->attachments->store(eventUuid: $uuid, attachments: $message->attachments);
         // TODO: Refactor this
         foreach ($result as $cid => $url) {
-            $data['html'] = \str_replace("cid:$cid", $url, $data['html']);
+            $data['html'] = \str_replace('cid:' . $cid, $url, $data['html']);
         }
 
         $this->bus->dispatch(

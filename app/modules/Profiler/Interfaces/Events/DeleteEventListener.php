@@ -21,7 +21,7 @@ final readonly class DeleteEventListener
     public function __invoke(EventWasDeleted $event): void
     {
         $profile = $this->orm->getRepository(Profile::class)->findByPK($event->uuid);
-        if (!$profile) {
+        if ($profile === null) {
             return;
         }
 

@@ -27,7 +27,7 @@ BODY;
         $this->project = $this->createProject('default');
     }
 
-    public function testSend(): void
+    public function testSend(): never
     {
         $this->makeRequest(project: $this->project->getKey())->assertOk();
 

@@ -12,11 +12,8 @@ class JsonResource implements ResourceInterface
 {
     use JsonTrait;
 
-    protected readonly mixed $data;
-
-    public function __construct(mixed $data = [])
+    public function __construct(protected readonly mixed $data = [])
     {
-        $this->data = $data;
     }
 
     protected function mapData(): array|JsonSerializable

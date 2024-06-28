@@ -20,7 +20,10 @@ use Spiral\DatabaseSeeder\Database\Traits\Helper;
 
 abstract class DatabaseTestCase extends TestCase
 {
-    use Transactions, Helper, DatabaseAsserts, ShowQueries;
+    use Transactions;
+    use Helper;
+    use DatabaseAsserts;
+    use ShowQueries;
 
     private DriverEnum $dbDriver;
 
@@ -29,7 +32,7 @@ abstract class DatabaseTestCase extends TestCase
         parent::setUp();
 
         $this->dbDriver = $this->get(DriverEnum::class);
-//        $this->getRefreshStrategy()->enableRefreshAttribute();
+        //        $this->getRefreshStrategy()->enableRefreshAttribute();
     }
 
     protected function tearDown(): void
@@ -48,6 +51,7 @@ abstract class DatabaseTestCase extends TestCase
         foreach ($entity as $e) {
             $em->persist($e);
         }
+
         $em->run();
     }
 

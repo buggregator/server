@@ -24,13 +24,13 @@ use Spiral\DatabaseSeeder\Factory\AbstractFactory;
  */
 final class EventFactory extends AbstractFactory
 {
-    use SmtpType,
-        ProfilerType,
-        SentryType,
-        MonologType,
-        InspectorType,
-        VarDumperType,
-        RayType;
+    use SmtpType;
+    use ProfilerType;
+    use SentryType;
+    use MonologType;
+    use InspectorType;
+    use VarDumperType;
+    use RayType;
 
     public function entity(): string
     {

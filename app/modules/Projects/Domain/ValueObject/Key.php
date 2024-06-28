@@ -9,7 +9,9 @@ use App\Application\Domain\Assert;
 final readonly class Key implements \JsonSerializable, \Stringable
 {
     public const MIN_LENGTH = 3;
+
     public const MAX_LENGTH = 36;
+
     public const ALLOWED_CHARACTERS = 'a-z0-9-_';
 
     public static function create(string $key): self

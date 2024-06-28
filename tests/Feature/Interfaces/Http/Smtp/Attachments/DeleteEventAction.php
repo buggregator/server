@@ -13,6 +13,7 @@ use Tests\Feature\Interfaces\Http\ControllerTestCase;
 final class DeleteEventAction extends ControllerTestCase
 {
     private MockInterface|AttachmentRepositoryInterface $attachements;
+
     private MockInterface|AttachmentStorageInterface $storage;
 
     protected function setUp(): void
@@ -29,11 +30,11 @@ final class DeleteEventAction extends ControllerTestCase
 
         $this->attachements->shouldReceive('deleteByEvent')
             ->once()
-            ->with(\Mockery::on(fn(Uuid $uuid) => $uuid->equals($event->getUuid())));
+            ->with(\Mockery::on(static fn(Uuid $uuid) => $uuid->equals($event->getUuid())));
 
         $this->storage->shouldReceive('deleteByEvent')
             ->once()
-            ->with(\Mockery::on(fn(Uuid $uuid) => $uuid->equals($event->getUuid())));
+            ->with(\Mockery::on(static fn(Uuid $uuid) => $uuid->equals($event->getUuid())));
 
         $this->http
             ->deleteEvent($event->getUuid())

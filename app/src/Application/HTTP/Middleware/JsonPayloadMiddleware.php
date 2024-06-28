@@ -40,7 +40,7 @@ final readonly class JsonPayloadMiddleware implements MiddlewareInterface
         $contentType = $request->getHeaderLine('Content-Type');
 
         foreach ($this->config->getContentTypes() as $allowedType) {
-            if (\stripos($contentType, $allowedType) === 0) {
+            if (\stripos($contentType, (string) $allowedType) === 0) {
                 return true;
             }
         }

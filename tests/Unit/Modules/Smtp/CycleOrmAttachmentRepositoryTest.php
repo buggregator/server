@@ -14,6 +14,7 @@ use Tests\DatabaseTestCase;
 final class CycleOrmAttachmentRepositoryTest extends DatabaseTestCase
 {
     private EntityAssertion $assertion;
+
     private AttachmentRepository $repository;
 
     protected function setUp(): void
@@ -31,6 +32,7 @@ final class CycleOrmAttachmentRepositoryTest extends DatabaseTestCase
         $record = $this->assertion->where(['uuid' => $attachment->getUuid()]);
 
         $record->assertMissing();
+
         $this->assertion->assertCount(0);
 
         $this->repository->store($attachment);

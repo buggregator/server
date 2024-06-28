@@ -9,5 +9,5 @@ return [
     'interceptors' => [
         WebhookEventInterceptor::class,
         BroadcastEventInterceptor::class,
-    ]
+    ],
 ];

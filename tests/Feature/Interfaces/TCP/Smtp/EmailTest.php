@@ -23,6 +23,7 @@ use Tests\Feature\Interfaces\TCP\TCPTestCase;
 final class EmailTest extends TCPTestCase
 {
     private BucketInterface $bucket;
+
     private MockInterface|AttachmentRepositoryInterface $attachments;
 
     protected function setUp(): void
@@ -176,7 +177,7 @@ To: Alice Doe <alice@example.com>, barney@example.com, John Doe\r
  <john@example.com>\r
 Cc: Customer <customer@example.com>, theboss@example.com\r
 From: Bob Example <no-reply@site.com>\r
-Message-ID: <$messageId>\r",
+Message-ID: <{$messageId}>\r",
             $parsedMessage->raw,
         );
     }
@@ -221,7 +222,7 @@ Message-ID: <$messageId>\r",
 
     public function buildEmail(): Email
     {
-        return (new Email)
+        return (new Email())
             ->subject('Test message')
             ->date(new \DateTimeImmutable('2024-05-02 16:01:33'))
             ->addTo(
@@ -233,8 +234,8 @@ Message-ID: <$messageId>\r",
                 new Address('customer@example.com', 'Customer'),
                 'theboss@example.com',
             )
-            ->addFrom(new Address('no-reply@site.com', 'Bob Example'),)
-            ->attachFromPath(path: __DIR__ . '/hello.txt',)
+            ->addFrom(new Address('no-reply@site.com', 'Bob Example'), )
+            ->attachFromPath(path: __DIR__ . '/hello.txt', )
             ->attachFromPath(path: __DIR__ . '/logo.svg')
             ->addPart(
                 (new DataPart(new File(__DIR__ . '/logo.svg'), 'logo-embeddable'))->asInline()->setContentId(

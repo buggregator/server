@@ -20,7 +20,9 @@ use Tests\DatabaseTestCase;
 final class WebhookHandlerTest extends DatabaseTestCase
 {
     private MockInterface|ClientInterface $httpClient;
+
     private EntityAssertion $assertion;
+
     private WebhookServiceInterface $service;
 
     protected function setUp(): void

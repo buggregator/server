@@ -25,23 +25,23 @@ class Edge
 
     public function __construct(
         #[Column(type: 'string(36)', primary: true, typecast: 'uuid')]
-        private Uuid $uuid,
+        private readonly Uuid $uuid,
         #[Column(type: 'string(36)', name: 'profile_uuid', typecast: 'uuid')]
-        private Uuid $profileUuid,
+        private readonly Uuid $profileUuid,
         #[Column(type: 'integer')]
-        private int $order,
+        private readonly int $order,
         #[Embedded(target: Cost::class)]
-        private Cost $cost,
+        private readonly Cost $cost,
         #[Embedded(target: Diff::class)]
-        private Diff $diff,
+        private readonly Diff $diff,
         #[Embedded(target: Percents::class)]
-        private Percents $percents,
+        private readonly Percents $percents,
         #[Column(type: 'text')]
-        private string $callee,
+        private readonly string $callee,
         #[Column(type: 'text', nullable: true, default: null)]
-        private ?string $caller = null,
+        private readonly ?string $caller = null,
         #[Column(type: 'string(36)', name: 'parent_uuid', nullable: true, default: null, typecast: 'uuid')]
-        private ?Uuid $parentUuid = null,
+        private readonly ?Uuid $parentUuid = null,
     ) {}
 
     public function getUuid(): Uuid

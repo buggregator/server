@@ -10,6 +10,7 @@ use Spiral\Cqrs\CommandInterface;
 final readonly class HandleReceivedEvent implements CommandInterface, \JsonSerializable
 {
     public Uuid $uuid;
+
     public float $timestamp;
 
     public function __construct(

@@ -15,9 +15,13 @@ final class HtmlDumper extends CliDumper
     public static $defaultOutput = 'php://output';
 
     protected string $dumpPrefix = '<pre class=sf-dump id=%s data-indent-pad="%s">';
+
     protected string $dumpSuffix = '</pre><script>Sfdump(%s)</script>';
+
     protected string $dumpId = 'sf-dump';
+
     protected $colors = true;
+
     protected int $lastDepth = -1;
 
     private array $displayOptions = [
@@ -25,6 +29,7 @@ final class HtmlDumper extends CliDumper
         'maxStringLength' => 160,
         'fileLinkFormat' => null,
     ];
+
     private array $extraDisplayOptions = [];
 
     public function __construct(DumpIdGeneratorInterface $generator)
@@ -71,7 +76,7 @@ final class HtmlDumper extends CliDumper
             $this->line .= sprintf(
                 '<img src="data:%s;base64,%s" /></samp>',
                 $cursor->attr['content-type'],
-                base64_encode($cursor->attr['img-data']),
+                base64_encode((string) $cursor->attr['img-data']),
             );
             $this->endValue($cursor);
         } else {
@@ -84,6 +89,7 @@ final class HtmlDumper extends CliDumper
         if (Cursor::HASH_OBJECT === $type) {
             $cursor->attr['depth'] = $cursor->depth;
         }
+
         parent::enterHash($cursor, $type, $class, false);
 
         if ($cursor->skipChildren || $cursor->depth >= $this->displayOptions['maxDepth']) {
@@ -102,6 +108,7 @@ final class HtmlDumper extends CliDumper
 
                 $this->line .= sprintf(' id=%s-ref%s', $this->dumpId, $r);
             }
+
             $this->line .= $eol;
             $this->dumpLine($cursor->depth);
         }
@@ -113,6 +120,7 @@ final class HtmlDumper extends CliDumper
         if ($hasChild) {
             $this->line .= '</samp>';
         }
+
         parent::leaveHash($cursor, $type, $class, $hasChild, 0);
     }
 
@@ -128,6 +136,7 @@ final class HtmlDumper extends CliDumper
             if (empty($attr['count'])) {
                 return sprintf('<a class=sf-dump-ref>%s</a>', $v);
             }
+
             $r = ('#' !== $v[0] ? 1 - ('@' !== $v[0]) : 2) . substr($value, 1);
 
             return sprintf(
@@ -158,8 +167,9 @@ final class HtmlDumper extends CliDumper
             if (isset($attr['ellipsis-type'])) {
                 $class = sprintf('"%s sf-dump-ellipsis-%s"', $class, $attr['ellipsis-type']);
             }
+
             $label = esc(substr($value, -$attr['ellipsis']));
-            $style = str_replace(' title="', " title=\"$v\n", $style);
+            $style = str_replace(' title="', sprintf(' title="%s%s', $v, PHP_EOL), $style);
             $v = sprintf('<span class=%s>%s</span>', $class, substr($v, 0, -\strlen($label)));
 
             if (!empty($attr['ellipsis-tail'])) {
@@ -171,12 +181,14 @@ final class HtmlDumper extends CliDumper
         }
 
         $map = static::$controlCharsMap;
-        $v = "<span class=sf-dump-{$style}>" . preg_replace_callback(static::$controlCharsRx, function ($c) use ($map) {
-            $s = $b = '<span class="sf-dump-default';
+        $v = sprintf('<span class=sf-dump-%s>', $style) . preg_replace_callback(static::$controlCharsRx, static function ($c) use ($map) {
+            $s = '<span class="sf-dump-default';
+            $b = '<span class="sf-dump-default';
             $c = $c[$i = 0];
             if ($ns = "\r" === $c[$i] || "\n" === $c[$i]) {
                 $s .= ' sf-dump-ns';
             }
+
             $s .= '">';
             do {
                 if (("\r" === $c[$i] || "\n" === $c[$i]) !== $ns) {
@@ -184,26 +196,28 @@ final class HtmlDumper extends CliDumper
                     if ($ns = !$ns) {
                         $s .= ' sf-dump-ns';
                     }
+
                     $s .= '">';
                 }
 
                 $s .= $map[$c[$i]] ?? sprintf('\x%02X', \ord($c[$i]));
             } while (isset($c[++$i]));
-
             return $s . '</span>';
         }, $v) . '</span>';
 
         if (!($attr['binary'] ?? false)) {
-            $v = preg_replace_callback(static::$unicodeCharsRx, fn($c) => '<span class=sf-dump-default>\u{' . strtoupper(dechex(mb_ord($c[0]))) . '}</span>', $v);
+            $v = preg_replace_callback(static::$unicodeCharsRx, static fn($c) => '<span class=sf-dump-default>\u{' . strtoupper(dechex(mb_ord($c[0]))) . '}</span>', $v);
         }
 
         if (isset($attr['file']) && $href = $this->getSourceLink($attr['file'], $attr['line'] ?? 0)) {
             $attr['href'] = $href;
         }
+
         if (isset($attr['href'])) {
             if ('label' === $style) {
                 $v .= '^';
             }
+
             $target = isset($attr['file']) ? '' : ' target="_blank"';
             $v = sprintf(
                 '<a href="%s"%s rel="noopener noreferrer">%s</a>',
@@ -212,9 +226,11 @@ final class HtmlDumper extends CliDumper
                 $v,
             );
         }
+
         if (isset($attr['lang'])) {
             $v = sprintf('<code class="%s">%s</code>', esc($attr['lang']), $v);
         }
+
         if ('label' === $style) {
             $v .= ' ';
         }
@@ -233,16 +249,19 @@ final class HtmlDumper extends CliDumper
             if ($this->extraDisplayOptions) {
                 $args[] = json_encode($this->extraDisplayOptions, \JSON_FORCE_OBJECT);
             }
+
             // Replace is for BC
             $this->line .= sprintf(str_replace('"%s"', '%s', $this->dumpSuffix), implode(', ', $args));
         }
+
         $this->lastDepth = $depth;
 
-        $this->line = mb_encode_numericentity($this->line, [0x80, 0x10FFFF, 0, 0x1FFFFF], 'UTF-8');
+        $this->line = mb_encode_numericentity((string) $this->line, [0x80, 0x10FFFF, 0, 0x1FFFFF], 'UTF-8');
 
         if (-1 === $depth) {
             AbstractDumper::dumpLine(0);
         }
+
         AbstractDumper::dumpLine($depth);
     }
 

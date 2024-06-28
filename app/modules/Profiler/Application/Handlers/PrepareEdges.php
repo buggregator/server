@@ -41,7 +41,7 @@ final class PrepareEdges implements EventHandlerInterface
             $parents[$func] = 'e' . $id;
             $prev = 'e' . $id;
 
-            $id++;
+            ++$id;
         }
 
         $event['total_edges'] = \count($event['edges']);

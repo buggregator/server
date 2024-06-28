@@ -64,7 +64,7 @@ final class JsonPayloadTest extends TCPTestCase
         ];
 
         if ($project !== null) {
-            $payload['context']['project'] = (string)$project;
+            $payload['context']['project'] = (string) $project;
         }
 
         return $payload;

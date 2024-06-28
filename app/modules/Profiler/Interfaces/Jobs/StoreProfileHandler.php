@@ -79,7 +79,7 @@ final class StoreProfileHandler extends JobHandler
                 $batchSize = 0;
             }
 
-            $batchSize++;
+            ++$batchSize;
         }
 
         $profile = $this->orm->getRepository(Profile::class)->findByPK($profileUuid);

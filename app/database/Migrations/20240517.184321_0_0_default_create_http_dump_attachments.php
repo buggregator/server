@@ -19,8 +19,10 @@ class OrmDefaultDca21e486cc30724624c30812f0e24df extends Migration
             ->addColumn('path', 'string', ['nullable' => false, 'defaultValue' => null, 'size' => 255])
             ->addColumn('size', 'integer', ['nullable' => false, 'defaultValue' => 0])
             ->addColumn('mime', 'string', ['nullable' => false, 'defaultValue' => null, 'size' => 32])
-            ->addIndex(['event_uuid'],
-                ['name' => 'http_dump_attachments_index_event_uuid_6647a54986782', 'unique' => false])
+            ->addIndex(
+                ['event_uuid'],
+                ['name' => 'http_dump_attachments_index_event_uuid_6647a54986782', 'unique' => false],
+            )
             ->setPrimaryKeys(['uuid'])
             ->create();
     }
