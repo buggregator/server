@@ -58,7 +58,7 @@ final class AttachmentFactory extends AbstractFactory
     {
         $uuid = $uuid instanceof Event ? $uuid->getUuid() : $uuid;
 
-        return $this->state(fn(Generator $faker, array $definition) => [
+        return $this->state(static fn(Generator $faker, array $definition) => [
             'event_uuid' => $uuid,
         ]);
     }

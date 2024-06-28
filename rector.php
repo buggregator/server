@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Rector\CodingStyle\Rector\Catch_\CatchExceptionNameMatchingTypeRector;
 use Rector\Config\RectorConfig;
 use Rector\Php74\Rector\Closure\ClosureToArrowFunctionRector;
 use Rector\Php80\Rector\Catch_\RemoveUnusedVariableInCatchRector;
@@ -21,10 +22,15 @@ return RectorConfig::configure()
         __DIR__ . '/app',
         __DIR__ . '/tests',
     ])
-    ->withImportNames(importShortClasses: false, removeUnusedImports: true)
     ->withCache(cacheDirectory: __DIR__ . '.cache/rector')
-    // uncomment to reach your current PHP version
-    // ->withPhpSets()
+    ->withPhpVersion(PhpVersion::PHP_82)
+    ->withPhpSets(php82: true)
+    ->withPreparedSets(
+        deadCode: true,
+        codeQuality: true,
+        codingStyle: true,
+    )
+    ->withImportNames(importShortClasses: false, removeUnusedImports: true)
     ->withRules([
         BootloaderConstantsFixesRule::class,
         AddVoidReturnTypeWhereNoReturnRector::class,
@@ -38,9 +44,6 @@ return RectorConfig::configure()
         RemoveUnusedVariableInCatchRector::class,
         ClosureToArrowFunctionRector::class,
     ])
-    ->withPhpVersion(PhpVersion::PHP_82)
-    // here we can define, what prepared sets of rules will be applied
-    ->withPreparedSets(
-        deadCode: true,
-        codeQuality: true,
-    );
+    ->withSkip([
+        CatchExceptionNameMatchingTypeRector::class,
+    ]);

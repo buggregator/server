@@ -62,7 +62,7 @@ final readonly class Parser
      */
     private function buildAttachmentFrom(array $attachments): array
     {
-        return \array_map(fn(ParseMessage\IMessagePart $part) => new Attachment(
+        return \array_map(static fn(ParseMessage\IMessagePart $part) => new Attachment(
             $part->getFilename(),
             $part->getContent(),
             $part->getContentType(),
@@ -76,10 +76,9 @@ final readonly class Parser
      */
     private function joinNameAndEmail(array $addresses): array
     {
-        return \array_map(function (AddressPart $addressPart) {
+        return \array_map(static function (AddressPart $addressPart) {
             $name = $addressPart->getName();
             $email = $addressPart->getValue();
-
             return ['name' => $name, 'email' => $email];
         }, $addresses);
     }

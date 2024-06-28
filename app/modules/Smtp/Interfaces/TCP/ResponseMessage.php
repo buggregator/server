@@ -7,10 +7,15 @@ namespace Modules\Smtp\Interfaces\TCP;
 final readonly class ResponseMessage implements \Stringable
 {
     private const READY = 220;
+
     public const OK = 250;
+
     public const CLOSING = 221;
+
     public const AUTHENTICATED = 235;
+
     public const START_MAIL_INPUT = 354;
+
     public const USERNAME = 334;
 
     public static function ready(string $message = 'mailamie'): self

@@ -71,7 +71,7 @@ final readonly class AnyHttpRequestDump implements HandlerInterface
                 'post' => $request->getParsedBody() ?? [],
                 'cookies' => $request->getCookieParams(),
                 'files' => \array_map(
-                    fn(Attachment $attachment) => [
+                    static fn(Attachment $attachment) => [
                         'uuid' => (string) $attachment->getUuid(),
                         'name' => $attachment->getFilename(),
                         'size' => $attachment->getSize(),

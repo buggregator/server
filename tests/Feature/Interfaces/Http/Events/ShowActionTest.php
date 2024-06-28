@@ -29,7 +29,7 @@ final class ShowActionTest extends ControllerTestCase
             ->showEvent($uuid)
             ->assertNotFound()
             ->assertJsonResponseSame([
-                'message' => 'Event with given uuid ['.$uuid.'] was not found.',
+                'message' => 'Event with given uuid [' . $uuid . '] was not found.',
                 'code' => 404,
             ]);
     }

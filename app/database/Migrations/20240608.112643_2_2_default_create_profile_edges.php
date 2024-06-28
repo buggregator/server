@@ -34,7 +34,9 @@ class OrmDefault972859df19369e40b49f2fae46c0a310 extends Migration
             ->addColumn('p_ct', 'float', ['nullable' => false, 'defaultValue' => null])
             ->addColumn('p_mu', 'float', ['nullable' => false, 'defaultValue' => null])
             ->addColumn('p_pmu', 'float', ['nullable' => false, 'defaultValue' => null])
-            ->addIndex(['profile_uuid'], ['name' => 'profile_edges_index_profile_uuid_66643ff3139b6', 'unique' => false],
+            ->addIndex(
+                ['profile_uuid'],
+                ['name' => 'profile_edges_index_profile_uuid_66643ff3139b6', 'unique' => false],
             )
             ->addIndex(['parent_uuid'], ['name' => 'profile_edges_index_parent_uuid_66643ff3139e7', 'unique' => false])
             ->addForeignKey(['profile_uuid'], 'profiles', ['uuid'], [

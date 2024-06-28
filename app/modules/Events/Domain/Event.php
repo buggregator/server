@@ -22,15 +22,15 @@ class Event
     /**  @internal */
     public function __construct(
         #[Column(type: 'string(36)', primary: true, typecast: 'uuid')]
-        private Uuid $uuid,
+        private readonly Uuid $uuid,
         #[Column(type: 'string(50)')]
-        private string $type,
+        private readonly string $type,
         #[Column(type: 'json', typecast: Json::class)]
         private Json $payload,
         #[Column(type: 'string(25)', typecast: Timestamp::class)]
-        private Timestamp $timestamp,
+        private readonly Timestamp $timestamp,
         #[Column(type: 'string', nullable: true, typecast: Key::class)]
-        private ?Key $project = null,
+        private readonly ?Key $project = null,
     ) {}
 
     public function getUuid(): Uuid

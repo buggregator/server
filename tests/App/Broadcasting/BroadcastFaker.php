@@ -12,8 +12,7 @@ final readonly class BroadcastFaker
 {
     public function __construct(
         private Container $container,
-    ) {
-    }
+    ) {}
 
     public function dump(): self
     {
@@ -31,7 +30,7 @@ final readonly class BroadcastFaker
 
     public function assertPushedTimes(string|\Stringable $topic, int $times = 1): array
     {
-        $messages = $this->filterMessages((string)$topic);
+        $messages = $this->filterMessages((string) $topic);
 
         TestCase::assertCount(
             $times,
@@ -50,7 +49,7 @@ final readonly class BroadcastFaker
 
     public function assertPushed(string|\Stringable $topic, \Closure $callback = null): self
     {
-        $messages = $this->filterMessages((string)$topic, $callback);
+        $messages = $this->filterMessages((string) $topic, $callback);
 
         TestCase::assertTrue(
             $messages !== [],
@@ -62,7 +61,7 @@ final readonly class BroadcastFaker
 
     public function assertNotPushed(string|\Stringable $topic, \Closure $callback = null): self
     {
-        $messages = $this->filterMessages((string)$topic, $callback);
+        $messages = $this->filterMessages((string) $topic, $callback);
 
         TestCase::assertCount(
             0,

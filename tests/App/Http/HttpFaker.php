@@ -116,7 +116,7 @@ final class HttpFaker
     public function __call(string $name, array $arguments): ResponseAssertions|self
     {
         if (!method_exists($this->http, $name)) {
-            throw new \Exception("Method $name does not exist");
+            throw new \Exception(sprintf('Method %s does not exist', $name));
         }
 
         if (\str_starts_with($name, 'with')) {

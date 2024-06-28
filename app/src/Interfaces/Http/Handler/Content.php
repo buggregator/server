@@ -7,6 +7,7 @@ namespace App\Interfaces\Http\Handler;
 final readonly class Content implements \Stringable
 {
     public int $len;
+
     public string $contentType;
 
     public function __construct(

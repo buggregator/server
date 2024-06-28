@@ -22,10 +22,10 @@ final class RegisterCommand extends Command
     ): int {
         foreach ($locator->findAll() as $webhook) {
             try {
-                $this->writeln("Registering webhook: {$webhook->key} for event: {$webhook->event} at {$webhook->url}");
+                $this->writeln(sprintf('Registering webhook: %s for event: %s at %s', $webhook->key, $webhook->event, $webhook->url));
                 $registry->register($webhook);
             } catch (WebhooksAlreadyExistsException) {
-                $this->warning("Webhook with key {$webhook->key} already exists");
+                $this->warning(sprintf('Webhook with key %s already exists', $webhook->key));
             }
         }
 

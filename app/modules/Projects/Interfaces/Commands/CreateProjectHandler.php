@@ -23,7 +23,7 @@ final readonly class CreateProjectHandler
     public function __invoke(CreateProject $command): Project
     {
         if ($this->projects->findByPK($command->key) !== null) {
-            throw new UniqueKeyException("Project with key {$command->key} already exists");
+            throw new UniqueKeyException(sprintf('Project with key %s already exists', $command->key));
         }
 
         $project = $this->factory->create(

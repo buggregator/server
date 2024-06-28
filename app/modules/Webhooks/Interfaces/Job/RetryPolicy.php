@@ -33,7 +33,7 @@ class RetryPolicy
         }
 
         $this->timer->sleep($this->getDelay());
-        $this->currentRetry++;
+        ++$this->currentRetry;
     }
 
     private function getDelay(): int

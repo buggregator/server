@@ -8,7 +8,7 @@ use Ramsey\Uuid\UuidInterface;
 
 final class Uuid implements \Stringable
 {
-    private UuidInterface $uuid;
+    private readonly UuidInterface $uuid;
 
     public static function generate(): self
     {

@@ -26,6 +26,7 @@ use Tests\App\TestKernel;
 class TestCase extends BaseTestCase
 {
     protected BroadcastFaker $broadcastig;
+
     private ?EventsMocker $events = null;
 
     protected function setUp(): void

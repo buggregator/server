@@ -31,11 +31,11 @@ class Profile
     /** @internal */
     public function __construct(
         #[Column(type: 'string(36)', primary: true, typecast: 'uuid')]
-        private Uuid $uuid,
+        private readonly Uuid $uuid,
         #[Column(type: 'string')]
-        private string $name,
+        private readonly string $name,
         #[Embedded(target: Peaks::class)]
-        private Peaks $peaks,
+        private readonly Peaks $peaks,
     ) {
         $this->edges = new ArrayCollection();
     }

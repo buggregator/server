@@ -41,7 +41,7 @@ final class Auth0Bootloader extends Bootloader
                 clientId: $env->get('AUTH_CLIENT_ID'),
                 redirectUri: $env->get('AUTH_CALLBACK_URL'),
                 clientSecret: $env->get('AUTH_CLIENT_SECRET'),
-                scope: \explode(',', $env->get('AUTH_SCOPES', 'openid,profile,email')),
+                scope: \explode(',', (string) $env->get('AUTH_SCOPES', 'openid,profile,email')),
                 cookieSecret: $env->get('AUTH_COOKIE_SECRET', $env->get('ENCRYPTER_KEY') ?? 'secret'),
             ),
         ];

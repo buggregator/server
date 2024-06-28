@@ -22,7 +22,7 @@ final class RegisterCommand extends Command
     ): int {
         foreach ($locator->findAll() as $project) {
             try {
-                $this->writeln("Registering project: {$project->getName()}");
+                $this->writeln('Registering project: ' . $project->getName());
                 $bus->dispatch(
                     new CreateProject(
                         key: (string) $project->getKey(),

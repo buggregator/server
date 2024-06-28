@@ -4,6 +4,14 @@ declare(strict_types=1);
 
 namespace Database\Factory\Partials;
 
+use Spiral\RoadRunnerBridge\Http\Dispatcher;
+use Nyholm\Psr7\ServerRequest;
+use Spiral\Debug\State;
+use Spiral\Bootloader\DebugBootloader;
+use Spiral\Telemetry\Span;
+use Nyholm\Psr7\Stream;
+use Nyholm\Psr7\Response;
+use Spiral\Telemetry\Span\Status;
 trait ProfilerType
 {
     public static function getProfilerPayload(): array
@@ -11,7 +19,7 @@ trait ProfilerType
         return [
             'tags' => [
                 'php' => '8.2.5',
-                'dispatcher' => 'Spiral\\RoadRunnerBridge\\Http\\Dispatcher',
+                'dispatcher' => Dispatcher::class,
                 'method' => 'GET',
                 'url' => 'http://127.0.0.1:8080/',
                 'route' => null,
@@ -45,7 +53,7 @@ trait ProfilerType
                 ],
                 'e2' => [
                     'caller' => 'main()',
-                    'callee' => 'Nyholm\\Psr7\\ServerRequest::getAttribute',
+                    'callee' => ServerRequest::class . '::getAttribute',
                     'cost' => [
                         'd_cpu' => 82950,
                         'd_wt' => 211997,
@@ -64,7 +72,7 @@ trait ProfilerType
                 ],
                 'e3' => [
                     'caller' => 'main()',
-                    'callee' => 'Spiral\\Debug\\State::getTags',
+                    'callee' => State::class . '::getTags',
                     'cost' => [
                         'd_cpu' => 82951,
                         'd_wt' => 211999,
@@ -83,7 +91,7 @@ trait ProfilerType
                 ],
                 'e4' => [
                     'caller' => 'main()',
-                    'callee' => 'Spiral\\Bootloader\\DebugBootloader::state',
+                    'callee' => DebugBootloader::class . '::state',
                     'cost' => [
                         'd_cpu' => 82855,
                         'd_wt' => 211903,
@@ -102,7 +110,7 @@ trait ProfilerType
                 ],
                 'e5' => [
                     'caller' => 'main()',
-                    'callee' => 'Spiral\\Telemetry\\Span::setStatus',
+                    'callee' => Span::class . '::setStatus',
                     'cost' => [
                         'd_cpu' => 82949,
                         'd_wt' => 211997,
@@ -121,7 +129,7 @@ trait ProfilerType
                 ],
                 'e6' => [
                     'caller' => 'main()',
-                    'callee' => 'Nyholm\\Psr7\\Stream::getSize',
+                    'callee' => Stream::class . '::getSize',
                     'cost' => [
                         'd_cpu' => 82951,
                         'd_wt' => 211999,
@@ -140,7 +148,7 @@ trait ProfilerType
                 ],
                 'e7' => [
                     'caller' => 'main()',
-                    'callee' => 'Nyholm\\Psr7\\Response::getBody',
+                    'callee' => Response::class . '::getBody',
                     'cost' =>
                         [
                             'd_cpu' => 82951,
@@ -160,7 +168,7 @@ trait ProfilerType
                 ],
                 'e8' => [
                     'caller' => 'main()',
-                    'callee' => 'Nyholm\\Psr7\\Response::getHeaderLine',
+                    'callee' => Response::class . '::getHeaderLine',
                     'cost' => [
                         'd_cpu' => 82948,
                         'd_wt' => 211996,
@@ -179,7 +187,7 @@ trait ProfilerType
                 ],
                 'e9' => [
                     'caller' => 'main()',
-                    'callee' => 'Spiral\\Telemetry\\Span::setAttribute',
+                    'callee' => Span::class . '::setAttribute',
                     'cost' => [
                         'd_cpu' => 82949,
                         'd_wt' => 211997,
@@ -198,7 +206,7 @@ trait ProfilerType
                 ],
                 'e10' => [
                     'caller' => 'main()',
-                    'callee' => 'Nyholm\\Psr7\\Response::getStatusCode',
+                    'callee' => Response::class . '::getStatusCode',
                     'cost' => [
                         'd_cpu' => 82951,
                         'd_wt' => 211998,
@@ -236,7 +244,7 @@ trait ProfilerType
                 ],
                 'e12' => [
                     'caller' => 'App\\Middleware\\LocaleSelector::process',
-                    'callee' => 'Spiral\\Telemetry\\Span::setStatus',
+                    'callee' => Span::class . '::setStatus',
                     'cost' => [
                         'd_cpu' => 82701,
                         'd_wt' => 211747,
@@ -254,8 +262,8 @@ trait ProfilerType
                     ],
                 ],
                 'e13' => [
-                    'caller' => 'Spiral\\Telemetry\\Span::setStatus',
-                    'callee' => 'Spiral\\Telemetry\\Span\\Status::__construct',
+                    'caller' => Span::class . '::setStatus',
+                    'callee' => Status::class . '::__construct',
                     'cost' => [
                         'd_cpu' => 3,
                         'd_wt' => 2,
@@ -274,7 +282,7 @@ trait ProfilerType
                 ],
                 'e14' => [
                     'caller' => 'App\\Middleware\\LocaleSelector::process',
-                    'callee' => 'Nyholm\\Psr7\\Stream::getSize',
+                    'callee' => Stream::class . '::getSize',
                     'cost' => [
                         'd_cpu' => 82691,
                         'd_wt' => 211737,
@@ -292,8 +300,8 @@ trait ProfilerType
                     ],
                 ],
                 'e15' => [
-                    'caller' => 'Nyholm\\Psr7\\Stream::getSize',
-                    'callee' => 'Nyholm\\Psr7\\Stream::getUri',
+                    'caller' => Stream::class . '::getSize',
+                    'callee' => Stream::class . '::getUri',
                     'cost' => [
                         'd_cpu' => 8,
                         'd_wt' => 7,
@@ -311,8 +319,8 @@ trait ProfilerType
                     ],
                 ],
                 'e16' => [
-                    'caller' => 'Nyholm\\Psr7\\Stream::getUri',
-                    'callee' => 'Nyholm\\Psr7\\Stream::getMetadata',
+                    'caller' => Stream::class . '::getUri',
+                    'callee' => Stream::class . '::getMetadata',
                     'cost' =>
                         [
                             'd_cpu' => 3,
@@ -332,7 +340,7 @@ trait ProfilerType
                 ],
                 'e17' => [
                     'caller' => 'App\\Middleware\\LocaleSelector::process',
-                    'callee' => 'Nyholm\\Psr7\\Response::getBody',
+                    'callee' => Response::class . '::getBody',
                     'cost' => [
                         'd_cpu' => 82706,
                         'd_wt' => 211751,
@@ -351,7 +359,7 @@ trait ProfilerType
                 ],
                 'e18' => [
                     'caller' => 'App\\Middleware\\LocaleSelector::process',
-                    'callee' => 'Nyholm\\Psr7\\Response::getHeaderLine',
+                    'callee' => Response::class . '::getHeaderLine',
                     'cost' => [
                         'd_cpu' => 82701,
                         'd_wt' => 211746,
@@ -369,8 +377,8 @@ trait ProfilerType
                     ],
                 ],
                 'e19' => [
-                    'caller' => 'Nyholm\\Psr7\\Response::getHeaderLine',
-                    'callee' => 'Nyholm\\Psr7\\Response::getHeader',
+                    'caller' => Response::class . '::getHeaderLine',
+                    'callee' => Response::class . '::getHeader',
                     'cost' => [
                         'd_cpu' => 2,
                         'd_wt' => 2,

@@ -47,7 +47,7 @@ JSON;
 
     public function assertEvent(?string $project = null): void
     {
-        $this->broadcastig->assertPushed((string)new EventsChannel($project), function (array $data) use ($project) {
+        $this->broadcastig->assertPushed((string) new EventsChannel($project), function (array $data) use ($project) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('profiler', $data['data']['type']);
             $this->assertSame($project, $data['data']['project']);

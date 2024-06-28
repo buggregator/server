@@ -101,7 +101,7 @@ final readonly class EventHandler implements HandlerInterface
 
         $userAgent = $request->getServerParams()['HTTP_USER_AGENT'] ?? '';
 
-        if (\str_starts_with(\strtolower($userAgent), 'ray')) {
+        if (\str_starts_with(\strtolower((string) $userAgent), 'ray')) {
             return new EventType(type: 'ray');
         }
 

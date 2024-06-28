@@ -16,7 +16,6 @@ use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 
 final class BootloaderConstantsFixesRule extends AbstractRector
 {
-
     public function getRuleDefinition(): RuleDefinition
     {
         return new RuleDefinition(
@@ -32,7 +31,6 @@ final class AttributesBootloader extends Bootloader
 }
 PHP
                     ,
-
                     <<<PHP
 final class AttributesBootloader extends Bootloader
 {
@@ -55,7 +53,6 @@ final class AttributesBootloader extends Bootloader
 }
 PHP
                     ,
-
                     <<<PHP
 final class AttributesBootloader extends Bootloader
 {
@@ -78,7 +75,6 @@ final class AttributesBootloader extends Bootloader
 }
 PHP
                     ,
-
                     <<<PHP
 final class AttributesBootloader extends Bootloader
 {
@@ -92,7 +88,6 @@ final class AttributesBootloader extends Bootloader
 PHP,
                 ),
             ],
-
         );
     }
 
@@ -122,7 +117,7 @@ PHP,
                     'DEPENDENCIES' => 'defineDependencies',
                     'SINGLETONS' => 'defineSingletons',
                     'BINDINGS' => 'defineBindings',
-                    default => null
+                    default => null,
                 };
 
                 if ($methodName === null) {

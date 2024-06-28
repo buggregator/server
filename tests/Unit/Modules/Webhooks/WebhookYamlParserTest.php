@@ -21,6 +21,7 @@ webhook:
 YAML;
 
     private MockInterface|Parser $yamlParser;
+
     private WebhookYamlParser $parser;
 
     protected function setUp(): void

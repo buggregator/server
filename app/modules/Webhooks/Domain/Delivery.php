@@ -17,20 +17,20 @@ use Cycle\Annotated\Annotation\ForeignKey;
 class Delivery
 {
     #[Column(type: 'datetime')]
-    private \DateTimeInterface $createdAt;
+    private readonly \DateTimeInterface $createdAt;
 
     /**  @internal */
     public function __construct(
         #[Column(type: 'string(36)', primary: true, typecast: 'uuid')]
-        private Uuid $uuid,
+        private readonly Uuid $uuid,
         #[Column(type: 'string(36)', typecast: 'uuid')]
-        private Uuid $webhookUuid,
+        private readonly Uuid $webhookUuid,
         #[Column(type: 'text')]
-        private string $payload,
+        private readonly string $payload,
         #[Column(type: 'text')]
-        private string $response,
+        private readonly string $response,
         #[Column(type: 'integer')]
-        private int $status,
+        private readonly int $status,
     ) {
         $this->createdAt = new \DateTimeImmutable();
     }

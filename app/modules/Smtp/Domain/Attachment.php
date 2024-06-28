@@ -20,19 +20,19 @@ class Attachment
     /** @internal */
     public function __construct(
         #[Column(type: 'string(36)', primary: true, typecast: 'uuid')]
-        private Uuid $uuid,
+        private readonly Uuid $uuid,
         #[Column(type: 'string(36)', typecast: 'uuid')]
-        private Uuid $eventUuid,
+        private readonly Uuid $eventUuid,
         #[Column(type: 'string')]
-        private string $name,
+        private readonly string $name,
         #[Column(type: 'string')]
-        private string $path,
+        private readonly string $path,
         #[Column(type: 'integer', default: 0)]
-        private int $size,
+        private readonly int $size,
         #[Column(type: 'string(32)')]
-        private string $mime,
+        private readonly string $mime,
         #[Column(type: 'string(255)')]
-        private string $id,
+        private readonly string $id,
     ) {}
 
     public function getUuid(): Uuid

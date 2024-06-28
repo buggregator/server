@@ -27,12 +27,12 @@ final class DeclareCommand extends Command
         }
 
         foreach ($repository->findAll() as $name => $collector) {
-            $this->info("Declaring metric: {$name}");
+            $this->info('Declaring metric: ' . $name);
 
             try {
                 $metrics->declare($name, $collector);
             } catch (\Throwable $e) {
-                $this->error("Failed to declare metric: {$name}. Reason: {$e->getMessage()}");
+                $this->error(sprintf('Failed to declare metric: %s. Reason: %s', $name, $e->getMessage()));
             }
         }
 

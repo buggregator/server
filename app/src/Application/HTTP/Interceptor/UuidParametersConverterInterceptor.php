@@ -18,6 +18,7 @@ final class UuidParametersConverterInterceptor implements CoreInterceptorInterfa
             if ($parameter->getType() instanceof \ReflectionUnionType) {
                 continue;
             }
+
             if ($parameter->getType()->getName() === Uuid::class) {
                 $parameters[$parameter->getName()] = Uuid::fromString($parameters[$parameter->getName()]);
             }

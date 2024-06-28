@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factory\Partials;
 
+use Spiral\Http\Pipeline;
 trait InspectorType
 {
     protected static function getInspectorPayload(): array
@@ -136,7 +137,7 @@ trait InspectorType
                                 ],
                             ],
                             [
-                                'class' => 'Spiral\\Http\\Pipeline',
+                                'class' => Pipeline::class,
                                 'function' => 'Spiral\\Http\\{closure}',
                                 'args' => [],
                                 'type' => '->',
@@ -190,7 +191,7 @@ trait InspectorType
                                     ],
                                     [
                                         'line' => 80,
-                                        'code' => '        throw new NotCallableException(\'Unsupported callable.\');',
+                                        'code' => "        throw new NotCallableException('Unsupported callable.');",
                                     ],
                                 ],
                             ],

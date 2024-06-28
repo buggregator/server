@@ -15,8 +15,11 @@ use Psr\Http\Message\UriInterface;
 final readonly class Client
 {
     private string $authorizationEndpoint;
+
     private string $tokenEndpoint;
+
     private string $logoutEndpoint;
+
     private JwtTokenParser $tokenParser;
 
     public function __construct(

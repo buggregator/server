@@ -25,7 +25,7 @@ final class CheckDatabaseConnectionCommand extends Command
                 $this->info('Database connection is OK');
                 break;
             } catch (\Throwable $e) {
-                $tries++;
+                ++$tries;
                 $this->error($e->getMessage());
                 $delay = (int) ($multiplier * $tries);
                 $this->error('Cannot connect to the database. Retrying in ' . $delay . ' second...');

@@ -23,9 +23,8 @@ final class RetryPolicyTest extends TestCase
                 };
 
                 $this->assertSame($expected, $seconds);
-                $i++;
+                ++$i;
             }),
-
             maxRetries: 3,
             delay: 5,
             retryMultiplier: 2,
@@ -43,10 +42,9 @@ final class RetryPolicyTest extends TestCase
     public function testCanTryWithZeroRetries(): void
     {
         $policy = new RetryPolicy(
-            timer: new Timer(function (int $seconds): void {
+            timer: new Timer(function (int $seconds): never {
                 $this->fail('No retries should be made');
             }),
-
             maxRetries: 0,
             delay: 5,
             retryMultiplier: 2,
@@ -58,10 +56,8 @@ final class RetryPolicyTest extends TestCase
     public function testCanTryWithOneRetry(): void
     {
         $policy = new RetryPolicy(
-            timer: new Timer(function (int $seconds): void {
-
+            timer: new Timer(static function (int $seconds) : void {
             }),
-
             maxRetries: 1,
             delay: 5,
             retryMultiplier: 2,

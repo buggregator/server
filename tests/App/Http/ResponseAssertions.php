@@ -211,7 +211,7 @@ final readonly class ResponseAssertions
     public function __call(string $name, array $arguments): self
     {
         if (!method_exists($this->response, $name)) {
-            throw new \Exception("Method $name does not exist");
+            throw new \Exception(sprintf('Method %s does not exist', $name));
         }
 
         $this->response->$name(...$arguments);

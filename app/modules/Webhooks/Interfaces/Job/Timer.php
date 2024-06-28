@@ -10,7 +10,7 @@ final readonly class Timer
 
     public function __construct(?\Closure $timer = null)
     {
-        $this->timer = $timer ?? function (int $seconds): void {
+        $this->timer = $timer ?? static function (int $seconds) : void {
             \sleep($seconds);
         };
     }

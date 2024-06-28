@@ -17,8 +17,5 @@ class OrmDefault4d821d8599782e856feb0c9b8b26b42f extends Migration
         ->update();
     }
 
-    public function down(): void
-    {
-
-    }
+    public function down(): void {}
 }

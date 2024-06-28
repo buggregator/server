@@ -16,9 +16,13 @@ use Tests\TestCase;
 final class WebhookFilesFinderTest extends TestCase
 {
     private FinderInterface|m\MockInterface $initialFinder;
+
     private LoggerInterface|m\MockInterface $logger;
+
     private WebhookYamlParser|m\MockInterface $parser;
+
     private FilesInterface|m\MockInterface $files;
+
     private WebhookFilesFinder $finder;
 
 

@@ -7,13 +7,11 @@ namespace Modules\VarDumper\Application\Dump;
 final readonly class HtmlBody implements BodyInterface
 {
     private string $id;
-    private string $html;
 
     public function __construct(
-        string $value,
+        private string $html,
     ) {
-        $this->html = $value;
-        \preg_match_all('/sf-dump-\d+/', $value, $matches);
+        \preg_match_all('/sf-dump-\d+/', $this->html, $matches);
         $this->id = $matches[0][0];
     }
 

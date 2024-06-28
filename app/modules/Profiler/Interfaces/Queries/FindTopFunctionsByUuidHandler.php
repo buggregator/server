@@ -11,7 +11,7 @@ use Modules\Profiler\Domain\Profile;
 use Spiral\Cqrs\Attribute\QueryHandler;
 
 // TODO: refactor this, use repository
-final class FindTopFunctionsByUuidHandler
+final readonly class FindTopFunctionsByUuidHandler
 {
     public function __construct(
         private ORMInterface $orm,
@@ -44,6 +44,7 @@ final class FindTopFunctionsByUuidHandler
                 foreach ($metrics as $metric) {
                     $functions[$edge->getCallee()][$metric] = $edge->getCost()->{$metric};
                 }
+
                 continue;
             }
 

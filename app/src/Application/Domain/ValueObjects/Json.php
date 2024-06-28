@@ -21,7 +21,7 @@ final readonly class Json implements \JsonSerializable, \Stringable
 
         try {
             return new self(
-                (array) \json_decode($value, true),
+                (array) \json_decode((string) $value, true),
             );
         } catch (\JsonException $e) {
             throw new \InvalidArgumentException($e->getMessage(), $e->getCode(), $e);
@@ -37,6 +37,6 @@ final readonly class Json implements \JsonSerializable, \Stringable
 
     public function __toString(): string
     {
-        return \json_encode($this);
+        return (string) \json_encode($this);
     }
 }
