@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Interfaces\Centrifugo;
 
+use RoadRunner\Centrifugo\Request\Subscribe;
 use RoadRunner\Centrifugo\Payload\SubscribeResponse;
-use RoadRunner\Centrifugo\Request;
 use RoadRunner\Centrifugo\Request\RequestInterface;
 use Spiral\RoadRunnerBridge\Centrifugo\ServiceInterface;
 
@@ -13,7 +13,7 @@ final class SubscribeService implements ServiceInterface
 {
     public function handle(RequestInterface $request): void
     {
-        \assert($request instanceof Request\Subscribe);
+        \assert($request instanceof Subscribe);
 
         try {
             $request->respond(

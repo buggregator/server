@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Interfaces\Http\Sentry;
 
-use App\Application\Broadcasting\Channel\EventsChannel;
 use Modules\Projects\Domain\Project;
 use Modules\Projects\Domain\ValueObject\Key;
 use Nyholm\Psr7\Stream;

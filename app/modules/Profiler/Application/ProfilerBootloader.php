@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Profiler\Application;
 
+use Modules\Profiler\Application\Mapper\EventTypeMapper;
 use App\Application\Event\EventTypeRegistryInterface;
 use Cycle\ORM\ORMInterface;
 use Cycle\ORM\Select;
@@ -80,6 +81,6 @@ final class ProfilerBootloader extends Bootloader
 
     public function boot(EventTypeRegistryInterface $registry): void
     {
-        $registry->register('profiler', new Mapper\EventTypeMapper());
+        $registry->register('profiler', new EventTypeMapper());
     }
 }

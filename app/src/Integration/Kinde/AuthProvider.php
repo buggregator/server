@@ -39,7 +39,7 @@ final readonly class AuthProvider implements AuthProviderInterface
     {
         $payload = $this->getProvider()->getUserDetails();
 
-        if (empty($payload)) {
+        if ($payload === []) {
             return null;
         }
 

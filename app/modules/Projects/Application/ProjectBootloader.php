@@ -36,13 +36,9 @@ final class ProjectBootloader extends Bootloader
                 ],
             ),
 
-            ProjectLocatorInterface::class => static function (
-                YamlFileProjectLocator $locator,
-            ): ProjectLocatorInterface {
-                return new CompositeProjectLocator([
-                    $locator,
-                ]);
-            },
+            ProjectLocatorInterface::class => static fn(YamlFileProjectLocator $locator): ProjectLocatorInterface => new CompositeProjectLocator([
+                $locator,
+            ]),
 
             ProjectRepositoryInterface::class => static fn(
                 FactoryInterface $factory,

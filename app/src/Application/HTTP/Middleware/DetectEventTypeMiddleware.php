@@ -22,7 +22,7 @@ final readonly class DetectEventTypeMiddleware implements MiddlewareInterface
 
         foreach ($detectors as $detector) {
             $info = $detector($request);
-            if ($info !== null) {
+            if ($info instanceof EventType) {
                 return $handler->handle(
                     $request->withAttribute('event', $info),
                 );
@@ -54,7 +54,7 @@ final readonly class DetectEventTypeMiddleware implements MiddlewareInterface
     {
         $info = $request->getUri()->getUserInfo();
 
-        if (empty($info)) {
+        if ($info === '' || $info === '0') {
             return null;
         }
 
@@ -71,13 +71,13 @@ final readonly class DetectEventTypeMiddleware implements MiddlewareInterface
         $type = $request->getHeaderLine('X-Buggregator-Event');
         $project = $request->getHeaderLine('X-Buggregator-Project');
 
-        if (empty($type)) {
+        if ($type === '' || $type === '0') {
             return null;
         }
 
         return new EventType(
             type: $type,
-            project: empty($project) ? null : $project,
+            project: $project === '' || $project === '0' ? null : $project,
         );
     }
 

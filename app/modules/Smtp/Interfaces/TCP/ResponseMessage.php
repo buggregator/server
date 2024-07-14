@@ -65,7 +65,7 @@ final readonly class ResponseMessage implements \Stringable
             "%d%s%s\r\n",
             $this->code,
             $this->separator,
-            empty($this->message) ? '' : $this->message . ' ',
+            $this->message === '' || $this->message === '0' ? '' : $this->message . ' ',
         );
     }
 }

@@ -16,7 +16,7 @@ final readonly class SecretKeyValidator
 
     public function validateRequest(ServerRequestInterface $request): bool
     {
-        if (empty($this->secret)) {
+        if ($this->secret === null || $this->secret === '' || $this->secret === '0') {
             return true;
         }
 

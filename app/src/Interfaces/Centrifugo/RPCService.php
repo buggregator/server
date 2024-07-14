@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Interfaces\Centrifugo;
 
+use RoadRunner\Centrifugo\Request\RequestInterface;
+use RoadRunner\Centrifugo\Request\RPC;
 use App\Application\Domain\Assert;
 use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use RoadRunner\Centrifugo\Payload\RPCResponse;
-use RoadRunner\Centrifugo\Request;
 use Spiral\Filters\Exception\ValidationException;
 use Spiral\Http\Http;
 use Spiral\RoadRunnerBridge\Centrifugo\ServiceInterface;
@@ -20,9 +21,9 @@ final readonly class RPCService implements ServiceInterface
         private ServerRequestFactoryInterface $requestFactory,
     ) {}
 
-    public function handle(Request\RequestInterface $request): void
+    public function handle(RequestInterface $request): void
     {
-        \assert($request instanceof Request\RPC);
+        \assert($request instanceof RPC);
 
         $result = [];
 
@@ -53,7 +54,7 @@ final readonly class RPCService implements ServiceInterface
         }
     }
 
-    public function createHttpRequest(Request\RPC $request): ServerRequestInterface
+    public function createHttpRequest(RPC $request): ServerRequestInterface
     {
         Assert::string($request->method, 'Invalid method');
         Assert::true(\str_contains($request->method, ':'), 'Invalid method format');
@@ -76,7 +77,7 @@ final readonly class RPCService implements ServiceInterface
             default => throw new \InvalidArgumentException('Unsupported method'),
         };
 
-        if (\is_string($token) && !empty($token)) {
+        if (\is_string($token) && ($token !== '' && $token !== '0')) {
             $httpRequest = $httpRequest->withHeader('X-Auth-Token', $token);
         }
 

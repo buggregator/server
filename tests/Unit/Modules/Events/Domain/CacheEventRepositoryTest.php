@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Modules\Events\Domain;
 
-use App\Integration\RoadRunner\Persistence\CacheEventRepository;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Tests\DatabaseTestCase;
-use Tests\TestCase;
 
 final class CacheEventRepositoryTest extends DatabaseTestCase
 {

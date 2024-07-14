@@ -21,7 +21,7 @@ final readonly class DeleteEventHandler
     public function __invoke(DeleteEvent $command): void
     {
         $event = $this->events->findByPK((string) $command->uuid);
-        if (!$event) {
+        if ($event === null) {
             return;
         }
 

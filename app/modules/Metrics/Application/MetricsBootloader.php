@@ -28,22 +28,16 @@ final class MetricsBootloader extends Bootloader
     public function defineSingletons(): array
     {
         return [
-            MetricsInterface::class => static function (
-                MetricsDriverEnum $driver,
-                FactoryInterface $factory,
-                RPCInterface $rpc,
-            ) {
-                return match ($driver) {
-                    MetricsDriverEnum::RoadRunner => (new MetricsFactory())->create(
-                        $rpc,
-                        new MetricsOptions(
-                            retryAttempts: 2,
-                            retrySleepMicroseconds: 300,
-                            suppressExceptions: true,
-                        ),
+            MetricsInterface::class => static fn(MetricsDriverEnum $driver, FactoryInterface $factory, RPCInterface $rpc) => match ($driver) {
+                MetricsDriverEnum::RoadRunner => (new MetricsFactory())->create(
+                    $rpc,
+                    new MetricsOptions(
+                        retryAttempts: 2,
+                        retrySleepMicroseconds: 300,
+                        suppressExceptions: true,
                     ),
-                    MetricsDriverEnum::Null => new NullDriver(),
-                };
+                ),
+                MetricsDriverEnum::Null => new NullDriver(),
             },
 
             CollectorRepositoryInterface::class => Collector::class,

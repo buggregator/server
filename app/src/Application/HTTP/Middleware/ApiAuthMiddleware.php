@@ -21,7 +21,7 @@ final class ApiAuthMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        if ($this->middleware === null) {
+        if (!$this->middleware instanceof MiddlewareInterface) {
             $this->initMiddleware();
         }
 

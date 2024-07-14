@@ -27,38 +27,38 @@ final class ExtendedTypecast implements CastableInterface, UncastableInterface
         return $rules;
     }
 
-    public function cast(array $values): array
+    public function cast(array $data): array
     {
         foreach ($this->rules as $column => $rule) {
-            if (!isset($values[$column])) {
+            if (!isset($data[$column])) {
                 continue;
             }
 
-            $values[$column] = match ($rule) {
-                'uuid' => Uuid::fromString($values[$column]),
-                'json' => new Json(\json_decode($values[$column], true)),
-                default => $values[$column],
+            $data[$column] = match ($rule) {
+                'uuid' => Uuid::fromString($data[$column]),
+                'json' => new Json(\json_decode($data[$column], true)),
+                default => $data[$column],
             };
         }
 
-        return $values;
+        return $data;
     }
 
-    public function uncast(array $values): array
+    public function uncast(array $data): array
     {
         foreach ($this->rules as $column => $rule) {
-            if (!isset($values[$column])) {
+            if (!isset($data[$column])) {
                 continue;
             }
 
-            $values[$column] = match ($rule) {
-                'uuid' => $this->uncastUuid($values[$column]),
-                'json' => $this->uncastJson($values[$column]),
-                default => $values[$column],
+            $data[$column] = match ($rule) {
+                'uuid' => $this->uncastUuid($data[$column]),
+                'json' => $this->uncastJson($data[$column]),
+                default => $data[$column],
             };
         }
 
-        return $values;
+        return $data;
     }
 
     private function uncastUuid(mixed $value): string

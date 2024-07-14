@@ -35,7 +35,6 @@ use Spiral\RoadRunner\Metrics\Collector;
 
 final class WebhooksBootloader extends Bootloader
 {
-    private const CACHE_ALIAS = 'webhooks';
     private const QUEUE_ALIAS = 'webhooks';
 
     public function defineSingletons(): array
@@ -84,13 +83,9 @@ final class WebhooksBootloader extends Bootloader
                 ],
             ),
 
-            WebhookLocatorInterface::class => static function (
-                YamlFileWebhookLocator $locator,
-            ): WebhookLocatorInterface {
-                return new CompositeWebhookLocator([
-                    $locator,
-                ]);
-            },
+            WebhookLocatorInterface::class => static fn(YamlFileWebhookLocator $locator): WebhookLocatorInterface => new CompositeWebhookLocator([
+                $locator,
+            ]),
 
             DeliveryFactoryInterface::class => DeliveryFactory::class,
 

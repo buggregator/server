@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Interfaces\Http\Smtp\Attachments;
 
 use App\Application\Domain\ValueObjects\Uuid;
-use Database\Factory\AttachmentFactory;
 use Mockery\MockInterface;
-use Modules\Smtp\Domain\Attachment;
 use Modules\Smtp\Domain\AttachmentRepositoryInterface;
 use Modules\Smtp\Domain\AttachmentStorageInterface;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;

@@ -12,6 +12,10 @@ use Tests\DatabaseTestCase;
 
 final class WebhookRegistryTest extends DatabaseTestCase
 {
+    private $registry;
+
+    private $assert;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -24,7 +28,7 @@ final class WebhookRegistryTest extends DatabaseTestCase
     {
         $this->assert->assertCount(0);
 
-        $uuid = $this->registry->register($this->createWebhook());
+        $this->registry->register($this->createWebhook());
 
         $this->assert->where([
             'key' => 'report-error',

@@ -83,7 +83,7 @@ final readonly class FindTopFunctionsByUuidHandler
 
         $functions = \array_slice($functions, 0, $query->limit);
 
-        foreach ($functions as $function => $m) {
+        foreach (array_keys($functions) as $function) {
             foreach ($metrics as $metric) {
                 $functions[$function]['p_' . $metric] = \round(
                     $functions[$function][$metric] > 0 ? $functions[$function][$metric] / $overallTotals[$metric] * 100 : 0,

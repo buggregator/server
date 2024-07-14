@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Profiler\Application\CallGraph;
 
+use Modules\Profiler\Domain\Edge\Cost;
+use Modules\Profiler\Domain\Edge\Percents;
 use App\Application\Domain\ValueObjects\Uuid;
 use Modules\Profiler\Domain\Edge;
 
@@ -32,8 +34,8 @@ final readonly class Node implements \JsonSerializable
         public Uuid $uuid,
         public string $callee,
         public Metric $metric,
-        public Edge\Cost $cost,
-        public Edge\Percents $percents,
+        public Cost $cost,
+        public Percents $percents,
         public int $maxColorPercentage,
     ) {
         $this->color = $this->isImportant() ? $this->detectNodeColor() : '#FFFFFF';
