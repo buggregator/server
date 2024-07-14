@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Interfaces\TCP;
 
+use App\Application\Domain\ValueObjects\Uuid;
+
 final readonly class ResponseMessage implements \Stringable
 {
     private const READY = 220;
@@ -21,6 +23,16 @@ final readonly class ResponseMessage implements \Stringable
     public static function ok(string $message = '', string $separator = ' '): self
     {
         return new self(self::OK, $message, $separator);
+    }
+
+    public static function accepted(Uuid $uuid): self
+    {
+        return new self(
+            code: self::OK,
+            message: \sprintf("Ok %s", $uuid),
+            lineEnding: "\r",
+            eosSeparator: '',
+        );
     }
 
     public static function authRequired(string $message = 'AUTH LOGIN PLAIN'): self
@@ -57,15 +69,18 @@ final readonly class ResponseMessage implements \Stringable
         public int $code,
         public string $message = '',
         public string $separator = " ",
+        public string $lineEnding = "\r\n",
+        public string $eosSeparator = " ",
     ) {}
 
     public function __toString(): string
     {
         return \sprintf(
-            "%d%s%s\r\n",
+            "%d%s%s%s",
             $this->code,
             $this->separator,
-            $this->message === '' || $this->message === '0' ? '' : $this->message . ' ',
+            $this->message === '' || $this->message === '0' ? '' : $this->message . $this->eosSeparator,
+            $this->lineEnding,
         );
     }
 }

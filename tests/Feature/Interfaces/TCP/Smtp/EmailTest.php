@@ -14,6 +14,7 @@ use Modules\Smtp\Domain\AttachmentRepositoryInterface;
 use Ramsey\Uuid\Uuid;
 use Spiral\RoadRunner\Tcp\TcpEvent;
 use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;
+use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\Part\DataPart;
@@ -90,14 +91,16 @@ final class EmailTest extends TCPTestCase
                 }),
             );
 
-        $client->send($email);
+        $sentMessage = $client->send($email);
+
         $this->validateMessage($id, (string) $connectionUuid);
 
         $response = $this->handleSmtpRequest(message: '', event: TCPEvent::Close);
         $this->assertInstanceOf(CloseConnection::class, $response);
 
-        $this->assertEventPushed('default');
+        $this->assertEventPushed($sentMessage, 'default');
     }
+
 
     private function getEmailMessage(string $uuid): Message
     {
@@ -181,9 +184,9 @@ Message-ID: <$messageId>\r",
         );
     }
 
-    private function assertEventPushed(?string $project = null): void
+    private function assertEventPushed(SentMessage $message, ?string $project = null): void
     {
-        $this->broadcastig->assertPushed(new EventsChannel($project), function (array $data) use ($project) {
+        $this->broadcastig->assertPushed(new EventsChannel($project), function (array $data) use ($message, $project) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('smtp', $data['data']['type']);
             $this->assertSame($project, $data['data']['project']);
@@ -212,7 +215,7 @@ Message-ID: <$messageId>\r",
                 ],
             ], $data['data']['payload']);
 
-            $this->assertNotEmpty($data['data']['uuid']);
+            $this->assertSame($message->getMessageId(), $data['data']['uuid']);
             $this->assertNotEmpty($data['data']['timestamp']);
 
             return true;
