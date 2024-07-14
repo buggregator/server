@@ -6,16 +6,14 @@ namespace Modules\Profiler\Interfaces\Jobs;
 
 use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\ORM\EntityManagerInterface;
-use Cycle\ORM\ORMInterface;
 use Modules\Profiler\Application\Query\FindTopFunctionsByUuid;
 use Modules\Profiler\Domain\EdgeFactoryInterface;
 use Modules\Profiler\Domain\Edge;
-use Modules\Profiler\Domain\Profile;
+use Modules\Profiler\Domain\ProfileRepositoryInterface;
 use Spiral\Core\InvokerInterface;
 use Spiral\Cqrs\QueryBusInterface;
 use Spiral\Queue\JobHandler;
 
-// TODO: refactor this, use repository
 final class StoreProfileHandler extends JobHandler
 {
     private const BATCH_SIZE = 100;
@@ -24,7 +22,7 @@ final class StoreProfileHandler extends JobHandler
         private readonly EdgeFactoryInterface $edgeFactory,
         private readonly EntityManagerInterface $em,
         private readonly QueryBusInterface $bus,
-        private readonly ORMInterface $orm,
+        private readonly ProfileRepositoryInterface $profiles,
         InvokerInterface $invoker,
     ) {
         parent::__construct($invoker);
@@ -39,6 +37,11 @@ final class StoreProfileHandler extends JobHandler
         $batchSize = 0;
         $i = 0;
         foreach ($event['edges'] as $id => $edge) {
+            $parentUuid = null;
+            if ($edge['parent'] !== null && isset($parents[$edge['parent']])) {
+                $parentUuid = $parents[$edge['parent']];
+            }
+
             $this->em->persist(
                 $edge = $this->edgeFactory->create(
                     profileUuid: $profileUuid,
@@ -66,7 +69,7 @@ final class StoreProfileHandler extends JobHandler
                     ),
                     callee: $edge['callee'],
                     caller: $edge['caller'],
-                    parentUuid: $edge['parent'] ? $parents[$edge['parent']] ?? null : null,
+                    parentUuid: $parentUuid,
                 ),
             );
 
@@ -80,7 +83,7 @@ final class StoreProfileHandler extends JobHandler
             $batchSize++;
         }
 
-        $profile = $this->orm->getRepository(Profile::class)->findByPK($profileUuid);
+        $profile = $this->profiles->getByUuid($profileUuid);
         $functions = $this->bus->ask(new FindTopFunctionsByUuid(profileUuid: $profileUuid));
 
         foreach ($functions['overall_totals'] as $metric => $value) {

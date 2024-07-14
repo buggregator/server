@@ -11,7 +11,6 @@ use Modules\Profiler\Domain\ProfileFactoryInterface;
 use Modules\Profiler\Interfaces\Jobs\StoreProfileHandler;
 use Spiral\Queue\QueueInterface;
 
-// TODO: refactor this, use repository
 final readonly class StoreProfile implements EventHandlerInterface
 {
     public function __construct(

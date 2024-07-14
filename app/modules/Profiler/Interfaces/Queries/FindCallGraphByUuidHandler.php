@@ -4,24 +4,22 @@ declare(strict_types=1);
 
 namespace Modules\Profiler\Interfaces\Queries;
 
-use Cycle\ORM\ORMInterface;
 use Modules\Profiler\Application\CallGraph\Node;
 use Modules\Profiler\Application\Query\FindCallGraphByUuid;
 use Modules\Profiler\Domain\Edge;
-use Modules\Profiler\Domain\Profile;
+use Modules\Profiler\Domain\ProfileRepositoryInterface;
 use Spiral\Cqrs\Attribute\QueryHandler;
 
-// TODO: refactor this, use repository
 final readonly class FindCallGraphByUuidHandler
 {
     public function __construct(
-        private ORMInterface $orm,
+        private ProfileRepositoryInterface $profiles,
     ) {}
 
     #[QueryHandler]
     public function __invoke(FindCallGraphByUuid $query): array
     {
-        $profile = $this->orm->getRepository(Profile::class)->findByPK($query->profileUuid);
+        $profile = $this->profiles->getByUuid($query->profileUuid);
 
         $edges = $profile->edges;
         $registered = [];

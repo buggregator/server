@@ -4,18 +4,16 @@ declare(strict_types=1);
 
 namespace Modules\Profiler\Interfaces\Queries;
 
-use Cycle\ORM\ORMInterface;
 use Modules\Profiler\Application\Query\FindFlameChartByUuid;
 use Modules\Profiler\Domain\Edge;
-use Modules\Profiler\Domain\Profile;
+use Modules\Profiler\Domain\ProfileRepositoryInterface;
 use Spiral\Cqrs\Attribute\QueryHandler;
 use Spiral\Storage\BucketInterface;
 
-// TODO: refactor this, use repository
 final readonly class FindFlameChartByUuidHandler
 {
     public function __construct(
-        private ORMInterface $orm,
+        private ProfileRepositoryInterface $profiles,
         private BucketInterface $bucket,
     ) {}
 
@@ -27,7 +25,7 @@ final readonly class FindFlameChartByUuidHandler
             return \json_decode($this->bucket->getContents($file), true);
         }
 
-        $profile = $this->orm->getRepository(Profile::class)->findByPK($query->profileUuid);
+        $profile = $this->profiles->getByUuid($query->profileUuid);
 
         /** @var Edge[] $edges */
         $edges = $profile->edges;

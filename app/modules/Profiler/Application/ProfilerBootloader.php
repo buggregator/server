@@ -5,15 +5,23 @@ declare(strict_types=1);
 namespace Modules\Profiler\Application;
 
 use App\Application\Event\EventTypeRegistryInterface;
+use Cycle\ORM\ORMInterface;
+use Cycle\ORM\Select;
 use Modules\Profiler\Application\Handlers\CalculateDiffsBetweenEdges;
 use Modules\Profiler\Application\Handlers\CleanupEvent;
 use Modules\Profiler\Application\Handlers\PrepareEdges;
 use Modules\Profiler\Application\Handlers\PreparePeaks;
 use Modules\Profiler\Application\Handlers\StoreProfile;
+use Modules\Profiler\Domain\Edge;
 use Modules\Profiler\Domain\EdgeFactoryInterface;
+use Modules\Profiler\Domain\Profile;
+use Modules\Profiler\Domain\ProfileEdgeRepositoryInterface;
 use Modules\Profiler\Domain\ProfileFactoryInterface;
+use Modules\Profiler\Domain\ProfileRepositoryInterface;
 use Modules\Profiler\Integration\CycleOrm\EdgeFactory;
+use Modules\Profiler\Integration\CycleOrm\ProfileEdgeRepository;
 use Modules\Profiler\Integration\CycleOrm\ProfileFactory;
+use Modules\Profiler\Integration\CycleOrm\ProfileRepository;
 use Modules\Profiler\Interfaces\Queries\FindCallGraphByUuidHandler;
 use Modules\Profiler\Interfaces\Queries\FindFlameChartByUuidHandler;
 use Psr\Container\ContainerInterface;
@@ -55,6 +63,18 @@ final class ProfilerBootloader extends Bootloader
             ): FindFlameChartByUuidHandler => $factory->make(FindFlameChartByUuidHandler::class, [
                 'bucket' => $storage->bucket('profiles'),
             ]),
+
+            ProfileRepositoryInterface::class => static fn(
+                ORMInterface $orm,
+            ): ProfileRepositoryInterface => new ProfileRepository(
+                select: new Select(orm: $orm, role: Profile::class),
+            ),
+
+            ProfileEdgeRepositoryInterface::class => static fn(
+                ORMInterface $orm,
+            ): ProfileEdgeRepositoryInterface => new ProfileEdgeRepository(
+                select: new Select(orm: $orm, role: Edge::class),
+            ),
         ];
     }
 
