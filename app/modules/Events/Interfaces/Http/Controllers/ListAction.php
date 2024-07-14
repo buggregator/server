@@ -11,6 +11,7 @@ use Modules\Events\Interfaces\Http\Resources\EventCollection;
 use Modules\Events\Interfaces\Http\Resources\EventResource;
 use Spiral\Cqrs\QueryBusInterface;
 use OpenApi\Attributes as OA;
+use Spiral\Router\Annotation\Route;
 
 #[OA\Get(
     path: '/api/events',
@@ -62,8 +63,7 @@ use OpenApi\Attributes as OA;
 )]
 final readonly class ListAction
 {
-    // todo: uncomment after implementing on frontend side
-    // #[Route(route: 'events', name: 'events.list', methods: 'GET', group: 'api')]
+    #[Route(route: 'events', name: 'events.list', methods: 'GET', group: 'api')]
     public function __invoke(
         EventsRequest $request,
         QueryBusInterface $bus,
