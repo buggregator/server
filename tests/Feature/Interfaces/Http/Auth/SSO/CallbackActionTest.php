@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Interfaces\Http\Auth\SSO;
 
+use Mockery\MockInterface;
+use Spiral\Http\Request\InputManager;
 use App\Application\OAuth\AuthProviderInterface;
 use App\Application\OAuth\User;
 use Tests\App\Http\ResponseAssertions;
@@ -11,7 +13,7 @@ use Tests\Feature\Interfaces\Http\ControllerTestCase;
 
 final class CallbackActionTest extends ControllerTestCase
 {
-    private \Mockery\MockInterface|AuthProviderInterface $auth;
+    private MockInterface|AuthProviderInterface $auth;
 
     protected function setUp(): void
     {
@@ -25,7 +27,7 @@ final class CallbackActionTest extends ControllerTestCase
         $this->auth
             ->shouldReceive('authenticate')
             ->once()
-            ->with(\Mockery::type(\Spiral\Http\Request\InputManager::class));
+            ->with(\Mockery::type(InputManager::class));
 
         $this->auth->shouldReceive('getUser')
             ->once()

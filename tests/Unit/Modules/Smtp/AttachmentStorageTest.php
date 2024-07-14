@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Modules\Smtp;
 
+use Spiral\Storage\FileInterface;
 use App\Application\Domain\ValueObjects\Uuid;
 use Database\Factory\AttachmentFactory;
 use Mockery\MockInterface;
@@ -52,7 +53,7 @@ final class AttachmentStorageTest extends TestCase
         $this->bucket->shouldReceive('write')
             ->with($path1 = $eventUuid . '/file1.txt', 'Hello, world!')
             ->once()
-            ->andReturn($file1 = $this->mockContainer(\Spiral\Storage\FileInterface::class));
+            ->andReturn($file1 = $this->mockContainer(FileInterface::class));
 
         $file1->shouldReceive('getPathname')->andReturn($path1);
         $file1->shouldReceive('getSize')->andReturn(12);
@@ -75,7 +76,7 @@ final class AttachmentStorageTest extends TestCase
         $this->bucket->shouldReceive('write')
             ->with($path2 = $eventUuid . '/image.png', 'image content')
             ->once()
-            ->andReturn($file2 = $this->mockContainer(\Spiral\Storage\FileInterface::class));
+            ->andReturn($file2 = $this->mockContainer(FileInterface::class));
 
         $file2->shouldReceive('getPathname')->andReturn($path2);
         $file2->shouldReceive('getSize')->andReturn(14);

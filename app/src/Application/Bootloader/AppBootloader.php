@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Application\Bootloader;
 
+use Spiral\Core\Core;
+use Psr\Container\ContainerInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Spiral\Core\InterceptableCore;
 use App\Application\AppVersion;
 use App\Application\HTTP\Interceptor\JsonResourceInterceptor;
 use App\Application\HTTP\Interceptor\StringToIntParametersInterceptor;
@@ -21,10 +25,10 @@ final class AppBootloader extends DomainBootloader
     {
         return [
             CoreInterface::class => fn(
-                \Spiral\Core\Core $core,
-                \Psr\Container\ContainerInterface $container,
-                ?\Psr\EventDispatcher\EventDispatcherInterface $dispatcher = null,
-            ): \Spiral\Core\InterceptableCore => self::domainCore($core, $container, $dispatcher),
+                Core $core,
+                ContainerInterface $container,
+                ?EventDispatcherInterface $dispatcher = null,
+            ): InterceptableCore => self::domainCore($core, $container, $dispatcher),
 
             UrlTemplate::class => fn(
                 EnvironmentInterface $env,

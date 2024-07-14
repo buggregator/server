@@ -12,6 +12,11 @@ use Symfony\Component\Mailer\Transport\Smtp\Stream\AbstractStream;
 
 final class FakeStream extends AbstractStream
 {
+    /**
+     * @var ResponseInterface[]
+     */
+    private array $response = [];
+
     public function __construct(
         private readonly SmtpService $service,
         private readonly string $uuid,

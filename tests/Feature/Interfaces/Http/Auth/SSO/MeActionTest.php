@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Interfaces\Http\Auth\SSO;
 
+use Mockery\MockInterface;
 use App\Application\HTTP\Response\UserResource;
 use App\Application\OAuth\ActorProvider;
 use App\Application\OAuth\AuthProviderInterface;
@@ -14,7 +15,7 @@ use Tests\Feature\Interfaces\Http\ControllerTestCase;
 
 final class MeActionTest extends ControllerTestCase
 {
-    private \Mockery\MockInterface|AuthProviderInterface $auth;
+    private MockInterface|AuthProviderInterface $auth;
 
     protected function setUp(): void
     {

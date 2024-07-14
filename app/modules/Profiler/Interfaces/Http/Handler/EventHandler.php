@@ -9,7 +9,6 @@ use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Event\EventType;
 use App\Application\Service\HttpHandler\HandlerInterface;
 use Modules\Profiler\Application\EventHandlerInterface;
-use Modules\Profiler\Domain\ProfileManagerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Spiral\Cqrs\CommandBusInterface;
@@ -32,7 +31,7 @@ final readonly class EventHandler implements HandlerInterface
     {
         $eventType = $this->listenEvent($request);
 
-        if ($eventType === null) {
+        if (!$eventType instanceof EventType) {
             return $next($request);
         }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Interfaces\Http\Controller\Auth;
 
+use App\Application\OAuth\User;
 use App\Application\Auth\SuccessRedirect;
 use App\Application\OAuth\AuthProviderInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -26,7 +27,7 @@ final readonly class CallbackAction
         $auth->authenticate($input);
 
         $user = $auth->getUser();
-        if (null === $user) {
+        if (!$user instanceof User) {
             throw new UnauthorizedException('User not found');
         }
 

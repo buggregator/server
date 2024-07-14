@@ -37,7 +37,7 @@ final readonly class WebhookEventInterceptor implements CoreInterceptorInterface
             );
         }
 
-        if ($webhookEvent) {
+        if ($webhookEvent instanceof WebhookEvent) {
             $this->container->get(WebhookServiceInterface::class)->send($webhookEvent);
         }
 

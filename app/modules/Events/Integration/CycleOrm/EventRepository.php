@@ -73,7 +73,7 @@ final class EventRepository extends Repository implements EventRepositoryInterfa
         foreach ($events as $event) {
             $this->em->delete($event);
 
-            if ($batch++ % $batchSize === 0) {
+            if (++$batch % $batchSize === 0) {
                 $this->em->run();
                 $batch = 0;
             }
@@ -86,7 +86,7 @@ final class EventRepository extends Repository implements EventRepositoryInterfa
     {
         $event = $this->findByPK($uuid);
 
-        if (!$event) {
+        if ($event === null) {
             return false;
         }
 

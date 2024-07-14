@@ -36,7 +36,7 @@ final readonly class AnyHttpRequestDump implements HandlerInterface
     {
         $eventType = $this->listenEvent($request);
 
-        if ($eventType === null) {
+        if (!$eventType instanceof EventType) {
             return $next($request);
         }
 
@@ -71,14 +71,12 @@ final readonly class AnyHttpRequestDump implements HandlerInterface
                 'post' => $request->getParsedBody() ?? [],
                 'cookies' => $request->getCookieParams(),
                 'files' => \array_map(
-                    function (Attachment $attachment) {
-                        return [
-                            'uuid' => (string) $attachment->getUuid(),
-                            'name' => $attachment->getFilename(),
-                            'size' => $attachment->getSize(),
-                            'mime' => $attachment->getMime(),
-                        ];
-                    },
+                    fn(Attachment $attachment) => [
+                        'uuid' => (string) $attachment->getUuid(),
+                        'name' => $attachment->getFilename(),
+                        'size' => $attachment->getSize(),
+                        'mime' => $attachment->getMime(),
+                    ],
                     $result,
                 ),
             ],

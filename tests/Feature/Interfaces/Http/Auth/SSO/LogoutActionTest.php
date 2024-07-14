@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Interfaces\Http\Auth\SSO;
 
+use Mockery\MockInterface;
 use App\Application\OAuth\AuthProviderInterface;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;
 
 final class LogoutActionTest extends ControllerTestCase
 {
-    private \Mockery\MockInterface|AuthProviderInterface $auth;
+    private MockInterface|AuthProviderInterface $auth;
 
     protected function setUp(): void
     {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Application;
 
+use Modules\Smtp\Application\Mapper\EventTypeMapper;
 use App\Application\Event\EventTypeRegistryInterface;
 use App\Application\Persistence\DriverEnum;
 use Cycle\ORM\EntityManagerInterface;
@@ -63,6 +64,6 @@ final class SmtpBootloader extends Bootloader
 
     public function boot(EventTypeRegistryInterface $registry): void
     {
-        $registry->register('smtp', new Mapper\EventTypeMapper());
+        $registry->register('smtp', new EventTypeMapper());
     }
 }
