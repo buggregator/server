@@ -64,9 +64,7 @@ use OpenApi\Attributes as OA;
 )]
 final readonly class PreviewListAction
 {
-    // todo: uncomment after implementing on frontend side
-    #[Route(route: 'events', name: 'events.preview.list', methods: 'GET', group: 'api')]
-    // #[Route(route: 'events/preview', name: 'events.preview.list', methods: 'GET', group: 'api')]
+    #[Route(route: 'events/preview', name: 'events.preview.list', methods: 'GET', group: 'api')]
     public function __invoke(
         EventsRequest $request,
         QueryBusInterface $bus,
