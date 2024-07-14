@@ -12,6 +12,7 @@ use Modules\Profiler\Application\EventHandlerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Spiral\Cqrs\CommandBusInterface;
+use Spiral\Filters\Exception\ValidationException;
 use Spiral\Http\ResponseWrapper;
 
 final readonly class EventHandler implements HandlerInterface
@@ -36,6 +37,9 @@ final readonly class EventHandler implements HandlerInterface
         }
 
         $payload = \json_decode((string) $request->getBody(), true);
+
+        $this->validatePayload($payload);
+
         $event = $this->handler->handle($payload);
         $profileUuid = Uuid::fromString($event['profile_uuid']);
 
@@ -69,4 +73,24 @@ final readonly class EventHandler implements HandlerInterface
 
         return null;
     }
+
+    private function validatePayload(mixed $payload): void
+    {
+        if (!\is_array($payload)) {
+            throw new ValidationException([], 'Invalid payload');
+        }
+
+        $errors = [];
+
+        foreach (['profile', 'app_name', 'hostname', 'date'] as $key) {
+            if (!\array_key_exists($key, $payload)) {
+                $errors[$key][] = 'This field is required';
+            }
+        }
+
+        if (!empty($errors)) {
+            throw new ValidationException($errors);
+        }
+    }
+
 }

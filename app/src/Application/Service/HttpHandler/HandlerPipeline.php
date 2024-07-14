@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Application\Service\HttpHandler;
 
+use App\Application\HTTP\Response\ValidationResource;
 use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Spiral\Core\FactoryInterface;
+use Spiral\Filters\Exception\ValidationException;
 use Spiral\Tokenizer\Attribute\TargetClass;
 use Spiral\Tokenizer\TokenizationListenerInterface;
 
@@ -62,10 +64,14 @@ final class HandlerPipeline implements HandlerRegistryInterface, CoreHandlerInte
             return new Response(404);
         }
 
-        return $handler->handle(
-            $request,
-            fn(ServerRequestInterface $request) => $this->handlePipeline($request),
-        );
+        try {
+            return $handler->handle(
+                $request,
+                fn(ServerRequestInterface $request) => $this->handlePipeline($request),
+            );
+        } catch (ValidationException $e) {
+            return (new ValidationResource($e))->toResponse(new Response(422));
+        }
     }
 
     public function listen(\ReflectionClass $class): void
@@ -77,6 +83,6 @@ final class HandlerPipeline implements HandlerRegistryInterface, CoreHandlerInte
 
     public function finalize(): void
     {
-        // TODO: Implement finalize() method.
+        // nothing to do
     }
 }

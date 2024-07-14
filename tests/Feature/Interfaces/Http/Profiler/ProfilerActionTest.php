@@ -45,6 +45,19 @@ JSON;
         $this->assertEvent('default');
     }
 
+    public function testSendInvalidPayload(): void
+    {
+        $this->http
+            ->post(
+                uri: '/api/profiler/store',
+                data: Stream::create(''),
+                headers: [
+                    'X-Buggregator-Event' => 'profiler',
+                    'X-Buggregator-Project' => 'default',
+                ],
+            )->assertStatus(422);
+    }
+
     public function assertEvent(?string $project = null): void
     {
         $this->broadcastig->assertPushed((string)new EventsChannel($project), function (array $data) use ($project) {
