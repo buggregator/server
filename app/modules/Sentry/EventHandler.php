@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Modules\Sentry;
 
 use Modules\Sentry\Application\EventHandlerInterface;
+use App\Application\Event\EventType;
+use Modules\Sentry\Application\DTO\Payload;
 use Psr\Container\ContainerInterface;
 
-final readonly class EventHandler implements EventHandlerInterface
+final readonly class EventHandler implements Application\EventHandlerInterface
 {
     /**
      * @param class-string<EventHandlerInterface>[] $handlers
@@ -17,12 +19,12 @@ final readonly class EventHandler implements EventHandlerInterface
         private array $handlers,
     ) {}
 
-    public function handle(array $event): array
+    public function handle(Payload $payload, EventType $event): Payload
     {
         foreach ($this->handlers as $handler) {
-            $event = $this->container->get($handler)->handle($event);
+            $payload = $this->container->get($handler)->handle($payload, $event);
         }
 
-        return $event;
+        return $payload;
     }
 }

@@ -8,7 +8,7 @@ use Modules\Events\Domain\Event;
 use App\Application\Commands\FindEventByUuid;
 use App\Application\Domain\ValueObjects\Uuid;
 use App\Application\Exception\EntityNotFoundException;
-use Modules\Sentry\Application\EventHandlerInterface;
+use Modules\Ray\Application\EventHandlerInterface;
 use Spiral\Cqrs\QueryBusInterface;
 
 final readonly class MergeEventsHandler implements EventHandlerInterface
