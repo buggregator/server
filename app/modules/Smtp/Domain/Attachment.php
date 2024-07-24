@@ -29,7 +29,7 @@ class Attachment
         private string $path,
         #[Column(type: 'integer', default: 0)]
         private int $size,
-        #[Column(type: 'string(32)')]
+        #[Column(type: 'string(127)')]
         private string $mime,
         #[Column(type: 'string(255)')]
         private string $id,
