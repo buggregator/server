@@ -9,7 +9,6 @@ use App\Application\Auth\AuthSettings;
 use App\Application\HTTP\Response\JsonResource;
 use App\Application\HTTP\Response\ResourceInterface;
 use App\Application\Ide\UrlTemplate;
-use Modules\Projects\Domain\Project;
 use Spiral\Boot\EnvironmentInterface;
 use Spiral\Router\Annotation\Route;
 
@@ -31,10 +30,6 @@ final class SettingsAction
                 'url_template' => $ideUrl->template,
             ],
             'version' => $appVersion->version,
-            'project' => [
-                // todo: use better option for default project
-                'default' => Project::DEFAULT_KEY,
-            ],
         ]);
     }
 }
