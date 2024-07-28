@@ -25,7 +25,7 @@ class OrmDefaultD93e77c9f5556975e93bfbc969442732 extends Migration
     public function down(): void
     {
         $defaultProject = $this->getRepository()->findOne(['key' => Project::DEFAULT_KEY]);
-        if ($defaultProject) {
+        if ($defaultProject !== null) {
             $this->getEntityManager()->delete($defaultProject)->run();
         }
     }

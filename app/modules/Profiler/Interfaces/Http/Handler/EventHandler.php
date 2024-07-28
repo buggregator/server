@@ -88,7 +88,7 @@ final readonly class EventHandler implements HandlerInterface
             }
         }
 
-        if (!empty($errors)) {
+        if ($errors !== []) {
             throw new ValidationException($errors);
         }
     }
