@@ -6,7 +6,6 @@ namespace Modules\Events\Interfaces\Queries;
 
 use App\Application\Commands\FindEvents;
 use Modules\Events\Domain\EventRepositoryInterface;
-use Spiral\Core\Container;
 use Spiral\Cqrs\Attribute\QueryHandler;
 use Spiral\Cqrs\QueryBusInterface;
 
