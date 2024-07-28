@@ -78,12 +78,14 @@ final class WebhooksBootloader extends Bootloader
                         finder: \Symfony\Component\Finder\Finder::create()
                             ->files()
                             ->in($dirs->get('runtime') . '/configs')
-                            ->name('*.webhook.yaml'),
+                            ->name(['*.webhook.yaml', '*.webhook.yml']),
                     ),
                 ],
             ),
 
-            WebhookLocatorInterface::class => static fn(YamlFileWebhookLocator $locator): WebhookLocatorInterface => new CompositeWebhookLocator([
+            WebhookLocatorInterface::class => static fn(
+                YamlFileWebhookLocator $locator,
+            ): WebhookLocatorInterface => new CompositeWebhookLocator([
                 $locator,
             ]),
 

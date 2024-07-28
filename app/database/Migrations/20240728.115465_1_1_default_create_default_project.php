@@ -17,6 +17,13 @@ class OrmDefaultD93e77c9f5556975e93bfbc969442732 extends Migration
 
     public function up(): void
     {
+        $defaultProject = $this->getRepository()->findOne(['key' => Project::DEFAULT_KEY]);
+
+        // Ignore if default project already exists
+        if ($defaultProject !== null) {
+            return;
+        }
+
         $this->getEntityManager()
             ->persist(new Project(Key::create(Project::DEFAULT_KEY), 'Default project'))
             ->run();
@@ -25,6 +32,7 @@ class OrmDefaultD93e77c9f5556975e93bfbc969442732 extends Migration
     public function down(): void
     {
         $defaultProject = $this->getRepository()->findOne(['key' => Project::DEFAULT_KEY]);
+        // Delete default project if exists
         if ($defaultProject !== null) {
             $this->getEntityManager()->delete($defaultProject)->run();
         }
