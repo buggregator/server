@@ -11,7 +11,6 @@ use App\Application\HTTP\Response\ResourceInterface;
 use App\Application\Ide\UrlTemplate;
 use Spiral\Boot\EnvironmentInterface;
 use Spiral\Router\Annotation\Route;
-use OpenApi\Attributes as OA;
 
 final class SettingsAction
 {
