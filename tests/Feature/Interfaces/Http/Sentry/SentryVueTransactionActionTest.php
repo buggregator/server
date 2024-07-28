@@ -24,7 +24,7 @@ BODY;
     {
         parent::setUp();
 
-        $this->project = $this->createProject('default');
+        $this->project = $this->createProject('foo');
     }
 
     public function testSend(): void
@@ -34,7 +34,7 @@ BODY;
         $this->markTestIncomplete('This test has not been implemented yet.');
     }
 
-    private function makeRequest(string $secret = 'secret', string|Key $project = 'default'): ResponseAssertions
+    private function makeRequest(string $secret = 'secret', string|Key $project = 'foo'): ResponseAssertions
     {
         return $this->http
             ->postJson(
