@@ -22,7 +22,7 @@ final readonly class YamlFileProjectLocator implements ProjectLocatorInterface
 
     public function findAll(): iterable
     {
-        $this->finder->files()->in($this->directory)->name('*.project.yaml');
+        $this->finder->files()->in($this->directory)->name(['*.project.yaml', '*.project.yml']);
 
         foreach ($this->finder as $file) {
             try {
