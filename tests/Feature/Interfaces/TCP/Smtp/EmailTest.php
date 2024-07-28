@@ -14,6 +14,7 @@ use Modules\Smtp\Domain\AttachmentRepositoryInterface;
 use Ramsey\Uuid\Uuid;
 use Spiral\RoadRunner\Tcp\TcpEvent;
 use Spiral\RoadRunnerBridge\Tcp\Response\CloseConnection;
+use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\Part\DataPart;
@@ -75,7 +76,22 @@ final class EmailTest extends TCPTestCase
                 }),
             );
 
-        // Assert hello.txt is persisted to a database
+        // Assert sample.pdf is persisted to a database
+        $this->attachments->shouldReceive('store')
+            ->once()
+            ->with(
+                \Mockery::on(function (Attachment $attachment) {
+                    $this->assertSame('sample.pdf', $attachment->getFilename());
+                    $this->assertSame(61752, $attachment->getSize());
+                    $this->assertSame('application/pdf', $attachment->getMime());
+
+                    // Check attachments storage
+                    $this->bucket->assertCreated($attachment->getPath());
+                    return true;
+                }),
+            );
+
+        // Assert logo.svg is persisted to a database
         $this->attachments->shouldReceive('store')
             ->once()
             ->with(
@@ -90,14 +106,16 @@ final class EmailTest extends TCPTestCase
                 }),
             );
 
-        $client->send($email);
+        $sentMessage = $client->send($email);
+
         $this->validateMessage($id, (string) $connectionUuid);
 
         $response = $this->handleSmtpRequest(message: '', event: TCPEvent::Close);
         $this->assertInstanceOf(CloseConnection::class, $response);
 
-        $this->assertEventPushed('default');
+        $this->assertEventPushed($sentMessage, 'default');
     }
+
 
     private function getEmailMessage(string $uuid): Message
     {
@@ -181,9 +199,9 @@ Message-ID: <$messageId>\r",
         );
     }
 
-    private function assertEventPushed(?string $project = null): void
+    private function assertEventPushed(SentMessage $message, ?string $project = null): void
     {
-        $this->broadcastig->assertPushed(new EventsChannel($project), function (array $data) use ($project) {
+        $this->broadcastig->assertPushed(new EventsChannel($project), function (array $data) use ($message, $project) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('smtp', $data['data']['type']);
             $this->assertSame($project, $data['data']['project']);
@@ -212,7 +230,7 @@ Message-ID: <$messageId>\r",
                 ],
             ], $data['data']['payload']);
 
-            $this->assertNotEmpty($data['data']['uuid']);
+            $this->assertSame($message->getMessageId(), $data['data']['uuid']);
             $this->assertNotEmpty($data['data']['timestamp']);
 
             return true;
@@ -235,6 +253,7 @@ Message-ID: <$messageId>\r",
             )
             ->addFrom(new Address('no-reply@site.com', 'Bob Example'),)
             ->attachFromPath(path: __DIR__ . '/hello.txt',)
+            ->attachFromPath(path: __DIR__ . '/sample.pdf',)
             ->attachFromPath(path: __DIR__ . '/logo.svg')
             ->addPart(
                 (new DataPart(new File(__DIR__ . '/logo.svg'), 'logo-embeddable'))->asInline()->setContentId(

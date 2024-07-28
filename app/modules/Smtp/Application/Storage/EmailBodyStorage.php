@@ -18,6 +18,13 @@ final readonly class EmailBodyStorage
         return $this->cache->get($this->getCacheKey($uuid), new Message($uuid));
     }
 
+    public function cleanup(string $uuid): Message
+    {
+        $this->cache->delete($this->getCacheKey($uuid));
+
+        return new Message($uuid);
+    }
+
     public function persist(Message $message): void
     {
         $this->cache->set(

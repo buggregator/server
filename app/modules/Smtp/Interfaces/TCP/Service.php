@@ -29,7 +29,7 @@ final readonly class Service implements ServiceInterface
     public function handle(Request $request): ResponseInterface
     {
         if ($request->event === TcpEvent::Connected) {
-            return $this->send(ResponseMessage::ready());
+            return $this->makeResponse(ResponseMessage::ready());
         }
 
         $message = $this->emailBodyStorage->getMessage($request->connectionUuid);
@@ -48,30 +48,39 @@ final readonly class Service implements ServiceInterface
             );
         } elseif (\preg_match('/^MAIL FROM:\s*<(.*)>/', $request->body, $matches)) {
             $message->setFrom($matches[1]);
-            $response = $this->send(ResponseMessage::ok());
+            $response = $this->makeResponse(ResponseMessage::ok());
         } elseif (\str_starts_with($request->body, 'AUTH')) {
-            $response = $this->send(ResponseMessage::enterUsername());
+            $response = $this->makeResponse(ResponseMessage::enterUsername());
             $message->waitUsername = true;
         } elseif ($message->waitUsername) {
             $message->setUsername($request->body);
-            $response = $this->send(ResponseMessage::enterPassword());
+            $response = $this->makeResponse(ResponseMessage::enterPassword());
         } elseif ($message->waitPassword) {
             $message->setPassword($request->body);
-            $response = $this->send(ResponseMessage::authenticated());
+            $response = $this->makeResponse(ResponseMessage::authenticated());
         } elseif (\preg_match('/^RCPT TO:\s*<(.*)>/', $request->body, $matches)) {
             $message->addRecipient($matches[1]);
-            $response = $this->send(ResponseMessage::ok());
+            $response = $this->makeResponse(ResponseMessage::ok());
         } elseif (\str_starts_with($request->body, 'QUIT')) {
-            $response = $this->send(ResponseMessage::closing(), close: true);
+            $response = $this->makeResponse(ResponseMessage::closing(), close: true);
+            $message = $this->emailBodyStorage->cleanup($request->connectionUuid);
         } elseif ($request->body === "DATA\r\n") {
-            $response = $this->send(ResponseMessage::provideBody());
+            $response = $this->makeResponse(ResponseMessage::provideBody());
             $message->waitBody = true;
+        } elseif ($request->body === "RSET\r\n") {
+            $message = $this->emailBodyStorage->cleanup($request->connectionUuid);
+            $response = $this->makeResponse(ResponseMessage::ok());
+        } elseif ($request->body === "NOOP\r\n") {
+            $response = $this->makeResponse(ResponseMessage::ok());
         } elseif ($message->waitBody) {
-            $response = $this->send(ResponseMessage::ok());
             $message->appendBody($request->body);
 
+            $response = $this->makeResponse(ResponseMessage::ok());
+
             if ($message->bodyHasEos()) {
-                $this->dispatchMessage($message->parse(), project: $message->username);
+                $uuid = $this->dispatchMessage($message->parse(), project: $message->username);
+
+                $response = $this->makeResponse(ResponseMessage::accepted($uuid));
                 $dispatched = true;
             }
         }
@@ -89,11 +98,10 @@ final readonly class Service implements ServiceInterface
         return $response;
     }
 
-    private function dispatchMessage(Message $message, ?string $project = null): void
+    private function dispatchMessage(Message $message, ?string $project = null): Uuid
     {
         $uuid = Uuid::generate();
         $data = $message->jsonSerialize();
-
 
         $result = $this->attachments->store(eventUuid: $uuid, attachments: $message->attachments);
         // TODO: Refactor this
@@ -109,9 +117,11 @@ final readonly class Service implements ServiceInterface
                 uuid: $uuid,
             ),
         );
+
+        return $uuid;
     }
 
-    private function send(ResponseMessage $message, bool $close = false): RespondMessage
+    private function makeResponse(ResponseMessage $message, bool $close = false): RespondMessage
     {
         return new RespondMessage((string) $message, $close);
     }
