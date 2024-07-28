@@ -25,12 +25,13 @@ JSON;
                 ],
             )->assertOk();
 
-        $this->assertEvent();
+        $this->assertEvent('default');
     }
 
     public function testSendDataWithProject(): void
     {
-        $this->createProject('default');
+        $project = 'foo';
+        $this->createProject($project);
 
         $this->http
             ->post(
@@ -38,11 +39,11 @@ JSON;
                 data: Stream::create(self::PAYLOAD),
                 headers: [
                     'X-Buggregator-Event' => 'profiler',
-                    'X-Buggregator-Project' => 'default',
+                    'X-Buggregator-Project' => $project,
                 ],
             )->assertOk();
 
-        $this->assertEvent('default');
+        $this->assertEvent($project);
     }
 
     public function testSendInvalidPayload(): void

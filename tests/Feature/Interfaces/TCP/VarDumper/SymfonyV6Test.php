@@ -15,7 +15,7 @@ final class SymfonyV6Test extends TCPTestCase
 
         $this->handleVarDumperRequest($payload);
 
-        $this->broadcastig->assertPushed(new EventsChannel(), function (array $data) {
+        $this->broadcastig->assertPushed(new EventsChannel('default'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('var-dump', $data['data']['type']);
 

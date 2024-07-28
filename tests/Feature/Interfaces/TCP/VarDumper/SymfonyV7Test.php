@@ -61,7 +61,7 @@ HTML
             $expected = \sprintf($expected, \spl_object_id($value));
         }
 
-        $this->broadcastig->assertPushed(new EventsChannel(), function (array $data) use ($value, $type, $expected) {
+        $this->broadcastig->assertPushed(new EventsChannel('default'), function (array $data) use ($value, $type, $expected) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('var-dump', $data['data']['type']);
 
@@ -83,7 +83,7 @@ HTML
         $message = $this->buildPayload(var: 'foo', context: ['language' => 'php']);
         $this->handleVarDumperRequest($message);
 
-        $this->broadcastig->assertPushed(new EventsChannel(), function (array $data) {
+        $this->broadcastig->assertPushed(new EventsChannel('default'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('var-dump', $data['data']['type']);
 
@@ -100,24 +100,24 @@ HTML
 
     public function testSendDumpWithProject(): void
     {
-        $this->createProject('default');
-        $message = $this->buildPayload(project: 'default');
+        $this->createProject('foo');
+        $message = $this->buildPayload(project: 'foo');
         $this->handleVarDumperRequest($message);
 
-        $this->broadcastig->assertPushed(new EventsChannel('default'), function (array $data) {
-            $this->assertSame('default', $data['data']['project']);
+        $this->broadcastig->assertPushed(new EventsChannel('foo'), function (array $data) {
+            $this->assertSame('foo', $data['data']['project']);
             return true;
         });
     }
 
     public function testSendDumpWithNonExistsProject(): void
     {
-        $message = $this->buildPayload(project: 'default');
+        $message = $this->buildPayload(project: 'foo');
         $this->handleVarDumperRequest($message);
 
-        $this->broadcastig->assertNotPushed(new EventsChannel('default'));
-        $this->broadcastig->assertPushed(new EventsChannel(), function (array $data) {
-            $this->assertSame(null, $data['data']['project']);
+        $this->broadcastig->assertNotPushed(new EventsChannel('foo'));
+        $this->broadcastig->assertPushed(new EventsChannel('default'), function (array $data) {
+            $this->assertSame('default', $data['data']['project']);
             return true;
         });
     }

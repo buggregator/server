@@ -27,8 +27,7 @@ final readonly class ConnectService implements ServiceInterface
         $projects = $this->bus->ask(new FindAllProjects());
 
         /** @var non-empty-string[] $channels */
-        $channels = [(string) new EventsChannel()];
-
+        $channels = [];
         foreach ($projects as $project) {
             $channels[] = (string) new EventsChannel($project->getKey());
         }

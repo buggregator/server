@@ -18,7 +18,7 @@ final class SentryEventActionTest extends SentryControllerTestCase
     {
         parent::setUp();
 
-        $this->project = $this->createProject('default');
+        $this->project = $this->createProject('foo');
     }
 
     public function testSendWithoutGzip(): void
@@ -29,7 +29,7 @@ final class SentryEventActionTest extends SentryControllerTestCase
         $this->broadcastig->assertPushed(new EventsChannel($this->project->getKey()), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
-            $this->assertSame('default', $data['data']['project']);
+            $this->assertSame('foo', $data['data']['project']);
 
             $this->assertSame('production', $data['data']['payload']['environment']);
             $this->assertSame('Hello world', $data['data']['payload']['message']);
@@ -45,7 +45,7 @@ final class SentryEventActionTest extends SentryControllerTestCase
     private function makeRequest(
         string $payload,
         string $secret = 'secret',
-        string|Key $project = 'default',
+        string|Key $project = 'foo',
     ): ResponseAssertions {
         return $this->http
             ->postJson(

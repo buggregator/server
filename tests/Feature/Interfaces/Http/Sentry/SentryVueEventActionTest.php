@@ -25,7 +25,7 @@ BODY;
     {
         parent::setUp();
 
-        $this->project = $this->createProject('default');
+        $this->project = $this->createProject('foo');
     }
 
     public function testSend(): void
@@ -35,7 +35,7 @@ BODY;
         $this->broadcastig->assertPushed(new EventsChannel($this->project->getKey()), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
-            $this->assertSame('default', $data['data']['project']);
+            $this->assertSame('foo', $data['data']['project']);
 
             $this->assertNull($data['data']['payload']['server_name']);
             $this->assertSame('production', $data['data']['payload']['environment']);
@@ -55,7 +55,7 @@ BODY;
         });
     }
 
-    private function makeRequest(string $secret = 'secret', string|Key $project = 'default'): ResponseAssertions
+    private function makeRequest(string $secret = 'secret', string|Key $project = 'foo'): ResponseAssertions
     {
         return $this->http
             ->postJson(

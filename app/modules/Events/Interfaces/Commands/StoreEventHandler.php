@@ -12,6 +12,8 @@ use Modules\Events\Domain\Event;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Modules\Events\Domain\Events\EventWasReceived;
 use Modules\Events\Domain\ValueObject\Timestamp;
+use Modules\Projects\Domain\Project;
+use Modules\Projects\Domain\ValueObject\Key;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Spiral\Cqrs\Attribute\CommandHandler;
 use Spiral\Cqrs\QueryBusInterface;
@@ -40,7 +42,8 @@ final readonly class StoreEventHandler
                 type: $command->type,
                 payload: new Json($command->payload),
                 timestamp: Timestamp::create(),
-                project: $project?->getKey(),
+                // todo: use better option for default project
+                project: $project?->getKey() ?? Key::create(Project::DEFAULT_KEY),
             ),
         );
 

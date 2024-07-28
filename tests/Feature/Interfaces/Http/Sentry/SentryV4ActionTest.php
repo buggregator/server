@@ -25,7 +25,7 @@ BODY;
     {
         parent::setUp();
 
-        $this->project = $this->createProject('default');
+        $this->project = $this->createProject('foo');
     }
 
     public function testSendWithoutGzip(): void
@@ -35,7 +35,7 @@ BODY;
         $this->broadcastig->assertPushed(new EventsChannel($this->project->getKey()), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
-            $this->assertSame('default', $data['data']['project']);
+            $this->assertSame((string) $this->project->getKey(), $data['data']['project']);
 
             $this->assertSame('Test', $data['data']['payload']['server_name']);
             $this->assertSame('production', $data['data']['payload']['environment']);
@@ -53,7 +53,7 @@ BODY;
     {
         $this->http
             ->postJson(
-                uri: '/api/default/envelope/',
+                uri: '/api/foo/envelope/',
                 data: Stream::create(\gzcompress(self::JSON, -1, \ZLIB_ENCODING_GZIP)),
                 headers: [
                     'Content-Encoding' => 'gzip',
@@ -63,10 +63,10 @@ BODY;
                 ],
             )->assertOk();
 
-        $this->broadcastig->assertPushed(new EventsChannel('default'), function (array $data) {
+        $this->broadcastig->assertPushed(new EventsChannel('foo'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
-            $this->assertSame('default', $data['data']['project']);
+            $this->assertSame('foo', $data['data']['project']);
 
             $this->assertSame('Test', $data['data']['payload']['server_name']);
             $this->assertSame('production', $data['data']['payload']['environment']);
@@ -83,7 +83,7 @@ BODY;
     {
         $this->http
             ->postJson(
-                uri: '/api/default/envelope/',
+                uri: '/api/foo/envelope/',
                 data: Stream::create(\gzcompress(self::JSON, -1, \ZLIB_ENCODING_GZIP)),
                 headers: [
                     'Content-Encoding' => 'gzip',
@@ -93,7 +93,7 @@ BODY;
                 ],
             )->assertOk();
 
-        $this->broadcastig->assertPushed(new EventsChannel('default'), function (array $data) {
+        $this->broadcastig->assertPushed(new EventsChannel('foo'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
 
@@ -107,7 +107,7 @@ BODY;
         });
     }
 
-    private function makeRequest(string $secret = 'secret', string|Key $project = 'default'): ResponseAssertions
+    private function makeRequest(string $secret = 'secret', string|Key $project = 'foo'): ResponseAssertions
     {
         return $this->http
             ->postJson(
