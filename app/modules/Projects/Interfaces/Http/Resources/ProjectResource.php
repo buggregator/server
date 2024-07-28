@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Projects\Interfaces\Http\Resources;
 
 use App\Application\HTTP\Response\JsonResource;
+use Modules\Projects\Domain\Project;
 use Modules\Projects\Domain\ProjectInterface;
 use OpenApi\Attributes as OA;
 
@@ -16,6 +17,7 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'key', type: 'string'),
         new OA\Property(property: 'name', type: 'string'),
+        new OA\Property(property: 'is_default', type: 'boolean'),
     ],
 )]
 final class ProjectResource extends JsonResource
@@ -30,6 +32,7 @@ final class ProjectResource extends JsonResource
         return [
             'key' => $this->data->getKey(),
             'name' => $this->data->getName(),
+            'is_default' => (string) $this->data->getKey() === Project::DEFAULT_KEY,
         ];
     }
 }
