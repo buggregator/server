@@ -18,10 +18,10 @@ final class HttpDumpsActionTest extends ControllerTestCase
             )
             ->assertOk();
 
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed('events.project.default', function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('http-dump', $data['data']['type']);
-            $this->assertSame(null, $data['data']['project']);
+            $this->assertSame('default', $data['data']['project']);
             $this->assertSame('{"foo":"bar"}', $data['data']['payload']['request']['body']);
 
             return true;
@@ -51,7 +51,7 @@ final class HttpDumpsActionTest extends ControllerTestCase
 
     public function testHttpDumpWithProjectFromHeader(): void
     {
-        $this->createProject('default');
+        $this->createProject('foo');
 
         $this->http
             ->postJson(
@@ -59,16 +59,16 @@ final class HttpDumpsActionTest extends ControllerTestCase
                 data: ['foo' => 'bar'],
                 headers: [
                     'X-Buggregator-Event' => 'http-dump',
-                    'X-Buggregator-Project' => 'default',
+                    'X-Buggregator-Project' => 'foo',
                 ],
                 cookies: ['foo' => 'bar'],
             )
             ->assertOk();
 
-        $this->broadcastig->assertPushed((string) new EventsChannel('default'), function (array $data) {
+        $this->broadcastig->assertPushed((string) new EventsChannel('foo'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('http-dump', $data['data']['type']);
-            $this->assertSame('default', $data['data']['project']);
+            $this->assertSame('foo', $data['data']['project']);
 
             return true;
         });
@@ -85,10 +85,10 @@ final class HttpDumpsActionTest extends ControllerTestCase
             )
             ->assertOk();
 
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed('events.project.default', function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('http-dump', $data['data']['type']);
-            $this->assertSame(null, $data['data']['project']);
+            $this->assertSame('default', $data['data']['project']);
             $this->assertSame('POST', $data['data']['payload']['request']['method']);
             $this->assertSame('', $data['data']['payload']['request']['uri']);
             $this->assertSame(['http-dump'], $data['data']['payload']['request']['headers']['X-Buggregator-Event']);
@@ -117,7 +117,7 @@ final class HttpDumpsActionTest extends ControllerTestCase
             )
             ->assertOk();
 
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed('events.project.default', function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('http-dump', $data['data']['type']);
             $this->assertSame('GET', $data['data']['payload']['request']['method']);
@@ -148,7 +148,7 @@ final class HttpDumpsActionTest extends ControllerTestCase
             )
             ->assertOk();
 
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed('events.project.default', function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('http-dump', $data['data']['type']);
             $this->assertSame('DELETE', $data['data']['payload']['request']['method']);

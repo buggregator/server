@@ -24,7 +24,7 @@ BODY;
     {
         parent::setUp();
 
-        $this->project = $this->createProject('default');
+        $this->project = $this->createProject('foo');
     }
 
     public function testSend(): void
@@ -36,7 +36,7 @@ BODY;
     public function testSendWithNonExistsProject(): void
     {
         $this->makeRequest(project: 'non-exists');
-        $this->assertEventSent();
+        $this->assertEventSent('default');
     }
 
     #[Env('SENTRY_SECRET_KEY', 'secret')]
@@ -60,7 +60,7 @@ BODY;
         $this->broadcastig->assertPushed(new EventsChannel($project), function (array $data) use ($project) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('sentry', $data['data']['type']);
-            $this->assertSame($project ? (string) $project : null, $data['data']['project']);
+            $this->assertSame($project ? (string) $project : 'default', $data['data']['project']);
 
             $this->assertSame('f7b7f09d40e645c79a8a2846e2111c81', $data['data']['payload']['event_id']);
             $this->assertSame('php', $data['data']['payload']['platform']);
@@ -75,7 +75,7 @@ BODY;
         });
     }
 
-    private function makeRequest(string $secret = 'secret', string|Key $project = 'default'): ResponseAssertions
+    private function makeRequest(string $secret = 'secret', string|Key $project = 'foo'): ResponseAssertions
     {
         return $this->http
             ->postJson(

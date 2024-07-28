@@ -16,18 +16,19 @@ JSON;
 
     public function testSendDump(): void
     {
-        $this->createProject('default');
+        $project = 'foo';
+        $this->createProject($project);
 
         $this->http->postJson(
             uri: '/',
             data: Stream::create(self::PAYLOAD),
             headers: [
                 'X-Buggregator-Event' => 'ray',
-                'X-Buggregator-Project' => 'default',
+                'X-Buggregator-Project' => $project,
             ],
         )->assertOk();
 
-        $this->assertEventSent('default');
+        $this->assertEventSent($project);
     }
 
     public function testSendDumpWithProject(): void
@@ -40,7 +41,7 @@ JSON;
             ],
         )->assertOk();
 
-        $this->assertEventSent();
+        $this->assertEventSent('default');
     }
 
     public function testSendDumpViaHttpAuth(): void
@@ -50,19 +51,20 @@ JSON;
             data: Stream::create(self::PAYLOAD),
         )->assertOk();
 
-        $this->assertEventSent();
+        $this->assertEventSent('default');
     }
 
     public function testSendDumpViaHttpAuthWithProjectId(): void
     {
-        $this->createProject('default');
+        $project = 'foo';
+        $this->createProject($project);
 
         $this->http->postJson(
-            uri: 'http://ray:default@localhost',
+            uri: 'http://ray:' . $project . '@localhost',
             data: Stream::create(self::PAYLOAD),
         )->assertOk();
 
-        $this->assertEventSent('default');
+        $this->assertEventSent($project);
     }
 
     public function testSendDumpViaUserAgent(): void
@@ -76,7 +78,7 @@ JSON;
                 data: Stream::create(self::PAYLOAD),
             )->assertOk();
 
-        $this->assertEventSent();
+        $this->assertEventSent('default');
     }
 
     public function testSendDumpWithMerge(): void
@@ -102,7 +104,7 @@ JSON;
             headers: ['X-Buggregator-Event' => 'ray'],
         )->assertOk();
 
-        $this->broadcastig->assertPushed('events', function (array $data) {
+        $this->broadcastig->assertPushed('events.project.default', function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('ray', $data['data']['type']);
 
@@ -162,7 +164,7 @@ HTML
     {
         $this->dump(true);
 
-        $this->broadcastig->assertPushed((string) new EventsChannel(), function (array $data) {
+        $this->broadcastig->assertPushed((string) new EventsChannel('default'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('ray', $data['data']['type']);
 
@@ -178,7 +180,7 @@ HTML
     {
         $this->dump(1);
 
-        $this->broadcastig->assertPushed((string) new EventsChannel(), function (array $data) {
+        $this->broadcastig->assertPushed((string) new EventsChannel('default'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('ray', $data['data']['type']);
 
@@ -193,7 +195,7 @@ HTML
     {
         $this->dump('Hello, world!');
 
-        $this->broadcastig->assertPushed((string) new EventsChannel(), function (array $data) {
+        $this->broadcastig->assertPushed((string) new EventsChannel('default'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('ray', $data['data']['type']);
 
@@ -208,7 +210,7 @@ HTML
     {
         $this->dump(['foo' => 'bar']);
 
-        $this->broadcastig->assertPushed((string) new EventsChannel(), function (array $data) {
+        $this->broadcastig->assertPushed((string) new EventsChannel('default'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('ray', $data['data']['type']);
 
@@ -236,7 +238,7 @@ HTML,
         $this->dump($object);
         $id = \spl_object_id($object);
 
-        $this->broadcastig->assertPushed((string) new EventsChannel(), function (array $data) use($id) {
+        $this->broadcastig->assertPushed((string) new EventsChannel('default'), function (array $data) use ($id) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('ray', $data['data']['type']);
 

@@ -36,7 +36,7 @@ final class EmailTest extends TCPTestCase
 
     public function testSendEmail(): void
     {
-        $project = $this->createProject('default');
+        $project = $this->createProject('foo');
 
         $email = $this->buildEmail();
         $email->getHeaders()->addIdHeader('Message-ID', $id = $email->generateMessageId());
@@ -113,7 +113,7 @@ final class EmailTest extends TCPTestCase
         $response = $this->handleSmtpRequest(message: '', event: TCPEvent::Close);
         $this->assertInstanceOf(CloseConnection::class, $response);
 
-        $this->assertEventPushed($sentMessage, 'default');
+        $this->assertEventPushed($sentMessage, 'foo');
     }
 
 
@@ -126,7 +126,7 @@ final class EmailTest extends TCPTestCase
     {
         $messageData = $this->getEmailMessage($uuid);
 
-        $this->assertSame('default', $messageData->username);
+        $this->assertSame('foo', $messageData->username);
         $this->assertSame('password', $messageData->password);
         $this->assertSame('no-reply@site.com', $messageData->from);
         $this->assertSame([

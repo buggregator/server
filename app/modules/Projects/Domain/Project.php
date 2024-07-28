@@ -11,8 +11,10 @@ use Modules\Projects\Domain\ValueObject\Key;
 #[Entity(
     repository: ProjectRepositoryInterface::class,
 )]
-class Project
+class Project implements ProjectInterface
 {
+    public const DEFAULT_KEY = 'default';
+
     /**  @internal */
     public function __construct(
         #[Column(type: 'string(36)', primary: true, typecast: Key::class)]

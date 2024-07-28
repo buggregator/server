@@ -57,11 +57,12 @@ BODY;
 
     public function testSendDataWithProject(): void
     {
-        $this->createProject('default');
+        $project = 'foo';
+        $this->createProject($project);
 
         $this->http
             ->post(
-                uri: 'http://inspector:default@localhost/',
+                uri: 'http://inspector:'.$project.'@localhost/',
                 data: Stream::create(self::PAYLOAD),
                 headers: [
                     'X-Inspector-Key' => 'test',
@@ -69,7 +70,7 @@ BODY;
                 ],
             )->assertOk();
 
-        $this->assertEvent('default');
+        $this->assertEvent($project);
     }
 
     #[Env('INSPECTOR_SECRET_KEY', 'test')]
@@ -102,7 +103,7 @@ BODY;
             )->assertForbidden();
     }
 
-    public function assertEvent(?string $project = null): void
+    public function assertEvent(string $project = 'default'): void
     {
         $this->broadcastig->assertPushed((string) new EventsChannel($project), function (array $data) use($project) {
             $this->assertSame('event.received', $data['event']);
