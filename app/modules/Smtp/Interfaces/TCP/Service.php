@@ -69,6 +69,9 @@ final readonly class Service implements ServiceInterface
             $message->waitBody = true;
         } elseif ($request->body === "RSET\r\n") {
             $message = $this->emailBodyStorage->cleanup($request->connectionUuid);
+            $response = $this->makeResponse(ResponseMessage::ok());
+        } elseif ($request->body === "NOOP\r\n") {
+            $response = $this->makeResponse(ResponseMessage::ok());
         } elseif ($message->waitBody) {
             $message->appendBody($request->body);
 

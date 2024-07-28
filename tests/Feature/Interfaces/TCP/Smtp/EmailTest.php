@@ -76,7 +76,22 @@ final class EmailTest extends TCPTestCase
                 }),
             );
 
-        // Assert hello.txt is persisted to a database
+        // Assert sample.pdf is persisted to a database
+        $this->attachments->shouldReceive('store')
+            ->once()
+            ->with(
+                \Mockery::on(function (Attachment $attachment) {
+                    $this->assertSame('sample.pdf', $attachment->getFilename());
+                    $this->assertSame(61752, $attachment->getSize());
+                    $this->assertSame('application/pdf', $attachment->getMime());
+
+                    // Check attachments storage
+                    $this->bucket->assertCreated($attachment->getPath());
+                    return true;
+                }),
+            );
+
+        // Assert logo.svg is persisted to a database
         $this->attachments->shouldReceive('store')
             ->once()
             ->with(
@@ -238,6 +253,7 @@ Message-ID: <$messageId>\r",
             )
             ->addFrom(new Address('no-reply@site.com', 'Bob Example'),)
             ->attachFromPath(path: __DIR__ . '/hello.txt',)
+            ->attachFromPath(path: __DIR__ . '/sample.pdf',)
             ->attachFromPath(path: __DIR__ . '/logo.svg')
             ->addPart(
                 (new DataPart(new File(__DIR__ . '/logo.svg'), 'logo-embeddable'))->asInline()->setContentId(
