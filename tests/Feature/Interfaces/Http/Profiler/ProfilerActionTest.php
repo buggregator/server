@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Interfaces\Http\Profiler;
 
 use App\Application\Broadcasting\Channel\EventsChannel;
+use App\Application\Domain\ValueObjects\Uuid;
+use Modules\Profiler\Domain\ProfileEdgeRepositoryInterface;
+use Modules\Profiler\Domain\ProfileRepositoryInterface;
 use Nyholm\Psr7\Stream;
 use Tests\Feature\Interfaces\Http\ControllerTestCase;
 
@@ -61,15 +64,26 @@ JSON;
 
     public function assertEvent(?string $project = null): void
     {
-        $this->broadcastig->assertPushed((string)new EventsChannel($project), function (array $data) use ($project) {
-            $this->assertSame('event.received', $data['event']);
-            $this->assertSame('profiler', $data['data']['type']);
-            $this->assertSame($project, $data['data']['project']);
+        $profiles = $this->get(ProfileRepositoryInterface::class);
+        $edges = $this->get(ProfileEdgeRepositoryInterface::class);
 
-            $this->assertNotEmpty($data['data']['uuid']);
-            $this->assertNotEmpty($data['data']['timestamp']);
+        $this->broadcastig->assertPushed(
+            (string) new EventsChannel($project),
+            function (array $data) use ($profiles, $edges, $project) {
+                $this->assertSame('event.received', $data['event']);
+                $this->assertSame('profiler', $data['data']['type']);
+                $this->assertSame($project, $data['data']['project']);
 
-            return true;
-        });
+                $this->assertNotEmpty($data['data']['uuid']);
+                $this->assertNotEmpty($data['data']['timestamp']);
+
+                // Check if the event was saved to the profiles table
+                $profileUuid = Uuid::fromString($data['data']['uuid']);
+                $this->assertNotNull($profiles->findByPK($profileUuid));
+                $this->assertCount(19, $edges->getByProfileUuid($profileUuid));
+
+                return true;
+            },
+        );
     }
 }

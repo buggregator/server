@@ -12,9 +12,9 @@ use Cycle\Annotated\Annotation\Relation\HasMany;
 use Doctrine\Common\Collections\ArrayCollection;
 use Modules\Profiler\Domain\Profile\Peaks;
 
-// TODO: add repository
 #[Entity(
     role: 'profile',
+    repository: ProfileRepositoryInterface::class,
     table: 'profiles',
 )]
 class Profile
@@ -25,6 +25,7 @@ class Profile
         outerKey: 'profile_uuid',
         orderBy: ['order' => 'ASC'],
         fkOnDelete: 'CASCADE',
+        load: 'eager',
     )]
     public ArrayCollection $edges;
 
