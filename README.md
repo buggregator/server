@@ -6,6 +6,8 @@
 [![phpunit](https://github.com/buggregator/server/actions/workflows/phpunit.yml/badge.svg)](https://github.com/buggregator/server/actions/workflows/phpunit.yml)
 [![Downloads](https://img.shields.io/docker/pulls/butschster/buggregator.svg)](https://hub.docker.com/repository/docker/butschster/buggregator)
 
+<a href="https://www.producthunt.com/posts/buggregator?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-buggregator" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=478631&theme=light" alt="Buggregator - The&#0032;Ultimate&#0032;Debugging&#0032;Server&#0032;for&#0032;PHP | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+
 **Buggregator is a free, multi-purpose server tool designed primarily for debugging PHP applications, but it's also compatible with other programming languages. Think of it as a Swiss Army knife for developers. What makes it special is that it offers a range of features that you would usually find in various paid tools, but it's available for free.**
 
 Just start from watching our introduction video on [YouTube](https://www.youtube.com/watch?v=yKWbuw8xN_c)!
