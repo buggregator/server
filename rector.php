@@ -38,6 +38,12 @@ return RectorConfig::configure()
         RemoveUnusedVariableInCatchRector::class,
         ClosureToArrowFunctionRector::class,
     ])
+    ->withSkip([
+        \Rector\DeadCode\Rector\ClassMethod\RemoveUnusedPublicMethodParameterRector::class => [
+            __DIR__ . '/app/modules/Projects/Interfaces/Queries/FindProjectsHandler.php',
+            __DIR__ . '/app/modules/Webhooks/Interfaces/Query/FindWebhooksHandler.php',
+        ],
+    ])
     ->withPhpVersion(PhpVersion::PHP_82)
     // here we can define, what prepared sets of rules will be applied
     ->withPreparedSets(

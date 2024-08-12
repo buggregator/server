@@ -13,7 +13,6 @@ use Spiral\Auth\TokenStorageInterface;
 use Spiral\Http\Exception\ClientException\UnauthorizedException;
 use Spiral\Http\ResponseWrapper;
 use Spiral\Router\Annotation\Route;
-use Spiral\Session\SessionScope;
 
 final readonly class LoginAction
 {
@@ -27,7 +26,6 @@ final readonly class LoginAction
         AuthScope $authScope,
         TokenStorageInterface $tokens,
         SuccessRedirect $successRedirect,
-        SessionScope $session,
     ): ResponseInterface {
         if (!$auth->isAuthenticated()) {
             $url = $auth->getLoginUrl();
