@@ -29,7 +29,7 @@ final readonly class DeleteEventHandler
             $this->dispatcher->dispatch(
                 new EventWasDeleted(
                     uuid: $command->uuid,
-                    project: $event->getProject(),
+                    project: $event->getProject()?->value,
                 ),
             );
         }
