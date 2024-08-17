@@ -9,6 +9,7 @@ use Psr\Container\ContainerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Spiral\Core\InterceptableCore;
 use App\Application\AppVersion;
+use App\Application\Client\Settings;
 use App\Application\HTTP\Interceptor\JsonResourceInterceptor;
 use App\Application\HTTP\Interceptor\StringToIntParametersInterceptor;
 use App\Application\HTTP\Interceptor\UuidParametersConverterInterceptor;
@@ -40,6 +41,18 @@ final class AppBootloader extends DomainBootloader
                 EnvironmentInterface $env,
             ): AppVersion => new AppVersion(
                 version: $env->get('APP_VERSION', 'dev'),
+            ),
+
+            Settings::class => fn(
+                EnvironmentInterface $env,
+            ): AppVersion => new AppVersion(
+                version: $env->get('APP_VERSION', 'dev'),
+            ),
+
+            ClientSettings::class => fn(
+                EnvironmentInterface $env,
+            ): ClientSettings => new ClientSettings(
+                version: $env->get('CLIENT_SUPPORTED_EVENTS', 'http-dump,inspector,monolog,profiler,ray,sentry,smtp,var-dump'),
             ),
         ];
     }

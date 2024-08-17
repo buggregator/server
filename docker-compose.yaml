@@ -51,6 +51,9 @@ services:
       AUTH_CLIENT_SECRET: ${AUTH_CLIENT_SECRET}
       AUTH_CALLBACK_URL: http://buggregator.localhost/auth/sso/callback
       AUTH_SCOPES: openid,email,profile
+
+      # Client
+      CLIENT_SUPPORTED_EVENTS: ${CLIENT_SUPPORTED_EVENTS}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.buggregator-http.entrypoints=web"
