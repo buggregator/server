@@ -23,6 +23,8 @@ final class SettingsAction
         AppVersion $appVersion,
         ClientSettings $clientSettings,
     ): ResourceInterface {
+        $supportedEvents = \explode(',', $clientSettings->supportedEvents);
+
         return new JsonResource([
             'auth' => [
                 'enabled' => $settings->enabled,
@@ -33,7 +35,7 @@ final class SettingsAction
             ],
             'version' => $appVersion->version,
             'client' => [
-                'events' => $clientSettings->supportedEvents,
+                'events' => $supportedEvents,
             ]
         ]);
     }
