@@ -3,7 +3,7 @@
 build:
 	if [ ! -d "runtime" ]; then \
 		mkdir -p runtime/configs; \
-		chmod 777 -R runtime; \
+		chmod 0777 -R runtime; \
 	fi
 	chmod +x bin/get-binaries.sh; \
 	if [ ! -f "bin/centrifugo" ]; then \
