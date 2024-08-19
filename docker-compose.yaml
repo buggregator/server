@@ -53,14 +53,16 @@ services:
       AUTH_SCOPES: openid,email,profile
 
       # Client
-      CLIENT_SUPPORTED_EVENTS: ${CLIENT_SUPPORTED_EVENTS}
+      CLIENT_SUPPORTED_EVENTS: http-dump,inspector,monolog,profiler,ray,sentry,smtp,var-dump
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.buggregator-http.entrypoints=web"
       - "traefik.http.routers.buggregator-http.rule=Host(`buggregator.localhost`)"
       - "traefik.http.services.buggregator-http.loadbalancer.server.port=8000"
     volumes:
-      - ./:/app
+      - ./app:/app/app
+      - ./runtime:/app/runtime
+      - ./vendor:/app/vendor
     networks:
       - buggregator-network
 

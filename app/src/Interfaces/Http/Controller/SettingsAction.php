@@ -21,9 +21,9 @@ final class SettingsAction
         AuthSettings $settings,
         UrlTemplate $ideUrl,
         AppVersion $appVersion,
-        ClientSettings $clientSettings,
+        Settings $clientSettings,
     ): ResourceInterface {
-        $supportedEvents = \explode(',', $clientSettings->supportedEvents);
+        $supportedEvents = \array_filter(\explode(',', $clientSettings->supportedEvents));
 
         return new JsonResource([
             'auth' => [

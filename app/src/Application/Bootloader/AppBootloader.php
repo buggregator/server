@@ -45,14 +45,8 @@ final class AppBootloader extends DomainBootloader
 
             Settings::class => fn(
                 EnvironmentInterface $env,
-            ): AppVersion => new AppVersion(
-                version: $env->get('APP_VERSION', 'dev'),
-            ),
-
-            ClientSettings::class => fn(
-                EnvironmentInterface $env,
-            ): ClientSettings => new ClientSettings(
-                version: $env->get('CLIENT_SUPPORTED_EVENTS', 'http-dump,inspector,monolog,profiler,ray,sentry,smtp,var-dump'),
+            ): Settings => new Settings(
+                supportedEvents: $env->get('CLIENT_SUPPORTED_EVENTS', 'http-dump,inspector,monolog,profiler,ray,sentry,smtp,var-dump'),
             ),
         ];
     }

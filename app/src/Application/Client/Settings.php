@@ -7,7 +7,7 @@ namespace App\Application\Client;
 use Spiral\Core\Attribute\Singleton;
 
 #[Singleton]
-final readonly class ClientSettings
+final readonly class Settings
 {
     public function __construct(
         public string $supportedEvents,
