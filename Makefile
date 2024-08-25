@@ -2,7 +2,7 @@
 
 build:
 	if [ ! -d "runtime" ]; then \
-		mkdir runtime/configs -p; \
+		mkdir -p runtime/configs; \
 		chmod 0777 -R runtime; \
 	fi
 	chmod +x bin/get-binaries.sh; \
@@ -11,11 +11,11 @@ build:
 		./get-binaries.sh; \
 		cd ../; \
 	fi
-	if [ ! -f "rr" ]; then \
-		vendor/bin/rr get;\
-	fi
 	if [ ! -d "vendor" ]; then \
 	    composer i --ignore-platform-reqs; \
+	fi
+	if [ ! -f "rr" ]; then \
+		vendor/bin/rr get;\
 	fi
 	if [ ! -d ".db" ]; then \
 		mkdir .db; \
