@@ -9,6 +9,7 @@ use App\Application\Auth\AuthSettings;
 use App\Application\HTTP\Response\JsonResource;
 use App\Application\HTTP\Response\ResourceInterface;
 use App\Application\Ide\UrlTemplate;
+use App\Application\Client\Settings;
 use Spiral\Boot\EnvironmentInterface;
 use Spiral\Router\Annotation\Route;
 
@@ -20,7 +21,10 @@ final class SettingsAction
         AuthSettings $settings,
         UrlTemplate $ideUrl,
         AppVersion $appVersion,
+        Settings $clientSettings,
     ): ResourceInterface {
+        $supportedEvents = \array_filter(\explode(',', $clientSettings->supportedEvents));
+
         return new JsonResource([
             'auth' => [
                 'enabled' => $settings->enabled,
@@ -30,6 +34,9 @@ final class SettingsAction
                 'url_template' => $ideUrl->template,
             ],
             'version' => $appVersion->version,
+            'client' => [
+                'events' => $supportedEvents,
+            ]
         ]);
     }
 }
