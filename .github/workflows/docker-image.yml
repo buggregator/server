@@ -7,6 +7,7 @@ on:
 
 jobs:
   build-release:
+    name: GitHub Container Registry
     if: "!github.event.release.prerelease"
     runs-on: ubuntu-latest
 
@@ -31,7 +32,7 @@ jobs:
         id: docker_meta
         uses: docker/metadata-action@v5
         with:
-          images: butschster/buggregator
+          images: ghcr.io/buggregator/server
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -55,6 +56,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   build-docker-release:
+    name: Docker Hub
     if: "!github.event.release.prerelease"
     runs-on: ubuntu-latest
 
@@ -78,7 +80,7 @@ jobs:
         id: docker_meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/buggregator/server
+          images: butschster/buggregator
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
