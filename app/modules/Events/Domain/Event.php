@@ -13,23 +13,34 @@ use Modules\Events\Domain\ValueObject\Timestamp;
 use Modules\Projects\Domain\ValueObject\Key;
 
 #[Entity(
+    role: Event::ROLE,
     repository: EventRepositoryInterface::class,
+    table: Event::TABLE_NAME,
 )]
 #[Index(columns: ['type'])]
 #[Index(columns: ['project'])]
 class Event
 {
+    public const TABLE_NAME = 'events';
+    public const ROLE = 'event';
+
+    public const UUID = 'uuid';
+    public const TYPE = 'type';
+    public const PAYLOAD = 'payload';
+    public const TIMESTAMP = 'timestamp';
+    public const PROJECT = 'project';
+
     /**  @internal */
     public function __construct(
-        #[Column(type: 'string(36)', primary: true, typecast: 'uuid')]
+        #[Column(type: 'string(36)', name: self::UUID, primary: true, typecast: 'uuid')]
         private Uuid $uuid,
-        #[Column(type: 'string(50)')]
+        #[Column(type: 'string(50)', name: self::TYPE)]
         private string $type,
-        #[Column(type: 'json', typecast: Json::class)]
+        #[Column(type: 'json', name: self::PAYLOAD, typecast: Json::class)]
         private Json $payload,
-        #[Column(type: 'string(25)', typecast: Timestamp::class)]
+        #[Column(type: 'string(25)', name: self::TIMESTAMP, typecast: Timestamp::class)]
         private Timestamp $timestamp,
-        #[Column(type: 'string', nullable: true, typecast: Key::class)]
+        #[Column(type: 'string', name: self::PROJECT, nullable: true, typecast: Key::class)]
         private ?Key $project = null,
     ) {}
 

@@ -36,7 +36,7 @@ final class SettingsAction
             'version' => $appVersion->version,
             'client' => [
                 'events' => $supportedEvents,
-            ]
+            ],
         ]);
     }
 }

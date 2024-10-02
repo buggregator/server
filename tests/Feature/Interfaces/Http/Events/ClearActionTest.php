@@ -10,10 +10,10 @@ final class ClearActionTest extends ControllerTestCase
 {
     public function testClearAllEvents(): void
     {
-        $event1 = $this->createEvent(type: 'foo');
-        $event2 = $this->createEvent(type: 'foo', project: 'default');
-        $event3 = $this->createEvent(type: 'bar');
-        $event4 = $this->createEvent(type: 'baz', project: 'default');
+        $event1 = $this->createEvent(type: 'foo', project: 'default');
+        $event2 = $this->createEvent(type: 'foo', project: 'text');
+        $event3 = $this->createEvent(type: 'bar', project: 'default');
+        $event4 = $this->createEvent(type: 'baz', project: 'text');
 
         $this->http
             ->clearEvents()
@@ -26,9 +26,9 @@ final class ClearActionTest extends ControllerTestCase
 
     public function testClearEventsByType(): void
     {
-        $event1 = $this->createEvent(type: 'foo');
-        $event2 = $this->createEvent(type: 'foo');
-        $event3 = $this->createEvent(type: 'bar');
+        $event1 = $this->createEvent(type: 'foo', project: 'default');
+        $event2 = $this->createEvent(type: 'foo', project: 'default');
+        $event3 = $this->createEvent(type: 'bar', project: 'default');
 
         $this->http
             ->clearEvents(type: 'bar')
@@ -41,9 +41,9 @@ final class ClearActionTest extends ControllerTestCase
 
     public function testClearEventsByProject(): void
     {
-        $event1 = $this->createEvent(type: 'foo');
+        $event1 = $this->createEvent(type: 'foo', project: 'test');
         $event2 = $this->createEvent(type: 'foo', project: 'default');
-        $event3 = $this->createEvent(type: 'bar');
+        $event3 = $this->createEvent(type: 'bar', project: 'test');
         $event4 = $this->createEvent(type: 'baz', project: 'default');
 
         $this->http
@@ -57,11 +57,11 @@ final class ClearActionTest extends ControllerTestCase
 
     public function testClearEventsByUuids(): void
     {
-        $event1 = $this->createEvent(type: 'foo');
-        $event2 = $this->createEvent(type: 'foo');
-        $event3 = $this->createEvent(type: 'foo');
-        $event4 = $this->createEvent(type: 'foo');
-        $event5 = $this->createEvent(type: 'bar');
+        $event1 = $this->createEvent(type: 'foo', project: 'default');
+        $event2 = $this->createEvent(type: 'foo', project: 'default');
+        $event3 = $this->createEvent(type: 'foo', project: 'default');
+        $event4 = $this->createEvent(type: 'foo', project: 'default');
+        $event5 = $this->createEvent(type: 'bar', project: 'test');
 
         $this->http
             ->clearEvents(uuids: [
@@ -79,11 +79,11 @@ final class ClearActionTest extends ControllerTestCase
 
     public function testClearEventsByTypeAndUuids(): void
     {
-        $event1 = $this->createEvent(type: 'foo');
-        $event2 = $this->createEvent(type: 'foo');
-        $event3 = $this->createEvent(type: 'foo');
-        $event4 = $this->createEvent(type: 'foo');
-        $event5 = $this->createEvent(type: 'bar');
+        $event1 = $this->createEvent(type: 'foo', project: 'default');
+        $event2 = $this->createEvent(type: 'foo', project: 'default');
+        $event3 = $this->createEvent(type: 'foo', project: 'default');
+        $event4 = $this->createEvent(type: 'foo', project: 'default');
+        $event5 = $this->createEvent(type: 'bar', project: 'default');
 
         $this->http
             ->clearEvents(type: 'foo', uuids: [
