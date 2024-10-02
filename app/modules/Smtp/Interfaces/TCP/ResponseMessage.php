@@ -30,7 +30,6 @@ final readonly class ResponseMessage implements \Stringable
         return new self(
             code: self::OK,
             message: \sprintf("Ok %s", $uuid),
-            lineEnding: "\r",
             eosSeparator: '',
         );
     }
