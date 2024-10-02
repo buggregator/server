@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Events\Integration\CycleOrm;
 
+use Cycle\Database\DatabaseInterface;
 use Cycle\ORM\EntityManagerInterface;
 use Cycle\ORM\Select;
 use Cycle\ORM\Select\Repository;
@@ -18,6 +19,7 @@ final class EventRepository extends Repository implements EventRepositoryInterfa
 {
     public function __construct(
         private readonly EntityManagerInterface $em,
+        private readonly DatabaseInterface $db,
         Select $select,
     ) {
         parent::__construct($select);
@@ -39,36 +41,17 @@ final class EventRepository extends Repository implements EventRepositoryInterfa
 
     public function deleteAll(array $scope = []): void
     {
-        $events = $this->select()
+        $this->db
+            ->delete(Event::TABLE_NAME)
             ->where($this->buildScope($scope))
-            ->fetchAll();
-
-        $batchSize = 100;
-
-        $batch = 0;
-        foreach ($events as $event) {
-            $this->em->delete($event);
-
-            if (++$batch % $batchSize === 0) {
-                $this->em->run();
-                $batch = 0;
-            }
-        }
-
-        $this->em->run();
+            ->run();
     }
 
     public function deleteByPK(string $uuid): bool
     {
-        $event = $this->findByPK($uuid);
-
-        if ($event === null) {
-            return false;
-        }
-
-        $this->em->delete($event)->run();
-
-        return true;
+        return $this->db->delete(Event::TABLE_NAME)
+                ->where(Event::UUID, $uuid)
+                ->run() > 0;
     }
 
     public function countAll(array $scope = []): int
