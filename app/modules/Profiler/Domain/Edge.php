@@ -13,9 +13,9 @@ use Modules\Profiler\Domain\Edge\Cost;
 use Modules\Profiler\Domain\Edge\Diff;
 use Modules\Profiler\Domain\Edge\Percents;
 
-// TODO: add repository
 #[Entity(
     role: 'profile_edge',
+    repository: ProfileEdgeRepositoryInterface::class,
     table: 'profile_edges',
 )]
 class Edge
