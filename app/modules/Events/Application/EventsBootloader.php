@@ -39,11 +39,11 @@ final class EventsBootloader extends Bootloader
             EventRepository::class => static fn(
                 ORMInterface $orm,
                 EntityManagerInterface $manager,
-                DatabaseInterface $db
+                DatabaseInterface $db,
             ): EventRepository => new EventRepository(
                 em: $manager,
                 db: $db,
-                select: new Select($orm, Event::class)
+                select: new Select($orm, Event::class),
             ),
         ];
     }
