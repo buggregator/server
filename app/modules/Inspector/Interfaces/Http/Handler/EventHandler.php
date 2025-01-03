@@ -45,6 +45,7 @@ final readonly class EventHandler implements HandlerInterface
         $type = $data[0]['type'] ?? 'unknown';
 
         $data = match ($type) {
+            'transaction',
             'process',
             'request' => $data,
             default => throw new BadRequestException(
