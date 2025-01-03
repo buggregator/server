@@ -55,7 +55,7 @@ return [
         ),
 
         // Only for testing purposes
-        // SQLite does not support multiple connections in the same time
+        // SQLite does not support multiple connections simultaneously
         'sqlite' => new SQLiteDriverConfig(
             connection: new FileConnectionConfig(database: directory('runtime') . 'test.db'),
             options: [

@@ -13,17 +13,42 @@ server:
     command: "php app.php register:modules"
 
 logs:
-  level: ${RR_LOG_LEVEL:-info}
+  # Logging mode can be "development", "production" or "raw".
+  # Do not forget to change this value for production environment.
+  mode: ${RR_LOG_MODE:-production}
+  # Encoding format can be "console" or "json" (last is preferred for production usage).
+  encoding: ${RR_LOG_ENCODING:-json}
+  # Logging level can be "panic", "error", "warn", "info", "debug".
+  level: ${RR_LOG_LEVEL:-warn}
+  channels:
+    http:
+      # HTTP plugin logging level can be "panic", "error", "warn", "info", "debug".
+      level: ${RR_LOG_HTTP_LEVEL:-warn}
+    tcp:
+      # TCP plugin logging level can be "panic", "error", "warn", "info", "debug".
+      level: ${RR_LOG_TCP_LEVEL:-warn}
+    jobs:
+      # JOBS plugin logging level can be "panic", "error", "warn", "info", "debug".
+      level: ${RR_LOG_TCP_LEVEL:-warn}
+    centrifuge:
+      # Centrifuge plugin logging level can be "panic", "error", "warn", "info", "debug".
+      level: ${RR_LOG_CENTRIFUGE_LEVEL:-warn}
+    server:
+      # Server logging level can be "panic", "error", "warn", "info", "debug".
+      level: ${RR_LOG_SERVER_LEVEL:-warn}
+    service:
+      # Service logging level can be "panic", "error", "warn", "info", "debug".
+      level: ${RR_LOG_SERVICE_LEVEL:-warn}
 
 http:
   address: 127.0.0.1:8082
   middleware: [ "headers" ]
   headers:
     cors:
-      allowed_origin: "*"
-      allowed_headers: "*"
+      allowed_origin: ${RR_HTTP_ALLOWED_ORIGIN:-*}
+      allowed_headers: ${RR_HTTP_ALLOWED_HEADERS:-*}
       allowed_methods: "GET,POST,PUT,DELETE"
-      allow_credentials: true
+      allow_credentials: ${RR_HTTP_ALLOW_CREDENTIALS:-true}
       exposed_headers: "Cache-Control,Content-Language,Content-Type,Expires,Last-Modified,Pragma"
       max_age: 600
   pool:
@@ -32,13 +57,21 @@ http:
 tcp:
   servers:
     monolog:
-      addr: :9913
+      # Address to listen.
+      addr: ${RR_TCP_MONOLOG_ADDR:-:9913}
       delimiter: "\n"
     var-dumper:
-      addr: :9912
+      # Address to listen.
+      addr: ${RR_TCP_VAR_DUMPER_ADDR:-:9912}
       delimiter: "\n"
     smtp:
-      addr: :1025
+      # Address to listen.
+      addr: ${RR_TCP_SMTP_ADDR:-:1025}
+  # Chunks that RR uses to read the data. In bytes.
+  # If you expect big payloads on a TCP server, to reduce `read` syscalls,
+  # would be a good practice to use a fairly big enough buffer.
+  # Default: 1024 * 1024 * 50 (50MB)
+  read_buf_size: ${RR_TCP_READ_BUF_SIZE:-50485760}
   pool:
     num_workers: ${RR_TCP_NUM_WORKERS}
 
@@ -54,17 +87,17 @@ service:
   nginx:
     service_name_in_log: true
     remain_after_exit: true
-    restart_sec: 1
+    restart_sec: 5
     command: "/usr/sbin/nginx"
   centrifuge:
     service_name_in_log: true
     remain_after_exit: true
-    restart_sec: 1
+    restart_sec: 5
     command: "./bin/centrifugo --config=centrifugo.json"
   dolt:
     service_name_in_log: true
     remain_after_exit: true
-    restart_sec: 1
+    restart_sec: 5
     command: "./bin/dolt sql-server --data-dir=.db"
 
 centrifuge:

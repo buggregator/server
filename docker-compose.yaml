@@ -40,10 +40,6 @@ services:
       DB_DRIVER: pgsql
       DB_HOST: buggregator-pgsql
 
-      # PERSISTENCE_DRIVER: mongodb
-      MONGODB_CONNECTION: mongodb://homestead:secret@buggregator-mongo:27017
-      MONGODB_DATABASE: buggregator
-
       # Auth
       AUTH_ENABLED: false
       AUTH_PROVIDER_URL: https://${AUTH_DOMAIN}.us.auth0.com
@@ -63,17 +59,7 @@ services:
       - ./app:/app/app
       - ./runtime:/app/runtime
       - ./vendor:/app/vendor
-    networks:
-      - buggregator-network
-
-  buggregator-mongo:
-    image: mongo:latest
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: homestead
-      MONGO_INITDB_ROOT_PASSWORD: secret
-      MONGO_INITDB_DATABASE: buggregator
-    ports:
-      - 27017:27017
+      - ./.rr-prod.yaml:/app/.rr-prod.yaml
     networks:
       - buggregator-network
 
