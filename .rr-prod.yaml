@@ -105,5 +105,5 @@ service:
 centrifuge:
   proxy_address: ${RR_CENTRIFUGE_PROXY_ADDRESS}
   grpc_api_address: ${RR_CENTRIFUGE_GRPC_API_ADDRESS}
-  poll:
+  pool:
     num_workers: ${RR_CENTRIFUGE_NUM_WORKERS:-2}
