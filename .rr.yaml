@@ -27,7 +27,7 @@ http:
       exposed_headers: "Cache-Control,Content-Language,Content-Type,Expires,Last-Modified,Pragma"
       max_age: 600
   pool:
-    num_workers: 2
+    num_workers: 1
 
 tcp:
   servers:
@@ -39,6 +39,8 @@ tcp:
       delimiter: "\n"
     smtp:
       addr: 127.0.0.1:1025
+  pool:
+    num_workers: 2
 
 kv:
   local:
@@ -47,6 +49,8 @@ kv:
 
 jobs:
   consume: [ ]
+  pool:
+    num_workers: 1
 
 service:
   centrifuge:
@@ -65,4 +69,4 @@ centrifuge:
   grpc_api_address: "tcp://127.0.0.1:10000"
   pool:
     reset_timeout: 10
-    num_workers: 5
+    num_workers: 2

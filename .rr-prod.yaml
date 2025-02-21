@@ -52,7 +52,7 @@ http:
       exposed_headers: "Cache-Control,Content-Language,Content-Type,Expires,Last-Modified,Pragma"
       max_age: 600
   pool:
-    num_workers: ${RR_HTTP_NUM_WORKERS}
+    num_workers: ${RR_HTTP_NUM_WORKERS:-1}
 
 tcp:
   servers:
@@ -73,7 +73,7 @@ tcp:
   # Default: 1024 * 1024 * 50 (50MB)
   read_buf_size: ${RR_TCP_READ_BUF_SIZE:-50485760}
   pool:
-    num_workers: ${RR_TCP_NUM_WORKERS}
+    num_workers: ${RR_TCP_NUM_WORKERS:-2}
 
 kv:
   local:
@@ -82,6 +82,8 @@ kv:
 
 jobs:
   consume: [ ]
+  pool:
+    num_workers: ${RR_JOBS_NUM_WORKERS:-1}
 
 service:
   nginx:
@@ -104,4 +106,4 @@ centrifuge:
   proxy_address: ${RR_CENTRIFUGE_PROXY_ADDRESS}
   grpc_api_address: ${RR_CENTRIFUGE_GRPC_API_ADDRESS}
   poll:
-    num_workers: ${RR_CENTRIFUGE_NUM_WORKERS}
+    num_workers: ${RR_CENTRIFUGE_NUM_WORKERS:-2}
