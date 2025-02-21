@@ -22,7 +22,7 @@ $app = Kernel::create(
     directories: [
         'root' => __DIR__,
         'modules' => __DIR__ . '/app/modules',
-        'public' => __DIR__ . '/frontend/assets',
+        'public' => __DIR__ . '/frontend',
     ],
     exceptionHandler: Handler::class,
 )->run();
@@ -31,5 +31,5 @@ if ($app === null) {
     exit(255);
 }
 
-$code = (int)$app->serve();
+$code = (int) $app->serve();
 exit($code);
