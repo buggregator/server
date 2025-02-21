@@ -68,7 +68,8 @@ final class FrontendRequest implements HandlerInterface
         $path = $request->getUri()->getPath();
 
         return $path === '/'
-            || \str_starts_with($path, '/_nuxt/')
+            || \str_starts_with($path, '/src/')
+            || \str_starts_with($path, '/assets/')
             || $path === '/favicon/favicon.ico'
             || $path === '/bg.jpg';
     }
