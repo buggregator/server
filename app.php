@@ -22,7 +22,7 @@ $app = Kernel::create(
     directories: [
         'root' => __DIR__,
         'modules' => __DIR__ . '/app/modules',
-        'public' => __DIR__ . '/frontend/.output/public',
+        'public' => __DIR__ . '/frontend/assets',
     ],
     exceptionHandler: Handler::class,
 )->run();

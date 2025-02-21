@@ -69,7 +69,7 @@ class TestCase extends BaseTestCase
         return [
             'root' => $root,
             'modules' => $root . '/app/modules',
-            'public' => $root . '/frontend/.output/public',
+            'public' => $root . '/frontend/assets',
         ];
     }
 
