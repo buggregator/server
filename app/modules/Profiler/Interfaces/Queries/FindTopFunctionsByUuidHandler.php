@@ -4,23 +4,21 @@ declare(strict_types=1);
 
 namespace Modules\Profiler\Interfaces\Queries;
 
-use Cycle\ORM\ORMInterface;
 use Modules\Profiler\Application\Query\FindTopFunctionsByUuid;
 use Modules\Profiler\Domain\Edge;
-use Modules\Profiler\Domain\Profile;
+use Modules\Profiler\Domain\ProfileRepositoryInterface;
 use Spiral\Cqrs\Attribute\QueryHandler;
 
-// TODO: refactor this, use repository
-final class FindTopFunctionsByUuidHandler
+final readonly class FindTopFunctionsByUuidHandler
 {
     public function __construct(
-        private ORMInterface $orm,
+        private ProfileRepositoryInterface $profiles,
     ) {}
 
     #[QueryHandler]
     public function __invoke(FindTopFunctionsByUuid $query): array
     {
-        $profile = $this->orm->getRepository(Profile::class)->findByPK($query->profileUuid);
+        $profile = $this->profiles->getByUuid($query->profileUuid);
 
         $overallTotals = [];
 
