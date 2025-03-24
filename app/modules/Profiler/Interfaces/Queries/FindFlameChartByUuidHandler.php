@@ -67,7 +67,7 @@ final readonly class FindFlameChartByUuidHandler
         }
 
         $this->adjustStartTimes($waterfall, 0);
-        $this->bucket->write($file, \json_encode($waterfall));
+        $this->bucket->write($file, \json_encode($waterfall, 0, 5000));
 
         return $waterfall;
     }
