@@ -36,7 +36,8 @@ final readonly class Message implements JsonSerializable
         return \array_values(
             \array_filter($this->allRecipients, function (string $recipient) {
                 foreach (\array_merge($this->recipients, $this->ccs) as $publicRecipient) {
-                    if (\str_contains($publicRecipient, $recipient)) {
+                    // Use email from the public recipient array
+                    if (isset($publicRecipient['email']) && \str_contains($publicRecipient['email'], $recipient)) {
                         return false;
                     }
                 }
