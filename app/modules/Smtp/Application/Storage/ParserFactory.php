@@ -26,7 +26,7 @@ final class ParserFactory
      */
     public static function getInstance(): self
     {
-        if (self::$instance === null) {
+        if (!self::$instance instanceof \Modules\Smtp\Application\Storage\ParserFactory) {
             self::$instance = new self();
         }
 

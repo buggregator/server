@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Application\Storage;
 
-use Modules\Smtp\Application\Mail\Parser;
-
 final class Message
 {
     public function __construct(

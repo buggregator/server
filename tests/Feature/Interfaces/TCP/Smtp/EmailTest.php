@@ -146,7 +146,7 @@ final class EmailTest extends TCPTestCase
         $this->assertEventPushed($sentMessage1, 'foo');
 
         // Check that state is reset properly by sending second email
-        $sentMessage2 = $client->send($email2);
+        $client->send($email2);
 
         // This would fail before our fix if the state wasn't properly reset
         $messageData2 = $this->getEmailMessage((string) $connectionUuid);

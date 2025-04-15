@@ -76,9 +76,7 @@ final class ServiceTest extends TestCase
             ->method('set')
             ->with(
                 $connectionUuid,
-                $this->callback(function ($persistedMessage) {
-                    return $persistedMessage->body === '' && $persistedMessage->waitBody === true;
-                }),
+                $this->callback(fn($persistedMessage) => $persistedMessage->body === '' && $persistedMessage->waitBody === true),
                 $this->anything(),
             );
 
@@ -180,12 +178,10 @@ final class ServiceTest extends TestCase
             ->method('set')
             ->with(
                 $connectionUuid,
-                $this->callback(function ($persistedMessage) {
-                    return str_contains(
-                        $persistedMessage->body,
-                        "съешь же ещё этих мягких французских булок, да выпей чаю",
-                    );
-                }),
+                $this->callback(fn($persistedMessage) => str_contains(
+                    $persistedMessage->body,
+                    "съешь же ещё этих мягких французских булок, да выпей чаю",
+                )),
                 $this->anything(),
             );
 
