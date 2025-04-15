@@ -4,25 +4,22 @@ declare(strict_types=1);
 
 namespace Modules\Profiler\Interfaces\Queries;
 
-use App\Application\Domain\ValueObjects\Uuid;
-use Cycle\ORM\ORMInterface;
 use Modules\Profiler\Application\CallGraph\Node;
 use Modules\Profiler\Application\Query\FindCallGraphByUuid;
 use Modules\Profiler\Domain\Edge;
-use Modules\Profiler\Domain\Profile;
+use Modules\Profiler\Domain\ProfileRepositoryInterface;
 use Spiral\Cqrs\Attribute\QueryHandler;
 
-// TODO: refactor this, use repository
 final readonly class FindCallGraphByUuidHandler
 {
     public function __construct(
-        private ORMInterface $orm,
+        private ProfileRepositoryInterface $profiles,
     ) {}
 
     #[QueryHandler]
     public function __invoke(FindCallGraphByUuid $query): array
     {
-        $profile = $this->orm->getRepository(Profile::class)->findByPK($query->profileUuid);
+        $profile = $this->profiles->getByUuid($query->profileUuid);
 
         $edges = $profile->edges;
         $registered = [];
@@ -44,7 +41,7 @@ final readonly class FindCallGraphByUuidHandler
 
                 $registered[] = (string) $edge->getUuid();
 
-                if ($edge->getParentUuid() instanceof Uuid && \in_array((string) $edge->getParentUuid(), $registered, true)) {
+                if ($edge->getParentUuid() !== null && \in_array((string) $edge->getParentUuid(), $registered, true)) {
                     $carry['edges'][] = [
                         'data' => [
                             'source' => (string) $edge->getParentUuid(),
