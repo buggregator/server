@@ -43,7 +43,7 @@ jobs:
           push: true
           build-args: |
             APP_VERSION=${{ steps.previoustag.outputs.tag }}
-            FRONTEND_IMAGE_TAG=dev
+            FRONTEND_IMAGE_TAG=latest
             BRANCH=${{ steps.previoustag.outputs.tag }}
           tags:
             ghcr.io/${{ github.repository }}:dev, ghcr.io/${{ github.repository }}:${{ steps.previoustag.outputs.tag }}

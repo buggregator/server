@@ -65,6 +65,9 @@ final readonly class Service implements ServiceInterface
             $response = $this->makeResponse(ResponseMessage::closing(), close: true);
             $message = $this->emailBodyStorage->cleanup($request->connectionUuid);
         } elseif ($request->body === "DATA\r\n") {
+            // Reset the body to empty string when starting a new DATA command
+            // This prevents confusion between multiple DATA commands in the same session
+            $message->body = '';
             $response = $this->makeResponse(ResponseMessage::provideBody());
             $message->waitBody = true;
         } elseif ($request->body === "RSET\r\n") {
@@ -75,13 +78,16 @@ final readonly class Service implements ServiceInterface
         } elseif ($message->waitBody) {
             $message->appendBody($request->body);
 
-            $response = $this->makeResponse(ResponseMessage::ok());
-
+            // FIX: Only send one response when data ends
             if ($message->bodyHasEos()) {
                 $uuid = $this->dispatchMessage($message->parse(), project: $message->username);
-
                 $response = $this->makeResponse(ResponseMessage::accepted($uuid));
                 $dispatched = true;
+                // Reset the waitBody flag to false since we've processed the message
+                $message->waitBody = false;
+            } else {
+                // Only send "OK" response if we're not at the end of data
+                $response = $this->makeResponse(ResponseMessage::ok());
             }
         }
 

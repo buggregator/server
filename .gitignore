@@ -13,3 +13,4 @@ protoc-gen-php-grpc*
 .db
 .sqlhistory
 *Zone.Identifier
+.context

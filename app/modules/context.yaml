@@ -1,0 +1,17 @@
+$schema: 'https://raw.githubusercontent.com/context-hub/generator/refs/heads/main/json-schema.json'
+
+documents:
+  - description: Events module
+    outputPath: module/events.md
+    sources:
+      - type: file
+        sourcePaths:
+          - ./Events
+
+  - description: SMTP module
+    outputPath: module/smtp.md
+    sources:
+      - type: file
+        sourcePaths:
+          - ./Smtp
+          - ../../docs/smtp.md

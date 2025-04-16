@@ -14,14 +14,13 @@ final readonly class EventsMocker
 {
     public function __construct(
         private MockInterface&EventRepositoryInterface $events,
-    ) {
-    }
+    ) {}
 
     public function eventShouldBeFound(Uuid|string $uuid, ?Event $result): self
     {
         $this->events
             ->shouldReceive('findByPK')
-            ->with((string)$uuid)
+            ->with((string) $uuid)
             ->once()
             ->andReturn($result);
 
@@ -33,7 +32,7 @@ final readonly class EventsMocker
         return new EventExpectation(
             $this->events
                 ->shouldReceive('findByPK')
-                ->with((string)$uuid)
+                ->with((string) $uuid)
                 ->once(),
         );
     }
@@ -42,7 +41,7 @@ final readonly class EventsMocker
     {
         $this->events
             ->shouldReceive('deleteByPK')
-            ->with((string)$uuid)
+            ->with((string) $uuid)
             ->once()
             ->andReturn($status);
     }
@@ -51,7 +50,7 @@ final readonly class EventsMocker
     {
         $this->events
             ->shouldNotReceive('deleteByPK')
-            ->with((string)$uuid);
+            ->with((string) $uuid);
     }
 
     public function eventShouldBeClear(?string $type = null, ?string $project = null, ?array $uuids = null): void

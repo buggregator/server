@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\App\Console;
 
-
 use PHPUnit\Framework\TestCase;
 use Spiral\Console\Command;
 use Spiral\Core\InvokerInterface;

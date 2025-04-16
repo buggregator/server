@@ -12,8 +12,7 @@ final class EventExpectation
 {
     public function __construct(
         private CompositeExpectation $expectation,
-    ) {
-    }
+    ) {}
 
     public function andReturnEvent(Event $event): void
     {

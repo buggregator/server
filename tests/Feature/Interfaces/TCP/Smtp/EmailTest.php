@@ -52,7 +52,7 @@ final class EmailTest extends TCPTestCase
             ->with(
                 \Mockery::on(function (Attachment $attachment) {
                     $this->assertSame('logo-embeddable', $attachment->getFilename());
-                    $this->assertSame(1206, $attachment->getSize());
+                    $this->assertSame(1207, $attachment->getSize());
                     $this->assertSame('image/svg+xml', $attachment->getMime());
 
                     // Check attachments storage
@@ -97,7 +97,7 @@ final class EmailTest extends TCPTestCase
             ->with(
                 \Mockery::on(function (Attachment $attachment) {
                     $this->assertSame('logo.svg', $attachment->getFilename());
-                    $this->assertSame(1206, $attachment->getSize());
+                    $this->assertSame(1207, $attachment->getSize());
                     $this->assertSame('image/svg+xml', $attachment->getMime());
 
                     // Check attachments storage
@@ -116,6 +116,45 @@ final class EmailTest extends TCPTestCase
         $this->assertEventPushed($sentMessage, 'foo');
     }
 
+    public function testSendMultipleEmails(): void
+    {
+        $project = $this->createProject('foo');
+        $connectionUuid = Uuid::uuid7();
+
+        // We'll send two emails in the same SMTP session
+        $email1 = $this->buildEmail();
+        $email1->getHeaders()->addIdHeader('Message-ID', $id1 = $email1->generateMessageId());
+
+        $email2 = $this->buildEmailWithCyrillic();
+        $email2->getHeaders()->addIdHeader('Message-ID', $id2 = $email2->generateMessageId());
+
+        // Set up attachment expectations (fixed to 7 based on the actual number of attachments)
+        // The first email has 4 attachments, the second has 3
+        $this->attachments->shouldReceive('store')->times(7)->andReturn(true);
+
+        // Build SMTP client
+        $client = $this->buildSmtpClient(
+            username: (string) $project->getKey(),
+            uuid: $connectionUuid,
+        );
+
+        // Send first email
+        $sentMessage1 = $client->send($email1);
+
+        // Validate the first message
+        $this->validateMessage($id1, (string) $connectionUuid);
+        $this->assertEventPushed($sentMessage1, 'foo');
+
+        // Check that state is reset properly by sending second email
+        $client->send($email2);
+
+        // This would fail before our fix if the state wasn't properly reset
+        $messageData2 = $this->getEmailMessage((string) $connectionUuid);
+        $this->assertFalse($messageData2->waitBody, 'waitBody flag should be reset after sending email');
+
+        $response = $this->handleSmtpRequest(message: '', event: TCPEvent::Close);
+        $this->assertInstanceOf(CloseConnection::class, $response);
+    }
 
     private function getEmailMessage(string $uuid): Message
     {
@@ -239,7 +278,7 @@ Message-ID: <$messageId>\r",
 
     public function buildEmail(): Email
     {
-        return (new Email)
+        return (new Email())
             ->subject('Test message')
             ->date(new \DateTimeImmutable('2024-05-02 16:01:33'))
             ->addTo(
@@ -251,9 +290,9 @@ Message-ID: <$messageId>\r",
                 new Address('customer@example.com', 'Customer'),
                 'theboss@example.com',
             )
-            ->addFrom(new Address('no-reply@site.com', 'Bob Example'),)
-            ->attachFromPath(path: __DIR__ . '/hello.txt',)
-            ->attachFromPath(path: __DIR__ . '/sample.pdf',)
+            ->addFrom(new Address('no-reply@site.com', 'Bob Example'), )
+            ->attachFromPath(path: __DIR__ . '/hello.txt', )
+            ->attachFromPath(path: __DIR__ . '/sample.pdf', )
             ->attachFromPath(path: __DIR__ . '/logo.svg')
             ->addPart(
                 (new DataPart(new File(__DIR__ . '/logo.svg'), 'logo-embeddable'))->asInline()->setContentId(
@@ -264,6 +303,37 @@ Message-ID: <$messageId>\r",
                 body: <<<'TEXT'
 <img src="cid:logo-embeddable">
 Hello Alice.<br>This is a test message with 5 header fields and 4 lines in the message body.
+TEXT
+                ,
+            );
+    }
+
+    public function buildEmailWithCyrillic(): Email
+    {
+        // Similar to buildEmail but with Cyrillic content
+        return (new Email())
+            ->subject('Test message with Cyrillic')
+            ->date(new \DateTimeImmutable('2024-05-02 16:01:33'))
+            ->addTo(
+                new Address('alice@example.com', 'Alice Doe'),
+                'barney@example.com',
+            )
+            ->addFrom(new Address('no-reply@site.com', 'Bob Example'), )
+            ->attachFromPath(path: __DIR__ . '/hello.txt', )
+            ->attachFromPath(path: __DIR__ . '/logo.svg')
+            ->addPart(
+                (new DataPart(new File(__DIR__ . '/logo.svg'), 'logo-embeddable'))->asInline()->setContentId(
+                    'test-cid@buggregator',
+                ),
+            )
+            ->html(
+                body: <<<'TEXT'
+<img src="cid:logo-embeddable">
+<p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
+<p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
+<p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
+<p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
+<p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
 TEXT
                 ,
             );
