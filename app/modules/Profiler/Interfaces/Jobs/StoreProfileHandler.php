@@ -40,7 +40,9 @@ final class StoreProfileHandler extends JobHandler
 
         $edges = &$event['edges'];
 
-        !\array_key_exists('main()', $edges) && \array_key_exists('value', $edges) and $edges['main()'] = $edges['value'];
+        if (!\array_key_exists('main()', $edges) && \array_key_exists('value', $edges)) {
+            $edges['main()'] = $edges['value'];
+        }
         unset($edges['value']);
 
         $batchSize = 0;

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Application\Mail;
 
+use Modules\Smtp\Application\Mail\Strategy\AttachmentProcessorFactory;
+use Spiral\Exceptions\ExceptionReporterInterface;
 use ZBateson\MailMimeParser\Header\AbstractHeader;
 use ZBateson\MailMimeParser\Header\AddressHeader;
 use ZBateson\MailMimeParser\Header\Part\AddressPart;
@@ -11,6 +13,11 @@ use ZBateson\MailMimeParser\Message as ParseMessage;
 
 final readonly class Parser
 {
+    public function __construct(
+        private ExceptionReporterInterface $reporter,
+        private AttachmentProcessorFactory $processorFactory = new AttachmentProcessorFactory(),
+    ) {}
+
     public function parse(string $body, array $allRecipients = []): Message
     {
         $message = ParseMessage::from($body, true);
@@ -62,12 +69,27 @@ final readonly class Parser
      */
     private function buildAttachmentFrom(array $attachments): array
     {
-        return \array_map(fn(ParseMessage\IMessagePart $part) => new Attachment(
-            $part->getFilename(),
-            $part->getContent(),
-            $part->getContentType(),
-            $part->getContentId(),
-        ), $attachments);
+        $result = [];
+
+        foreach ($attachments as $part) {
+            try {
+                $processor = $this->processorFactory->createProcessor($part);
+                $attachment = $processor->processAttachment($part);
+                $result[] = $attachment;
+            } catch (\Throwable $e) {
+                $this->reporter->report($e);
+                // Create a fallback attachment
+                $fallbackFilename = 'failed_attachment_' . uniqid() . '.bin';
+                $result[] = new Attachment(
+                    filename: $fallbackFilename,
+                    content: $part->getContent() ?? '',
+                    type: $part->getContentType() ?? 'application/octet-stream',
+                    contentId: $part->getContentId(),
+                );
+            }
+        }
+
+        return $result;
     }
 
     /**

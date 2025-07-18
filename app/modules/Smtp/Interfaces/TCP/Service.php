@@ -7,6 +7,7 @@ namespace Modules\Smtp\Interfaces\TCP;
 use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Domain\ValueObjects\Uuid;
 use Modules\Smtp\Application\Mail\Message;
+use Modules\Smtp\Application\Mail\Parser;
 use Modules\Smtp\Application\Storage\EmailBodyStorage;
 use Modules\Smtp\Domain\AttachmentStorageInterface;
 use Spiral\Cqrs\CommandBusInterface;
@@ -24,6 +25,7 @@ final readonly class Service implements ServiceInterface
         private CommandBusInterface $bus,
         private EmailBodyStorage $emailBodyStorage,
         private AttachmentStorageInterface $attachments,
+        private Parser $parser,
     ) {}
 
     public function handle(Request $request): ResponseInterface
@@ -80,7 +82,7 @@ final readonly class Service implements ServiceInterface
 
             // FIX: Only send one response when data ends
             if ($message->bodyHasEos()) {
-                $uuid = $this->dispatchMessage($message->parse(), project: $message->username);
+                $uuid = $this->dispatchMessage($message->parse($this->parser), project: $message->username);
                 $response = $this->makeResponse(ResponseMessage::accepted($uuid));
                 $dispatched = true;
                 // Reset the waitBody flag to false since we've processed the message
