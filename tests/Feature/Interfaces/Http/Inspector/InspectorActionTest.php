@@ -62,7 +62,7 @@ BODY;
 
         $this->http
             ->post(
-                uri: 'http://inspector:'.$project.'@localhost/',
+                uri: 'http://inspector:' . $project . '@localhost/',
                 data: Stream::create(self::PAYLOAD),
                 headers: [
                     'X-Inspector-Key' => 'test',
@@ -105,7 +105,7 @@ BODY;
 
     public function assertEvent(string $project = 'default'): void
     {
-        $this->broadcastig->assertPushed((string) new EventsChannel($project), function (array $data) use($project) {
+        $this->broadcastig->assertPushed((string) new EventsChannel($project), function (array $data) use ($project) {
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('inspector', $data['data']['type']);
             $this->assertSame($project, $data['data']['project']);

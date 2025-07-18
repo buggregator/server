@@ -49,15 +49,15 @@ final class CacheEventRepositoryTest extends DatabaseTestCase
 
         $this->repository->deleteAll([
             'uuid' => [
-                (string)$event1->getUuid(),
-                (string)$event3->getUuid(),
+                (string) $event1->getUuid(),
+                (string) $event3->getUuid(),
             ],
         ]);
         $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
 
         $result = \iterator_to_array($this->repository->findAll());
 
-        $this->assertSame((string)$event2->getUuid(), (string)$result[0]->getUuid());
+        $this->assertSame((string) $event2->getUuid(), (string) $result[0]->getUuid());
     }
 
     public function testDeleteByTypeAndUuids(): void
@@ -73,9 +73,9 @@ final class CacheEventRepositoryTest extends DatabaseTestCase
         $this->repository->deleteAll([
             'type' => 'foo',
             'uuid' => [
-                (string)$event3->getUuid(),
-                (string)$event5->getUuid(),
-                (string)$event4->getUuid(),
+                (string) $event3->getUuid(),
+                (string) $event5->getUuid(),
+                (string) $event4->getUuid(),
             ],
         ]);
 
@@ -83,8 +83,8 @@ final class CacheEventRepositoryTest extends DatabaseTestCase
 
         $result = \iterator_to_array($this->repository->findAll());
 
-        $this->assertSame((string)$event1->getUuid(), (string)$result[0]->getUuid());
-        $this->assertSame((string)$event2->getUuid(), (string)$result[1]->getUuid());
-        $this->assertSame((string)$event3->getUuid(), (string)$result[2]->getUuid());
+        $this->assertSame((string) $event1->getUuid(), (string) $result[0]->getUuid());
+        $this->assertSame((string) $event2->getUuid(), (string) $result[1]->getUuid());
+        $this->assertSame((string) $event3->getUuid(), (string) $result[2]->getUuid());
     }
 }

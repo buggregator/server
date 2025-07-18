@@ -18,12 +18,11 @@ final class FakeTransport implements TransportInterface
 
     public function __construct(
         private readonly PayloadSerializerInterface $payloadSerializer,
-    ) {
-    }
+    ) {}
 
     public function send(Event $event): Result
     {
-        $this->events[(string)$event->getId()] = $this->payloadSerializer->serialize($event);
+        $this->events[(string) $event->getId()] = $this->payloadSerializer->serialize($event);
 
         return new Result(ResultStatus::success(), $event);
     }
@@ -35,6 +34,6 @@ final class FakeTransport implements TransportInterface
 
     public function findEvent(EventId $id): string
     {
-        return $this->events[(string)$id] ?? throw new \InvalidArgumentException('Event not found');
+        return $this->events[(string) $id] ?? throw new \InvalidArgumentException('Event not found');
     }
 }
