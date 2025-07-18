@@ -358,7 +358,7 @@ Message-ID: <$messageId>\r",
             ->addTo(new Address('alice@example.com', 'Alice Doe'))
             ->addFrom(new Address('no-reply@site.com', 'Bob Example'))
             ->addPart(
-                // Create inline attachment WITHOUT filename - this should trigger the issue
+            // Create inline attachment WITHOUT filename - this should trigger the issue
                 (new DataPart($pngContent, null, 'image/png'))->asInline()->setContentId('qr@domain.com'),
             )
             ->html(
@@ -389,13 +389,13 @@ Message-ID: <$messageId>\r",
             )
             ->html(
                 body: <<<'TEXT'
-<img src="cid:logo-embeddable">
-<p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
-<p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
-<p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
-<p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
-<p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
-TEXT
+                    <img src="cid:logo-embeddable">
+                    <p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
+                    <p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
+                    <p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
+                    <p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
+                    <p>съешь же ещё этих мягких французских булок, да выпей чаю</p>
+                    TEXT
                 ,
             );
     }
