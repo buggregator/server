@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dload xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/php-internal/dload/refs/heads/1.x/dload.xsd"
+       temp-dir="./runtime">
+    <registry overwrite="false">
+        <!-- Centrifugo: Scalable real-time messaging server -->
+        <software name="centrifugo" alias="centrifugo"
+                  homepage="https://centrifugal.dev"
+                  description="Scalable real-time messaging server in a language-agnostic way">
+            <repository type="github" uri="centrifugal/centrifugo" asset-pattern="/^centrifugo_.*\.tar\.gz$/"/>
+            <binary name="centrifugo" pattern="/^centrifugo$/" version-command="--version"/>
+        </software>
+    </registry>
+    <actions>
+        <download software="dolt" extract-path="bin"/>
+        <download software="rr"/>
+        <download software="centrifugo" version="^5.4.9" extract-path="bin"/>
+    </actions>
+</dload>

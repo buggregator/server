@@ -5,18 +5,12 @@ build:
 		mkdir -p runtime/configs; \
 		chmod 0777 -R runtime; \
 	fi
-	chmod +x bin/get-binaries.sh; \
-	if [ ! -f "bin/centrifugo" ]; then \
-		cd bin; \
-		./get-binaries.sh; \
-		cd ../; \
-	fi
 	if [ ! -d "vendor" ]; then \
 	    composer i --ignore-platform-reqs; \
 	fi
-	if [ ! -f "rr" ]; then \
-		vendor/bin/rr get;\
-	fi
+	if [ ! -f "bin/centrifugo" ] || [ ! -f "bin/dolt" ] || [ ! -f "rr" ]; then \
+    	vendor/bin/dload get; \
+    fi
 	if [ ! -d ".db" ]; then \
 		mkdir .db; \
 		chmod 0777 -R .db; \
