@@ -15,3 +15,6 @@ documents:
         sourcePaths:
           - ./Smtp
           - ../../docs/smtp.md
+          - ../../tests/Feature/Interfaces/TCP/Smtp
+        filePattern:
+          - "*.php"

@@ -34,7 +34,8 @@ final class DeliveryListActionTest extends ControllerTestCase
             $missingDeliveries,
         );
 
-        $this->http->listWebhookDeliveries($webhook->uuid)
+        $this->http
+            ->listWebhookDeliveries($webhook->uuid)
             ->assertOk()
             ->assertCollectionContainResources($deliveries)
             ->assertCollectionMissingResources($missingDeliveries);

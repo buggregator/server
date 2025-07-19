@@ -26,7 +26,8 @@ final class DownloadActionTest extends ControllerTestCase
 
         $bucket->write($attachment->getPath(), $content = 'Downloaded content');
 
-        $this->http->get('/api/smtp/' . $event->getUuid() . '/attachments/' . $attachment->getUuid())
+        $this->http
+            ->get('/api/smtp/' . $event->getUuid() . '/attachments/' . $attachment->getUuid())
             ->assertOk()
             ->assertBodySame($content)
             ->assertHasHeader('Content-Type', 'application/octet-stream')
@@ -40,7 +41,8 @@ final class DownloadActionTest extends ControllerTestCase
         $eventUuid = Uuid::generate();
         $attachmentUuid = Uuid::generate();
 
-        $this->http->get('/api/smtp/' . $eventUuid . '/attachments/' . $attachmentUuid)
+        $this->http
+            ->get('/api/smtp/' . $eventUuid . '/attachments/' . $attachmentUuid)
             ->assertNotFound()
             ->assertResource(
                 new JsonResource([
@@ -55,7 +57,8 @@ final class DownloadActionTest extends ControllerTestCase
         $event = $this->createEvent('smtp');
         $attachmentUuid = Uuid::generate();
 
-        $this->http->get('/api/smtp/' . $event->getUuid() . '/attachments/' . $attachmentUuid)
+        $this->http
+            ->get('/api/smtp/' . $event->getUuid() . '/attachments/' . $attachmentUuid)
             ->assertNotFound()
             ->assertResource(
                 new JsonResource([
@@ -70,7 +73,8 @@ final class DownloadActionTest extends ControllerTestCase
         $event = $this->createEvent('smtp');
         $attachment = AttachmentFactory::new()->createOne();
 
-        $this->http->get('/api/smtp/' . $event->getUuid() . '/attachments/' . $attachment->getUuid())
+        $this->http
+            ->get('/api/smtp/' . $event->getUuid() . '/attachments/' . $attachment->getUuid())
             ->assertForbidden()
             ->assertResource(
                 new JsonResource([

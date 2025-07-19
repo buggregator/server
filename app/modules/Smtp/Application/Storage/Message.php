@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Smtp\Application\Storage;
 
+use Modules\Smtp\Application\Mail\Parser;
+
 final class Message
 {
     public function __construct(
@@ -67,8 +69,8 @@ final class Message
         return $this->body;
     }
 
-    public function parse(): \Modules\Smtp\Application\Mail\Message
+    public function parse(Parser $parser): \Modules\Smtp\Application\Mail\Message
     {
-        return ParserFactory::getInstance()->create()->parse($this->getBody(), $this->recipients);
+        return $parser->parse($this->getBody(), $this->recipients);
     }
 }

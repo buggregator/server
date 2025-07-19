@@ -18,7 +18,8 @@ final class ListActionTest extends ControllerTestCase
         $attachments = AttachmentFactory::new()->forEvent($event->getUuid())->times(3)->create();
         $missing = AttachmentFactory::new()->createOne();
 
-        $this->http->get('/api/smtp/' . $event->getUuid() . '/attachments')
+        $this->http
+            ->get('/api/smtp/' . $event->getUuid() . '/attachments')
             ->assertOk()
             ->assertCollectionContainResources(
                 \array_map(
@@ -32,7 +33,8 @@ final class ListActionTest extends ControllerTestCase
     public function testFindWithNonExistsEvent(): void
     {
         $eventUuid = Uuid::generate();
-        $this->http->get('/api/smtp/' . $eventUuid . '/attachments')
+        $this->http
+            ->get('/api/smtp/' . $eventUuid . '/attachments')
             ->assertNotFound();
     }
 }

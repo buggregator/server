@@ -7,6 +7,7 @@ namespace Tests\Feature\Interfaces\TCP\Smtp;
 use App\Application\Commands\HandleReceivedEvent;
 use Mockery\MockInterface;
 use Modules\Smtp\Application\Mail\Message as MailMessage;
+use Modules\Smtp\Application\Mail\Parser;
 use Modules\Smtp\Application\Storage\EmailBodyStorage;
 use Modules\Smtp\Application\Storage\Message;
 use Modules\Smtp\Domain\AttachmentStorageInterface;
@@ -18,7 +19,6 @@ use Spiral\RoadRunner\Tcp\Request;
 use Spiral\RoadRunner\Tcp\TcpEvent;
 use Spiral\RoadRunnerBridge\Tcp\Response\RespondMessage;
 use Tests\TestCase;
-use Tests\Utilities\ParserTestHelper;
 
 final class ServiceTest extends TestCase
 {
@@ -31,9 +31,6 @@ final class ServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        // Reset the ParserFactory
-        ParserTestHelper::resetParserFactory();
 
         // Create a mock for the cache that EmailBodyStorage depends on
         $this->cache = $this->createMock(CacheInterface::class);
@@ -48,13 +45,8 @@ final class ServiceTest extends TestCase
             $this->bus,
             $this->emailBodyStorage,
             $this->attachments,
+            $this->get(Parser::class),
         );
-    }
-
-    protected function tearDown(): void
-    {
-        ParserTestHelper::resetParserFactory();
-        parent::tearDown();
     }
 
     public function testResetBodyOnDataCommand(): void
@@ -76,7 +68,9 @@ final class ServiceTest extends TestCase
             ->method('set')
             ->with(
                 $connectionUuid,
-                $this->callback(fn($persistedMessage) => $persistedMessage->body === '' && $persistedMessage->waitBody === true),
+                $this->callback(
+                    fn($persistedMessage) => $persistedMessage->body === '' && $persistedMessage->waitBody === true,
+                ),
                 $this->anything(),
             );
 
@@ -105,7 +99,7 @@ final class ServiceTest extends TestCase
         $message->body = "Test message content\r\n.\r\n"; // With EOS marker
 
         // Create a real MailMessage object instead of a mock
-        $mailMessage = new MailMessage(
+        new MailMessage(
             id: 'test-message-id',
             raw: $message->getBody(),
             sender: [['email' => 'test@example.com', 'name' => 'Test Sender']],
@@ -118,8 +112,6 @@ final class ServiceTest extends TestCase
             allRecipients: [],
             attachments: [],
         );
-
-        ParserTestHelper::setupParserWithPredefinedResult($mailMessage);
 
         // Set up the cache mock
         $this->cache
