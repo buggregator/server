@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Profiler\Application\Handlers;
 
 use Modules\Profiler\Application\EventHandlerInterface;
+use Modules\Profiler\Application\MetricsHelper;
 
 final class PrepareEdges implements EventHandlerInterface
 {
@@ -23,9 +24,16 @@ final class PrepareEdges implements EventHandlerInterface
 
             $parentId = $parents[$parent] ?? $prev;
 
+            // Normalize metrics to ensure all required fields are present
+            $normalizedValues = MetricsHelper::getAllMetrics($values);
+
+            // Calculate percentages with safe metric access
             foreach (['cpu', 'mu', 'pmu', 'wt'] as $key) {
+                $peakValue = MetricsHelper::getMetric($event['peaks'], $key);
                 $values['p_' . $key] = \round(
-                    $values[$key] > 0 ? ($values[$key]) / $event['peaks'][$key] * 100 : 0,
+                    $normalizedValues[$key] > 0 && $peakValue > 0
+                        ? ($normalizedValues[$key]) / $peakValue * 100
+                        : 0,
                     3,
                 );
             }

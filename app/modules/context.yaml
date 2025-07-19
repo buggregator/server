@@ -18,3 +18,14 @@ documents:
           - ../../tests/Feature/Interfaces/TCP/Smtp
         filePattern:
           - "*.php"
+          -
+  - description: Profiler module
+    outputPath: module/profiler.md
+    sources:
+      - type: file
+        sourcePaths:
+          - ./Profiler
+          - ../../tests/Unit/Modules/Profiler
+          - ../../tests/Feature/Interfaces/Http/Profiler
+        filePattern:
+          - "*.php"
