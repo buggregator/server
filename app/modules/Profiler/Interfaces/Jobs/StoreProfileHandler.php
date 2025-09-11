@@ -54,7 +54,7 @@ final class StoreProfileHandler extends JobHandler
             $normalizedCost = MetricsHelper::getAllMetrics($cost);
 
             $this->em->persist(
-                $edge = $this->edgeFactory->create(
+                entity: $edge = $this->edgeFactory->create(
                     profileUuid: $profileUuid,
                     order: $i++,
                     cost: new Cost(
@@ -99,7 +99,7 @@ final class StoreProfileHandler extends JobHandler
 
         // Safely update peaks with normalized metrics
         foreach ($functions['overall_totals'] as $metric => $value) {
-            if (property_exists($profile->getPeaks(), $metric)) {
+            if (\property_exists($profile->getPeaks(), $metric)) {
                 $profile->getPeaks()->{$metric} = $value;
             }
         }
