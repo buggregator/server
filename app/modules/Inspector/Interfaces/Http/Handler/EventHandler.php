@@ -72,7 +72,10 @@ final readonly class EventHandler implements HandlerInterface
         if (
             $request->hasHeader('X-Inspector-Key')
             || $request->hasHeader('X-Inspector-Version')
-            || \str_ends_with((string) $request->getUri(), 'inspector')
+            || (
+                !\str_starts_with($request->getUri()->getPath(), '/inspector')
+                && \str_ends_with((string) $request->getUri(), 'inspector')
+            )
         ) {
             return new EventType(type: 'inspector');
         }
