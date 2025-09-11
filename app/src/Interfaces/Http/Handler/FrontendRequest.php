@@ -9,6 +9,7 @@ use GuzzleHttp\Psr7\MimeType;
 use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Spiral\Http\Exception\ClientException\NotFoundException;
 
 final class FrontendRequest implements HandlerInterface
 {
@@ -35,14 +36,19 @@ final class FrontendRequest implements HandlerInterface
 
         if ($path === '/') {
             $path = '/index.html';
+        } elseif (
+            !\str_starts_with($path, '/api')
+            && !\str_starts_with($path, '/assets')
+            && !\str_contains($path, '/src')
+        ) {
+            $path = '/index.html';
         }
 
         $path = $this->publicPath . $path;
 
         if (!isset($this->fileContent[$path])) {
             if (!file_exists($path)) {
-                // Similar to Nginx's retry-files functionality.
-                $path = $this->publicPath . '/index.html';
+                throw new NotFoundException(\sprintf('File "%s" not found', $path));
             }
 
             $body = \file_get_contents($path);
@@ -67,23 +73,11 @@ final class FrontendRequest implements HandlerInterface
     {
         $path = $request->getUri()->getPath();
 
-        $frontendRoutes = [
-            '/',
-            '/ray',
-            '/smtp',
-            '/sentry',
-            '/monolog',
-            '/profiler',
-            '/settings',
-            '/var-dump',
-            '/http-dump',
-            '/inspector',
-        ];
-
-        return in_array($path, $frontendRoutes)
+        return $path === '/'
             || \str_starts_with($path, '/src/')
             || \str_starts_with($path, '/assets/')
             || $path === '/favicon/favicon.ico'
-            || $path === '/bg.jpg';
+            || $path === '/bg.jpg'
+            || !\str_starts_with($path, '/api');
     }
 }
