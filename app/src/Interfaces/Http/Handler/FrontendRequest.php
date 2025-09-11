@@ -36,6 +36,12 @@ final class FrontendRequest implements HandlerInterface
 
         if ($path === '/') {
             $path = '/index.html';
+        } elseif (
+            !\str_starts_with($path, '/api')
+            && !\str_starts_with($path, '/assets')
+            && !\str_contains($path, '/src')
+        ) {
+            $path = '/index.html';
         }
 
         $path = $this->publicPath . $path;
@@ -71,6 +77,7 @@ final class FrontendRequest implements HandlerInterface
             || \str_starts_with($path, '/src/')
             || \str_starts_with($path, '/assets/')
             || $path === '/favicon/favicon.ico'
-            || $path === '/bg.jpg';
+            || $path === '/bg.jpg'
+            || !\str_starts_with($path, '/api');
     }
 }
