@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\VarDumper\Interfaces\TCP;
+namespace Modules\VarDumper\Interfaces\Jobs;
 
 use App\Application\Commands\HandleReceivedEvent;
 use Modules\VarDumper\Application\Dump\BodyInterface;
@@ -12,41 +12,32 @@ use Modules\VarDumper\Application\Dump\HtmlDumper;
 use Modules\VarDumper\Application\Dump\MessageParser;
 use Modules\VarDumper\Application\Dump\ParsedPayload;
 use Modules\VarDumper\Application\Dump\PrimitiveBody;
+use Spiral\Core\InvokerInterface;
 use Spiral\Cqrs\CommandBusInterface;
-use Spiral\RoadRunner\Tcp\Request;
-use Spiral\RoadRunner\Tcp\TcpEvent;
-use Spiral\RoadRunnerBridge\Tcp\Response\ContinueRead;
-use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
-use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
+use Spiral\Queue\JobHandler;
 use Symfony\Component\VarDumper\Cloner\Data;
 
-final readonly class Service implements ServiceInterface
+final class DumpHandler extends JobHandler
 {
     public function __construct(
-        private CommandBusInterface $commandBus,
-        private DumpIdGeneratorInterface $dumpId,
-    ) {}
-
-    public function handle(Request $request): ResponseInterface
-    {
-        if ($request->event === TcpEvent::Connected) {
-            return new ContinueRead();
-        }
-
-        $messages = \array_filter(\explode("\n", $request->body));
-
-        foreach ($messages as $message) {
-            $payload = (new MessageParser())->parse($message);
-
-            $this->fireEvent($payload);
-        }
-
-        return new ContinueRead();
+        private readonly CommandBusInterface $bus,
+        private readonly DumpIdGeneratorInterface $dumpId,
+        InvokerInterface $invoker,
+    ) {
+        parent::__construct($invoker);
     }
+
+    public function invoke(mixed $payload): void
+    {
+        $this->fireEvent(
+            (new MessageParser())->parse($payload),
+        );
+    }
+
 
     private function fireEvent(ParsedPayload $payload): void
     {
-        $this->commandBus->dispatch(
+        $this->bus->dispatch(
             new HandleReceivedEvent(
                 type: 'var-dump',
                 payload: [
@@ -96,4 +87,5 @@ final readonly class Service implements ServiceInterface
 
         return $payloadContent;
     }
+
 }

@@ -94,3 +94,8 @@ repository = "tcp"
 ref = "2.0.0"
 owner = "buggregator"
 repository = "smtp-server"
+
+[github.plugins.var-dumper-server]
+ref = "main"
+owner = "buggregator"
+repository = "var-dumper-server"
