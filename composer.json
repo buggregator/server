@@ -87,6 +87,9 @@
     "allow-plugins": {
       "spiral/composer-publish-plugin": true,
       "php-http/discovery": false
+    },
+    "audit": {
+      "block-insecure": false
     }
   },
   "scripts": {
