@@ -13,32 +13,26 @@ server:
     command: "php app.php register:modules"
 
 logs:
-  # Logging mode can be "development", "production" or "raw".
-  # Do not forget to change this value for production environment.
   mode: ${RR_LOG_MODE:-production}
-  # Encoding format can be "console" or "json" (last is preferred for production usage).
   encoding: ${RR_LOG_ENCODING:-json}
-  # Logging level can be "panic", "error", "warn", "info", "debug".
   level: ${RR_LOG_LEVEL:-warn}
   channels:
     http:
-      # HTTP plugin logging level can be "panic", "error", "warn", "info", "debug".
       level: ${RR_LOG_HTTP_LEVEL:-warn}
     tcp:
-      # TCP plugin logging level can be "panic", "error", "warn", "info", "debug".
       level: ${RR_LOG_TCP_LEVEL:-warn}
     jobs:
-      # JOBS plugin logging level can be "panic", "error", "warn", "info", "debug".
       level: ${RR_LOG_JOBS_LEVEL:-warn}
     centrifuge:
-      # Centrifuge plugin logging level can be "panic", "error", "warn", "info", "debug".
       level: ${RR_LOG_CENTRIFUGE_LEVEL:-warn}
     server:
-      # Server logging level can be "panic", "error", "warn", "info", "debug".
       level: ${RR_LOG_SERVER_LEVEL:-warn}
     service:
-      # Service logging level can be "panic", "error", "warn", "info", "debug".
       level: ${RR_LOG_SERVICE_LEVEL:-warn}
+    smtp:
+      level: ${RR_LOG_SMTP_LEVEL:-warn}
+    var-dumper:
+      level: ${RR_LOG_VAR_DUMPER_LEVEL:-warn}
 
 http:
   address: 127.0.0.1:8082
@@ -57,20 +51,11 @@ http:
 tcp:
   servers:
     monolog:
-      # Address to listen.
       addr: ${RR_TCP_MONOLOG_ADDR:-:9913}
       delimiter: "\n"
-    var-dumper:
-      # Address to listen.
-      addr: ${RR_TCP_VAR_DUMPER_ADDR:-:9912}
-      delimiter: "\n"
-  # Chunks that RR uses to read the data. In bytes.
-  # If you expect big payloads on a TCP server, to reduce `read` syscalls,
-  # would be a good practice to use a fairly big enough buffer.
-  # Default: 1024 * 1024 * 50 (50MB)
   read_buf_size: ${RR_TCP_READ_BUF_SIZE:-50485760}
   pool:
-    num_workers: ${RR_TCP_NUM_WORKERS:-2}
+    num_workers: ${RR_TCP_NUM_WORKERS:-1}
 
 kv:
   local:
@@ -79,9 +64,9 @@ kv:
 
 jobs:
   consume:
-    - smtp
+    - events
   pipelines:
-    smtp:
+    events:
       driver: memory
       config:
         priority: 10
@@ -93,7 +78,13 @@ smtp:
   addr: ${RR_SMTP_ADDR:-:1025}
   hostname: "buggregator.local"
   jobs:
-    pipeline: smtp
+    pipeline: events
+
+var-dumper:
+  addr: ${RR_VAR_DUMPER_ADDR:-:9912}
+  max_message_size: ${RR_TCP_READ_BUF_SIZE:-50485760}
+  jobs:
+    pipeline: events
 
 service:
   nginx:
