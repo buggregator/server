@@ -96,6 +96,6 @@ owner = "buggregator"
 repository = "smtp-server"
 
 [github.plugins.var-dumper-server]
-ref = "main"
+ref = "1.0.0"
 owner = "buggregator"
 repository = "var-dumper-server"
