@@ -61,7 +61,7 @@ final class HandlerPipeline implements HandlerRegistryInterface, CoreHandlerInte
         $this->position++;
 
         if ($handler === null) {
-            return new Response(404);
+            return new Response(404, [], 'Unprocessable Entity');
         }
 
         try {

@@ -51,12 +51,13 @@
     "spiral/roadrunner-tcp": "^3.1",
     "spiral/validator": "^1.1",
     "symfony/mime": "^6.2",
-    "symfony/var-dumper": "^6.1",
+    "symfony/var-dumper": "^7.1",
     "symfony/yaml": "^7.0",
     "zbateson/mail-mime-parser": "^2.0",
     "zentlix/swagger-php": "1.x-dev"
   },
   "require-dev": {
+    "buggregator/trap": "^1.13",
     "friendsofphp/php-cs-fixer": "^3.40",
     "phpunit/phpunit": "^10.0",
     "qossmic/deptrac-shim": "^1.0",

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application;
 
 use App\Application\Bootloader\ExceptionHandlerBootloader;
+use App\Application\Bootloader\LoggingBootloader;
 use App\Application\Bootloader\RoutesBootloader;
 use App\Application\Bootloader\AppBootloader;
 use App\Application\Bootloader\AttributesBootloader;
@@ -51,13 +52,13 @@ class Kernel extends \Spiral\Framework\Kernel
     {
         return [
             ExceptionHandlerBootloader::class,
+            LoggingBootloader::class,
 
             // RoadRunner
             RoadRunnerBridge\CacheBootloader::class,
             RoadRunnerBridge\HttpBootloader::class,
             RoadRunnerBridge\QueueBootloader::class,
             RoadRunnerBridge\TcpBootloader::class,
-            RoadRunnerBridge\LoggerBootloader::class,
 
             MonologBootloader::class,
 

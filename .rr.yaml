@@ -52,6 +52,14 @@ jobs:
   pool:
     num_workers: 1
 
+
+smtp:
+  addr: ${RR_SMTP_ADDR:-:1025}
+  hostname: "buggregator.local"
+  include_raw: true
+  jobs:
+    pipeline: "smtp"
+
 service:
   centrifuge:
     service_name_in_log: true

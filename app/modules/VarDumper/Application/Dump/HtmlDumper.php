@@ -17,7 +17,7 @@ final class HtmlDumper extends CliDumper
     protected string $dumpPrefix = '<pre class=sf-dump id=%s data-indent-pad="%s">';
     protected string $dumpSuffix = '</pre><script>Sfdump(%s)</script>';
     protected string $dumpId = 'sf-dump';
-    protected $colors = true;
+    protected bool $colors = true;
     protected int $lastDepth = -1;
 
     private array $displayOptions = [

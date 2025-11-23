@@ -98,6 +98,7 @@ jobs:
             APP_VERSION=${{ github.ref_name }}
             FRONTEND_IMAGE_TAG=${{ secrets.FRONTEND_IMAGE_TAG }}
             BRANCH=${{ github.ref_name }}
+            GH_TOKEN=${{ secrets.GHCR_PASSWORD }}
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
           cache-from: type=gha

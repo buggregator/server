@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Smtp\Interfaces\Jobs\EmailHandler;
 use Modules\Webhooks\Interfaces\Job\WebhookHandler;
 use Spiral\Queue\Driver\SyncDriver;
 use Spiral\RoadRunner\Jobs\Queue\MemoryCreateInfo;
@@ -36,7 +37,9 @@ return [
         'roadrunner' => Queue::class,
     ],
     'registry' => [
-        'handlers' => [],
+        'handlers' => [
+            'smtp.email' => EmailHandler::class,
+        ],
         'serializers' => [
             WebhookHandler::class => 'symfony-json',
         ],
