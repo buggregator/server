@@ -1,0 +1,96 @@
+[roadrunner]
+ref = "v2025.1.1"
+
+[log]
+level = "info"
+mode = "production"
+
+[github]
+[github.token]
+token = "${GH_TOKEN}"
+
+[github.plugins]
+[github.plugins.logger]
+ref = "v5.1.8"
+owner = "roadrunner-server"
+repository = "logger"
+
+[github.plugins.server]
+ref = "v5.2.9"
+owner = "roadrunner-server"
+repository = "server"
+
+[github.plugins.rpc]
+ref = "v5.1.8"
+owner = "roadrunner-server"
+repository = "rpc"
+
+[github.plugins.service]
+ref = "v5.1.8"
+owner = "roadrunner-server"
+repository = "service"
+
+[github.plugins.lock]
+ref = "v5.1.8"
+owner = "roadrunner-server"
+repository = "lock"
+
+[github.plugins.http]
+ref = "v5.2.7"
+owner = "roadrunner-server"
+repository = "http"
+
+[github.plugins.gzip]
+ref = "v5.1.8"
+owner = "roadrunner-server"
+repository = "gzip"
+
+[github.plugins.headers]
+ref = "v5.1.8"
+owner = "roadrunner-server"
+repository = "headers"
+
+[github.plugins.jobs]
+ref = "v5.1.8"
+owner = "roadrunner-server"
+repository = "jobs"
+
+[github.plugins.kv]
+ref = "v5.2.8"
+owner = "roadrunner-server"
+repository = "kv"
+
+[github.plugins.memory]
+ref = "v5.2.8"
+owner = "roadrunner-server"
+repository = "memory"
+
+[github.plugins.metrics]
+ref = "v5.1.8"
+owner = "roadrunner-server"
+repository = "metrics"
+
+[github.plugins.status]
+ref = "v5.1.8"
+owner = "roadrunner-server"
+repository = "status"
+
+[github.plugins.appLogger]
+ref = "v5.1.8"
+owner = "roadrunner-server"
+repository = "app-logger"
+
+[github.plugins.centrifuge]
+ref = "v5.1.8"
+owner = "roadrunner-server"
+repository = "centrifuge"
+
+[github.plugins.tcp]
+ref = "v5.0.0"
+owner = "roadrunner-server"
+repository = "tcp"
+
+[github.plugins.smtp-server]
+ref = "2.0.0"
+owner = "buggregator"
+repository = "smtp-server"

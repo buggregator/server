@@ -45,5 +45,6 @@ jobs:
             APP_VERSION=${{ steps.previoustag.outputs.tag }}
             FRONTEND_IMAGE_TAG=latest
             BRANCH=${{ steps.previoustag.outputs.tag }}
+            GH_TOKEN=${{ secrets.GHCR_PASSWORD }}
           tags:
             ghcr.io/${{ github.repository }}:dev, ghcr.io/${{ github.repository }}:${{ steps.previoustag.outputs.tag }}

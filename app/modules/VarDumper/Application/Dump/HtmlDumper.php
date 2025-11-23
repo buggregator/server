@@ -17,7 +17,7 @@ final class HtmlDumper extends CliDumper
     protected string $dumpPrefix = '<pre class=sf-dump id=%s data-indent-pad="%s">';
     protected string $dumpSuffix = '</pre><script>Sfdump(%s)</script>';
     protected string $dumpId = 'sf-dump';
-    protected $colors = true;
+    protected bool $colors = true;
     protected int $lastDepth = -1;
 
     private array $displayOptions = [
@@ -96,7 +96,7 @@ final class HtmlDumper extends CliDumper
 
         if ($hasChild) {
             $this->line .= '<samp data-depth=' . ($cursor->depth + 1);
-            if ($cursor->refIndex) {
+            if ($cursor->refIndex !== 0) {
                 $r = Cursor::HASH_OBJECT !== $type ? 1 - (Cursor::HASH_RESOURCE !== $type) : 2;
                 $r .= $r && 0 < $cursor->softRefHandle ? $cursor->softRefHandle : $cursor->refIndex;
 

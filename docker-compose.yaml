@@ -25,20 +25,24 @@ services:
       - buggregator-network
 
   buggregator-server:
-    build: "./.docker"
-    ports:
-      - 1025:1025
-      - 9912:9912
-      - 9913:9913
+    build:
+      dockerfile: Dockerfile
+      context: .docker
+      args:
+        GH_TOKEN: "${GH_TOKEN}"
     environment:
-      # RR_LOG_LEVEL: debug
+#      RR_LOG_LEVEL: debug
+      #      RR_LOG_TCP_LEVEL: debug
+      #      RR_LOG_JOBS_LEVEL: debug
+      #      RR_LOG_SERVER_LEVEL: debug
+      MONOLOG_DEFAULT_CHANNEL: roadrunner
 
       PERSISTENCE_DRIVER: db
-      # DB_LOGGER: roadrunner
       DB_USERNAME: homestead
       DB_PASSWORD: secret
       DB_DRIVER: pgsql
       DB_HOST: buggregator-pgsql
+      # DB_LOGGER: roadrunner
 
       # Auth
       AUTH_ENABLED: false
@@ -104,6 +108,7 @@ services:
       INSPECTOR_URL: http://inspector@buggregator-server:8000
       INSPECTOR_API_KEY: test
       PROFILER_ENDPOINT: http://profiler@buggregator-server:8000
+      HTTP_DUMP_ENDPOINT: http://http-dump@buggregator-server:8000
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.buggregator-examples.entrypoints=web"

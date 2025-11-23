@@ -2,13 +2,37 @@ ARG ROAD_RUNNER_IMAGE=2024.2.1
 ARG CENTRIFUGO_IMAGE=v4
 ARG DOLT_IMAGE=1.42.8
 ARG FRONTEND_IMAGE_TAG=latest
+ARG GH_TOKEN
 
 # Build centrifugo binary
 FROM centrifugo/centrifugo:$CENTRIFUGO_IMAGE as centrifugo
 # Build dolt binary
 FROM dolthub/dolt:$DOLT_IMAGE as dolt
 # Build rr binary
-FROM ghcr.io/roadrunner-server/roadrunner:$ROAD_RUNNER_IMAGE as rr
+FROM ghcr.io/roadrunner-server/velox:2025.1.1 as velox
+#FROM ghcr.io/roadrunner-server/roadrunner:$ROAD_RUNNER_IMAGE as rr
+
+FROM golang:1.25-alpine as rr
+
+ARG APP_VERSION="2025.1.1"
+ARG VELOX_CONFIG="velox.toml"
+ARG GH_TOKEN
+
+# copy required files from builder image
+COPY --from=velox /usr/bin/vx /usr/bin/vx
+COPY ${VELOX_CONFIG} .
+
+# we don't need CGO
+ENV CGO_ENABLED=0
+ENV RT_TOKEN=${GH_TOKEN}
+ENV VELOX_CONFIG=${VELOX_CONFIG}
+ARG CACHE_BUST=1
+
+RUN echo $CACHE_BUST
+
+# RUN build
+RUN vx build -c ${VELOX_CONFIG} -o /usr/bin/
+
 # Build JS files
 FROM ghcr.io/buggregator/frontend:$FRONTEND_IMAGE_TAG as frontend
 # Clone the project
@@ -23,7 +47,7 @@ FROM ghcr.io/buggregator/docker:latest as backend
 
 COPY --from=git /app /app
 COPY --from=frontend /app /app/frontend
-COPY --from=rr /usr/bin/rr /app
+COPY --from=rr /usr/bin/rr /usr/bin/rr
 COPY --from=centrifugo /usr/local/bin/centrifugo /app/bin
 COPY --from=dolt /usr/local/bin/dolt /app/bin
 
@@ -65,4 +89,4 @@ LABEL org.opencontainers.image.source=$REPOSITORY
 LABEL org.opencontainers.image.description="Buggregator"
 LABEL org.opencontainers.image.licenses=MIT
 
-CMD ./rr serve -c .rr-prod.yaml
+CMD /usr/bin/rr serve -c .rr-prod.yaml -w /app

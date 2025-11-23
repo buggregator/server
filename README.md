@@ -74,7 +74,7 @@ See the [documentation](https://docs.buggregator.dev/) for detailed installati
 We enthusiastically invite you to contribute to Buggregator Server! Whether you've uncovered a bug, have innovative feature suggestions, or wish to contribute in any other capacity, we warmly welcome your participation. Simply open an issue or submit a pull request on our GitHub repository to get started.
 
 > **Note**
-> Read more how to contribute [here](https://docs.buggregator.dev/contributing/architecture.html)
+> Read more how to contribute [here](https://docs.buggregator.dev/contributing.html)
 
 ---
 

@@ -29,7 +29,7 @@ logs:
       level: ${RR_LOG_TCP_LEVEL:-warn}
     jobs:
       # JOBS plugin logging level can be "panic", "error", "warn", "info", "debug".
-      level: ${RR_LOG_TCP_LEVEL:-warn}
+      level: ${RR_LOG_JOBS_LEVEL:-warn}
     centrifuge:
       # Centrifuge plugin logging level can be "panic", "error", "warn", "info", "debug".
       level: ${RR_LOG_CENTRIFUGE_LEVEL:-warn}
@@ -64,9 +64,6 @@ tcp:
       # Address to listen.
       addr: ${RR_TCP_VAR_DUMPER_ADDR:-:9912}
       delimiter: "\n"
-    smtp:
-      # Address to listen.
-      addr: ${RR_TCP_SMTP_ADDR:-:1025}
   # Chunks that RR uses to read the data. In bytes.
   # If you expect big payloads on a TCP server, to reduce `read` syscalls,
   # would be a good practice to use a fairly big enough buffer.
@@ -81,9 +78,22 @@ kv:
     config: { }
 
 jobs:
-  consume: [ ]
+  consume:
+    - smtp
+  pipelines:
+    smtp:
+      driver: memory
+      config:
+        priority: 10
+        prefetch: 10
   pool:
     num_workers: ${RR_JOBS_NUM_WORKERS:-1}
+
+smtp:
+  addr: ${RR_SMTP_ADDR:-:1025}
+  hostname: "buggregator.local"
+  jobs:
+    pipeline: smtp
 
 service:
   nginx:
