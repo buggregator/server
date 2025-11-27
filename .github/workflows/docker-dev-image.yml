@@ -46,6 +46,6 @@ jobs:
             FRONTEND_IMAGE_TAG=latest
             BRANCH=${{ steps.previoustag.outputs.tag }}
             GH_TOKEN=${{ secrets.GHCR_PASSWORD }}
-            VELOX_CONFIG=".docker/velox.toml"
+            VELOX_CONFIG="./.docker/velox.toml"
           tags:
             ghcr.io/${{ github.repository }}:dev, ghcr.io/${{ github.repository }}:${{ steps.previoustag.outputs.tag }}
