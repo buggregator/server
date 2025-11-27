@@ -25,13 +25,12 @@ COPY ${VELOX_CONFIG} .
 # we don't need CGO
 ENV CGO_ENABLED=0
 ENV RT_TOKEN=${GH_TOKEN}
-ENV VELOX_CONFIG=${VELOX_CONFIG}
 ARG CACHE_BUST=1
 
 RUN echo $CACHE_BUST
 
 # RUN build
-RUN vx build -c ${VELOX_CONFIG} -o /usr/bin/
+RUN vx build -c velox.toml -o /usr/bin/
 
 # Build JS files
 FROM ghcr.io/buggregator/frontend:$FRONTEND_IMAGE_TAG as frontend
