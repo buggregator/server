@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Profiler\Application\Handlers;
 
 use Modules\Profiler\Application\EventHandlerInterface;
+use Modules\Profiler\Application\MetricsHelper;
 
 final class PreparePeaks implements EventHandlerInterface
 {
@@ -12,13 +13,11 @@ final class PreparePeaks implements EventHandlerInterface
     {
         // TODO: fix peaks calculation
         // @see \Modules\Profiler\Interfaces\Queries\FindTopFunctionsByUuidHandler:$overallTotals
-        $event['peaks'] = $event['profile']['main()'] ?? [
-            'wt' => 0,
-            'ct' => 0,
-            'mu' => 0,
-            'pmu' => 0,
-            'cpu' => 0,
-        ];
+
+        // Get main() metrics or use defaults if not available
+        $mainMetrics = $event['profile']['main()'] ?? [];
+
+        $event['peaks'] = MetricsHelper::getAllMetrics($mainMetrics);
 
         return $event;
     }

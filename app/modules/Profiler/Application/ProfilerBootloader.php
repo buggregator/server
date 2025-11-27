@@ -11,6 +11,7 @@ use Modules\Profiler\Application\Handlers\CleanupEvent;
 use Modules\Profiler\Application\Handlers\PrepareEdges;
 use Modules\Profiler\Application\Handlers\PreparePeaks;
 use Modules\Profiler\Application\Handlers\StoreProfile;
+use Modules\Profiler\Application\Service\FunctionMetricsCalculator;
 use Modules\Profiler\Domain\EdgeFactoryInterface;
 use Modules\Profiler\Domain\ProfileFactoryInterface;
 use Modules\Profiler\Integration\CycleOrm\EdgeFactory;
@@ -30,6 +31,7 @@ final class ProfilerBootloader extends Bootloader
         return [
             ProfileFactoryInterface::class => ProfileFactory::class,
             EdgeFactoryInterface::class => EdgeFactory::class,
+
             EventHandlerInterface::class => static fn(
                 ContainerInterface $container,
             ): EventHandlerInterface => new EventHandler($container, [
@@ -39,7 +41,6 @@ final class ProfilerBootloader extends Bootloader
                 CleanupEvent::class,
                 StoreProfile::class,
             ]),
-
 
             StoreProfile::class => static fn(
                 FactoryInterface $factory,
