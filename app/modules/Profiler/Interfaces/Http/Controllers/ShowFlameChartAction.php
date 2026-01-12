@@ -14,10 +14,10 @@ use Spiral\Router\Annotation\Route;
 final readonly class ShowFlameChartAction
 {
     #[Route(route: 'profiler/<uuid>/flame-chart', name: 'profiler.show.flame-chart', methods: ['GET'], group: 'api')]
-    public function __invoke(QueryBusInterface $bus, Uuid $uuid): array
+    public function __invoke(QueryBusInterface $bus, Uuid $uuid): string
     {
         try {
-            /** @var array $flameChart */
+            /** @var string $flameChart */
             $flameChart = $bus->ask(new FindFlameChartByUuid($uuid));
         } catch (EntityNotFoundException $e) {
             throw new NotFoundException($e->getMessage());

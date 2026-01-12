@@ -20,11 +20,11 @@ final readonly class FindFlameChartByUuidHandler
     ) {}
 
     #[QueryHandler]
-    public function __invoke(FindFlameChartByUuid $query): array
+    public function __invoke(FindFlameChartByUuid $query): string
     {
         $file = $query->profileUuid . '.flamechart.json';
         if ($this->bucket->exists($file)) {
-            return \json_decode($this->bucket->getContents($file), true);
+            return $this->bucket->getContents($file);
         }
 
         $profile = $this->orm->getRepository(Profile::class)->findByPK($query->profileUuid);
@@ -67,9 +67,10 @@ final readonly class FindFlameChartByUuidHandler
         }
 
         $this->adjustStartTimes($waterfall, 0);
-        $this->bucket->write($file, \json_encode($waterfall, 0, 5000));
+        $serialized = \json_encode($waterfall, 0, 5000);
+        $this->bucket->write($file, $serialized);
 
-        return $waterfall;
+        return $serialized;
     }
 
     private function adjustStartTimes(array &$eventList, float|int $startTime): void
