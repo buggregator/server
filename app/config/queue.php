@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Modules\Smtp\Interfaces\Jobs\EmailHandler;
-use Modules\VarDumper\Interfaces\Jobs\DumpHandler;
 use Modules\Webhooks\Interfaces\Job\WebhookHandler;
 use Spiral\Queue\Driver\SyncDriver;
 use Spiral\RoadRunner\Jobs\Queue\MemoryCreateInfo;
@@ -40,7 +39,6 @@ return [
     'registry' => [
         'handlers' => [
             'smtp.email' => EmailHandler::class,
-            'vardumper.dump' => DumpHandler::class,
         ],
         'serializers' => [
             WebhookHandler::class => 'symfony-json',
