@@ -31,7 +31,7 @@ services:
       args:
         GH_TOKEN: "${GH_TOKEN}"
     environment:
-      RR_LOG_LEVEL: debug
+#      RR_LOG_LEVEL: debug
       #      RR_LOG_TCP_LEVEL: debug
       #      RR_LOG_JOBS_LEVEL: debug
       #      RR_LOG_SERVER_LEVEL: debug

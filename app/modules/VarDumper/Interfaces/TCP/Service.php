@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\VarDumper\Interfaces\Jobs;
+namespace Modules\VarDumper\Interfaces\TCP;
 
 use App\Application\Commands\HandleReceivedEvent;
 use Modules\VarDumper\Application\Dump\BodyInterface;
@@ -12,32 +12,41 @@ use Modules\VarDumper\Application\Dump\HtmlDumper;
 use Modules\VarDumper\Application\Dump\MessageParser;
 use Modules\VarDumper\Application\Dump\ParsedPayload;
 use Modules\VarDumper\Application\Dump\PrimitiveBody;
-use Spiral\Core\InvokerInterface;
 use Spiral\Cqrs\CommandBusInterface;
-use Spiral\Queue\JobHandler;
+use Spiral\RoadRunner\Tcp\Request;
+use Spiral\RoadRunner\Tcp\TcpEvent;
+use Spiral\RoadRunnerBridge\Tcp\Response\ContinueRead;
+use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
+use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
 use Symfony\Component\VarDumper\Cloner\Data;
 
-final class DumpHandler extends JobHandler
+final readonly class Service implements ServiceInterface
 {
     public function __construct(
-        private readonly CommandBusInterface $bus,
-        private readonly DumpIdGeneratorInterface $dumpId,
-        InvokerInterface $invoker,
-    ) {
-        parent::__construct($invoker);
-    }
+        private CommandBusInterface $commandBus,
+        private DumpIdGeneratorInterface $dumpId,
+    ) {}
 
-    public function invoke(mixed $payload): void
+    public function handle(Request $request): ResponseInterface
     {
-        $this->fireEvent(
-            (new MessageParser())->parse($payload),
-        );
-    }
+        if ($request->event === TcpEvent::Connected) {
+            return new ContinueRead();
+        }
 
+        $messages = \array_filter(\explode("\n", $request->body));
+
+        foreach ($messages as $message) {
+            $payload = (new MessageParser())->parse($message);
+
+            $this->fireEvent($payload);
+        }
+
+        return new ContinueRead();
+    }
 
     private function fireEvent(ParsedPayload $payload): void
     {
-        $this->bus->dispatch(
+        $this->commandBus->dispatch(
             new HandleReceivedEvent(
                 type: 'var-dump',
                 payload: [
@@ -87,5 +96,4 @@ final class DumpHandler extends JobHandler
 
         return $payloadContent;
     }
-
 }
