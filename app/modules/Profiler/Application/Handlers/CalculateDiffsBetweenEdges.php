@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Profiler\Application\Handlers;
 
 use Modules\Profiler\Application\EventHandlerInterface;
+use Modules\Profiler\Application\MetricsHelper;
 
 // TODO: fix diff calculation
 final class CalculateDiffsBetweenEdges implements EventHandlerInterface
@@ -18,16 +19,21 @@ final class CalculateDiffsBetweenEdges implements EventHandlerInterface
             [$parent, $func] = $this->splitName($name);
 
             if ($parent) {
-                $parentValues = $parents[$parent] ?? ['cpu' => 0, 'wt' => 0, 'mu' => 0, 'pmu' => 0];
+                $parentValues = $parents[$parent] ?? MetricsHelper::getAllMetrics([]);
+
+                // Use MetricsHelper to safely access metrics with defaults
+                $currentMetrics = MetricsHelper::getAllMetrics($values);
+
                 $event['profile'][$name] = \array_merge([
-                    'd_cpu' => $parentValues['cpu'] - $values['cpu'],
-                    'd_wt' => $parentValues['wt'] - $values['wt'],
-                    'd_mu' => $parentValues['mu'] - $values['mu'],
-                    'd_pmu' => $parentValues['pmu'] - $values['pmu'],
+                    'd_cpu' => $parentValues['cpu'] - $currentMetrics['cpu'],
+                    'd_wt' => $parentValues['wt'] - $currentMetrics['wt'],
+                    'd_mu' => $parentValues['mu'] - $currentMetrics['mu'],
+                    'd_pmu' => $parentValues['pmu'] - $currentMetrics['pmu'],
                 ], $values);
             }
 
-            $parents[$func] = $values;
+            // Store normalized metrics for parent lookup
+            $parents[$func] = MetricsHelper::getAllMetrics($values);
         }
 
         return $event;

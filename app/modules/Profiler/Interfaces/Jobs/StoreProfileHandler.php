@@ -10,6 +10,7 @@ use Modules\Profiler\Domain\Edge\Percents;
 use App\Application\Domain\ValueObjects\Uuid;
 use Cycle\ORM\EntityManagerInterface;
 use Cycle\ORM\ORMInterface;
+use Modules\Profiler\Application\MetricsHelper;
 use Modules\Profiler\Application\Query\FindTopFunctionsByUuid;
 use Modules\Profiler\Domain\EdgeFactoryInterface;
 use Modules\Profiler\Domain\Profile;
@@ -48,30 +49,34 @@ final class StoreProfileHandler extends JobHandler
         $batchSize = 0;
         $i = 0;
         foreach ($edges as $id => $edge) {
+            // Use safe metric access with defaults for missing values
+            $cost = $edge['cost'] ?? [];
+            $normalizedCost = MetricsHelper::getAllMetrics($cost);
+
             $this->em->persist(
-                $edge = $this->edgeFactory->create(
+                entity: $edge = $this->edgeFactory->create(
                     profileUuid: $profileUuid,
                     order: $i++,
                     cost: new Cost(
-                        cpu: $edge['cost']['cpu'] ?? 0,
-                        wt: $edge['cost']['wt'] ?? 0,
-                        ct: $edge['cost']['ct'] ?? 0,
-                        mu: $edge['cost']['mu'] ?? 0,
-                        pmu: $edge['cost']['pmu'] ?? 0,
+                        cpu: $normalizedCost['cpu'],
+                        wt: $normalizedCost['wt'],
+                        ct: $normalizedCost['ct'],
+                        mu: $normalizedCost['mu'],
+                        pmu: $normalizedCost['pmu'],
                     ),
                     diff: new Diff(
-                        cpu: $edge['cost']['d_cpu'] ?? 0,
-                        wt: $edge['cost']['d_wt'] ?? 0,
-                        ct: $edge['cost']['d_ct'] ?? 0,
-                        mu: $edge['cost']['d_mu'] ?? 0,
-                        pmu: $edge['cost']['d_pmu'] ?? 0,
+                        cpu: MetricsHelper::getMetric($cost, 'd_cpu'),
+                        wt: MetricsHelper::getMetric($cost, 'd_wt'),
+                        ct: MetricsHelper::getMetric($cost, 'd_ct'),
+                        mu: MetricsHelper::getMetric($cost, 'd_mu'),
+                        pmu: MetricsHelper::getMetric($cost, 'd_pmu'),
                     ),
                     percents: new Percents(
-                        cpu: $edge['cost']['p_cpu'] ?? 0,
-                        wt: $edge['cost']['p_wt'] ?? 0,
-                        ct: $edge['cost']['p_ct'] ?? 0,
-                        mu: $edge['cost']['p_mu'] ?? 0,
-                        pmu: $edge['cost']['p_pmu'] ?? 0,
+                        cpu: (float) MetricsHelper::getMetric($cost, 'p_cpu'),
+                        wt: (float) MetricsHelper::getMetric($cost, 'p_wt'),
+                        ct: (float) MetricsHelper::getMetric($cost, 'p_ct'),
+                        mu: (float) MetricsHelper::getMetric($cost, 'p_mu'),
+                        pmu: (float) MetricsHelper::getMetric($cost, 'p_pmu'),
                     ),
                     callee: $edge['callee'],
                     caller: $edge['caller'],
@@ -92,8 +97,11 @@ final class StoreProfileHandler extends JobHandler
         $profile = $this->orm->getRepository(Profile::class)->findByPK($profileUuid);
         $functions = $this->bus->ask(new FindTopFunctionsByUuid(profileUuid: $profileUuid));
 
+        // Safely update peaks with normalized metrics
         foreach ($functions['overall_totals'] as $metric => $value) {
-            $profile->getPeaks()->{$metric} = $value;
+            if (\property_exists($profile->getPeaks(), $metric)) {
+                $profile->getPeaks()->{$metric} = $value;
+            }
         }
 
         $this->em->persist($profile);
