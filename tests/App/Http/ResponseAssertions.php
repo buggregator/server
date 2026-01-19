@@ -118,6 +118,13 @@ final readonly class ResponseAssertions
         return $this;
     }
 
+    public function json(): array
+    {
+        $data = \json_decode((string) $this->response, true);
+
+        return \is_array($data) ? $data : [];
+    }
+
     public function assertJsonResponseContains(array $data): self
     {
         $needle = \json_encode($data);

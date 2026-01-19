@@ -113,6 +113,87 @@ final class HttpFaker
         );
     }
 
+    public function typeCounts(?string $type = null, ?string $project = null): ResponseAssertions
+    {
+        $args = [];
+        if ($type) {
+            $args['type'] = $type;
+        }
+
+        if ($project) {
+            $args['project'] = $project;
+        }
+
+        return $this->makeResponse(
+            $this->http->get(
+                uri: '/api/events/type-counts',
+                query: $args,
+            ),
+        );
+    }
+
+    public function listEvents(
+        ?string $type = null,
+        ?string $project = null,
+        ?int $limit = null,
+        ?string $cursor = null,
+    ): ResponseAssertions {
+        $args = [];
+        if ($type) {
+            $args['type'] = $type;
+        }
+
+        if ($project) {
+            $args['project'] = $project;
+        }
+
+        if ($limit !== null) {
+            $args['limit'] = $limit;
+        }
+
+        if ($cursor !== null) {
+            $args['cursor'] = $cursor;
+        }
+
+        return $this->makeResponse(
+            $this->http->get(
+                uri: '/api/events',
+                query: $args,
+            ),
+        );
+    }
+
+    public function previewEvents(
+        ?string $type = null,
+        ?string $project = null,
+        ?int $limit = null,
+        ?string $cursor = null,
+    ): ResponseAssertions {
+        $args = [];
+        if ($type) {
+            $args['type'] = $type;
+        }
+
+        if ($project) {
+            $args['project'] = $project;
+        }
+
+        if ($limit !== null) {
+            $args['limit'] = $limit;
+        }
+
+        if ($cursor !== null) {
+            $args['cursor'] = $cursor;
+        }
+
+        return $this->makeResponse(
+            $this->http->get(
+                uri: '/api/events/preview',
+                query: $args,
+            ),
+        );
+    }
+
     public function __call(string $name, array $arguments): ResponseAssertions|self
     {
         if (!method_exists($this->http, $name)) {

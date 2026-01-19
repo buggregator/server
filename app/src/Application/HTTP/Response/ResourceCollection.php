@@ -64,7 +64,7 @@ class ResourceCollection implements ResourceInterface
         return $this->writeJson($response, $this);
     }
 
-    protected function wrapData(array $data): array
+    protected function wrapData(array $data, array $meta = []): array
     {
         $grid = [];
 
@@ -77,6 +77,7 @@ class ResourceCollection implements ResourceInterface
         return [
             'data' => $data,
             'meta' => [
+                ...$meta,
                 'grid' => $grid,
             ],
         ];
