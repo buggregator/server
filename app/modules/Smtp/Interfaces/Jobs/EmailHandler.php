@@ -37,7 +37,7 @@ final class EmailHandler extends JobHandler
             sender: $data['envelope']['from'],
             recipients: $data['envelope']['to'],
             ccs: $data['envelope']['ccs'],
-            subject: $data['message']['subject'],
+            subject: $message->getHeaderValue('subject', $data['message']['subject']),
             htmlBody: (string) $message->getHtmlContent(),
             textBody: (string) $message->getTextContent(),
             replyTo: $data['envelope']['replyTo'],
