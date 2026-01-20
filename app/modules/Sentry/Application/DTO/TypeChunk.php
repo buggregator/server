@@ -12,6 +12,7 @@ final readonly class TypeChunk extends JsonChunk
             'event' => Type::Event,
             'span' => Type::Span,
             'transaction' => Type::Transaction,
+            'session' => Type::Session,
             'replay_event' => Type::ReplyEvent,
             'replay_recording' => Type::ReplayRecording,
             default => throw new \InvalidArgumentException('Invalid type: ' . $this->data['type']),
