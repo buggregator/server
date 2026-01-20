@@ -8,6 +8,7 @@ enum Type
 {
     case Event;
     case Transaction;
+    case Session;
     case ReplyEvent;
     case ReplayRecording;
     case Span;
