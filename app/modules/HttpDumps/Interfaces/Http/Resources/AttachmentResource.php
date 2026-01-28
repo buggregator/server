@@ -13,7 +13,7 @@ use OpenApi\Attributes as OA;
  * @property-read Attachment $data
  */
 #[OA\Schema(
-    schema: 'Attachment',
+    schema: 'HttpDumpAttachment',
     properties: [
         new OA\Property(property: 'uuid', type: 'string', format: 'uuid'),
         new OA\Property(property: 'name', type: 'string'),
