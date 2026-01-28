@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Events\Domain;
 
+use Cycle\ORM\Select;
 use Cycle\ORM\RepositoryInterface;
 
 /**
@@ -14,7 +15,11 @@ interface EventRepositoryInterface extends RepositoryInterface
 {
     public function findAll(array $scope = [], array $orderBy = [], int $limit = 30, int $offset = 0): iterable;
 
+    public function select(): Select;
+
     public function countAll(array $scope = []): int;
+
+    public function countByType(array $scope = []): array;
 
     public function store(Event $event): bool;
 

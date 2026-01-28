@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Events\Integration\CycleOrm;
 
 use Cycle\Database\DatabaseInterface;
+use Cycle\Database\Injection\Fragment;
 use Cycle\ORM\EntityManagerInterface;
 use Cycle\ORM\Select;
 use Cycle\ORM\Select\Repository;
@@ -59,6 +60,20 @@ final class EventRepository extends Repository implements EventRepositoryInterfa
         return $this->select()
             ->where($this->buildScope($scope))
             ->count();
+    }
+
+    public function countByType(array $scope = []): array
+    {
+        return $this->db
+            ->select()
+            ->from(Event::TABLE_NAME)
+            ->columns([
+                Event::TYPE,
+                new Fragment('COUNT(*) AS cnt'),
+            ])
+            ->where($this->buildScope($scope))
+            ->groupBy(Event::TYPE)
+            ->fetchAll();
     }
 
     public function findAll(array $scope = [], array $orderBy = [], int $limit = 30, int $offset = 0): iterable
