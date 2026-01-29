@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace Modules\Events\Interfaces\Http\Controllers;
 
-use App\Application\Commands\FindEvents;
+use App\Application\Commands\FindEventsCursor;
 use App\Application\HTTP\Response\ErrorResource;
 use Modules\Events\Interfaces\Http\Request\EventsRequest;
-use Modules\Events\Interfaces\Http\Resources\EventCollection;
+use Modules\Events\Interfaces\Http\Resources\EventCursorCollection;
 use Modules\Events\Interfaces\Http\Resources\EventResource;
-use Spiral\Cqrs\QueryBusInterface;
+use Modules\Events\Interfaces\Queries\EventsCursorResult;
 use OpenApi\Attributes as OA;
+use Spiral\Cqrs\QueryBusInterface;
+use Spiral\Http\Request\InputManager;
 use Spiral\Router\Annotation\Route;
 
 #[OA\Get(
     path: '/api/events',
-    description: 'Retrieve all events',
+    description: 'Retrieve events with cursor pagination. Uses a composite cursor (timestamp + uuid) ordered by timestamp DESC, uuid DESC. Use meta.next_cursor as the cursor parameter to fetch the next page; meta.has_more indicates more data.',
     tags: ['Events'],
     parameters: [
         new OA\QueryParameter(
@@ -26,7 +28,19 @@ use Spiral\Router\Annotation\Route;
         ),
         new OA\QueryParameter(
             name: 'project',
-            description: 'Filter by event type',
+            description: 'Filter by event project',
+            required: false,
+            schema: new OA\Schema(type: 'string'),
+        ),
+        new OA\QueryParameter(
+            name: 'limit',
+            description: 'Page size (default 100, max 100)',
+            required: false,
+            schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100),
+        ),
+        new OA\QueryParameter(
+            name: 'cursor',
+            description: 'Opaque composite cursor (timestamp + uuid) from meta.next_cursor of the previous response',
             required: false,
             schema: new OA\Schema(type: 'string'),
         ),
@@ -46,7 +60,11 @@ use Spiral\Router\Annotation\Route;
                     ),
                     new OA\Property(
                         property: 'meta',
-                        ref: '#/components/schemas/ResponseMeta',
+                        properties: [
+                            new OA\Property(property: 'limit', type: 'integer'),
+                            new OA\Property(property: 'has_more', type: 'boolean'),
+                            new OA\Property(property: 'next_cursor', type: 'string', nullable: true),
+                        ],
                         type: 'object',
                     ),
                 ],
@@ -66,12 +84,25 @@ final readonly class ListAction
     #[Route(route: 'events', name: 'events.list', methods: 'GET', group: 'api')]
     public function __invoke(
         EventsRequest $request,
+        InputManager $input,
         QueryBusInterface $bus,
-    ): EventCollection {
-        return new EventCollection(
-            $bus->ask(
-                new FindEvents(type: $request->type, project: $request->project),
-            ),
+    ): EventCursorCollection {
+        $limit = $input->query->get('limit');
+        $cursor = $input->query->get('cursor');
+
+        /** @var EventsCursorResult $result */
+        $result = $bus->ask(new FindEventsCursor(
+            type: $request->type,
+            project: $request->project,
+            limit: $limit,
+            cursor: $cursor,
+        ));
+
+        return new EventCursorCollection(
+            $result->items,
+            $result->limit,
+            $result->hasMore,
+            $result->nextCursor,
         );
     }
 }
