@@ -80,12 +80,17 @@ kv:
 jobs:
   consume:
     - smtp
+    - profiler
   pipelines:
     smtp:
       driver: memory
       config:
         priority: 10
         prefetch: 10
+    profiler:
+      driver: memory
+      config:
+        priority: 10
   pool:
     num_workers: ${RR_JOBS_NUM_WORKERS:-1}
 
@@ -94,6 +99,13 @@ smtp:
   hostname: "buggregator.local"
   jobs:
     pipeline: smtp
+
+profiler:
+  addr: ${RR_PROFILER_ADDR:-:9914}
+  max_request_size: 52428800
+  jobs:
+    pipeline: "profiler"
+    auto_ack: true
 
 service:
   nginx:

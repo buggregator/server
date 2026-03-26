@@ -94,3 +94,8 @@ repository = "tcp"
 ref = "2.0.0"
 owner = "buggregator"
 repository = "smtp-server"
+
+[github.plugins.profiler-server]
+ref = "1.0.0"
+owner = "buggregator"
+repository = "profiler-server"

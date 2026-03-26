@@ -48,10 +48,20 @@ kv:
     config: { }
 
 jobs:
-  consume: [ ]
+  pipelines:
+    profiler:
+      driver: memory
+      config:
+        priority: 10
+  consume: ["profiler"]
   pool:
     num_workers: 1
 
+profiler:
+  addr: 127.0.0.1:9914
+  jobs:
+    pipeline: "profiler"
+    auto_ack: true
 
 smtp:
   addr: ${RR_SMTP_ADDR:-:1025}
