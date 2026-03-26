@@ -2,7 +2,6 @@ ARG ROAD_RUNNER_IMAGE=2024.2.1
 ARG CENTRIFUGO_IMAGE=v4
 ARG DOLT_IMAGE=1.42.8
 ARG FRONTEND_IMAGE_TAG=latest
-ARG GH_TOKEN
 
 # Build centrifugo binary
 FROM centrifugo/centrifugo:$CENTRIFUGO_IMAGE as centrifugo
@@ -16,7 +15,6 @@ FROM golang:1.25-alpine as rr
 
 ARG APP_VERSION="2025.1.1"
 ARG VELOX_CONFIG="velox.toml"
-ARG GH_TOKEN
 
 # copy required files from builder image
 COPY --from=velox /usr/bin/vx /usr/bin/vx
@@ -24,13 +22,15 @@ COPY ${VELOX_CONFIG} .
 
 # we don't need CGO
 ENV CGO_ENABLED=0
-ENV RT_TOKEN=${GH_TOKEN}
 ARG CACHE_BUST=1
 
 RUN echo $CACHE_BUST
 
-# RUN build
-RUN vx build -c velox.toml -o /usr/bin/
+# Build RoadRunner with velox. The GitHub token is mounted as a secret
+# and never stored in image layers.
+RUN --mount=type=secret,id=gh_token \
+    RT_TOKEN=$(cat /run/secrets/gh_token) \
+    vx build -c velox.toml -o /usr/bin/
 
 # Build JS files
 FROM ghcr.io/buggregator/frontend:$FRONTEND_IMAGE_TAG as frontend

@@ -28,8 +28,10 @@ services:
     build:
       dockerfile: Dockerfile
       context: .docker
+      secrets:
+        - gh_token
       args:
-        GH_TOKEN: "${GH_TOKEN}"
+        VELOX_CONFIG: velox.toml
     environment:
 #      RR_LOG_LEVEL: debug
       #      RR_LOG_TCP_LEVEL: debug
@@ -118,6 +120,10 @@ services:
       - buggregator-pgsql
     networks:
       - buggregator-network
+
+secrets:
+  gh_token:
+    environment: "GH_TOKEN"
 
 networks:
   buggregator-network:
