@@ -22,7 +22,8 @@ final readonly class FindFlameChartByUuidHandler
     #[QueryHandler]
     public function __invoke(FindFlameChartByUuid $query): string
     {
-        $file = $query->profileUuid . '.flamechart.json';
+        $metric = $query->metric->value;
+        $file = $query->profileUuid . '.' . $metric . '.flamechart.json';
         if ($this->bucket->exists($file)) {
             return $this->bucket->getContents($file);
         }
@@ -34,15 +35,19 @@ final readonly class FindFlameChartByUuidHandler
 
         $waterfall = [];
         $eventCache = [];
-        // TODO: send metric from the frontend side
-        $metric = 'wt';
+
+        // Divisor: microseconds → milliseconds for time metrics, bytes → KB for memory
+        $divisor = match ($metric) {
+            'mu', 'pmu' => 1_024,
+            default => 1_000,
+        };
 
         foreach ($edges as $edge) {
-            $duration = $edge->getCost()->{$metric} ?? 0;
+            $rawValue = $edge->getCost()->{$metric} ?? 0;
             $eventData = [
                 'name' => $edge->getCallee(),
-                'start' => 0,  // Temporarily zero, will adjust based on the parent later
-                'duration' => $duration > 0 ? \round($duration / 1_000, 3) : 0,
+                'start' => 0,
+                'duration' => $rawValue > 0 ? \round($rawValue / $divisor, 3) : 0,
                 'type' => 'task',
                 'children' => [],
                 'cost' => [
@@ -66,21 +71,39 @@ final readonly class FindFlameChartByUuidHandler
             }
         }
 
-        $this->adjustStartTimes($waterfall, 0);
+        $this->adjustStartTimes($waterfall);
         $serialized = \json_encode($waterfall, 0, 5000);
         $this->bucket->write($file, $serialized);
 
         return $serialized;
     }
 
-    private function adjustStartTimes(array &$eventList, float|int $startTime): void
+    /**
+     * Lay out children sequentially within their parent's time span.
+     * If children's total duration exceeds the parent, scale them down proportionally.
+     */
+    private function adjustStartTimes(array &$eventList, float|int $startTime = 0, float|int $parentDuration = 0): void
     {
+        $childrenTotal = 0;
         foreach ($eventList as &$event) {
-            $event['start'] = $startTime;
-            // Next event starts after the current event ends.
-            $startTime += $event['duration'];
-            // Recursively adjust times for children.
-            $this->adjustStartTimes($event['children'], $event['start']);
+            $childrenTotal += $event['duration'];
+        }
+        unset($event);
+
+        // Scale factor: if children overflow parent, shrink proportionally
+        $scale = ($parentDuration > 0 && $childrenTotal > $parentDuration)
+            ? $parentDuration / $childrenTotal
+            : 1.0;
+
+        $cursor = $startTime;
+        foreach ($eventList as &$event) {
+            $event['start'] = \round($cursor, 3);
+            $scaledDuration = \round($event['duration'] * $scale, 3);
+
+            // Recursively adjust children within this event's bounds
+            $this->adjustStartTimes($event['children'], $event['start'], $scaledDuration);
+
+            $cursor += $scaledDuration;
         }
     }
 
