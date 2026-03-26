@@ -72,6 +72,6 @@ bash:
 	docker compose exec buggregator-server /bin/sh;
 
 reset-server:
-	docker compose exec buggregator-server ./rr reset;
+	docker compose exec buggregator-server rr reset;
 
 reset: reset-server
