@@ -36,8 +36,12 @@ final class ProfileHandler extends JobHandler
         parent::__construct($invoker);
     }
 
-    public function invoke(array $payload): void
+    public function invoke(mixed $payload): void
     {
+        if (\is_string($payload)) {
+            $payload = \json_decode($payload, true) ?? [];
+        }
+
         $profileUuid = Uuid::generate();
 
         // Create Profile entity with peaks from Go plugin

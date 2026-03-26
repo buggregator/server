@@ -27,8 +27,12 @@ final class DumpHandler extends JobHandler
         parent::__construct($invoker);
     }
 
-    public function invoke(array $payload): void
+    public function invoke(mixed $payload): void
     {
+        if (\is_string($payload)) {
+            $payload = \json_decode($payload, true) ?? [];
+        }
+
         // RR VarDumper plugin sends: { event, uuid, payload (base64), context, ... }
         $message = $payload['payload'] ?? '';
 
