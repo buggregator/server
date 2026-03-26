@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\VarDumper\Interfaces\TCP;
+namespace Modules\VarDumper\Interfaces\Jobs;
 
 use App\Application\Commands\HandleReceivedEvent;
 use Modules\VarDumper\Application\Dump\BodyInterface;
@@ -12,36 +12,33 @@ use Modules\VarDumper\Application\Dump\HtmlDumper;
 use Modules\VarDumper\Application\Dump\MessageParser;
 use Modules\VarDumper\Application\Dump\ParsedPayload;
 use Modules\VarDumper\Application\Dump\PrimitiveBody;
+use Spiral\Core\InvokerInterface;
 use Spiral\Cqrs\CommandBusInterface;
-use Spiral\RoadRunner\Tcp\Request;
-use Spiral\RoadRunner\Tcp\TcpEvent;
-use Spiral\RoadRunnerBridge\Tcp\Response\ContinueRead;
-use Spiral\RoadRunnerBridge\Tcp\Response\ResponseInterface;
-use Spiral\RoadRunnerBridge\Tcp\Service\ServiceInterface;
+use Spiral\Queue\JobHandler;
 use Symfony\Component\VarDumper\Cloner\Data;
 
-final readonly class Service implements ServiceInterface
+final class DumpHandler extends JobHandler
 {
     public function __construct(
-        private CommandBusInterface $commandBus,
-        private DumpIdGeneratorInterface $dumpId,
-    ) {}
+        private readonly CommandBusInterface $commandBus,
+        private readonly DumpIdGeneratorInterface $dumpId,
+        InvokerInterface $invoker,
+    ) {
+        parent::__construct($invoker);
+    }
 
-    public function handle(Request $request): ResponseInterface
+    public function invoke(array $payload): void
     {
-        if ($request->event === TcpEvent::Connected) {
-            return new ContinueRead();
+        // RR VarDumper plugin sends: { event, uuid, payload (base64), context, ... }
+        $message = $payload['payload'] ?? '';
+
+        if ($message === '') {
+            return;
         }
 
-        $messages = \array_filter(\explode("\n", $request->body));
+        $parsed = (new MessageParser())->parse($message);
 
-        foreach ($messages as $message) {
-            $payload = (new MessageParser())->parse($message);
-
-            $this->fireEvent($payload);
-        }
-
-        return new ContinueRead();
+        $this->fireEvent($parsed);
     }
 
     private function fireEvent(ParsedPayload $payload): void
@@ -58,7 +55,7 @@ final readonly class Service implements ServiceInterface
         );
     }
 
-    private function convertToPrimitive(Data $data): BodyInterface|null
+    private function convertToPrimitive(Data $data): BodyInterface
     {
         if (\in_array($data->getType(), ['string', 'boolean', 'integer', 'double'])) {
             return new PrimitiveBody(

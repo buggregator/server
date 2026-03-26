@@ -43,7 +43,7 @@ pull-latest:
 	docker compose pull;
 
 build-server:
-	docker compose build buggregator-server --no-cache;
+	DOCKER_BUILDKIT=1 docker compose build buggregator-server --no-cache;
 
 # ====== Database ========
 
