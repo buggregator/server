@@ -30,11 +30,19 @@ final class DumpHandler extends JobHandler
     public function invoke(mixed $payload): void
     {
         if (\is_string($payload)) {
-            $payload = \json_decode($payload, true) ?? [];
+            $decoded = \json_decode($payload, true);
+            // If JSON with 'payload' key — extract the base64 message from the Go plugin envelope
+            if (\is_array($decoded) && isset($decoded['payload'])) {
+                $message = $decoded['payload'];
+            } else {
+                // Raw base64 string (Spiral deserialized the payload field directly)
+                $message = $payload;
+            }
+        } elseif (\is_array($payload)) {
+            $message = $payload['payload'] ?? '';
+        } else {
+            return;
         }
-
-        // RR VarDumper plugin sends: { event, uuid, payload (base64), context, ... }
-        $message = $payload['payload'] ?? '';
 
         if ($message === '') {
             return;

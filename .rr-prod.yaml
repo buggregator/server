@@ -73,13 +73,6 @@ kv:
     driver: memory
     config: { }
 
-var-dumper:
-  addr: ${RR_VAR_DUMPER_ADDR:-:9912}
-  max_message_size: 10485760
-  jobs:
-    pipeline: "var-dumper"
-    auto_ack: true
-
 jobs:
   consume:
     - smtp
@@ -114,6 +107,12 @@ profiler:
   jobs:
     pipeline: "profiler"
     auto_ack: true
+
+var-dumper:
+  addr: ${RR_VAR_DUMPER_ADDR:-:9912}
+  max_message_size: 10485760
+  jobs:
+    pipeline: "var-dumper"
 
 service:
   nginx:

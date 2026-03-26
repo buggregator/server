@@ -34,9 +34,8 @@ services:
         VELOX_CONFIG: velox.toml
     environment:
 #      RR_LOG_LEVEL: debug
-      #      RR_LOG_TCP_LEVEL: debug
-      #      RR_LOG_JOBS_LEVEL: debug
-      #      RR_LOG_SERVER_LEVEL: debug
+#      RR_LOG_JOBS_LEVEL: debug
+#      RR_LOG_SERVER_LEVEL: debug
       MONOLOG_DEFAULT_CHANNEL: roadrunner
 
       PERSISTENCE_DRIVER: db
@@ -56,6 +55,11 @@ services:
 
       # Client
       CLIENT_SUPPORTED_EVENTS: http-dump,inspector,monolog,profiler,ray,sentry,smtp,var-dump
+    ports:
+      - "1025:1025"     # SMTP
+      - "9912:9912"     # VarDumper
+      - "9913:9913"     # Monolog
+      - "9914:9914"     # Profiler
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.buggregator-http.entrypoints=web"
