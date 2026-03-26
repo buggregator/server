@@ -15,6 +15,7 @@ use Modules\Profiler\Domain\EdgeFactoryInterface;
 use Modules\Profiler\Domain\ProfileFactoryInterface;
 use Modules\Profiler\Integration\CycleOrm\EdgeFactory;
 use Modules\Profiler\Integration\CycleOrm\ProfileFactory;
+use Modules\Profiler\Interfaces\Events\DeleteEventListener;
 use Modules\Profiler\Interfaces\Queries\FindCallGraphByUuidHandler;
 use Modules\Profiler\Interfaces\Queries\FindFlameChartByUuidHandler;
 use Psr\Container\ContainerInterface;
@@ -54,6 +55,13 @@ final class ProfilerBootloader extends Bootloader
                 FactoryInterface $factory,
                 StorageInterface $storage,
             ): FindFlameChartByUuidHandler => $factory->make(FindFlameChartByUuidHandler::class, [
+                'bucket' => $storage->bucket('profiles'),
+            ]),
+
+            DeleteEventListener::class => static fn(
+                FactoryInterface $factory,
+                StorageInterface $storage,
+            ): DeleteEventListener => $factory->make(DeleteEventListener::class, [
                 'bucket' => $storage->bucket('profiles'),
             ]),
         ];
