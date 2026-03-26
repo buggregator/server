@@ -6,43 +6,42 @@ namespace Modules\Profiler\Application\Handlers;
 
 use Modules\Profiler\Application\EventHandlerInterface;
 
-// TODO: fix diff calculation
 final class CalculateDiffsBetweenEdges implements EventHandlerInterface
 {
     public function handle(array $event): array
     {
-        $data = \array_reverse($event['profile'] ?? []);
-        $parents = [];
+        $profile = $event['profile'] ?? [];
 
-        foreach ($data as $name => $values) {
-            [$parent, $func] = $this->splitName($name);
+        // Aggregate children's inclusive metrics per parent function
+        $childrenSum = [];
+        foreach ($profile as $name => $values) {
+            [$parent] = EdgeNameSplitter::split($name);
 
-            if ($parent) {
-                $parentValues = $parents[$parent] ?? ['cpu' => 0, 'wt' => 0, 'mu' => 0, 'pmu' => 0];
-                $event['profile'][$name] = \array_merge([
-                    'd_cpu' => $parentValues['cpu'] - $values['cpu'],
-                    'd_wt' => $parentValues['wt'] - $values['wt'],
-                    'd_mu' => $parentValues['mu'] - $values['mu'],
-                    'd_pmu' => $parentValues['pmu'] - $values['pmu'],
-                ], $values);
+            if ($parent !== null) {
+                if (!isset($childrenSum[$parent])) {
+                    $childrenSum[$parent] = ['cpu' => 0, 'wt' => 0, 'mu' => 0, 'pmu' => 0, 'ct' => 0];
+                }
+
+                foreach (['cpu', 'wt', 'mu', 'pmu', 'ct'] as $metric) {
+                    $childrenSum[$parent][$metric] += $values[$metric] ?? 0;
+                }
             }
+        }
 
-            $parents[$func] = $values;
+        // Calculate diff: parent's inclusive minus sum of all its children (exclusive time of parent)
+        foreach ($profile as $name => $values) {
+            [, $func] = EdgeNameSplitter::split($name);
+            $children = $childrenSum[$func] ?? ['cpu' => 0, 'wt' => 0, 'mu' => 0, 'pmu' => 0, 'ct' => 0];
+
+            $event['profile'][$name] = \array_merge($values, [
+                'd_cpu' => \max(0, ($values['cpu'] ?? 0) - $children['cpu']),
+                'd_wt' => \max(0, ($values['wt'] ?? 0) - $children['wt']),
+                'd_mu' => \max(0, ($values['mu'] ?? 0) - $children['mu']),
+                'd_pmu' => \max(0, ($values['pmu'] ?? 0) - $children['pmu']),
+                'd_ct' => \max(0, ($values['ct'] ?? 0) - $children['ct']),
+            ]);
         }
 
         return $event;
-    }
-
-    /**
-     * @return array{0: string|null, 1: string}
-     */
-    private function splitName(string $name): array
-    {
-        $a = \explode('==>', $name);
-        if (isset($a[1])) {
-            return $a;
-        }
-
-        return [null, $a[0]];
     }
 }

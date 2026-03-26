@@ -81,12 +81,12 @@ final class StoreProfileHandler extends JobHandler
 
             $parents[$id] = $edge->getUuid();
 
-            if (self::BATCH_SIZE === $batchSize) {
+            $batchSize++;
+
+            if ($batchSize >= self::BATCH_SIZE) {
                 $this->em->run();
                 $batchSize = 0;
             }
-
-            $batchSize++;
         }
 
         $profile = $this->orm->getRepository(Profile::class)->findByPK($profileUuid);

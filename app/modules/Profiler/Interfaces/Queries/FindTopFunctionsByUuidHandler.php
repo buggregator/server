@@ -10,7 +10,6 @@ use Modules\Profiler\Domain\Edge;
 use Modules\Profiler\Domain\Profile;
 use Spiral\Cqrs\Attribute\QueryHandler;
 
-// TODO: refactor this, use repository
 final class FindTopFunctionsByUuidHandler
 {
     public function __construct(
@@ -22,8 +21,6 @@ final class FindTopFunctionsByUuidHandler
     {
         $profile = $this->orm->getRepository(Profile::class)->findByPK($query->profileUuid);
 
-        $overallTotals = [];
-
         $functions = [];
 
         /** @var Edge[] $edges */
@@ -31,35 +28,41 @@ final class FindTopFunctionsByUuidHandler
 
         $metrics = ['cpu', 'ct', 'wt', 'mu', 'pmu'];
 
-        foreach ($metrics as $metric) {
-            $overallTotals[$metric] = 0;
-        }
-
+        // Aggregate inclusive metrics per function (same callee may appear from different callers)
         foreach ($edges as $edge) {
-            if (!isset($functions[$edge->getCallee()])) {
-                $functions[$edge->getCallee()] = [
-                    'function' => $edge->getCallee(),
-                ];
+            $callee = $edge->getCallee();
 
+            if (!isset($functions[$callee])) {
+                $functions[$callee] = ['function' => $callee];
                 foreach ($metrics as $metric) {
-                    $functions[$edge->getCallee()][$metric] = $edge->getCost()->{$metric};
+                    $functions[$callee][$metric] = 0;
                 }
-                continue;
             }
 
             foreach ($metrics as $metric) {
-                $overallTotals[$metric] = $functions['main()'][$metric];
+                $functions[$callee][$metric] += $edge->getCost()->{$metric};
             }
         }
 
-        foreach ($functions as $function => $m) {
-            foreach ($metrics as $metric) {
-                $functions[$function]['excl_' . $metric] = $functions[$function][$metric];
-            }
-
+        // Overall totals from main() entry (inclusive metrics for the entire request)
+        $overallTotals = [];
+        foreach ($metrics as $metric) {
+            $overallTotals[$metric] = $functions['main()'][$metric] ?? 0;
+        }
+        // ct total is sum of all calls, not just main()
+        $overallTotals['ct'] = 0;
+        foreach ($functions as $m) {
             $overallTotals['ct'] += $m['ct'];
         }
 
+        // Initialize exclusive metrics as copy of inclusive
+        foreach (array_keys($functions) as $function) {
+            foreach ($metrics as $metric) {
+                $functions[$function]['excl_' . $metric] = $functions[$function][$metric];
+            }
+        }
+
+        // Subtract children's inclusive metrics from parent's exclusive metrics
         foreach ($edges as $edge) {
             if (!$edge->getCaller()) {
                 continue;
@@ -69,7 +72,7 @@ final class FindTopFunctionsByUuidHandler
                 $field = 'excl_' . $metric;
 
                 if (!isset($functions[$edge->getCaller()][$field])) {
-                    $functions[$edge->getCaller()][$field] = 0;
+                    continue;
                 }
 
                 $functions[$edge->getCaller()][$field] -= $edge->getCost()->{$metric};

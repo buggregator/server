@@ -18,7 +18,7 @@ final class PrepareEdges implements EventHandlerInterface
 
         $id = 1;
         foreach ($profile as $name => $values) {
-            [$caller, $callee] = $this->splitName($name);
+            [$caller, $callee] = EdgeNameSplitter::split($name);
 
             foreach (['cpu', 'mu', 'pmu', 'wt', 'ct'] as $key) {
                 $peakValue = $event['peaks'][$key] ?? 0;
@@ -85,16 +85,4 @@ final class PrepareEdges implements EventHandlerInterface
         return $event;
     }
 
-    /**
-     * @return array{0: string|null, 1: string}
-     */
-    private function splitName(string $name): array
-    {
-        $a = \explode('==>', $name);
-        if (isset($a[1])) {
-            return $a;
-        }
-
-        return [null, $a[0]];
-    }
 }
