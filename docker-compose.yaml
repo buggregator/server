@@ -2,7 +2,7 @@ version: '3.1'
 
 services:
   buggregator-reverse-proxy:
-    image: traefik:v2.9
+    image: traefik:v3.6
     command:
       - "--accesslog"
       - "--api.insecure=true"

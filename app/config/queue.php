@@ -39,6 +39,8 @@ return [
     'registry' => [
         'handlers' => [
             'smtp.email' => EmailHandler::class,
+            'vardumper.dump' => \Modules\VarDumper\Interfaces\Jobs\DumpHandler::class,
+            'profiler.profile' => \Modules\Profiler\Interfaces\Jobs\ProfileHandler::class,
         ],
         'serializers' => [
             WebhookHandler::class => 'symfony-json',

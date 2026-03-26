@@ -34,11 +34,6 @@ tcp:
     monolog:
       addr: 127.0.0.1:9913
       delimiter: "\n"
-    var-dumper:
-      addr: 127.0.0.1:9912
-      delimiter: "\n"
-    smtp:
-      addr: 127.0.0.1:1025
   pool:
     num_workers: 2
 
@@ -47,11 +42,35 @@ kv:
     driver: memory
     config: { }
 
+var-dumper:
+  addr: 127.0.0.1:9912
+  jobs:
+    pipeline: "var-dumper"
+    auto_ack: true
+
 jobs:
-  consume: [ ]
+  pipelines:
+    var-dumper:
+      driver: memory
+      config:
+        priority: 10
+    profiler:
+      driver: memory
+      config:
+        priority: 10
+    smtp:
+      driver: memory
+      config:
+        priority: 10
+  consume: ["var-dumper", "profiler", "smtp"]
   pool:
     num_workers: 1
 
+profiler:
+  addr: 127.0.0.1:9914
+  jobs:
+    pipeline: "profiler"
+    auto_ack: true
 
 smtp:
   addr: ${RR_SMTP_ADDR:-:1025}

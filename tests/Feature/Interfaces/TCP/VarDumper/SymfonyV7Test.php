@@ -7,6 +7,7 @@ namespace Tests\Feature\Interfaces\TCP\VarDumper;
 use App\Application\Broadcasting\Channel\EventsChannel;
 use Modules\VarDumper\Application\Dump\DumpIdGeneratorInterface;
 use Modules\VarDumper\Exception\InvalidPayloadException;
+use Modules\VarDumper\Interfaces\Jobs\DumpHandler;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\VarDumper\Caster\ReflectionCaster;
 use Symfony\Component\VarDumper\Cloner\VarCloner;
@@ -55,7 +56,7 @@ HTML
         $generator->shouldReceive('generate')->andReturn('sf-dump-730421088');
 
         $message = $this->buildPayload(var: $value);
-        $this->handleVarDumperRequest($message);
+        $this->handleVarDumperJob($message);
 
         if (\is_object($value)) {
             $expected = \sprintf($expected, \spl_object_id($value));
@@ -81,7 +82,7 @@ HTML
     public function testSendDumpWithCodeHighlighting(): void
     {
         $message = $this->buildPayload(var: 'foo', context: ['language' => 'php']);
-        $this->handleVarDumperRequest($message);
+        $this->handleVarDumperJob($message);
 
         $this->broadcastig->assertPushed(new EventsChannel('default'), function (array $data) {
             $this->assertSame('event.received', $data['event']);
@@ -102,7 +103,7 @@ HTML
     {
         $this->createProject('foo');
         $message = $this->buildPayload(project: 'foo');
-        $this->handleVarDumperRequest($message);
+        $this->handleVarDumperJob($message);
 
         $this->broadcastig->assertPushed(new EventsChannel('foo'), function (array $data) {
             $this->assertSame('foo', $data['data']['project']);
@@ -113,7 +114,7 @@ HTML
     public function testSendDumpWithNonExistsProject(): void
     {
         $message = $this->buildPayload(project: 'foo');
-        $this->handleVarDumperRequest($message);
+        $this->handleVarDumperJob($message);
 
         $this->broadcastig->assertNotPushed(new EventsChannel('foo'));
         $this->broadcastig->assertPushed(new EventsChannel('default'), function (array $data) {
@@ -127,7 +128,18 @@ HTML
         $this->expectException(InvalidPayloadException::class);
         $this->expectExceptionMessage('Unable to decode the message.');
 
-        $this->handleVarDumperRequest('invalid');
+        $this->handleVarDumperJob('invalid');
+    }
+
+    private function handleVarDumperJob(string $base64Message): void
+    {
+        $handler = $this->get(DumpHandler::class);
+        $handler->invoke([
+            'event' => 'DUMP_RECEIVED',
+            'uuid' => 'test-uuid',
+            'payload' => \rtrim($base64Message, "\n"),
+            'context' => [],
+        ]);
     }
 
     private function buildPayload(mixed $var = 'string', ?string $project = null, array $context = []): string

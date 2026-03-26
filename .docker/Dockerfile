@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 ARG ROAD_RUNNER_IMAGE=2024.2.1
 ARG CENTRIFUGO_IMAGE=v4
 ARG DOLT_IMAGE=1.42.8
@@ -29,7 +30,7 @@ RUN echo $CACHE_BUST
 # Build RoadRunner with velox. The GitHub token is mounted as a secret
 # and never stored in image layers.
 RUN --mount=type=secret,id=gh_token \
-    RT_TOKEN=$(cat /run/secrets/gh_token) \
+    export GH_TOKEN="$(cat /run/secrets/gh_token 2>/dev/null | tr -d '\n' || true)" && \
     vx build -c velox.toml -o /usr/bin/
 
 # Build JS files

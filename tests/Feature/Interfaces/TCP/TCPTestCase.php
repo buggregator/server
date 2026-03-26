@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Interfaces\TCP;
 
 use Modules\Monolog\Interfaces\TCP\Service as MonologService;
-use Modules\VarDumper\Interfaces\TCP\Service as VarDumperService;
 use Modules\Smtp\Interfaces\TCP\Service as SmtpService;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
@@ -22,13 +21,6 @@ abstract class TCPTestCase extends DatabaseTestCase
     {
         return $this
             ->get(MonologService::class)
-            ->handle($this->buildRequest(message: $message));
-    }
-
-    public function handleVarDumperRequest(string $message): ResponseInterface
-    {
-        return $this
-            ->get(VarDumperService::class)
             ->handle($this->buildRequest(message: $message));
     }
 
