@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Events\Interfaces\Commands;
 
+use App\Application\Commands\CreateProject;
 use App\Application\Commands\FindProjectByKey;
 use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Domain\ValueObjects\Json;
@@ -24,16 +25,26 @@ final readonly class StoreEventHandler
         private EventDispatcherInterface $dispatcher,
         private EventRepositoryInterface $events,
         private QueryBusInterface $queryBus,
+        private \Spiral\Cqrs\CommandBusInterface $commandBus,
         private EventMetrics $metrics,
     ) {}
 
     #[CommandHandler]
     public function handle(HandleReceivedEvent $command): void
     {
-        $project = null;
-        // If the project is not null, we will find the project by key
-        if ($command->project !== null) {
-            $project = $this->queryBus->ask(new FindProjectByKey($command->project));
+        $projectKey = $command->project ?? Project::DEFAULT_KEY;
+
+        $project = $this->queryBus->ask(new FindProjectByKey($projectKey));
+
+        if ($project === null) {
+            try {
+                $project = $this->commandBus->dispatch(
+                    new CreateProject(key: $projectKey, name: $projectKey),
+                );
+            } catch (\Throwable) {
+                // Race condition: project was created between check and create
+                $project = $this->queryBus->ask(new FindProjectByKey($projectKey));
+            }
         }
 
         $this->events->store(
@@ -42,7 +53,6 @@ final readonly class StoreEventHandler
                 type: $command->type,
                 payload: new Json($command->payload),
                 timestamp: Timestamp::create(),
-                // todo: use better option for default project
                 project: $project?->getKey() ?? Key::create(Project::DEFAULT_KEY),
             ),
         );

@@ -34,6 +34,7 @@ final class EventRepository extends Repository implements EventRepositoryInterfa
                 Event::PAYLOAD => $payload,
                 Event::TIMESTAMP => (string) $event->getTimestamp(),
                 Event::PROJECT => $event->getProject() !== null ? (string) $event->getProject() : null,
+                Event::IS_PINNED => $event->isPinned(),
             ])->run();
         } catch (\Throwable) {
             $this->db->update(Event::TABLE_NAME)
@@ -47,16 +48,35 @@ final class EventRepository extends Repository implements EventRepositoryInterfa
 
     public function deleteAll(array $scope = []): void
     {
-        $this->db
+        $query = $this->db
             ->delete(Event::TABLE_NAME)
-            ->where($this->buildScope($scope))
-            ->run();
+            ->where($this->buildScope($scope));
+
+        $query->where(Event::IS_PINNED, false);
+        $query->run();
     }
 
     public function deleteByPK(string $uuid): bool
     {
         return $this->db->delete(Event::TABLE_NAME)
                 ->where(Event::UUID, $uuid)
+                ->where(Event::IS_PINNED, false)
+                ->run() > 0;
+    }
+
+    public function pin(string $uuid): bool
+    {
+        return $this->db->update(Event::TABLE_NAME)
+                ->where(Event::UUID, $uuid)
+                ->values([Event::IS_PINNED => true])
+                ->run() > 0;
+    }
+
+    public function unpin(string $uuid): bool
+    {
+        return $this->db->update(Event::TABLE_NAME)
+                ->where(Event::UUID, $uuid)
+                ->values([Event::IS_PINNED => false])
                 ->run() > 0;
     }
 

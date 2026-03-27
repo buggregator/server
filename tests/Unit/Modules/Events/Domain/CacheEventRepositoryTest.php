@@ -134,4 +134,52 @@ final class CacheEventRepositoryTest extends DatabaseTestCase
         $this->assertSame((string) $event2->getUuid(), (string) $result[1]->getUuid());
         $this->assertSame((string) $event3->getUuid(), (string) $result[2]->getUuid());
     }
+
+    public function testPinEvent(): void
+    {
+        $event = $this->createEvent();
+
+        $this->assertTrue($this->repository->pin((string) $event->getUuid()));
+
+        $this->cleanIdentityMap();
+        $found = $this->repository->findByPK($event->getUuid());
+        $this->assertTrue($found->isPinned());
+    }
+
+    public function testUnpinEvent(): void
+    {
+        $event = $this->createEvent();
+        $this->repository->pin((string) $event->getUuid());
+
+        $this->assertTrue($this->repository->unpin((string) $event->getUuid()));
+
+        $this->cleanIdentityMap();
+        $found = $this->repository->findByPK($event->getUuid());
+        $this->assertFalse($found->isPinned());
+    }
+
+    public function testDeleteAllSkipsPinnedEvents(): void
+    {
+        $event1 = $this->createEvent();
+        $event2 = $this->createEvent();
+        $this->repository->pin((string) $event1->getUuid());
+
+        $this->repository->deleteAll([]);
+
+        $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
+
+        $this->cleanIdentityMap();
+        $found = $this->repository->findByPK($event1->getUuid());
+        $this->assertNotNull($found);
+        $this->assertTrue($found->isPinned());
+    }
+
+    public function testDeleteByPKSkipsPinnedEvent(): void
+    {
+        $event = $this->createEvent();
+        $this->repository->pin((string) $event->getUuid());
+
+        $this->assertFalse($this->repository->deleteByPK((string) $event->getUuid()));
+        $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
+    }
 }
