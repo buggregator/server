@@ -50,6 +50,8 @@ jobs:
             APP_VERSION=${{ github.ref_name }}
             BRANCH=${{ github.ref_name }}
             VELOX_CONFIG=./.docker/velox.toml
+          secrets: |
+            gh_token=${{ secrets.GHCR_PASSWORD }}
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
           cache-from: type=gha
