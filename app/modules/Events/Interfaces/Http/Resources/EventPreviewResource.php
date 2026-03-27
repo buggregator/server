@@ -20,6 +20,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'type', type: 'string'),
         new OA\Property(property: 'payload', description: 'Event payload based on type', type: 'object'),
         new OA\Property(property: 'timestamp', type: 'float', example: 1630540800.12312),
+        new OA\Property(property: 'searchable_text', description: 'Concatenated searchable content', type: 'string'),
     ],
 )]
 final class EventPreviewResource extends JsonResource
@@ -42,6 +43,10 @@ final class EventPreviewResource extends JsonResource
                 payload: $this->data->getPayload(),
             ) ?? $this->data->getPayload(),
             'timestamp' => $this->data->getTimestamp(),
+            'searchable_text' => $this->mapper?->toSearchableText(
+                type: $this->data->getType(),
+                payload: $this->data->getPayload(),
+            ) ?? '',
         ];
     }
 }

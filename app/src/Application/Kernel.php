@@ -21,6 +21,7 @@ use Modules\Profiler\Application\ProfilerBootloader;
 use Modules\Projects\Application\ProjectBootloader;
 use Modules\Ray\Application\RayBootloader;
 use Modules\HttpDumps\Application\HttpDumpsBootloader;
+use Modules\Monolog\Application\MonologEventBootloader;
 use Modules\Sentry\Application\SentryBootloader;
 use Modules\Smtp\Application\SmtpBootloader;
 use Modules\VarDumper\Application\VarDumperBootloader;
@@ -99,6 +100,7 @@ class Kernel extends \Spiral\Framework\Kernel
             VarDumperBootloader::class,
             RayBootloader::class,
             HttpDumpsBootloader::class,
+            MonologEventBootloader::class,
             ProfilerBootloader::class,
             PersistenceBootloader::class,
             WebhooksBootloader::class,

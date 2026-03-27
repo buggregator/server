@@ -21,6 +21,15 @@ final class EventTypeMapper implements EventTypeMapperInterface, EventTypeRegist
         return $this->mappers[$type]->toPreview($type, $payload);
     }
 
+    public function toSearchableText(string $type, array|\JsonSerializable $payload): string
+    {
+        if (!isset($this->mappers[$type])) {
+            return '';
+        }
+
+        return $this->mappers[$type]->toSearchableText($type, $payload);
+    }
+
     public function register(string $type, EventTypeMapperInterface $mapper): void
     {
         if (isset($this->mappers[$type])) {

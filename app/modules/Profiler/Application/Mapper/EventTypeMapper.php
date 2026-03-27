@@ -20,4 +20,20 @@ final readonly class EventTypeMapper implements EventTypeMapperInterface
             'date' => $data['date'],
         ];
     }
+
+    public function toSearchableText(string $type, array|\JsonSerializable $payload): string
+    {
+        $data = $payload instanceof \JsonSerializable ? $payload->jsonSerialize() : $payload;
+
+        $parts = \array_filter([
+            $data['app_name'] ?? null,
+            $data['hostname'] ?? null,
+        ]);
+
+        foreach (($data['tags'] ?? []) as $key => $value) {
+            $parts[] = \is_string($key) ? "{$key}:{$value}" : $value;
+        }
+
+        return \implode(' ', $parts);
+    }
 }

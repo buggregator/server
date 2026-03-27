@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Events\Integration\CycleOrm;
 
 use Cycle\Database\DatabaseInterface;
-use Cycle\ORM\EntityManagerInterface;
 use Cycle\ORM\Select;
 use Cycle\ORM\Select\Repository;
 use Modules\Events\Domain\Event;
@@ -18,7 +17,6 @@ use Modules\Events\Domain\EventRepositoryInterface;
 final class EventRepository extends Repository implements EventRepositoryInterface
 {
     public function __construct(
-        private readonly EntityManagerInterface $em,
         private readonly DatabaseInterface $db,
         Select $select,
     ) {
@@ -27,14 +25,22 @@ final class EventRepository extends Repository implements EventRepositoryInterfa
 
     public function store(Event $event): bool
     {
-        if (($found = $this->findByPK($event->getUuid())) !== null) {
-            $found->setPayload($event->getPayload());
-            $this->em->persist($found);
-        } else {
-            $this->em->persist($event);
-        }
+        $payload = (string) $event->getPayload();
 
-        $this->em->run();
+        try {
+            $this->db->insert(Event::TABLE_NAME)->values([
+                Event::UUID => (string) $event->getUuid(),
+                Event::TYPE => $event->getType(),
+                Event::PAYLOAD => $payload,
+                Event::TIMESTAMP => (string) $event->getTimestamp(),
+                Event::PROJECT => $event->getProject() !== null ? (string) $event->getProject() : null,
+            ])->run();
+        } catch (\Throwable) {
+            $this->db->update(Event::TABLE_NAME)
+                ->where(Event::UUID, (string) $event->getUuid())
+                ->values([Event::PAYLOAD => $payload])
+                ->run();
+        }
 
         return true;
     }
