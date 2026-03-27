@@ -2,8 +2,6 @@
 ARG ROAD_RUNNER_IMAGE=2024.2.1
 ARG CENTRIFUGO_IMAGE=v4
 ARG DOLT_IMAGE=1.42.8
-ARG FRONTEND_IMAGE_TAG=latest
-
 # Build centrifugo binary
 FROM centrifugo/centrifugo:$CENTRIFUGO_IMAGE as centrifugo
 # Build dolt binary
@@ -33,8 +31,6 @@ RUN --mount=type=secret,id=gh_token \
     export GH_TOKEN="$(cat /run/secrets/gh_token 2>/dev/null | tr -d '\n' || true)" && \
     vx build -c velox.toml -o /usr/bin/
 
-# Build JS files
-FROM ghcr.io/buggregator/frontend:$FRONTEND_IMAGE_TAG as frontend
 # Clone the project
 FROM alpine/git as git
 
@@ -46,7 +42,6 @@ RUN git clone -b $BRANCH $REPOSITORY /app
 FROM ghcr.io/buggregator/docker:latest as backend
 
 COPY --from=git /app /app
-COPY --from=frontend /app /app/frontend
 COPY --from=rr /usr/bin/rr /usr/bin/rr
 COPY --from=centrifugo /usr/local/bin/centrifugo /app/bin
 COPY --from=dolt /usr/local/bin/dolt /app/bin
