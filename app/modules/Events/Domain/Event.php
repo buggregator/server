@@ -29,6 +29,7 @@ class Event
     public const PAYLOAD = 'payload';
     public const TIMESTAMP = 'timestamp';
     public const PROJECT = 'project';
+    public const IS_PINNED = 'is_pinned';
 
     /**  @internal */
     public function __construct(
@@ -42,6 +43,8 @@ class Event
         private Timestamp $timestamp,
         #[Column(type: 'string', name: self::PROJECT, nullable: true, typecast: Key::class)]
         private ?Key $project = null,
+        #[Column(type: 'boolean', name: self::IS_PINNED, default: false)]
+        private bool $isPinned = false,
     ) {}
 
     public function getUuid(): Uuid
@@ -72,5 +75,20 @@ class Event
     public function getProject(): ?Key
     {
         return $this->project;
+    }
+
+    public function isPinned(): bool
+    {
+        return $this->isPinned;
+    }
+
+    public function pin(): void
+    {
+        $this->isPinned = true;
+    }
+
+    public function unpin(): void
+    {
+        $this->isPinned = false;
     }
 }

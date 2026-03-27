@@ -47,6 +47,7 @@ final class EventPreviewResource extends JsonResource
                 type: $this->data->getType(),
                 payload: $this->data->getPayload(),
             ) ?? '',
+            'is_pinned' => $this->data->isPinned(),
         ];
     }
 }

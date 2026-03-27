@@ -37,6 +37,7 @@ final readonly class EventWasReceivedMapper implements EventMapperInterface
                     type: $event->event->getType(),
                     payload: $event->event->getPayload(),
                 ),
+                'is_pinned' => $event->event->isPinned(),
             ],
         );
     }

@@ -21,4 +21,8 @@ interface EventRepositoryInterface extends RepositoryInterface
     public function deleteAll(array $scope = []): void;
 
     public function deleteByPK(string $uuid): bool;
+
+    public function pin(string $uuid): bool;
+
+    public function unpin(string $uuid): bool;
 }
