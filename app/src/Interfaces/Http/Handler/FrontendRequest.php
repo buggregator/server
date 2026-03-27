@@ -35,13 +35,17 @@ final class FrontendRequest implements HandlerInterface
         $path = $request->getUri()->getPath();
 
         if ($path === '/') {
-            $path = '/index.html';
+            $path = 'index.html';
         } elseif (
             !\str_starts_with($path, '/api')
             && !\str_starts_with($path, '/assets')
-            && !\str_contains($path, '/src')
+            && !\str_starts_with($path, '/favicon')
         ) {
-            $path = '/index.html';
+            $path = 'index.html';
+        }
+
+        if (\str_starts_with($path, '/')) {
+            $path = \substr($path, 1);
         }
 
         $path = $this->publicPath . $path;
@@ -74,9 +78,9 @@ final class FrontendRequest implements HandlerInterface
         $path = $request->getUri()->getPath();
 
         return $path === '/'
-            || \str_starts_with($path, '/src/')
             || \str_starts_with($path, '/assets/')
-            || $path === '/favicon/favicon.ico'
+            || \str_starts_with($path, '/favicon/')
+            || $path === '/manifest.json'
             || $path === '/bg.jpg'
             || !\str_starts_with($path, '/api');
     }
