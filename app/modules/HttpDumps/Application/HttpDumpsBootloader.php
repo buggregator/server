@@ -9,12 +9,14 @@ use Cycle\ORM\EntityManagerInterface;
 use Cycle\ORM\ORMInterface;
 use Cycle\ORM\Select;
 use Modules\HttpDumps\EventHandler;
+use Modules\HttpDumps\Application\Mapper\EventTypeMapper;
 use Modules\HttpDumps\Application\Storage\AttachmentStorage;
 use Modules\HttpDumps\Domain\AttachmentFactoryInterface;
 use Modules\HttpDumps\Domain\AttachmentRepositoryInterface;
 use Modules\HttpDumps\Domain\AttachmentStorageInterface;
 use Modules\HttpDumps\Domain\Attachment;
 use Modules\HttpDumps\Integration\CycleOrm\AttachmentRepository;
+use App\Application\Event\EventTypeRegistryInterface;
 use Psr\Container\ContainerInterface;
 use Spiral\Boot\Bootloader\Bootloader;
 use Spiral\Core\FactoryInterface;
@@ -57,5 +59,10 @@ final class HttpDumpsBootloader extends Bootloader
                 default => throw new \Exception('Unsupported database driver'),
             },
         ];
+    }
+
+    public function boot(EventTypeRegistryInterface $registry): void
+    {
+        $registry->register('http-dump', new EventTypeMapper());
     }
 }

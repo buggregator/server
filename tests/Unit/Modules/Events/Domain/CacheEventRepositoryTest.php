@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Modules\Events\Domain;
 
+use App\Application\Domain\ValueObjects\Json;
 use Modules\Events\Domain\EventRepositoryInterface;
 use Tests\DatabaseTestCase;
 
@@ -25,6 +26,52 @@ final class CacheEventRepositoryTest extends DatabaseTestCase
         $this->createEvent();
 
         $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
+    }
+
+    public function testUpsertNewEvent(): void
+    {
+        $event = $this->createEvent(type: 'sentry');
+
+        $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
+
+        $found = $this->repository->findByPK($event->getUuid());
+        $this->assertNotNull($found);
+        $this->assertSame('sentry', $found->getType());
+    }
+
+    public function testUpsertExistingEventUpdatesPayload(): void
+    {
+        $event = $this->createEvent(type: 'sentry');
+
+        $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
+
+        $newPayload = new Json(['updated' => true, 'message' => 'changed']);
+        $event->setPayload($newPayload);
+        $this->repository->store($event);
+
+        $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
+
+        $this->cleanIdentityMap();
+        $found = $this->repository->findByPK($event->getUuid());
+        $this->assertNotNull($found);
+        $this->assertSame(['updated' => true, 'message' => 'changed'], $found->getPayload()->jsonSerialize());
+    }
+
+    public function testUpsertDoesNotDuplicateOnSameUuid(): void
+    {
+        $event = $this->createEvent(type: 'monolog');
+
+        $event->setPayload(new Json(['attempt' => 2]));
+        $this->repository->store($event);
+
+        $event->setPayload(new Json(['attempt' => 3]));
+        $this->repository->store($event);
+
+        $this->assertCount(1, \iterator_to_array($this->repository->findAll()));
+
+        $this->cleanIdentityMap();
+        $found = $this->repository->findByPK($event->getUuid());
+        $this->assertSame(['attempt' => 3], $found->getPayload()->jsonSerialize());
     }
 
     public function testDeleteByType(): void

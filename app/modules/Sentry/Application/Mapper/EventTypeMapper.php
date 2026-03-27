@@ -30,6 +30,30 @@ final readonly class EventTypeMapper implements EventTypeMapperInterface
         ];
     }
 
+    public function toSearchableText(string $type, array|\JsonSerializable $payload): string
+    {
+        $data = $payload instanceof \JsonSerializable ? $payload->jsonSerialize() : $payload;
+
+        $parts = \array_filter([
+            $data['message'] ?? null,
+            $data['level'] ?? null,
+            $data['environment'] ?? null,
+            $data['server_name'] ?? null,
+            $data['platform'] ?? null,
+        ]);
+
+        foreach (($data['exception']['values'] ?? []) as $e) {
+            if (isset($e['type'])) {
+                $parts[] = $e['type'];
+            }
+            if (isset($e['value'])) {
+                $parts[] = $e['value'];
+            }
+        }
+
+        return \implode(' ', $parts);
+    }
+
     public function limitExceptionFramesNumber(array|null $exception, int $max = 3): array|null
     {
         if ($exception === null) {

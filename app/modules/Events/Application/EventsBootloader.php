@@ -7,7 +7,6 @@ namespace Modules\Events\Application;
 use App\Application\Broadcasting\EventMapperRegistryInterface;
 use App\Application\Persistence\DriverEnum;
 use Cycle\Database\DatabaseInterface;
-use Cycle\ORM\EntityManagerInterface;
 use Cycle\ORM\ORMInterface;
 use Cycle\ORM\Select;
 use Modules\Events\Application\Broadcasting\EventsWasClearMapper;
@@ -38,10 +37,8 @@ final class EventsBootloader extends Bootloader
             },
             EventRepository::class => static fn(
                 ORMInterface $orm,
-                EntityManagerInterface $manager,
                 DatabaseInterface $db,
             ): EventRepository => new EventRepository(
-                em: $manager,
                 db: $db,
                 select: new Select($orm, Event::class),
             ),

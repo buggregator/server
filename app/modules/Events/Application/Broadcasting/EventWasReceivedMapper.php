@@ -33,6 +33,10 @@ final readonly class EventWasReceivedMapper implements EventMapperInterface
                     payload: $event->event->getPayload(),
                 ),
                 'timestamp' => $event->event->getTimestamp(),
+                'searchable_text' => $this->eventTypeMapper->toSearchableText(
+                    type: $event->event->getType(),
+                    payload: $event->event->getPayload(),
+                ),
             ],
         );
     }

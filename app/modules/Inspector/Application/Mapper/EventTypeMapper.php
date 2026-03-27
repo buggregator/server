@@ -25,4 +25,24 @@ final readonly class EventTypeMapper implements EventTypeMapperInterface
             $transaction,
         ];
     }
+
+    public function toSearchableText(string $type, array|\JsonSerializable $payload): string
+    {
+        $data = $payload instanceof \JsonSerializable ? $payload->jsonSerialize() : $payload;
+
+        $parts = [];
+
+        foreach ($data as $block) {
+            if (!is_array($block)) {
+                continue;
+            }
+            foreach (['model', 'name', 'type', 'host'] as $key) {
+                if (isset($block[$key]) && \is_string($block[$key])) {
+                    $parts[] = $block[$key];
+                }
+            }
+        }
+
+        return \implode(' ', $parts);
+    }
 }
