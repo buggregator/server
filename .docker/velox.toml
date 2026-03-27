@@ -104,3 +104,8 @@ repository = "var-dumper-server"
 ref = "1.0.0"
 owner = "buggregator"
 repository = "profiler-server"
+
+[github.plugins.monolog-server]
+ref = "1.0.0"
+owner = "buggregator"
+repository = "monolog-server"

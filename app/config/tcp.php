@@ -2,19 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Application\TCP\ExceptionHandlerInterceptor;
-use Modules\Monolog\Interfaces\TCP\Service as MonologService;
-
 return [
-    'services' => [
-        'monolog' => MonologService::class,
-    ],
+    'services' => [],
 
-    'interceptors' => [
-        'monolog' => [
-            ExceptionHandlerInterceptor::class,
-        ],
-    ],
+    'interceptors' => [],
 
     'debug' => env('TCP_DEBUG', false),
 ];

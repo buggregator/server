@@ -29,13 +29,11 @@ http:
   pool:
     num_workers: 1
 
-tcp:
-  servers:
-    monolog:
-      addr: 127.0.0.1:9913
-      delimiter: "\n"
-  pool:
-    num_workers: 2
+monolog:
+  addr: 127.0.0.1:9913
+  jobs:
+    pipeline: "monolog"
+    auto_ack: true
 
 kv:
   local:
@@ -62,7 +60,11 @@ jobs:
       driver: memory
       config:
         priority: 10
-  consume: ["var-dumper", "profiler", "smtp"]
+    monolog:
+      driver: memory
+      config:
+        priority: 10
+  consume: ["var-dumper", "profiler", "smtp", "monolog"]
   pool:
     num_workers: 1
 

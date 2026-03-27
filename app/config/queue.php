@@ -41,6 +41,7 @@ return [
             'smtp.email' => EmailHandler::class,
             'vardumper.dump' => \Modules\VarDumper\Interfaces\Jobs\DumpHandler::class,
             'profiler.profile' => \Modules\Profiler\Interfaces\Jobs\ProfileHandler::class,
+            'monolog.log' => \Modules\Monolog\Interfaces\Jobs\LogHandler::class,
         ],
         'serializers' => [
             WebhookHandler::class => 'symfony-json',
