@@ -171,12 +171,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/buggregator/frontend.git",
-                "reference": "ca7803430b94d52c0d4f0c6e01732698809738ca"
+                "reference": "d7f895f915e29e1777626b66db13ccd5132f003d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/buggregator/frontend/zipball/ca7803430b94d52c0d4f0c6e01732698809738ca",
-                "reference": "ca7803430b94d52c0d4f0c6e01732698809738ca",
+                "url": "https://api.github.com/repos/buggregator/frontend/zipball/d7f895f915e29e1777626b66db13ccd5132f003d",
+                "reference": "d7f895f915e29e1777626b66db13ccd5132f003d",
                 "shasum": ""
             },
             "type": "library",
@@ -200,7 +200,7 @@
                     "type": "patreon"
                 }
             ],
-            "time": "2026-03-27T12:17:34+00:00"
+            "time": "2026-03-27T19:22:30+00:00"
         },
         {
             "name": "carbonphp/carbon-doctrine-types",

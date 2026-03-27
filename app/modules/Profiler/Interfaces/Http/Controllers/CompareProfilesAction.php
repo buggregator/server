@@ -22,8 +22,8 @@ final readonly class CompareProfilesAction
         try {
             return $bus->ask(
                 new CompareProfiles(
-                    baseProfileUuid: new Uuid($request->base),
-                    compareProfileUuid: new Uuid($request->compare),
+                    baseProfileUuid: Uuid::fromString($request->base),
+                    compareProfileUuid: Uuid::fromString($request->compare),
                 ),
             );
         } catch (EntityNotFoundException $e) {
