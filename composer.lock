@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "741b8377fb6679593db5fffdfed6a36b",
+    "content-hash": "fbb5cbdb8d226fc5ad4a3ea1e3aa0c1c",
     "packages": [
         {
             "name": "auth0/auth0-php",
@@ -167,16 +167,16 @@
         },
         {
             "name": "buggregator/frontend",
-            "version": "1.27.0",
+            "version": "1.27.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/buggregator/frontend.git",
-                "reference": "d7f895f915e29e1777626b66db13ccd5132f003d"
+                "reference": "807a4d92769ab32d1af775d35ee70ff19a7e83f4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/buggregator/frontend/zipball/d7f895f915e29e1777626b66db13ccd5132f003d",
-                "reference": "d7f895f915e29e1777626b66db13ccd5132f003d",
+                "url": "https://api.github.com/repos/buggregator/frontend/zipball/807a4d92769ab32d1af775d35ee70ff19a7e83f4",
+                "reference": "807a4d92769ab32d1af775d35ee70ff19a7e83f4",
                 "shasum": ""
             },
             "type": "library",
@@ -192,7 +192,7 @@
             "description": "Buggregator frontend assets",
             "support": {
                 "issues": "https://github.com/buggregator/frontend/issues",
-                "source": "https://github.com/buggregator/frontend/tree/1.27.0"
+                "source": "https://github.com/buggregator/frontend/tree/1.27.1"
             },
             "funding": [
                 {
@@ -200,7 +200,7 @@
                     "type": "patreon"
                 }
             ],
-            "time": "2026-03-27T19:22:30+00:00"
+            "time": "2026-03-27T20:14:54+00:00"
         },
         {
             "name": "carbonphp/carbon-doctrine-types",
