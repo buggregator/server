@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Interfaces\TCP;
 
-use Modules\Monolog\Interfaces\TCP\Service as MonologService;
+use Modules\Monolog\Interfaces\Jobs\LogHandler;
 use Modules\Smtp\Interfaces\TCP\Service as SmtpService;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
@@ -17,11 +17,14 @@ use Tests\DatabaseTestCase;
 
 abstract class TCPTestCase extends DatabaseTestCase
 {
-    public function handleMonologRequest(string $message): ResponseInterface
+    public function handleMonologRequest(string $message): void
     {
-        return $this
-            ->get(MonologService::class)
-            ->handle($this->buildRequest(message: $message));
+        $handler = $this->get(LogHandler::class);
+        $handler->invoke([
+            'event' => 'LOG_RECEIVED',
+            'uuid' => 'test-uuid',
+            'payload' => \json_decode($message, true),
+        ]);
     }
 
     public function handleSmtpRequest(string $message, TcpEvent $event = TcpEvent::Data): ResponseInterface

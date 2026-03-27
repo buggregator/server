@@ -24,9 +24,9 @@ logs:
     http:
       # HTTP plugin logging level can be "panic", "error", "warn", "info", "debug".
       level: ${RR_LOG_HTTP_LEVEL:-warn}
-    tcp:
-      # TCP plugin logging level can be "panic", "error", "warn", "info", "debug".
-      level: ${RR_LOG_TCP_LEVEL:-warn}
+    monolog:
+      # Monolog plugin logging level can be "panic", "error", "warn", "info", "debug".
+      level: ${RR_LOG_MONOLOG_LEVEL:-warn}
     jobs:
       # JOBS plugin logging level can be "panic", "error", "warn", "info", "debug".
       level: ${RR_LOG_JOBS_LEVEL:-warn}
@@ -54,19 +54,12 @@ http:
   pool:
     num_workers: ${RR_HTTP_NUM_WORKERS:-1}
 
-tcp:
-  servers:
-    monolog:
-      # Address to listen.
-      addr: ${RR_TCP_MONOLOG_ADDR:-:9913}
-      delimiter: "\n"
-  # Chunks that RR uses to read the data. In bytes.
-  # If you expect big payloads on a TCP server, to reduce `read` syscalls,
-  # would be a good practice to use a fairly big enough buffer.
-  # Default: 1024 * 1024 * 50 (50MB)
-  read_buf_size: ${RR_TCP_READ_BUF_SIZE:-50485760}
-  pool:
-    num_workers: ${RR_TCP_NUM_WORKERS:-2}
+monolog:
+  addr: ${RR_MONOLOG_ADDR:-:9913}
+  max_message_size: 10485760
+  jobs:
+    pipeline: "monolog"
+    auto_ack: true
 
 kv:
   local:
@@ -78,6 +71,7 @@ jobs:
     - smtp
     - var-dumper
     - profiler
+    - monolog
   pipelines:
     smtp:
       driver: memory
@@ -89,6 +83,10 @@ jobs:
       config:
         priority: 10
     profiler:
+      driver: memory
+      config:
+        priority: 10
+    monolog:
       driver: memory
       config:
         priority: 10

@@ -66,6 +66,10 @@ HTML
             $this->assertSame('event.received', $data['event']);
             $this->assertSame('var-dump', $data['data']['type']);
 
+            // Normalize line endings — heredoc strings inherit the file's CRLF on Windows/autocrlf,
+            // but the HtmlDumper always outputs LF.
+            $expected = \str_replace("\r\n", "\n", $expected);
+
             $this->assertSame([
                 'type' => $type,
                 'value' => $expected,
