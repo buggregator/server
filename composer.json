@@ -32,7 +32,7 @@
     "php": ">=8.2",
     "ext-mbstring": "*",
     "auth0/auth0-php": "^8.11",
-    "buggregator/frontend": "^1.0",
+    "buggregator/frontend": "1.27.0",
     "doctrine/collections": "^1.8",
     "firebase/php-jwt": "^6.10",
     "guzzlehttp/guzzle": "^7.8",

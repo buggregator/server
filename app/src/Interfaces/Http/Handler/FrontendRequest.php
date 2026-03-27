@@ -36,12 +36,6 @@ final class FrontendRequest implements HandlerInterface
 
         if ($path === '/') {
             $path = 'index.html';
-        } elseif (
-            !\str_starts_with($path, '/api')
-            && !\str_starts_with($path, '/assets')
-            && !\str_starts_with($path, '/favicon')
-        ) {
-            $path = 'index.html';
         }
 
         if (\str_starts_with($path, '/')) {
@@ -49,6 +43,11 @@ final class FrontendRequest implements HandlerInterface
         }
 
         $path = $this->publicPath . $path;
+
+        // SPA fallback: if file doesn't exist, serve index.html
+        if (!\file_exists($path)) {
+            $path = $this->publicPath . 'index.html';
+        }
 
         if (!isset($this->fileContent[$path])) {
             if (!file_exists($path)) {

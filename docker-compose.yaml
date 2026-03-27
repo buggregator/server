@@ -67,6 +67,7 @@ services:
       - "traefik.http.services.buggregator-http.loadbalancer.server.port=8000"
     volumes:
       - ./app:/app/app
+      - ./app.php:/app/app.php
       - ./runtime:/app/runtime
       - ./vendor:/app/vendor
       - ./.rr-prod.yaml:/app/.rr-prod.yaml
