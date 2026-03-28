@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sms\Interfaces\Http\Handler;
 
+use Modules\Sms\Application\Gateway\GatewayInterface;
 use App\Application\Commands\HandleReceivedEvent;
 use App\Application\Service\HttpHandler\HandlerInterface;
 use Modules\Sms\Application\Gateway\GatewayRegistry;
@@ -50,7 +51,7 @@ final readonly class SmsHandler implements HandlerInterface
         // Try to find explicit gateway by URL segment
         $explicitGateway = $segment1 ? $this->registry->findByName($segment1) : null;
 
-        if ($explicitGateway !== null) {
+        if ($explicitGateway instanceof GatewayInterface) {
             // Explicit gateway via URL — validate and always store event
             $project = $segment2;
             $warnings = $explicitGateway->validate($body);
@@ -85,7 +86,7 @@ final readonly class SmsHandler implements HandlerInterface
         $project = $segment1; // first segment is project in auto-detect mode
         $gateway = $this->registry->detect($body);
 
-        if ($gateway === null) {
+        if (!$gateway instanceof GatewayInterface) {
             return $next($request);
         }
 
