@@ -161,7 +161,7 @@ final class CacheEventRepositoryTest extends DatabaseTestCase
     public function testDeleteAllSkipsPinnedEvents(): void
     {
         $event1 = $this->createEvent();
-        $event2 = $this->createEvent();
+        $this->createEvent();
         $this->repository->pin((string) $event1->getUuid());
 
         $this->repository->deleteAll([]);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Events\Interfaces\Commands;
 
+use Spiral\Cqrs\CommandBusInterface;
 use App\Application\Commands\CreateProject;
 use App\Application\Commands\FindProjectByKey;
 use App\Application\Commands\HandleReceivedEvent;
@@ -25,7 +26,7 @@ final readonly class StoreEventHandler
         private EventDispatcherInterface $dispatcher,
         private EventRepositoryInterface $events,
         private QueryBusInterface $queryBus,
-        private \Spiral\Cqrs\CommandBusInterface $commandBus,
+        private CommandBusInterface $commandBus,
         private EventMetrics $metrics,
     ) {}
 
