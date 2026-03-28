@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Events\Integration\CycleOrm;
 
+use Modules\Projects\Domain\ValueObject\Key;
 use Cycle\Database\DatabaseInterface;
 use Cycle\ORM\Select;
 use Cycle\ORM\Select\Repository;
@@ -33,7 +34,7 @@ final class EventRepository extends Repository implements EventRepositoryInterfa
                 Event::TYPE => $event->getType(),
                 Event::PAYLOAD => $payload,
                 Event::TIMESTAMP => (string) $event->getTimestamp(),
-                Event::PROJECT => $event->getProject() !== null ? (string) $event->getProject() : null,
+                Event::PROJECT => $event->getProject() instanceof Key ? (string) $event->getProject() : null,
                 Event::IS_PINNED => $event->isPinned(),
             ])->run();
         } catch (\Throwable) {

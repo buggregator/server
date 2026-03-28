@@ -32,12 +32,7 @@ final class DumpHandler extends JobHandler
         if (\is_string($payload)) {
             $decoded = \json_decode($payload, true);
             // If JSON with 'payload' key — extract the base64 message from the Go plugin envelope
-            if (\is_array($decoded) && isset($decoded['payload'])) {
-                $message = $decoded['payload'];
-            } else {
-                // Raw base64 string (Spiral deserialized the payload field directly)
-                $message = $payload;
-            }
+            $message = \is_array($decoded) && isset($decoded['payload']) ? $decoded['payload'] : $payload;
         } elseif (\is_array($payload)) {
             $message = $payload['payload'] ?? '';
         } else {

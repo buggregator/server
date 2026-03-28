@@ -23,6 +23,7 @@ use Modules\Ray\Application\RayBootloader;
 use Modules\HttpDumps\Application\HttpDumpsBootloader;
 use Modules\Monolog\Application\MonologEventBootloader;
 use Modules\Sentry\Application\SentryBootloader;
+use Modules\Sms\Application\SmsBootloader;
 use Modules\Smtp\Application\SmtpBootloader;
 use Modules\VarDumper\Application\VarDumperBootloader;
 use Modules\Webhooks\Application\WebhooksBootloader;
@@ -96,6 +97,7 @@ class Kernel extends \Spiral\Framework\Kernel
             AppBootloader::class,
             InspectorBootloader::class,
             SentryBootloader::class,
+            SmsBootloader::class,
             SmtpBootloader::class,
             VarDumperBootloader::class,
             RayBootloader::class,

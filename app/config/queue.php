@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Modules\VarDumper\Interfaces\Jobs\DumpHandler;
+use Modules\Profiler\Interfaces\Jobs\ProfileHandler;
+use Modules\Monolog\Interfaces\Jobs\LogHandler;
 use Modules\Smtp\Interfaces\Jobs\EmailHandler;
 use Modules\Webhooks\Interfaces\Job\WebhookHandler;
 use Spiral\Queue\Driver\SyncDriver;
@@ -39,9 +42,9 @@ return [
     'registry' => [
         'handlers' => [
             'smtp.email' => EmailHandler::class,
-            'vardumper.dump' => \Modules\VarDumper\Interfaces\Jobs\DumpHandler::class,
-            'profiler.profile' => \Modules\Profiler\Interfaces\Jobs\ProfileHandler::class,
-            'monolog.log' => \Modules\Monolog\Interfaces\Jobs\LogHandler::class,
+            'vardumper.dump' => DumpHandler::class,
+            'profiler.profile' => ProfileHandler::class,
+            'monolog.log' => LogHandler::class,
         ],
         'serializers' => [
             WebhookHandler::class => 'symfony-json',

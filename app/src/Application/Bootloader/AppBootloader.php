@@ -46,7 +46,7 @@ final class AppBootloader extends DomainBootloader
             Settings::class => fn(
                 EnvironmentInterface $env,
             ): Settings => new Settings(
-                supportedEvents: $env->get('CLIENT_SUPPORTED_EVENTS', 'http-dump,inspector,monolog,profiler,ray,sentry,smtp,var-dump'),
+                supportedEvents: $env->get('CLIENT_SUPPORTED_EVENTS', 'http-dump,inspector,monolog,profiler,ray,sentry,sms,smtp,var-dump'),
             ),
         ];
     }
