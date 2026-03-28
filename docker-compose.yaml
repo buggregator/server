@@ -69,7 +69,7 @@ services:
       - ./app:/app/app
       - ./app.php:/app/app.php
       - ./runtime:/app/runtime
-#      - ./vendor:/app/vendor
+      - ./composer.json:/app/composer.json
       - ./.rr-prod.yaml:/app/.rr-prod.yaml
     networks:
       - buggregator-network
