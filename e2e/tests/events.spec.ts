@@ -227,11 +227,18 @@ test.describe('Http Dump', () => {
     // Attachments section
     await expect(page.locator('text=Attachments')).toBeVisible();
 
-    // Attachment download link
+    // Attachment link exists and is a real <a> with href
     const attachmentLink = page.locator('a[href*="/attachments/"]').first();
-    if (await attachmentLink.isVisible()) {
-      const href = await attachmentLink.getAttribute('href');
-      expect(href).toContain('/attachments/');
+    await expect(attachmentLink).toBeVisible();
+    const href = await attachmentLink.getAttribute('href');
+    expect(href).toContain('/attachments/');
+
+    // User clicks attachment — should trigger download
+    const downloadPromise = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
+    await attachmentLink.click();
+    const download = await downloadPromise;
+    if (download) {
+      expect(download.suggestedFilename()).toBeTruthy();
     }
 
     // cURL section
