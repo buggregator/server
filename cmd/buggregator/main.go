@@ -38,13 +38,14 @@ func main() {
 	}
 
 	store := storage.NewSQLiteStore(db)
+	attachments := storage.NewAttachmentStore(cfg.Storage.Mode, cfg.Storage.Path)
 	hub := ws.NewHub()
 	registry := module.NewRegistry()
 	enabled := cfg.Modules
 
 	// TCP modules.
 	monologMod := monolog.New(cfg.MonologAddr)
-	smtpMod := smtpmod.New(cfg.SMTPAddr)
+	smtpMod := smtpmod.New(cfg.SMTPAddr, attachments, db)
 	vardumperMod := vardumper.New(cfg.VarDumperAddr)
 
 	// Start VarDumper PHP parser (only if enabled).
@@ -97,6 +98,6 @@ func main() {
 		vardumperMod.SetEventService(eventService)
 	}
 
-	application := app.New(cfg, db, registry, hub, store)
+	application := app.New(cfg, db, registry, hub, store, attachments)
 	application.Run()
 }

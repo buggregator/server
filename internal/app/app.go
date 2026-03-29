@@ -16,24 +16,27 @@ import (
 	httpserver "github.com/buggregator/go-buggregator/internal/server/http"
 	"github.com/buggregator/go-buggregator/internal/server/tcp"
 	"github.com/buggregator/go-buggregator/internal/server/ws"
+	"github.com/buggregator/go-buggregator/internal/storage"
 )
 
 // App orchestrates all servers and modules.
 type App struct {
-	cfg      Config
-	db       *sql.DB
-	registry *module.Registry
-	hub      *ws.Hub
-	store    event.Store
+	cfg         Config
+	db          *sql.DB
+	registry    *module.Registry
+	hub         *ws.Hub
+	store       event.Store
+	attachments *storage.AttachmentStore
 }
 
-func New(cfg Config, db *sql.DB, registry *module.Registry, hub *ws.Hub, store event.Store) *App {
+func New(cfg Config, db *sql.DB, registry *module.Registry, hub *ws.Hub, store event.Store, attachments *storage.AttachmentStore) *App {
 	return &App{
-		cfg:      cfg,
-		db:       db,
-		registry: registry,
-		hub:      hub,
-		store:    store,
+		cfg:         cfg,
+		db:          db,
+		registry:    registry,
+		hub:         hub,
+		store:       store,
+		attachments: attachments,
 	}
 }
 
@@ -55,6 +58,9 @@ func (a *App) Run() {
 
 	// Register core API routes.
 	httpserver.RegisterAPI(mux, a.store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes())
+
+	// Register attachment API endpoints.
+	httpserver.RegisterAttachmentAPI(mux, a.db, a.attachments)
 
 	// Wire RPC handler so Centrifugo RPC calls route to our HTTP handlers.
 	a.hub.SetRPCHandler(ws.NewMuxRPCHandler(mux))

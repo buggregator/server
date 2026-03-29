@@ -14,7 +14,10 @@ import (
 	"strings"
 	"time"
 
+	"database/sql"
+
 	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/go-buggregator/internal/storage"
 	gosmtp "github.com/emersion/go-smtp"
 )
 
@@ -22,10 +25,12 @@ import (
 type smtpServer struct {
 	server       *gosmtp.Server
 	eventService EventStorer
+	attachments  *storage.AttachmentStore
+	db           *sql.DB
 }
 
-func newSMTPServer(addr string, es EventStorer) *smtpServer {
-	be := &backend{eventService: es}
+func newSMTPServer(addr string, es EventStorer, att *storage.AttachmentStore, db *sql.DB) *smtpServer {
+	be := &backend{eventService: es, attachments: att, db: db}
 	s := gosmtp.NewServer(be)
 	s.Addr = addr
 	s.Domain = "localhost"
@@ -34,7 +39,7 @@ func newSMTPServer(addr string, es EventStorer) *smtpServer {
 	s.MaxMessageBytes = 10 * 1024 * 1024
 	s.AllowInsecureAuth = true
 
-	return &smtpServer{server: s, eventService: es}
+	return &smtpServer{server: s, eventService: es, attachments: att, db: db}
 }
 
 func (s *smtpServer) Start(ctx context.Context) error {
@@ -57,6 +62,8 @@ func (s *smtpServer) Stop() error {
 // backend implements gosmtp.Backend.
 type backend struct {
 	eventService EventStorer
+	attachments  *storage.AttachmentStore
+	db           *sql.DB
 }
 
 func (b *backend) NewSession(c *gosmtp.Conn) (gosmtp.Session, error) {
@@ -86,15 +93,37 @@ func (s *session) Data(r io.Reader) error {
 		return err
 	}
 
-	parsed, err := parseEmail(raw, s.to)
+	parsed, attachments, err := parseEmail(raw, s.to)
 	if err != nil {
 		slog.Error("smtp: failed to parse email", "err", err)
 		return nil
 	}
 
+	// Generate event UUID for attachment storage.
+	eventUUID := event.GenerateUUID()
+
+	// Store attachments.
+	if s.backend.attachments != nil && len(attachments) > 0 {
+		for _, att := range attachments {
+			path := eventUUID + "/" + att.Filename
+			if err := s.backend.attachments.Store(path, att.content); err != nil {
+				slog.Error("smtp: failed to store attachment", "err", err)
+				continue
+			}
+			attUUID := event.GenerateUUID()
+			if s.backend.db != nil {
+				s.backend.db.Exec(
+					`INSERT INTO smtp_attachments (uuid, event_uuid, name, path, size, mime, content_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+					attUUID, eventUUID, att.Filename, path, len(att.content), att.Type, att.ContentID,
+				)
+			}
+		}
+	}
+
 	payload, _ := json.Marshal(parsed)
 
 	inc := &event.Incoming{
+		UUID:    eventUUID,
 		Type:    "smtp",
 		Payload: json.RawMessage(payload),
 	}
@@ -114,11 +143,12 @@ type EmailAddress struct {
 	Name  string `json:"name"`
 }
 
-// Attachment represents a parsed email attachment.
-type Attachment struct {
-	Filename string `json:"filename"`
-	Content  string `json:"content"`
-	Type     string `json:"type"`
+// parsedAttachment holds raw attachment data during parsing.
+type parsedAttachment struct {
+	Filename  string
+	Type      string
+	ContentID string
+	content   []byte // raw binary content
 }
 
 // ParsedEmail is the structure stored as event payload.
@@ -136,10 +166,10 @@ type ParsedEmail struct {
 	Raw      string         `json:"raw"`
 }
 
-func parseEmail(raw []byte, recipients []string) (*ParsedEmail, error) {
+func parseEmail(raw []byte, recipients []string) (*ParsedEmail, []parsedAttachment, error) {
 	msg, err := mail.ReadMessage(bytes.NewReader(raw))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Parse Message-ID.
@@ -194,9 +224,10 @@ func parseEmail(raw []byte, recipients []string) (*ParsedEmail, error) {
 		} else {
 			parsed.Text = string(decoded)
 		}
-		return parsed, nil
+		return parsed, nil, nil
 	}
 
+	var atts []parsedAttachment
 	mr := multipart.NewReader(msg.Body, params["boundary"])
 	for {
 		part, err := mr.NextPart()
@@ -206,19 +237,19 @@ func parseEmail(raw []byte, recipients []string) (*ParsedEmail, error) {
 		if err != nil {
 			break
 		}
-		processPart(part, parsed)
+		processPart(part, parsed, &atts)
 	}
 
-	return parsed, nil
+	return parsed, atts, nil
 }
 
-func processPart(part *multipart.Part, parsed *ParsedEmail) {
+func processPart(part *multipart.Part, parsed *ParsedEmail, atts *[]parsedAttachment) {
 	ct := part.Header.Get("Content-Type")
 	disposition := part.Header.Get("Content-Disposition")
 
 	mediaType, params, _ := mime.ParseMediaType(ct)
 
-	// Recurse into nested multipart (multipart/alternative, multipart/mixed, etc.)
+	// Recurse into nested multipart.
 	if strings.HasPrefix(mediaType, "multipart/") {
 		if boundary := params["boundary"]; boundary != "" {
 			mr := multipart.NewReader(part, boundary)
@@ -227,7 +258,7 @@ func processPart(part *multipart.Part, parsed *ParsedEmail) {
 				if err != nil {
 					break
 				}
-				processPart(subpart, parsed)
+				processPart(subpart, parsed, atts)
 			}
 		}
 		return
@@ -235,8 +266,34 @@ func processPart(part *multipart.Part, parsed *ParsedEmail) {
 
 	// Attachment.
 	if strings.HasPrefix(disposition, "attachment") || strings.HasPrefix(disposition, "inline") {
-		// TODO: store attachments in separate table (smtp_attachments)
-		io.ReadAll(part) // drain
+		content, _ := io.ReadAll(part)
+		encoding := part.Header.Get("Content-Transfer-Encoding")
+		if strings.EqualFold(encoding, "base64") {
+			if decoded, err := base64.StdEncoding.DecodeString(string(content)); err == nil {
+				content = decoded
+			}
+		}
+
+		filename := part.FileName()
+		if filename == "" {
+			filename = "unnamed"
+		}
+		mimeType := ct
+		if idx := strings.Index(mimeType, ";"); idx > 0 {
+			mimeType = strings.TrimSpace(mimeType[:idx])
+		}
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+
+		contentID := strings.Trim(part.Header.Get("Content-ID"), "<>")
+
+		*atts = append(*atts, parsedAttachment{
+			Filename:  filename,
+			Type:      mimeType,
+			ContentID: contentID,
+			content:   content,
+		})
 		return
 	}
 

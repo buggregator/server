@@ -15,6 +15,7 @@ import (
 type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Database DatabaseConfig `yaml:"database"`
+	Storage  StorageConfig  `yaml:"storage"`
 	TCP      TCPConfig      `yaml:"tcp"`
 	Modules  ModulesConfig  `yaml:"modules"`
 	Projects []ProjectDef   `yaml:"projects"`
@@ -30,6 +31,11 @@ type Config struct {
 
 type ServerConfig struct {
 	Addr string `yaml:"addr"`
+}
+
+type StorageConfig struct {
+	Mode string `yaml:"mode"` // "memory" (default) or "filesystem"
+	Path string `yaml:"path"` // Directory for filesystem mode
 }
 
 type DatabaseConfig struct {
@@ -131,6 +137,10 @@ func LoadConfig() Config {
 	cfg.TCP.SMTP.Addr = coalesce(cfg.TCP.SMTP.Addr, os.Getenv("SMTP_ADDR"), fileCfg.TCP.SMTP.Addr, ":1025")
 	cfg.TCP.Monolog.Addr = coalesce(cfg.TCP.Monolog.Addr, os.Getenv("MONOLOG_ADDR"), fileCfg.TCP.Monolog.Addr, ":9913")
 	cfg.TCP.VarDumper.Addr = coalesce(cfg.TCP.VarDumper.Addr, os.Getenv("VAR_DUMPER_ADDR"), fileCfg.TCP.VarDumper.Addr, ":9912")
+
+	// Storage.
+	cfg.Storage.Mode = coalesce(os.Getenv("STORAGE_MODE"), fileCfg.Storage.Mode, "memory")
+	cfg.Storage.Path = coalesce(os.Getenv("STORAGE_PATH"), fileCfg.Storage.Path, "./storage")
 
 	// Modules: merge from file config, env override.
 	cfg.Modules = fileCfg.Modules
