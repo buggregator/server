@@ -39,7 +39,7 @@ func setupAPI(t *testing.T) (*http.ServeMux, *storage.SQLiteStore) {
 	store := storage.NewSQLiteStore(db)
 	hub := ws.NewHub()
 	registry := module.NewRegistry()
-	es := serverhttp.NewEventService(store, hub, registry)
+	es := serverhttp.NewEventService(store, hub, registry, nil)
 
 	mux := http.NewServeMux()
 	serverhttp.RegisterAPI(mux, store, event.NewPreviewRegistry(), es, "test-version", db, []string{"sentry", "ray"})

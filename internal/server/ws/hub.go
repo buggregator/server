@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/buggregator/go-buggregator/internal/metrics"
 	"nhooyr.io/websocket"
 )
 
@@ -18,6 +19,7 @@ type Hub struct {
 	clients         map[*client]struct{}
 	rpcHandler      RPCHandler
 	projectProvider ProjectProvider
+	metrics         *metrics.Collector
 }
 
 // RPCHandler processes Centrifugo RPC calls (e.g., "delete:api/event/{id}").
@@ -49,6 +51,11 @@ func (h *Hub) SetProjectProvider(p ProjectProvider) {
 	h.projectProvider = p
 }
 
+// SetMetrics sets the metrics collector for the hub.
+func (h *Hub) SetMetrics(m *metrics.Collector) {
+	h.metrics = m
+}
+
 // Run keeps the hub alive until context is cancelled.
 func (h *Hub) Run(ctx context.Context) {
 	<-ctx.Done()
@@ -73,11 +80,17 @@ func (h *Hub) HandleUpgrade(w http.ResponseWriter, r *http.Request) {
 	h.mu.Lock()
 	h.clients[c] = struct{}{}
 	h.mu.Unlock()
+	if h.metrics != nil {
+		h.metrics.WSConnectionsActive.Inc()
+	}
 
 	defer func() {
 		h.mu.Lock()
 		delete(h.clients, c)
 		h.mu.Unlock()
+		if h.metrics != nil {
+			h.metrics.WSConnectionsActive.Dec()
+		}
 	}()
 
 	// Read loop — handle Centrifugo protocol commands.
@@ -219,6 +232,10 @@ func (h *Hub) Broadcast(channel, eventName string, payload any) {
 		if err := c.conn.Write(c.ctx, websocket.MessageText, msg); err != nil {
 			slog.Debug("websocket write error", "err", err)
 		}
+	}
+
+	if h.metrics != nil {
+		h.metrics.WSMessagesSentTotal.WithLabelValues(channel).Inc()
 	}
 }
 

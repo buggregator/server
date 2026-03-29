@@ -17,6 +17,7 @@ type Config struct {
 	Database DatabaseConfig `yaml:"database"`
 	Storage  StorageConfig  `yaml:"storage"`
 	TCP      TCPConfig      `yaml:"tcp"`
+	Metrics  MetricsConfig  `yaml:"metrics"`
 	Modules  ModulesConfig  `yaml:"modules"`
 	Projects []ProjectDef   `yaml:"projects"`
 	Version  string         `yaml:"-"`
@@ -27,6 +28,12 @@ type Config struct {
 	SMTPAddr      string `yaml:"-"`
 	MonologAddr   string `yaml:"-"`
 	VarDumperAddr string `yaml:"-"`
+}
+
+// MetricsConfig controls Prometheus metrics.
+type MetricsConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Addr    string `yaml:"addr"` // Separate metrics server address (e.g., ":9090"). Empty = use main HTTP server.
 }
 
 type ServerConfig struct {
@@ -141,6 +148,10 @@ func LoadConfig() Config {
 	// Storage.
 	cfg.Storage.Mode = coalesce(os.Getenv("STORAGE_MODE"), fileCfg.Storage.Mode, "memory")
 	cfg.Storage.Path = coalesce(os.Getenv("STORAGE_PATH"), fileCfg.Storage.Path, "./storage")
+
+	// Metrics.
+	cfg.Metrics.Enabled = fileCfg.Metrics.Enabled || os.Getenv("METRICS_ENABLED") == "true"
+	cfg.Metrics.Addr = coalesce(os.Getenv("METRICS_ADDR"), fileCfg.Metrics.Addr)
 
 	// Modules: merge from file config, env override.
 	cfg.Modules = fileCfg.Modules

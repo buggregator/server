@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/buggregator/go-buggregator/internal/app"
+	"github.com/buggregator/go-buggregator/internal/metrics"
 	"github.com/buggregator/go-buggregator/internal/module"
 	httpserver "github.com/buggregator/go-buggregator/internal/server/http"
 	"github.com/buggregator/go-buggregator/internal/server/ws"
@@ -35,6 +36,13 @@ func main() {
 	// Seed projects from config file.
 	for _, p := range cfg.Projects {
 		db.Exec(`INSERT OR IGNORE INTO projects (key, name) VALUES (?, ?)`, p.Key, p.Name)
+	}
+
+	// Create metrics collector if enabled.
+	var collector *metrics.Collector
+	if cfg.Metrics.Enabled {
+		collector = metrics.NewCollector()
+		slog.Info("prometheus metrics enabled")
 	}
 
 	store := storage.NewSQLiteStore(db)
@@ -87,7 +95,7 @@ func main() {
 	}
 
 	// Build event service and inject into TCP modules.
-	eventService := httpserver.NewEventService(store, hub, registry)
+	eventService := httpserver.NewEventService(store, hub, registry, collector)
 	if enabled.IsEnabled("monolog") {
 		monologMod.SetEventService(eventService)
 	}
@@ -98,6 +106,6 @@ func main() {
 		vardumperMod.SetEventService(eventService)
 	}
 
-	application := app.New(cfg, db, registry, hub, store, attachments)
+	application := app.New(cfg, db, registry, hub, store, attachments, collector)
 	application.Run()
 }

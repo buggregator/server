@@ -19,6 +19,12 @@ storage:
   mode: ${STORAGE_MODE:memory}          # "memory" (default, lost on restart) or "filesystem"
   path: ${STORAGE_PATH:./storage}       # Directory for filesystem mode
 
+# Prometheus metrics
+metrics:
+  enabled: ${METRICS_ENABLED:false}       # Set to true to expose Prometheus metrics
+  addr: ${METRICS_ADDR:}                  # Separate metrics server address (e.g., ":9090")
+                                          # Leave empty to serve /metrics on the main HTTP server
+
 # TCP servers
 tcp:
   smtp:

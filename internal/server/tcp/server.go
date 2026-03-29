@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"net"
 	"sync"
+
+	"github.com/buggregator/go-buggregator/internal/metrics"
 )
 
 // ConnectionHandler handles a single TCP connection.
@@ -33,10 +35,11 @@ type Manager struct {
 	servers  []ServerConfig
 	starters []Starter
 	wg       sync.WaitGroup
+	metrics  *metrics.Collector
 }
 
-func NewManager(servers []ServerConfig) *Manager {
-	return &Manager{servers: servers}
+func NewManager(servers []ServerConfig, m *metrics.Collector) *Manager {
+	return &Manager{servers: servers, metrics: m}
 }
 
 // Start begins listening on all configured TCP servers.
@@ -83,7 +86,17 @@ func (m *Manager) acceptLoop(ctx context.Context, ln net.Listener, sc ServerConf
 				continue
 			}
 		}
-		go sc.Handler.HandleConnection(conn)
+		if m.metrics != nil {
+			m.metrics.TCPConnectionsActive.WithLabelValues(sc.Name).Inc()
+		}
+		go func(c net.Conn) {
+			defer func() {
+				if m.metrics != nil {
+					m.metrics.TCPConnectionsActive.WithLabelValues(sc.Name).Dec()
+				}
+			}()
+			sc.Handler.HandleConnection(c)
+		}(conn)
 	}
 }
 

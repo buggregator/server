@@ -3,23 +3,26 @@ package http
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/go-buggregator/internal/metrics"
 	"github.com/buggregator/go-buggregator/internal/module"
 	"github.com/buggregator/go-buggregator/internal/server/ws"
 )
 
 const defaultProject = "default"
 
-// EventService handles the store → preview → broadcast → notify pipeline.
+// EventService handles the store -> preview -> broadcast -> notify pipeline.
 type EventService struct {
 	store    event.Store
 	hub      *ws.Hub
 	registry *module.Registry
+	metrics  *metrics.Collector
 }
 
-func NewEventService(store event.Store, hub *ws.Hub, registry *module.Registry) *EventService {
-	return &EventService{store: store, hub: hub, registry: registry}
+func NewEventService(store event.Store, hub *ws.Hub, registry *module.Registry, m *metrics.Collector) *EventService {
+	return &EventService{store: store, hub: hub, registry: registry, metrics: m}
 }
 
 // HandleIncoming stores an event, broadcasts preview, and notifies modules.
@@ -31,8 +34,19 @@ func (s *EventService) HandleIncoming(ctx context.Context, inc *event.Incoming) 
 
 	ev := event.NewEvent(inc)
 
+	start := time.Now()
 	if err := s.store.Store(ctx, ev); err != nil {
+		if s.metrics != nil {
+			s.metrics.EventsIngestionErrors.WithLabelValues(ev.Type, "store_failed").Inc()
+		}
 		return err
+	}
+	duration := time.Since(start).Seconds()
+
+	if s.metrics != nil {
+		s.metrics.EventsReceivedTotal.WithLabelValues(ev.Type, ev.Project).Inc()
+		s.metrics.EventsIngestionDuration.WithLabelValues(ev.Type).Observe(duration)
+		s.metrics.EventsPayloadBytes.WithLabelValues(ev.Type).Observe(float64(len(ev.Payload)))
 	}
 
 	slog.Info("event stored", "uuid", ev.UUID, "type", ev.Type, "project", ev.Project)
