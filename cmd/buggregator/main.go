@@ -83,7 +83,7 @@ func main() {
 		registry.Register(sms.New())
 	}
 	if enabled.IsEnabled("http-dump") {
-		registry.Register(httpdumps.New()) // catch-all, must be last
+		registry.Register(httpdumps.New(attachments, db)) // catch-all, must be last
 	}
 
 	// Build event service and inject into TCP modules.
