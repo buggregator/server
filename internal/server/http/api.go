@@ -18,7 +18,7 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 		writeJSON(w, map[string]any{
 			"auth":    map[string]any{"enabled": false},
 			"version": version,
-			"events":  []string{"sentry", "ray", "var-dump", "inspector", "monolog", "smtp", "http-dumps", "profiler"},
+			"events":  []string{"sentry", "ray", "var-dump", "inspector", "monolog", "sms", "smtp", "http-dumps", "profiler"},
 		})
 	})
 

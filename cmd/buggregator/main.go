@@ -15,6 +15,7 @@ import (
 	"github.com/buggregator/go-buggregator/modules/profiler"
 	"github.com/buggregator/go-buggregator/modules/ray"
 	"github.com/buggregator/go-buggregator/modules/sentry"
+	"github.com/buggregator/go-buggregator/modules/sms"
 	smtpmod "github.com/buggregator/go-buggregator/modules/smtp"
 	"github.com/buggregator/go-buggregator/modules/vardumper"
 )
@@ -56,6 +57,7 @@ func main() {
 	registry.Register(monologMod)
 	registry.Register(smtpMod)
 	registry.Register(vardumperMod)
+	registry.Register(sms.New())
 	registry.Register(httpdumps.New()) // catch-all, must be last
 
 	// Build the event service and inject into TCP modules.

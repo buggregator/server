@@ -45,6 +45,7 @@ services:
       INSPECTOR_API_KEY: test
       PROFILER_ENDPOINT: http://profiler@buggregator:8000
       HTTP_DUMP_ENDPOINT: http://http-dump@buggregator:8000
+      SMS_ENDPOINT: http://buggregator:8000/sms
     networks:
       - buggregator
 
