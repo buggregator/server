@@ -15,10 +15,12 @@ func RegisterAttachmentAPI(mux *http.ServeMux, db *sql.DB, store *storage.Attach
 	mux.HandleFunc("GET /api/smtp/{eventUuid}/attachments/{uuid}", downloadAttachment(db, store, "smtp_attachments"))
 	mux.HandleFunc("GET /api/smtp/{eventUuid}/attachments/preview/{uuid}", previewAttachment(db, store, "smtp_attachments"))
 
-	// HTTP Dump attachments.
-	mux.HandleFunc("GET /api/http-dumps/{uuid}/attachments", listAttachments(db, "http_dump_attachments"))
-	mux.HandleFunc("GET /api/http-dumps/{eventUuid}/attachments/{uuid}", downloadAttachment(db, store, "http_dump_attachments"))
-	mux.HandleFunc("GET /api/http-dumps/{eventUuid}/attachments/preview/{uuid}", previewAttachment(db, store, "http_dump_attachments"))
+	// HTTP Dump attachments (support both /http-dump/ and /http-dumps/ paths).
+	for _, prefix := range []string{"/api/http-dump/", "/api/http-dumps/"} {
+		mux.HandleFunc("GET "+prefix+"{uuid}/attachments", listAttachments(db, "http_dump_attachments"))
+		mux.HandleFunc("GET "+prefix+"{eventUuid}/attachments/{uuid}", downloadAttachment(db, store, "http_dump_attachments"))
+		mux.HandleFunc("GET "+prefix+"{eventUuid}/attachments/preview/{uuid}", previewAttachment(db, store, "http_dump_attachments"))
+	}
 }
 
 func listAttachments(db *sql.DB, table string) http.HandlerFunc {

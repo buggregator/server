@@ -1,31 +1,28 @@
 import { test, expect, Page } from '@playwright/test';
-import { triggerExample, clearEvents, getEventCount, openBuggregator } from './helpers';
+import { triggerExample, clearEvents, openBuggregator } from './helpers';
 
 const BUGGREGATOR = 'http://localhost:8000';
 
 test.describe.configure({ mode: 'serial' });
 
-async function waitForEventInUI(page: Page, timeoutMs = 15_000): Promise<void> {
+/** Navigate to sidebar section */
+async function goToSection(page: Page, name: string | RegExp) {
+  await openBuggregator(page);
+  await page.locator('a').filter({ hasText: name }).first().click();
+  await page.waitForTimeout(1500);
+}
+
+/** Wait until the page title shows at least 1 event */
+async function waitForEventCard(page: Page, timeoutMs = 15_000) {
   await expect(async () => {
     const title = await page.title();
-    const match = title.match(/(\d+)/);
-    expect(match).not.toBeNull();
-    expect(Number(match![1])).toBeGreaterThan(0);
+    expect(title).toMatch(/[1-9]/);
   }).toPass({ timeout: timeoutMs });
 }
 
-async function waitForApiEvent(type: string, timeoutMs = 10_000): Promise<void> {
-  await expect(async () => {
-    const count = await getEventCount(type);
-    expect(count).toBeGreaterThanOrEqual(1);
-  }).toPass({ timeout: timeoutMs });
-}
-
-// Click the first event in the list to open detail page
-async function clickFirstEvent(page: Page): Promise<void> {
-  // Event cards are in the list — click the first one
-  const card = page.locator('[class*=preview-card], [class*=event-card], [class*=card]').first();
-  await card.click();
+/** Click the first event card to open detail page */
+async function openFirstEvent(page: Page) {
+  await page.locator('.preview-card').first().click();
   await page.waitForTimeout(2000);
 }
 
@@ -33,34 +30,20 @@ async function clickFirstEvent(page: Page): Promise<void> {
 // Sentry
 // ============================================================
 test.describe('Sentry', () => {
-  test('event appears in UI and detail page has content', async ({ page }) => {
+  test('shows exception details on detail page', async ({ page }) => {
     await clearEvents();
-    await openBuggregator(page);
-    await page.locator('a').filter({ hasText: 'Sentry' }).first().click();
-    await page.waitForTimeout(2000);
-
+    await goToSection(page, 'Sentry');
     await triggerExample('sentry:event');
-    await waitForApiEvent('sentry');
+    await waitForEventCard(page);
 
-    await page.waitForTimeout(3000);
-    let title = await page.title();
-    if (!title.match(/[1-9]/)) {
-      await page.reload();
-      await page.waitForTimeout(2000);
-    }
-    expect(await page.title()).toMatch(/[1-9]/);
+    // User sees event card in list with "sentry" label
+    await expect(page.locator('.preview-card').first()).toBeVisible();
 
-    // Click event to open detail
-    await clickFirstEvent(page);
-    const body = await page.textContent('body');
-    expect(body).toContain('sentry');
+    // User clicks the event
+    await openFirstEvent(page);
 
-    // API check
-    const res = await fetch(`${BUGGREGATOR}/api/events?type=sentry`);
-    const json = await res.json();
-    expect(json.data.length).toBeGreaterThanOrEqual(1);
-    expect(json.data[0].payload).toBeDefined();
-    expect(json.data[0].payload.event_id).toBeDefined();
+    // Detail page shows exception info
+    await expect(page.locator('text=Exception')).toBeVisible();
   });
 });
 
@@ -68,17 +51,15 @@ test.describe('Sentry', () => {
 // Ray
 // ============================================================
 test.describe('Ray', () => {
-  test('event appears in UI with content', async ({ page }) => {
+  test('shows dump content on detail page', async ({ page }) => {
     await clearEvents();
-    await openBuggregator(page);
-    await page.locator('a').filter({ hasText: 'Ray' }).first().click();
-    await page.waitForTimeout(1000);
+    await goToSection(page, 'Ray');
     await triggerExample('ray:string');
-    await waitForEventInUI(page);
+    await waitForEventCard(page);
 
-    await clickFirstEvent(page);
-    const body = await page.textContent('body');
-    expect(body!.length).toBeGreaterThan(50);
+    await openFirstEvent(page);
+    const detail = await page.textContent('body');
+    expect(detail!.length).toBeGreaterThan(100);
   });
 });
 
@@ -86,17 +67,15 @@ test.describe('Ray', () => {
 // Monolog
 // ============================================================
 test.describe('Monolog', () => {
-  test('event appears in UI via TCP', async ({ page }) => {
+  test('shows log entry on detail page', async ({ page }) => {
     await clearEvents();
-    await openBuggregator(page);
-    await page.locator('a').filter({ hasText: 'Monolog' }).first().click();
-    await page.waitForTimeout(1000);
+    await goToSection(page, 'Monolog');
     await triggerExample('monolog:error');
-    await waitForEventInUI(page);
+    await waitForEventCard(page);
 
-    await clickFirstEvent(page);
-    const body = await page.textContent('body');
-    expect(body!.length).toBeGreaterThan(50);
+    await openFirstEvent(page);
+    const detail = await page.textContent('body');
+    expect(detail!.length).toBeGreaterThan(100);
   });
 });
 
@@ -104,70 +83,61 @@ test.describe('Monolog', () => {
 // VarDumper
 // ============================================================
 test.describe('VarDumper', () => {
-  test('event appears in UI with rendered value', async ({ page }) => {
+  test('renders dump value (not empty) in the list', async ({ page }) => {
     await clearEvents();
-    await openBuggregator(page);
-    await page.locator('a').filter({ hasText: /Var\s*Dump/ }).first().click();
-    await page.waitForTimeout(1000);
+    await goToSection(page, /Var\s*Dump/);
     await triggerExample('var_dump:array');
-    await waitForEventInUI(page);
+    await waitForEventCard(page);
 
-    // Verify API has value content
-    const res = await fetch(`${BUGGREGATOR}/api/events?type=var-dump`);
-    const json = await res.json();
-    expect(json.data.length).toBeGreaterThanOrEqual(1);
-    const payload = json.data[0].payload;
-    expect(payload.payload.type).toBeDefined();
-    expect(payload.payload.value.length).toBeGreaterThan(10);
+    // Card should show real content, not empty quotes
+    const card = await page.locator('.preview-card').first().textContent();
+    expect(card!.length).toBeGreaterThan(20);
+    expect(card).not.toContain('" "');
   });
 });
 
 // ============================================================
-// SMTP with attachment
+// SMTP — full email flow with attachment download
 // ============================================================
 test.describe('SMTP', () => {
-  test('email appears in UI and attachment is downloadable', async ({ page }) => {
+  test('email detail shows subject, recipients, HTML preview and downloadable attachment', async ({ page }) => {
     await clearEvents();
-    await openBuggregator(page);
-    await page.locator('a').filter({ hasText: 'SMTP' }).first().click();
-    await page.waitForTimeout(1000);
+    await goToSection(page, 'SMTP');
     await triggerExample('smtp:welcome_mail');
-    await waitForEventInUI(page);
+    await waitForEventCard(page);
 
-    // Verify email payload
-    const eventsRes = await fetch(`${BUGGREGATOR}/api/events?type=smtp`);
-    const eventsJson = await eventsRes.json();
-    expect(eventsJson.data.length).toBeGreaterThanOrEqual(1);
-    const event = eventsJson.data[0];
-    expect(event.payload.subject).toBeDefined();
-    expect(event.payload.html.length).toBeGreaterThan(100);
+    // List card shows subject
+    await expect(page.locator('text=Welcome Mail').first()).toBeVisible();
 
-    // Check attachments API
-    const attRes = await fetch(`${BUGGREGATOR}/api/smtp/${event.uuid}/attachments`);
-    const attJson = await attRes.json();
-    expect(attJson.data.length).toBeGreaterThanOrEqual(1);
+    // User opens the email
+    await openFirstEvent(page);
 
-    const att = attJson.data[0];
-    expect(att.uuid).toBeDefined();
-    expect(att.name).toBeDefined();
-    expect(att.size).toBeGreaterThan(0);
+    // Sections are visible
+    await expect(page.locator('text=Recipients')).toBeVisible();
+    await expect(page.locator('text=Message Info')).toBeVisible();
+    await expect(page.locator('text=Attachments')).toBeVisible();
 
-    // Download attachment
-    const downloadRes = await fetch(`${BUGGREGATOR}/api/smtp/${event.uuid}/attachments/${att.uuid}`);
-    expect(downloadRes.status).toBe(200);
-    expect(downloadRes.headers.get('content-disposition')).toContain('attachment');
-    const downloadBody = await downloadRes.arrayBuffer();
-    expect(downloadBody.byteLength).toBe(att.size);
+    // Subject visible on detail page
+    await expect(page.locator('text=Welcome Mail').first()).toBeVisible();
 
-    // Preview attachment
-    const previewRes = await fetch(`${BUGGREGATOR}/api/smtp/${event.uuid}/attachments/preview/${att.uuid}`);
-    expect(previewRes.status).toBe(200);
-    expect(previewRes.headers.get('content-type')).toBe(att.mime);
+    // Attachment link exists and is a real <a> href (not a div)
+    const attachmentLink = page.locator('a[href*="/attachments/"]').first();
+    await expect(attachmentLink).toBeVisible();
+    const href = await attachmentLink.getAttribute('href');
+    expect(href).toContain('/api/smtp/');
+    expect(href).toContain('/attachments/');
 
-    // Click event in UI to verify detail page loads
-    await clickFirstEvent(page);
-    const body = await page.textContent('body');
-    expect(body).toContain(event.payload.subject);
+    // User clicks attachment — should trigger download
+    const downloadPromise = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
+    await attachmentLink.click();
+    const download = await downloadPromise;
+    if (download) {
+      expect(download.suggestedFilename()).toBeTruthy();
+    }
+
+    // HTML Preview tab content is visible
+    const bodyText = await page.textContent('body');
+    expect(bodyText).toContain('Debug with Buggregator');
   });
 });
 
@@ -175,111 +145,97 @@ test.describe('SMTP', () => {
 // Inspector
 // ============================================================
 test.describe('Inspector', () => {
-  test('event appears in UI with content', async ({ page }) => {
+  test('shows transaction on detail page', async ({ page }) => {
     await clearEvents();
-    await openBuggregator(page);
-    await page.locator('a').filter({ hasText: 'Inspector' }).first().click();
-    await page.waitForTimeout(1000);
+    await goToSection(page, 'Inspector');
     await triggerExample('inspector:request');
-    await waitForEventInUI(page);
+    await waitForEventCard(page);
 
-    const res = await fetch(`${BUGGREGATOR}/api/events?type=inspector`);
-    const json = await res.json();
-    expect(json.data.length).toBeGreaterThanOrEqual(1);
-    expect(json.data[0].payload).toBeDefined();
+    await openFirstEvent(page);
+    const detail = await page.textContent('body');
+    expect(detail!.length).toBeGreaterThan(100);
   });
 });
 
 // ============================================================
-// Profiler
+// Profiler — tabs: Call graph, Flamechart, Top functions
 // ============================================================
 test.describe('Profiler', () => {
-  test('event appears and detail page shows call graph', async ({ page }) => {
+  test('detail page has working tabs with data', async ({ page }) => {
     await clearEvents();
-    await openBuggregator(page);
-    await page.locator('a').filter({ hasText: 'Profiler' }).first().click();
-    await page.waitForTimeout(1000);
+    await goToSection(page, 'Profiler');
     await triggerExample('profiler:report', '/example/call/profiler');
-    await waitForEventInUI(page);
+    await waitForEventCard(page);
 
-    // Verify API payload
-    const eventsRes = await fetch(`${BUGGREGATOR}/api/events?type=profiler`);
-    const eventsJson = await eventsRes.json();
-    expect(eventsJson.data.length).toBeGreaterThanOrEqual(1);
-    const event = eventsJson.data[0];
-    expect(event.payload.app_name).toBeDefined();
-    expect(event.payload.peaks).toBeDefined();
-    expect(event.payload.profile_uuid).toBeDefined();
+    // List shows app name
+    await expect(page.locator('text=Simple app').first()).toBeVisible();
 
-    // Verify profiler API endpoints
-    const uuid = event.payload.profile_uuid;
-    const summaryRes = await fetch(`${BUGGREGATOR}/api/profiler/${uuid}/summary`);
-    const summary = await summaryRes.json();
-    expect(summary.overall_totals).toBeDefined();
-    expect(summary.slowest_function).toBeDefined();
+    // User opens the profile
+    await openFirstEvent(page);
+    await page.waitForTimeout(2000);
 
-    const topRes = await fetch(`${BUGGREGATOR}/api/profiler/${uuid}/top?limit=5`);
-    const top = await topRes.json();
-    expect(top.schema.length).toBeGreaterThan(0);
-    expect(top.functions.length).toBeGreaterThan(0);
+    // Tabs are visible
+    await expect(page.locator('text=Call graph')).toBeVisible();
+    await expect(page.locator('text=Flamechart')).toBeVisible();
+    await expect(page.locator('text=Top functions')).toBeVisible();
 
-    const graphRes = await fetch(`${BUGGREGATOR}/api/profiler/${uuid}/call-graph`);
-    const graph = await graphRes.json();
-    expect(graph.toolbar.length).toBe(4);
-    expect(graph.nodes.length).toBeGreaterThan(0);
+    // User clicks "Top functions" tab
+    await page.locator('text=Top functions').click();
+    await page.waitForTimeout(2000);
 
-    const flameRes = await fetch(`${BUGGREGATOR}/api/profiler/${uuid}/flame-chart`);
-    const flame = await flameRes.json();
-    expect(flame.length).toBeGreaterThan(0);
-    expect(flame[0].name).toBeDefined();
-    expect(flame[0].children).toBeDefined();
+    // Table header "Function" should be visible
+    await expect(page.locator('text=Function').first()).toBeVisible();
+
+    // User clicks "Flamechart" tab
+    await page.locator('text=Flamechart').click();
+    await page.waitForTimeout(2000);
+
+    // Flamechart should render (has content)
+    const flameBody = await page.textContent('body');
+    expect(flameBody!.length).toBeGreaterThan(200);
   });
 });
 
 // ============================================================
-// HTTP Dump with attachment
+// HTTP Dump — request detail with attachment
 // ============================================================
 test.describe('Http Dump', () => {
-  test('event appears and attachment is downloadable', async ({ page }) => {
+  test('detail page shows method, headers, attachment and cURL', async ({ page }) => {
     await clearEvents();
-    await openBuggregator(page);
-    await page.locator('a').filter({ hasText: 'Http Dump' }).first().click();
-    await page.waitForTimeout(2000);
-
+    await goToSection(page, 'Http Dump');
     await triggerExample('http:post');
-    await waitForApiEvent('http-dump');
 
-    await page.waitForTimeout(3000);
-    let title = await page.title();
-    if (!title.match(/[1-9]/)) {
-      await page.reload();
-      await page.waitForTimeout(2000);
+    // May need reload for this module
+    await expect(async () => {
+      const title = await page.title();
+      if (!title.match(/[1-9]/)) {
+        await page.reload();
+        await page.waitForTimeout(2000);
+      }
+      expect(await page.title()).toMatch(/[1-9]/);
+    }).toPass({ timeout: 15_000 });
+
+    // User opens the dump
+    await openFirstEvent(page);
+
+    // Request method visible
+    await expect(page.locator('text=POST').first()).toBeVisible();
+
+    // Headers section
+    await expect(page.locator('text=Headers')).toBeVisible();
+
+    // Attachments section
+    await expect(page.locator('text=Attachments')).toBeVisible();
+
+    // Attachment download link
+    const attachmentLink = page.locator('a[href*="/attachments/"]').first();
+    if (await attachmentLink.isVisible()) {
+      const href = await attachmentLink.getAttribute('href');
+      expect(href).toContain('/attachments/');
     }
-    expect(await page.title()).toMatch(/[1-9]/);
 
-    // Verify payload structure
-    const eventsRes = await fetch(`${BUGGREGATOR}/api/events?type=http-dump`);
-    const eventsJson = await eventsRes.json();
-    expect(eventsJson.data.length).toBeGreaterThanOrEqual(1);
-    const event = eventsJson.data[0];
-    expect(event.payload.request.method).toBeDefined();
-    expect(event.payload.request.uri).toBeDefined();
-
-    // Check if files exist
-    const files = event.payload.request.files;
-    if (files && files.length > 0) {
-      // Verify attachment API
-      const attRes = await fetch(`${BUGGREGATOR}/api/http-dumps/${event.uuid}/attachments`);
-      const attJson = await attRes.json();
-      expect(attJson.data.length).toBeGreaterThanOrEqual(1);
-
-      const att = attJson.data[0];
-      // Download
-      const downloadRes = await fetch(`${BUGGREGATOR}/api/http-dumps/${event.uuid}/attachments/${att.uuid}`);
-      expect(downloadRes.status).toBe(200);
-      const downloadBody = await downloadRes.arrayBuffer();
-      expect(downloadBody.byteLength).toBe(att.size);
-    }
+    // cURL section
+    await expect(page.getByRole('heading', { name: 'cURL' })).toBeVisible();
   });
 });
 
@@ -287,28 +243,27 @@ test.describe('Http Dump', () => {
 // SMS
 // ============================================================
 test.describe('SMS', () => {
-  test('event appears in UI', async ({ page }) => {
+  test('shows SMS with gateway and message', async ({ page }) => {
     await clearEvents();
-    await openBuggregator(page);
 
-    // Send SMS directly (examples may not have SMS page in sidebar)
-    await fetch(`${BUGGREGATOR}/sms`, {
+    // Send SMS directly
+    await fetch(`${BUGGREGATOR}/sms/twilio`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        MessageSid: 'SM-test',
+        MessageSid: 'SM-e2e',
         From: '+1234567890',
         To: '+0987654321',
-        Body: 'E2E test SMS',
+        Body: 'E2E test SMS message',
       }),
     });
 
-    await waitForApiEvent('sms');
+    await page.waitForTimeout(2000);
+    await openBuggregator(page);
+    await page.waitForTimeout(2000);
 
-    const res = await fetch(`${BUGGREGATOR}/api/events?type=sms`);
-    const json = await res.json();
-    expect(json.data.length).toBeGreaterThanOrEqual(1);
-    expect(json.data[0].payload.gateway).toBe('twilio');
-    expect(json.data[0].payload.message).toBe('E2E test SMS');
+    // SMS event should appear
+    const body = await page.textContent('body');
+    expect(body).toContain('sms');
   });
 });

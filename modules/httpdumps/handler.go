@@ -101,7 +101,7 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 						"name": fh.Filename,
 						"size": len(content),
 						"mime": mime,
-						"uri":  "/api/http-dumps/" + eventUUID + "/attachments/" + attUUID,
+						"uri":  "/api/http-dump/" + eventUUID + "/attachments/" + attUUID,
 					})
 				}
 			}
