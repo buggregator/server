@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  FRONTEND_VERSION: "1.29.0"
+  PHP_VERSION: "8.4.19"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            spc_os: linux
+            spc_arch: x86_64
+          - goos: linux
+            goarch: arm64
+            spc_os: linux
+            spc_arch: aarch64
+          - goos: darwin
+            goarch: amd64
+            spc_os: macos
+            spc_arch: x86_64
+          - goos: darwin
+            goarch: arm64
+            spc_os: macos
+            spc_arch: aarch64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+
+      # Download frontend
+      - name: Download frontend
+        run: |
+          mkdir -p internal/frontend/dist
+          ASSET_URL=$(curl -s "https://api.github.com/repos/buggregator/frontend/releases/tags/${FRONTEND_VERSION}" \
+            | jq -r '.assets[0].url')
+          curl -sL -H "Accept: application/octet-stream" "$ASSET_URL" -o /tmp/frontend.zip
+          unzip -qo /tmp/frontend.zip -d internal/frontend/dist/
+
+      # Build PHP VarDumper parser
+      - name: Build VarDumper PHP binary
+        run: |
+          cd php/vardumper
+          composer install --no-dev --optimize-autoloader --quiet
+          curl -sL https://github.com/box-project/box/releases/download/4.6.6/box.phar -o box.phar
+          php box.phar compile --quiet
+          curl -sL "https://dl.static-php.dev/static-php-cli/common/php-${PHP_VERSION}-micro-${{ matrix.spc_os }}-${{ matrix.spc_arch }}.tar.gz" \
+            -o /tmp/micro.tar.gz
+          mkdir -p /tmp/micro && tar -xzf /tmp/micro.tar.gz -C /tmp/micro/
+          mkdir -p ../../modules/vardumper/bin
+          cat /tmp/micro/micro.sfx vardumper-parser.phar > ../../modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}
+          chmod +x ../../modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}
+
+      # Build Go binary
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          go build -ldflags="-s -w" -o buggregator-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/buggregator
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: buggregator-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: buggregator-${{ matrix.goos }}-${{ matrix.goarch }}
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*/buggregator-*
+          generate_release_notes: true

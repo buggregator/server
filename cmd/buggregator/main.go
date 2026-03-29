@@ -25,7 +25,6 @@ func main() {
 
 	cfg := app.LoadConfig()
 
-	// Open database.
 	db, err := storage.Open(cfg.DatabaseDSN)
 	if err != nil {
 		slog.Error("failed to open database", "err", err)
@@ -33,38 +32,70 @@ func main() {
 	}
 	defer db.Close()
 
+	// Seed projects from config file.
+	for _, p := range cfg.Projects {
+		db.Exec(`INSERT OR IGNORE INTO projects (key, name) VALUES (?, ?)`, p.Key, p.Name)
+	}
+
 	store := storage.NewSQLiteStore(db)
 	hub := ws.NewHub()
 	registry := module.NewRegistry()
+	enabled := cfg.Modules
 
-	// TCP modules need the event service, which needs the registry.
+	// TCP modules.
 	monologMod := monolog.New(cfg.MonologAddr)
 	smtpMod := smtpmod.New(cfg.SMTPAddr)
 	vardumperMod := vardumper.New(cfg.VarDumperAddr)
 
-	// Start the embedded PHP parser for VarDumper.
-	if err := vardumperMod.StartPHP(); err != nil {
-		slog.Error("failed to start VarDumper PHP parser", "err", err)
-		os.Exit(1)
+	// Start VarDumper PHP parser (only if enabled).
+	if enabled.IsEnabled("var-dump") {
+		if err := vardumperMod.StartPHP(); err != nil {
+			slog.Error("failed to start VarDumper PHP parser", "err", err)
+			os.Exit(1)
+		}
+		defer vardumperMod.StopPHP()
 	}
-	defer vardumperMod.StopPHP()
 
-	// Register modules — adding a new one is one line here.
-	registry.Register(sentry.New())
-	registry.Register(ray.New())
-	registry.Register(inspector.New())
-	registry.Register(profiler.New())
-	registry.Register(monologMod)
-	registry.Register(smtpMod)
-	registry.Register(vardumperMod)
-	registry.Register(sms.New())
-	registry.Register(httpdumps.New()) // catch-all, must be last
+	// Register enabled modules.
+	if enabled.IsEnabled("sentry") {
+		registry.Register(sentry.New())
+	}
+	if enabled.IsEnabled("ray") {
+		registry.Register(ray.New())
+	}
+	if enabled.IsEnabled("inspector") {
+		registry.Register(inspector.New())
+	}
+	if enabled.IsEnabled("profiler") {
+		registry.Register(profiler.New())
+	}
+	if enabled.IsEnabled("monolog") {
+		registry.Register(monologMod)
+	}
+	if enabled.IsEnabled("smtp") {
+		registry.Register(smtpMod)
+	}
+	if enabled.IsEnabled("var-dump") {
+		registry.Register(vardumperMod)
+	}
+	if enabled.IsEnabled("sms") {
+		registry.Register(sms.New())
+	}
+	if enabled.IsEnabled("http-dump") {
+		registry.Register(httpdumps.New()) // catch-all, must be last
+	}
 
-	// Build the event service and inject into TCP modules.
+	// Build event service and inject into TCP modules.
 	eventService := httpserver.NewEventService(store, hub, registry)
-	monologMod.SetEventService(eventService)
-	smtpMod.SetEventService(eventService)
-	vardumperMod.SetEventService(eventService)
+	if enabled.IsEnabled("monolog") {
+		monologMod.SetEventService(eventService)
+	}
+	if enabled.IsEnabled("smtp") {
+		smtpMod.SetEventService(eventService)
+	}
+	if enabled.IsEnabled("var-dump") {
+		vardumperMod.SetEventService(eventService)
+	}
 
 	application := app.New(cfg, db, registry, hub, store)
 	application.Run()

@@ -19,3 +19,25 @@ tcp:
     addr: ${MONOLOG_ADDR::9913}
   var-dumper:
     addr: ${VAR_DUMPER_ADDR::9912}
+
+# Enable/disable modules. All enabled by default.
+# Set to false to disable a module entirely (TCP port won't bind, events ignored).
+# Can also be controlled via CLIENT_SUPPORTED_EVENTS env (comma-separated list).
+modules:
+  sentry: true
+  ray: true
+  var-dump: true
+  inspector: true
+  monolog: true
+  smtp: true
+  sms: true
+  http-dump: true
+  profiler: true
+
+# Pre-defined projects. The "default" project always exists.
+# Additional projects can be defined here.
+# projects:
+#   - key: my-app
+#     name: My Application
+#   - key: staging
+#     name: Staging Environment

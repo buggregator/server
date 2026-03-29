@@ -54,7 +54,7 @@ func (a *App) Run() {
 	eventService := httpserver.NewEventService(a.store, a.hub, a.registry)
 
 	// Register core API routes.
-	httpserver.RegisterAPI(mux, a.store, a.registry.Previews(), eventService, a.cfg.Version, a.db)
+	httpserver.RegisterAPI(mux, a.store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes())
 
 	// Wire RPC handler so Centrifugo RPC calls route to our HTTP handlers.
 	a.hub.SetRPCHandler(ws.NewMuxRPCHandler(mux))

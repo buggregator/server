@@ -9,7 +9,7 @@ import (
 )
 
 // RegisterAPI registers core API routes on the given mux.
-func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewRegistry, es *EventService, version string, db *sql.DB) {
+func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewRegistry, es *EventService, version string, db *sql.DB, enabledEvents []string) {
 	mux.HandleFunc("GET /api/version", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]string{"version": version})
 	})
@@ -18,7 +18,7 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 		writeJSON(w, map[string]any{
 			"auth":    map[string]any{"enabled": false},
 			"version": version,
-			"events":  []string{"sentry", "ray", "var-dump", "inspector", "monolog", "sms", "smtp", "http-dump", "profiler"},
+			"events":  enabledEvents,
 		})
 	})
 
