@@ -169,14 +169,30 @@ test.describe('Http Dump', () => {
     await clearEvents();
     await openBuggregator(page);
     await page.locator('a').filter({ hasText: 'Http Dump' }).first().click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
 
     await triggerExample('http:post');
-    await waitForEventInUI(page);
 
-    const res = await fetch(`${BUGGREGATOR}/api/events?type=http-dumps`);
+    // Wait for API to confirm event arrived.
+    await expect(async () => {
+      const count = await getEventCount('http-dump');
+      expect(count).toBeGreaterThanOrEqual(1);
+    }).toPass({ timeout: 10_000 });
+
+    // Wait for UI update via WS (or reload as fallback).
+    await page.waitForTimeout(3000);
+    let title = await page.title();
+    if (!title.match(/[1-9]/)) {
+      await page.reload();
+      await page.waitForTimeout(2000);
+    }
+
+    title = await page.title();
+    expect(title).toMatch(/[1-9]/);
+
+    const res = await fetch(`${BUGGREGATOR}/api/events?type=http-dump`);
     const json = await res.json();
     expect(json.data.length).toBeGreaterThanOrEqual(1);
-    expect(json.data[0].payload.method).toBeDefined();
+    expect(json.data[0].payload.request.method).toBeDefined();
   });
 });

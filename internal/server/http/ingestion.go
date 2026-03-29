@@ -33,15 +33,22 @@ func NewIngestionPipeline(handlers []module.HTTPIngestionHandler, es *EventServi
 }
 
 func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost || r.Method == http.MethodPut {
-		// Detect event type from userinfo/headers/basic-auth.
-		if detected := detectEventType(r); detected != nil {
-			r.Header.Set(HeaderDetectedType, detected.Type)
-			if detected.Project != "" {
-				r.Header.Set(HeaderDetectedProject, detected.Project)
-			}
+	// Detect event type from userinfo/headers/basic-auth.
+	detected := detectEventType(r)
+	if detected != nil {
+		r.Header.Set(HeaderDetectedType, detected.Type)
+		if detected.Project != "" {
+			r.Header.Set(HeaderDetectedProject, detected.Project)
 		}
+	}
 
+	// Determine if this request should be processed by ingestion handlers.
+	// POST/PUT always go through ingestion.
+	// Other methods go through only if event type was explicitly detected
+	// (e.g., http-dump@host sends GET/PATCH/DELETE that should be captured).
+	shouldIngest := r.Method == http.MethodPost || r.Method == http.MethodPut || detected != nil
+
+	if shouldIngest {
 		for _, h := range p.handlers {
 			if !h.Match(r) {
 				continue
@@ -57,7 +64,6 @@ func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			// Override project from detection if handler didn't set it.
 			if incoming.Project == "" {
 				incoming.Project = r.Header.Get(HeaderDetectedProject)
 			}
