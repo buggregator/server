@@ -5,13 +5,21 @@
 #
 # Every setting has a sensible default — this file is entirely optional.
 
+# HTTP server
 server:
   addr: ${HTTP_ADDR::8000}
 
+# Database
 database:
-  driver: sqlite
-  dsn: ${DATABASE_DSN::memory:}       # ":memory:" (default), "data.db", or full path
+  driver: sqlite                        # Only SQLite supported for now
+  dsn: ${DATABASE_DSN::memory:}         # ":memory:" (default), "data.db", or full path
 
+# Attachment storage (SMTP attachments, HTTP dump files)
+storage:
+  mode: ${STORAGE_MODE:memory}          # "memory" (default, lost on restart) or "filesystem"
+  path: ${STORAGE_PATH:./storage}       # Directory for filesystem mode
+
+# TCP servers
 tcp:
   smtp:
     addr: ${SMTP_ADDR::1025}
