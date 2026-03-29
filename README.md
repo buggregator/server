@@ -1,4 +1,4 @@
-# A server for debugging PHP applications and more.
+# Debug everything. Install nothing.
 
 <a href="https://discord.gg/vDsCD3EKUB"><img src="https://img.shields.io/badge/discord-chat-magenta.svg"></a>
 [![Twitter](https://img.shields.io/badge/twitter-Follow-blue)](https://twitter.com/buggregator)
@@ -8,32 +8,44 @@
 
 <a href="https://www.producthunt.com/posts/buggregator?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-buggregator" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=478631&theme=light" alt="Buggregator - The&#0032;Ultimate&#0032;Debugging&#0032;Server&#0032;for&#0032;PHP | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 
-**Buggregator is a free, multi-purpose server tool designed primarily for debugging PHP applications, but it's also compatible with other programming languages. Think of it as a Swiss Army knife for developers. What makes it special is that it offers a range of features that you would usually find in various paid tools, but it's available for free.**
+**One `docker run`. Exceptions, dumps, emails, profiling, logs — all in one real-time UI. Works with the SDKs you
+already have. No cloud account. No code changes.**
 
-Just start from watching our introduction video on [YouTube](https://www.youtube.com/watch?v=yKWbuw8xN_c)!
+Buggregator runs *beside* your application as a standalone server — not inside it. Zero performance overhead. Zero new
+dependencies in your codebase. Works with long-running PHP processes (RoadRunner, FrankenPHP, Swoole, Octane) where
+tools like Telescope don’t.
 
-![Cover image](https://github.com/buggregator/server/assets/773481/47491a3c-57a3-4b40-b82e-37976afdf708)
+Watch our introduction video on [YouTube](https://www.youtube.com/watch?v=yKWbuw8xN_c)
 
-## Key Features[​](https://docs.buggregator.dev/#key-features)
+```bash
+docker run --pull always \
+  -p 127.0.0.1:8000:8000 \
+  -p 127.0.0.1:1025:1025 \
+  -p 127.0.0.1:9912:9912 \
+  ghcr.io/buggregator/server:latest
+```
 
-Buggregator is not just a debugging server; it's a comprehensive suite of tools that cater to various aspects of application development and maintenance, all available at no cost. Here’s what you can expect:
+Open http://127.0.0.1:8000 and start debugging. That’s it.
+
+> No Docker? Use [Buggregator Trap](https://docs.buggregator.dev/trap/what-is-trap.html) — a lightweight PHP CLI
+> alternative.
+
+## Key Features
 
 ### 1. [Xhprof Profiler](https://docs.buggregator.dev/config/xhprof.html)[​](https://docs.buggregator.dev/#_1-xhprof-profiler)
 
-Watch our intro video about profiler on [YouTube](https://www.youtube.com/watch?v=2QbgjIVnz78&pp=ygULYnVnZ3JlZ2F0b3I%3D).
+Watch our intro video about profiler
+on [YouTube](https://www.youtube.com/watch?v=2QbgjIVnz78&pp=ygULYnVnZ3JlZ2F0b3I%3D).
 
 ![xhprof](https://github.com/buggregator/server/assets/773481/d69e1158-599d-4546-96a9-40a42cb060f4)
-
 
 ### 2. [Symfony VarDumper Server](https://docs.buggregator.dev/config/var-dumper.html)[​](https://docs.buggregator.dev/#_2-symfony-vardumper-server)
 
 ![var-dumper](https://github.com/buggregator/server/assets/773481/b77fa867-0a8e-431a-9126-f69959dc18f4)
 
-
 ### 3. [Spatie Ray Debug Tool](https://docs.buggregator.dev/config/ray.html)[​](https://docs.buggregator.dev/#_3-spatie-ray-debug-tool)
 
 ![ray](https://github.com/buggregator/server/assets/773481/168b27f7-75b1-4837-b0a1-37146d5b8b52)
-
 
 ### 4. [Fake SMTP Server](https://docs.buggregator.dev/config/smtp.html)[​](https://docs.buggregator.dev/#_4-fake-smtp-server)
 
@@ -65,13 +77,15 @@ Watch our intro video about profiler on [YouTube](https://www.youtube.com/watch?
 
 ## Documentation, Installation and Usage Instructions
 
-See the [documentation](https://docs.buggregator.dev/) for detailed installation and usage instructions.
+See the[documentation](https://docs.buggregator.dev/)for detailed installation and usage instructions.
 
 ---
 
 ## Contributing
 
-We enthusiastically invite you to contribute to Buggregator Server! Whether you've uncovered a bug, have innovative feature suggestions, or wish to contribute in any other capacity, we warmly welcome your participation. Simply open an issue or submit a pull request on our GitHub repository to get started.
+We enthusiastically invite you to contribute to Buggregator Server! Whether you've uncovered a bug, have innovative
+feature suggestions, or wish to contribute in any other capacity, we warmly welcome your participation. Simply open an
+issue or submit a pull request on our GitHub repository to get started.
 
 > **Note**
 > Read more how to contribute [here](https://docs.buggregator.dev/contributing.html)
