@@ -19,6 +19,7 @@ import (
 	"github.com/buggregator/go-buggregator/modules/sms"
 	smtpmod "github.com/buggregator/go-buggregator/modules/smtp"
 	"github.com/buggregator/go-buggregator/modules/vardumper"
+	"github.com/buggregator/go-buggregator/modules/webhooks"
 )
 
 func main() {
@@ -90,6 +91,30 @@ func main() {
 	if enabled.IsEnabled("sms") {
 		registry.Register(sms.New())
 	}
+	// Register webhooks module if any webhooks are configured.
+	if len(cfg.Webhooks) > 0 {
+		whConfigs := make([]webhooks.WebhookConfig, len(cfg.Webhooks))
+		for i, w := range cfg.Webhooks {
+			retry := true
+			if w.Retry != nil {
+				retry = *w.Retry
+			}
+			verifySSL := false
+			if w.VerifySSL != nil {
+				verifySSL = *w.VerifySSL
+			}
+			whConfigs[i] = webhooks.WebhookConfig{
+				Event:     w.Event,
+				URL:       w.URL,
+				Headers:   w.Headers,
+				VerifySSL: verifySSL,
+				Retry:     retry,
+			}
+		}
+		registry.Register(webhooks.New(whConfigs, collector))
+		slog.Info("webhooks registered", "count", len(whConfigs))
+	}
+
 	if enabled.IsEnabled("http-dump") {
 		registry.Register(httpdumps.New(attachments, db)) // catch-all, must be last
 	}

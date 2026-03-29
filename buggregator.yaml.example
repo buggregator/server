@@ -48,6 +48,21 @@ modules:
   http-dump: true
   profiler: true
 
+# Webhooks — send HTTP POST notifications when events are received.
+# Each webhook fires for a specific event type, or "*" for all events.
+# Payload: { uuid, type, payload, timestamp, project }
+# webhooks:
+#   - event: "*"                          # Fire on any event type
+#     url: https://slack.example.com/webhook
+#     headers:
+#       Authorization: "Bearer token123"
+#     verify_ssl: false                   # Default: false
+#     retry: true                         # Retry up to 3 times with exponential backoff (default: true)
+#   - event: sentry                       # Fire only on Sentry events
+#     url: https://pagerduty.example.com/alert
+#   - event: smtp                         # Fire only on SMTP events
+#     url: https://my-app.example.com/email-hook
+
 # Pre-defined projects. The "default" project always exists.
 # Additional projects can be defined here.
 # projects:

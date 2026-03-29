@@ -26,6 +26,7 @@ Drop-in replacement for [Buggregator](https://github.com/buggregator/server) tha
 | SMS | `sms` | HTTP `/sms` | SMS gateway capture (41 providers) |
 | HTTP Dump | `http-dump` | HTTP | Catch-all HTTP request capture |
 | Profiler | `profiler` | HTTP | XHProf profiling (call graph, flame chart, top functions) |
+| Webhooks | `webhooks` | — | Send HTTP POST notifications when events are received |
 
 ## Quick Start
 
@@ -89,6 +90,11 @@ database:
   driver: sqlite
   dsn: ":memory:"           # or "data.db" for persistence
 
+# Prometheus metrics (optional)
+metrics:
+  enabled: true
+  addr: ":9090"             # separate server, or empty to use main HTTP
+
 tcp:
   smtp:
     addr: ":1025"
@@ -108,6 +114,17 @@ modules:
   sms: true
   http-dump: true
   profiler: true
+
+# Webhooks — HTTP POST notifications on events
+webhooks:
+  - event: "*"                          # "*" for all, or specific type
+    url: https://slack.example.com/webhook
+    headers:
+      Authorization: "Bearer token"
+    verify_ssl: false                   # default: false
+    retry: true                         # retry up to 3x with backoff (default: true)
+  - event: sentry
+    url: https://pagerduty.example.com/alert
 
 # Pre-defined projects
 projects:
@@ -134,6 +151,8 @@ projects:
 | `MONOLOG_ADDR` | `:9913` | Monolog TCP address |
 | `VAR_DUMPER_ADDR` | `:9912` | VarDumper TCP address |
 | `CLIENT_SUPPORTED_EVENTS` | all | Comma-separated list of enabled modules |
+| `METRICS_ENABLED` | `false` | Enable Prometheus metrics |
+| `METRICS_ADDR` | — | Separate metrics server address (e.g., `:9090`) |
 
 Config file values support `${VAR}` and `${VAR:default}` syntax for environment variable substitution.
 
@@ -258,6 +277,7 @@ GET /connection/websocket        WebSocket (Centrifugo v5 protocol)
 | [nhooyr.io/websocket](https://pkg.go.dev/nhooyr.io/websocket) | WebSocket server |
 | [go-smtp](https://github.com/emersion/go-smtp) | SMTP server |
 | [gopkg.in/yaml.v3](https://pkg.go.dev/gopkg.in/yaml.v3) | YAML config |
+| [prometheus/client_golang](https://github.com/prometheus/client_golang) | Prometheus metrics |
 
 ## License
 

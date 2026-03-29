@@ -13,14 +13,15 @@ import (
 
 // Config holds application configuration.
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Database DatabaseConfig `yaml:"database"`
-	Storage  StorageConfig  `yaml:"storage"`
-	TCP      TCPConfig      `yaml:"tcp"`
-	Metrics  MetricsConfig  `yaml:"metrics"`
-	Modules  ModulesConfig  `yaml:"modules"`
-	Projects []ProjectDef   `yaml:"projects"`
-	Version  string         `yaml:"-"`
+	Server   ServerConfig    `yaml:"server"`
+	Database DatabaseConfig  `yaml:"database"`
+	Storage  StorageConfig   `yaml:"storage"`
+	TCP      TCPConfig       `yaml:"tcp"`
+	Metrics  MetricsConfig   `yaml:"metrics"`
+	Modules  ModulesConfig   `yaml:"modules"`
+	Webhooks []WebhookDef    `yaml:"webhooks"`
+	Projects []ProjectDef    `yaml:"projects"`
+	Version  string          `yaml:"-"`
 
 	// Shortcuts.
 	HTTPAddr      string `yaml:"-"`
@@ -28,6 +29,15 @@ type Config struct {
 	SMTPAddr      string `yaml:"-"`
 	MonologAddr   string `yaml:"-"`
 	VarDumperAddr string `yaml:"-"`
+}
+
+// WebhookDef defines a webhook from config.
+type WebhookDef struct {
+	Event     string            `yaml:"event"`      // Event type to match ("sentry", "ray", "*" for all).
+	URL       string            `yaml:"url"`        // Target URL.
+	Headers   map[string]string `yaml:"headers"`    // Custom HTTP headers.
+	VerifySSL *bool             `yaml:"verify_ssl"` // Verify SSL certificates (default: false).
+	Retry     *bool             `yaml:"retry"`      // Retry on failure (default: true).
 }
 
 // MetricsConfig controls Prometheus metrics.
@@ -158,6 +168,9 @@ func LoadConfig() Config {
 	if env := os.Getenv("CLIENT_SUPPORTED_EVENTS"); env != "" {
 		cfg.Modules = modulesFromCSV(env)
 	}
+
+	// Webhooks from config file.
+	cfg.Webhooks = fileCfg.Webhooks
 
 	// Projects from config file.
 	cfg.Projects = fileCfg.Projects
