@@ -13,7 +13,7 @@ services:
 
   # Laravel demo app with all integrations pre-configured
   examples:
-    image: ghcr.io/buggregator/examples:latest
+    image: ghcr.io/buggregator/examples:1.7.1
     depends_on:
       - buggregator
     ports:
