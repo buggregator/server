@@ -15,8 +15,21 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Create embed placeholders
+        run: |
+          # Frontend placeholder (embedded via go:embed)
+          mkdir -p internal/frontend/dist
+          echo '<!DOCTYPE html><html><body>placeholder</body></html>' > internal/frontend/dist/index.html
+
+          # VarDumper PHP parser placeholder (embedded via go:embed per-platform)
+          mkdir -p modules/vardumper/bin
+          echo 'placeholder' > modules/vardumper/bin/vardumper-parser-linux-amd64
+
       - name: Build
         run: go build ./cmd/buggregator
 
       - name: Vet
         run: go vet ./...
+
+      - name: Test
+        run: go test ./... -short -count=1
