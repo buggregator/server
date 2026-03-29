@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/buggregator/go-buggregator/internal/event"
 )
@@ -165,13 +166,16 @@ func handleCallGraph(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		peaks, _, _ := loadPeaks(db, uuid)
 		metric := r.URL.Query().Get("metric")
 		if metric == "" {
 			metric = "cpu"
 		}
 
-		// Build nodes (one per unique callee) and edges.
+		// Parse threshold and percentage params.
+		threshold := parseFloat(r.URL.Query().Get("threshold"), 0)   // 0-100, default 0
+		percentage := parseFloat(r.URL.Query().Get("percentage"), 10) // 0-100, default 10
+
+		// Build nodes (one per unique callee).
 		nodeMap := make(map[string]*edgeRow)
 		for i := range edges {
 			e := &edges[i]
@@ -180,17 +184,33 @@ func handleCallGraph(db *sql.DB) http.HandlerFunc {
 			}
 		}
 
+		// Filter and build nodes.
+		registeredUUIDs := make(map[string]bool) // track included nodes for edge filtering
 		nodes := make([]map[string]any, 0, len(nodeMap))
 		for _, e := range nodeMap {
 			pct := getPercent(e, metric)
-			cost := metricValue(e, metric)
-			peakVal := peakMetricValue(peaks, metric)
+
+			// Filtering logic (matching PHP):
+			// Exclude if: NOT important (pct < percentage) AND satisfied (pct <= threshold)
+			isImportant := pct >= percentage
+			isSatisfied := pct <= threshold
+			if !isImportant && isSatisfied {
+				continue // skip this node
+			}
+
+			// Color: only colored if important (pct >= percentage), otherwise white.
+			nodeColor := "#FFFFFF"
+			if isImportant {
+				nodeColor = nodeColorByPercent(pct)
+			}
+			txtColor := textColorByLuminance(nodeColor)
 
 			name := e.Callee
 			if e.Cost.Calls > 0 {
 				name = fmt.Sprintf("%s (%dx)", e.Callee, e.Cost.Calls)
 			}
 
+			registeredUUIDs[e.UUID] = true
 			nodes = append(nodes, map[string]any{
 				"data": map[string]any{
 					"id":   e.UUID,
@@ -198,30 +218,41 @@ func handleCallGraph(db *sql.DB) http.HandlerFunc {
 					"cost": map[string]any{
 						"cpu": e.Cost.CPU, "wt": e.Cost.WallTime, "mu": e.Cost.Memory, "pmu": e.Cost.PeakMem, "ct": e.Cost.Calls,
 					},
-					"metrics":   map[string]any{"cost": cost, "percents": pct},
-					"color":     percentToColor(pct),
-					"textColor": textColorFor(pct),
+					"metrics":   map[string]any{"cost": metricValue(e, metric), "percents": pct},
+					"color":     nodeColor,
+					"textColor": txtColor,
 				},
 			})
-			_ = peakVal
 		}
 
+		// Build edges — only between included nodes.
 		graphEdges := make([]map[string]any, 0)
 		for _, e := range edges {
 			if e.Caller == nil {
 				continue
 			}
 			parentEdge := nodeMap[*e.Caller]
-			if parentEdge == nil {
+			targetEdge := nodeMap[e.Callee]
+			if parentEdge == nil || targetEdge == nil {
 				continue
 			}
+			if !registeredUUIDs[parentEdge.UUID] || !registeredUUIDs[targetEdge.UUID] {
+				continue
+			}
+
 			pct := getPercent(&e, metric)
+			isImportant := pct >= percentage
+			edgeColor := "#FFFFFF"
+			if isImportant {
+				edgeColor = nodeColorByPercent(pct)
+			}
+
 			graphEdges = append(graphEdges, map[string]any{
 				"data": map[string]any{
 					"source": parentEdge.UUID,
-					"target": nodeMap[e.Callee].UUID,
+					"target": targetEdge.UUID,
 					"label":  fmt.Sprintf("%.2f%%", pct),
-					"color":  percentToColor(pct),
+					"color":  edgeColor,
 				},
 			})
 		}
@@ -482,19 +513,57 @@ func round1(v float64) float64 {
 	return math.Round(v*10) / 10
 }
 
-func percentToColor(pct float64) string {
-	if pct <= 5 {
+// nodeColorByPercent returns the 10-step red gradient matching PHP Node::detectNodeColor.
+func nodeColorByPercent(pct float64) string {
+	switch {
+	case pct <= 10:
 		return "#FFFFFF"
+	case pct <= 20:
+		return "#f19797"
+	case pct <= 30:
+		return "#d93939"
+	case pct <= 40:
+		return "#ad1e1e"
+	case pct <= 50:
+		return "#982525"
+	case pct <= 60:
+		return "#862323"
+	case pct <= 70:
+		return "#671d1d"
+	case pct <= 80:
+		return "#540d0d"
+	case pct <= 90:
+		return "#340707"
+	default:
+		return "#000000"
 	}
-	r := int(math.Min(255, pct*2.55))
-	return fmt.Sprintf("#FF%02X%02X", 255-r, 255-r)
 }
 
-func textColorFor(pct float64) string {
-	if pct > 50 {
-		return "#FFFFFF"
+// textColorByLuminance calculates contrast text color using WCAG luminance.
+func textColorByLuminance(hexColor string) string {
+	hex := strings.TrimPrefix(hexColor, "#")
+	if len(hex) != 6 {
+		return "#000000"
 	}
-	return "#000000"
+	r, _ := strconv.ParseInt(hex[0:2], 16, 64)
+	g, _ := strconv.ParseInt(hex[2:4], 16, 64)
+	b, _ := strconv.ParseInt(hex[4:6], 16, 64)
+	brightness := (r*299 + g*587 + b*114) / 1000
+	if brightness > 125 {
+		return "#000000"
+	}
+	return "#FFFFFF"
+}
+
+func parseFloat(s string, def float64) float64 {
+	if s == "" {
+		return def
+	}
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return def
+	}
+	return v
 }
 
 func flameColor(pct float64) string {
