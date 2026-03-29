@@ -2,41 +2,16 @@ package vardumper
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
+// previewMapper for VarDumper returns the full payload as-is.
+// This matches the original PHP Buggregator where VarDumper has no
+// EventTypeMapper — the complete payload (with HTML) is broadcast.
 type previewMapper struct{}
 
 func (p *previewMapper) ToPreview(payload json.RawMessage) (json.RawMessage, error) {
-	var data map[string]any
-	if err := json.Unmarshal(payload, &data); err != nil {
-		return payload, nil
-	}
-
-	// Extract the inner payload for preview.
-	inner, ok := data["payload"].(map[string]any)
-	if !ok {
-		return payload, nil
-	}
-
-	preview := map[string]any{
-		"type":  inner["type"],
-		"label": inner["label"],
-	}
-
-	// For primitives, include the value in preview.
-	if t, ok := inner["type"].(string); ok {
-		switch t {
-		case "string", "boolean", "integer", "double", "code":
-			preview["value"] = inner["value"]
-		default:
-			// For complex types (HTML), truncate or omit in preview.
-			preview["value"] = fmt.Sprintf("[%s]", t)
-		}
-	}
-
-	b, _ := json.Marshal(preview)
-	return b, nil
+	// Return full payload — frontend needs payload.payload.value with complete HTML/value.
+	return payload, nil
 }
 
 func (p *previewMapper) ToSearchableText(payload json.RawMessage) string {
