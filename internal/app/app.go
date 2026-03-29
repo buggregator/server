@@ -54,10 +54,29 @@ func (a *App) Run() {
 	eventService := httpserver.NewEventService(a.store, a.hub, a.registry)
 
 	// Register core API routes.
-	httpserver.RegisterAPI(mux, a.store, a.registry.Previews(), eventService, a.cfg.Version)
+	httpserver.RegisterAPI(mux, a.store, a.registry.Previews(), eventService, a.cfg.Version, a.db)
 
 	// Wire RPC handler so Centrifugo RPC calls route to our HTTP handlers.
 	a.hub.SetRPCHandler(ws.NewMuxRPCHandler(mux))
+
+	// Provide project list for server-side WebSocket subscriptions.
+	a.hub.SetProjectProvider(func() []string {
+		rows, err := a.db.Query(`SELECT key FROM projects`)
+		if err != nil {
+			return []string{"default"}
+		}
+		defer rows.Close()
+		var keys []string
+		for rows.Next() {
+			var key string
+			rows.Scan(&key)
+			keys = append(keys, key)
+		}
+		if len(keys) == 0 {
+			keys = []string{"default"}
+		}
+		return keys
+	})
 
 	// Register WebSocket endpoints (Centrifugo-compatible + simple).
 	mux.HandleFunc("GET /connection/websocket", a.hub.HandleUpgrade)

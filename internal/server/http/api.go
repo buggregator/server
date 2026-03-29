@@ -1,6 +1,7 @@
 package http
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 
@@ -8,7 +9,7 @@ import (
 )
 
 // RegisterAPI registers core API routes on the given mux.
-func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewRegistry, es *EventService, version string) {
+func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewRegistry, es *EventService, version string, db *sql.DB) {
 	mux.HandleFunc("GET /api/version", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]string{"version": version})
 	})
@@ -127,6 +128,31 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 			return
 		}
 		writeJSON(w, map[string]any{"status": "unpinned"})
+	})
+
+	// List projects.
+	mux.HandleFunc("GET /api/projects", func(w http.ResponseWriter, r *http.Request) {
+		rows, err := db.QueryContext(r.Context(), `SELECT key, name FROM projects`)
+		if err != nil {
+			writeError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		var projects []map[string]any
+		for rows.Next() {
+			var key, name string
+			rows.Scan(&key, &name)
+			projects = append(projects, map[string]any{
+				"key":        key,
+				"name":       name,
+				"is_default": key == "default",
+			})
+		}
+		if projects == nil {
+			projects = []map[string]any{}
+		}
+		writeJSON(w, map[string]any{"data": projects, "meta": map[string]any{}})
 	})
 }
 

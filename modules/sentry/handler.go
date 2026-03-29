@@ -43,30 +43,25 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 	// Extract project from path: /api/{project}/store
 	project := extractProject(r.URL.Path)
 
-	// Handle Sentry envelope format (multiline: header\nitem_header\npayload).
-	if strings.HasSuffix(r.URL.Path, "/envelope") {
-		return handleEnvelope(body, project)
-	}
-
-	// Standard JSON store format.
+	// Try parsing as plain JSON first.
 	var parsed map[string]any
-	uuid := ""
 	if json.Unmarshal(body, &parsed) == nil {
+		uuid := ""
 		if id, ok := parsed["event_id"].(string); ok {
 			uuid = id
 		}
-	} else {
-		// If still not valid JSON, wrap it as a raw string.
-		wrapped, _ := json.Marshal(map[string]any{"raw": string(body)})
-		body = wrapped
+		return &event.Incoming{
+			UUID:    uuid,
+			Type:    "sentry",
+			Payload: json.RawMessage(body),
+			Project: project,
+		}, nil
 	}
 
-	return &event.Incoming{
-		UUID:    uuid,
-		Type:    "sentry",
-		Payload: json.RawMessage(body),
-		Project: project,
-	}, nil
+	// Not valid JSON — try envelope format (Sentry SDKs send this to both
+	// /store and /envelope endpoints).
+	// Envelope: header_json\nitem_header_json\npayload_json[\n...]
+	return handleEnvelope(body, project)
 }
 
 // decompress handles gzip and deflate Content-Encoding.

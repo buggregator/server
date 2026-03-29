@@ -14,16 +14,19 @@ import (
 // Hub manages WebSocket connections and broadcasts messages
 // using the Centrifugo v5 JSON protocol.
 type Hub struct {
-	mu      sync.RWMutex
-	clients map[*client]struct{}
-	// rpcHandler handles RPC calls from the frontend.
-	rpcHandler RPCHandler
+	mu              sync.RWMutex
+	clients         map[*client]struct{}
+	rpcHandler      RPCHandler
+	projectProvider ProjectProvider
 }
 
 // RPCHandler processes Centrifugo RPC calls (e.g., "delete:api/event/{id}").
 type RPCHandler interface {
 	HandleRPC(method, uri string, data json.RawMessage) (json.RawMessage, error)
 }
+
+// ProjectProvider returns the list of project keys for server-side subscriptions.
+type ProjectProvider func() []string
 
 type client struct {
 	conn *websocket.Conn
@@ -39,6 +42,11 @@ func NewHub() *Hub {
 // SetRPCHandler sets the handler for Centrifugo RPC calls.
 func (h *Hub) SetRPCHandler(handler RPCHandler) {
 	h.rpcHandler = handler
+}
+
+// SetProjectProvider sets the function that returns project keys for auto-subscription.
+func (h *Hub) SetProjectProvider(p ProjectProvider) {
+	h.projectProvider = p
 }
 
 // Run keeps the hub alive until context is cancelled.
@@ -120,6 +128,14 @@ func (h *Hub) processCommand(cmd centrifugoCommand) centrifugoReply {
 }
 
 func (h *Hub) handleConnect(id uint32) centrifugoReply {
+	// Build server-side subscriptions for all project channels.
+	subs := make(map[string]serverSideSubV)
+	if h.projectProvider != nil {
+		for _, key := range h.projectProvider() {
+			subs["events.project."+key] = serverSideSubV{}
+		}
+	}
+
 	return centrifugoReply{
 		ID: id,
 		Connect: &connectResult{
@@ -127,6 +143,7 @@ func (h *Hub) handleConnect(id uint32) centrifugoReply {
 			Version: "0.0.1",
 			Ping:    25,
 			Pong:    true,
+			Subs:    subs,
 		},
 	}
 }
@@ -241,10 +258,15 @@ type centrifugoReply struct {
 }
 
 type connectResult struct {
-	Client  string `json:"client"`
-	Version string `json:"version"`
-	Ping    int    `json:"ping,omitempty"`
-	Pong    bool   `json:"pong,omitempty"`
+	Client  string                    `json:"client"`
+	Version string                    `json:"version"`
+	Ping    int                       `json:"ping,omitempty"`
+	Pong    bool                      `json:"pong,omitempty"`
+	Subs    map[string]serverSideSubV `json:"subs,omitempty"`
+}
+
+type serverSideSubV struct {
+	Recoverable bool `json:"recoverable,omitempty"`
 }
 
 type subscribeResult struct{}

@@ -9,6 +9,8 @@ import (
 	"github.com/buggregator/go-buggregator/internal/server/ws"
 )
 
+const defaultProject = "default"
+
 // EventService handles the store → preview → broadcast → notify pipeline.
 type EventService struct {
 	store    event.Store
@@ -22,6 +24,11 @@ func NewEventService(store event.Store, hub *ws.Hub, registry *module.Registry) 
 
 // HandleIncoming stores an event, broadcasts preview, and notifies modules.
 func (s *EventService) HandleIncoming(ctx context.Context, inc *event.Incoming) error {
+	// Assign default project if not set.
+	if inc.Project == "" {
+		inc.Project = defaultProject
+	}
+
 	ev := event.NewEvent(inc)
 
 	if err := s.store.Store(ctx, ev); err != nil {
@@ -30,14 +37,9 @@ func (s *EventService) HandleIncoming(ctx context.Context, inc *event.Incoming) 
 
 	slog.Info("event stored", "uuid", ev.UUID, "type", ev.Type, "project", ev.Project)
 
-	// Build preview and broadcast.
+	// Build preview and broadcast to project-specific channel.
 	preview := s.registry.Previews().BuildPreview(ev)
-
-	channel := "events"
-	if ev.Project != "" {
-		s.hub.Broadcast("events.project."+ev.Project, "event.received", preview)
-	}
-	s.hub.Broadcast(channel, "event.received", preview)
+	s.hub.Broadcast("events.project."+ev.Project, "event.received", preview)
 
 	// Notify modules (e.g., webhooks).
 	s.registry.NotifyEventStored(ev)
@@ -47,17 +49,17 @@ func (s *EventService) HandleIncoming(ctx context.Context, inc *event.Incoming) 
 
 // BroadcastDeleted broadcasts event deletion.
 func (s *EventService) BroadcastDeleted(uuid, project string) {
-	data := map[string]string{"uuid": uuid, "project": project}
-	if project != "" {
-		s.hub.Broadcast("events.project."+project, "event.deleted", data)
+	if project == "" {
+		project = defaultProject
 	}
-	s.hub.Broadcast("events", "event.deleted", data)
+	data := map[string]string{"uuid": uuid, "project": project}
+	s.hub.Broadcast("events.project."+project, "event.deleted", data)
 }
 
 // BroadcastCleared broadcasts events cleared.
 func (s *EventService) BroadcastCleared(eventType, project string) {
-	if project != "" {
-		s.hub.Broadcast("events.project."+project, "events.cleared", nil)
+	if project == "" {
+		project = defaultProject
 	}
-	s.hub.Broadcast("events", "events.cleared", nil)
+	s.hub.Broadcast("events.project."+project, "events.cleared", nil)
 }

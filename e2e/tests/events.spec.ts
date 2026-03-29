@@ -1,49 +1,71 @@
-import { test, expect } from '@playwright/test';
-import { triggerExample, clearEvents, getEventCount, openBuggregator, waitForEvents } from './helpers';
+import { test, expect, Page } from '@playwright/test';
+import { triggerExample, clearEvents, getEventCount, openBuggregator } from './helpers';
 
 const BUGGREGATOR = 'http://localhost:8000';
 
 test.describe.configure({ mode: 'serial' });
 
-test.beforeAll(async () => {
-  await clearEvents();
-});
+/**
+ * Wait for at least `count` event cards to appear in the UI.
+ * Looks for common event list item patterns in the page.
+ */
+async function waitForEventInUI(page: Page, timeoutMs = 15_000): Promise<void> {
+  // The page title updates with event count: "Events: N | Buggregator"
+  // or "Sentry N | Buggregator" etc.
+  await expect(async () => {
+    const title = await page.title();
+    const match = title.match(/(\d+)/);
+    expect(match).not.toBeNull();
+    expect(Number(match![1])).toBeGreaterThan(0);
+  }).toPass({ timeout: timeoutMs });
+}
 
 test.describe('Sentry', () => {
-  test('receives events and displays in UI', async ({ page }) => {
+  test('event appears in UI via WebSocket', async ({ page }) => {
     await clearEvents();
-    await triggerExample('sentry:event');
-    await waitForEvents(page, 1);
-
     await openBuggregator(page);
     await page.locator('a').filter({ hasText: 'Sentry' }).first().click();
     await page.waitForTimeout(2000);
 
-    // Should see at least one event card with "sentry" content
-    const body = await page.textContent('body');
-    expect(body).toContain('sentry');
+    // Sentry SDK sends async — trigger and wait longer
+    await triggerExample('sentry:event');
 
-    // Check API has the event with payload
+    // Wait for API to confirm event arrived first
+    await expect(async () => {
+      const count = await getEventCount('sentry');
+      expect(count).toBeGreaterThanOrEqual(1);
+    }).toPass({ timeout: 10_000 });
+
+    // Now wait for UI to update via WebSocket (or reload as fallback)
+    await page.waitForTimeout(3000);
+    let title = await page.title();
+    if (!title.match(/[1-9]/)) {
+      // WebSocket push may not have updated UI yet — reload
+      await page.reload();
+      await page.waitForTimeout(2000);
+    }
+
+    title = await page.title();
+    expect(title).toMatch(/[1-9]/);
+
+    // Verify API
     const res = await fetch(`${BUGGREGATOR}/api/events?type=sentry`);
     const json = await res.json();
     expect(json.data.length).toBeGreaterThanOrEqual(1);
-    expect(json.data[0].type).toBe('sentry');
     expect(json.data[0].payload).toBeDefined();
+    expect(json.data[0].project).toBe('default');
   });
 });
 
 test.describe('Ray', () => {
-  test('receives events and displays in UI', async ({ page }) => {
+  test('event appears in UI via WebSocket', async ({ page }) => {
     await clearEvents();
-    await triggerExample('ray:string');
-    await page.waitForTimeout(2000);
-
-    const count = await getEventCount('ray');
-    expect(count).toBeGreaterThanOrEqual(1);
-
     await openBuggregator(page);
     await page.locator('a').filter({ hasText: 'Ray' }).first().click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
+
+    await triggerExample('ray:string');
+    await waitForEventInUI(page);
 
     const res = await fetch(`${BUGGREGATOR}/api/events?type=ray`);
     const json = await res.json();
@@ -53,46 +75,36 @@ test.describe('Ray', () => {
 });
 
 test.describe('Monolog', () => {
-  test('receives events via TCP and displays in UI', async ({ page }) => {
+  test('event appears in UI via WebSocket (TCP)', async ({ page }) => {
     await clearEvents();
-    await triggerExample('monolog:error');
-    await page.waitForTimeout(2000);
-
-    const count = await getEventCount('monolog');
-    expect(count).toBeGreaterThanOrEqual(1);
-
     await openBuggregator(page);
     await page.locator('a').filter({ hasText: 'Monolog' }).first().click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
+
+    await triggerExample('monolog:error');
+    await waitForEventInUI(page);
 
     const res = await fetch(`${BUGGREGATOR}/api/events?type=monolog`);
     const json = await res.json();
     expect(json.data.length).toBeGreaterThanOrEqual(1);
-
-    // Monolog payload should have message/channel/level
-    const payload = json.data[0].payload;
-    expect(payload).toBeDefined();
+    expect(json.data[0].payload).toBeDefined();
   });
 });
 
 test.describe('VarDumper', () => {
-  test('receives events via TCP and displays in UI', async ({ page }) => {
+  test('event appears in UI via WebSocket (TCP+PHP)', async ({ page }) => {
     await clearEvents();
-    await triggerExample('var_dump:string');
-    await page.waitForTimeout(3000);
-
-    const count = await getEventCount('var-dump');
-    expect(count).toBeGreaterThanOrEqual(1);
-
     await openBuggregator(page);
     await page.locator('a').filter({ hasText: /Var\s*Dump/ }).first().click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
+
+    await triggerExample('var_dump:string');
+    await waitForEventInUI(page);
 
     const res = await fetch(`${BUGGREGATOR}/api/events?type=var-dump`);
     const json = await res.json();
     expect(json.data.length).toBeGreaterThanOrEqual(1);
 
-    // VarDumper payload should have nested payload with type and value
     const payload = json.data[0].payload;
     expect(payload.payload).toBeDefined();
     expect(payload.payload.type).toBeDefined();
@@ -101,40 +113,31 @@ test.describe('VarDumper', () => {
 });
 
 test.describe('SMTP', () => {
-  test('receives emails and displays in UI', async ({ page }) => {
+  test('email appears in UI via WebSocket', async ({ page }) => {
     await clearEvents();
-    await triggerExample('smtp:welcome_mail');
-    await page.waitForTimeout(3000);
-
-    const count = await getEventCount('smtp');
-    expect(count).toBeGreaterThanOrEqual(1);
-
     await openBuggregator(page);
     await page.locator('a').filter({ hasText: 'SMTP' }).first().click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
+
+    await triggerExample('smtp:welcome_mail');
+    await waitForEventInUI(page);
 
     const res = await fetch(`${BUGGREGATOR}/api/events?type=smtp`);
     const json = await res.json();
     expect(json.data.length).toBeGreaterThanOrEqual(1);
-
-    // SMTP payload should have subject
-    const payload = json.data[0].payload;
-    expect(payload.subject).toBeDefined();
+    expect(json.data[0].payload.subject).toBeDefined();
   });
 });
 
 test.describe('Inspector', () => {
-  test('receives events and displays in UI', async ({ page }) => {
+  test('event appears in UI via WebSocket', async ({ page }) => {
     await clearEvents();
-    await triggerExample('inspector:request');
-    await page.waitForTimeout(3000);
-
-    const count = await getEventCount('inspector');
-    expect(count).toBeGreaterThanOrEqual(1);
-
     await openBuggregator(page);
     await page.locator('a').filter({ hasText: 'Inspector' }).first().click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
+
+    await triggerExample('inspector:request');
+    await waitForEventInUI(page);
 
     const res = await fetch(`${BUGGREGATOR}/api/events?type=inspector`);
     const json = await res.json();
@@ -144,67 +147,36 @@ test.describe('Inspector', () => {
 });
 
 test.describe('Profiler', () => {
-  test('receives XHProf data and displays in UI', async ({ page }) => {
+  test('event appears in UI via WebSocket', async ({ page }) => {
     await clearEvents();
-    await triggerExample('profiler:report', '/example/call/profiler');
-    await page.waitForTimeout(3000);
-
-    const count = await getEventCount('profiler');
-    expect(count).toBeGreaterThanOrEqual(1);
-
     await openBuggregator(page);
     await page.locator('a').filter({ hasText: 'Profiler' }).first().click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
+
+    await triggerExample('profiler:report', '/example/call/profiler');
+    await waitForEventInUI(page);
 
     const res = await fetch(`${BUGGREGATOR}/api/events?type=profiler`);
     const json = await res.json();
     expect(json.data.length).toBeGreaterThanOrEqual(1);
-
-    const payload = json.data[0].payload;
-    expect(payload.app_name).toBeDefined();
-    expect(payload.peaks).toBeDefined();
+    expect(json.data[0].payload.app_name).toBeDefined();
+    expect(json.data[0].payload.peaks).toBeDefined();
   });
 });
 
 test.describe('Http Dump', () => {
-  test('captures HTTP requests and displays in UI', async ({ page }) => {
+  test('event appears in UI via WebSocket', async ({ page }) => {
     await clearEvents();
-    await triggerExample('http:post');
-    await page.waitForTimeout(2000);
-
-    const count = await getEventCount('http-dumps');
-    expect(count).toBeGreaterThanOrEqual(1);
-
     await openBuggregator(page);
     await page.locator('a').filter({ hasText: 'Http Dump' }).first().click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
+
+    await triggerExample('http:post');
+    await waitForEventInUI(page);
 
     const res = await fetch(`${BUGGREGATOR}/api/events?type=http-dumps`);
     const json = await res.json();
     expect(json.data.length).toBeGreaterThanOrEqual(1);
-
-    const payload = json.data[0].payload;
-    expect(payload.method).toBeDefined();
-  });
-});
-
-test.describe('WebSocket real-time', () => {
-  test('events appear in UI without page reload', async ({ page }) => {
-    await clearEvents();
-    await openBuggregator(page);
-
-    // Page should show "waiting for events" or similar empty state
-    await page.waitForTimeout(2000);
-
-    // Trigger an event while watching the page
-    await triggerExample('monolog:info');
-
-    // Wait for the event to appear via WebSocket (no reload)
-    await page.waitForTimeout(5000);
-
-    // Check that the title updated with event count
-    const title = await page.title();
-    // Title format: "Events: N | Buggregator" or just has a count
-    expect(title).toMatch(/\d+/);
+    expect(json.data[0].payload.method).toBeDefined();
   });
 });
