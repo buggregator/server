@@ -1,0 +1,26 @@
+CREATE TABLE IF NOT EXISTS profile_edges (
+    uuid TEXT PRIMARY KEY,
+    profile_uuid TEXT NOT NULL,
+    "order" INTEGER NOT NULL,
+    cpu INTEGER NOT NULL DEFAULT 0,
+    wt INTEGER NOT NULL DEFAULT 0,
+    ct INTEGER NOT NULL DEFAULT 0,
+    mu INTEGER NOT NULL DEFAULT 0,
+    pmu INTEGER NOT NULL DEFAULT 0,
+    d_cpu INTEGER NOT NULL DEFAULT 0,
+    d_wt INTEGER NOT NULL DEFAULT 0,
+    d_ct INTEGER NOT NULL DEFAULT 0,
+    d_mu INTEGER NOT NULL DEFAULT 0,
+    d_pmu INTEGER NOT NULL DEFAULT 0,
+    p_cpu REAL NOT NULL DEFAULT 0,
+    p_wt REAL NOT NULL DEFAULT 0,
+    p_ct REAL NOT NULL DEFAULT 0,
+    p_mu REAL NOT NULL DEFAULT 0,
+    p_pmu REAL NOT NULL DEFAULT 0,
+    callee TEXT NOT NULL,
+    caller TEXT,
+    parent_uuid TEXT,
+    FOREIGN KEY (profile_uuid) REFERENCES profiles(uuid) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS profile_edges_idx_profile ON profile_edges(profile_uuid);

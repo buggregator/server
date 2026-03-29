@@ -1,0 +1,26 @@
+{
+  "version": "1.22.1",
+  "short_name": "Buggregator",
+  "name": "Buggregator",
+  "manifest_version": 2,
+  "lang": "en",
+  "icons": [
+    {
+      "src": "./favicon/android-chrome-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "./favicon/android-chrome-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    }
+  ],
+  "author": "Pavel Buchnev",
+  "start_url": "/",
+  "background_color": "#1F2937",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#1F2937",
+  "description": "Buggregator is a free, multi-purpose server tool designed primarily for debugging PHP applications, but it's also compatible with other programming languages. Think of it as a Swiss Army knife for developers. What makes it special is that it offers a range of features that you would usually find in various paid tools, but it's available for free."
+}
