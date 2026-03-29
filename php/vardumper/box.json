@@ -1,0 +1,9 @@
+{
+    "main": "parser.php",
+    "output": "vardumper-parser.phar",
+    "directories": ["vendor"],
+    "compression": "GZ",
+    "compactors": [
+        "KevinGH\\Box\\Compactor\\Php"
+    ]
+}

@@ -17,7 +17,9 @@ func (h *handler) Match(r *http.Request) bool {
 	if r.Method != http.MethodPost {
 		return false
 	}
-	// Sentry sends X-Sentry-Auth header or path ends with /store or /envelope.
+	if r.Header.Get("X-Buggregator-Detected-Type") == "sentry" {
+		return true
+	}
 	if r.Header.Get("X-Sentry-Auth") != "" {
 		return true
 	}

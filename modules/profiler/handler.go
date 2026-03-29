@@ -20,7 +20,8 @@ func (h *handler) Match(r *http.Request) bool {
 	if r.Method != http.MethodPost {
 		return false
 	}
-	return r.Header.Get("X-Profiler-Dump") != "" ||
+	return r.Header.Get("X-Buggregator-Detected-Type") == "profiler" ||
+		r.Header.Get("X-Profiler-Dump") != "" ||
 		strings.HasSuffix(r.URL.Path, "/profiler/store")
 }
 

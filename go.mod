@@ -4,6 +4,7 @@ go 1.26.1
 
 require (
 	github.com/emersion/go-smtp v0.24.0
+	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.48.0
 	nhooyr.io/websocket v1.8.17
 )

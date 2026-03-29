@@ -9,6 +9,12 @@ import (
 	"github.com/buggregator/go-buggregator/internal/module"
 )
 
+const (
+	// Internal headers set by the ingestion pipeline for handler matching.
+	HeaderDetectedType    = "X-Buggregator-Detected-Type"
+	HeaderDetectedProject = "X-Buggregator-Detected-Project"
+)
+
 // IngestionPipeline tries each registered handler in priority order.
 // Requests that aren't claimed by any module are served as static frontend files.
 type IngestionPipeline struct {
@@ -18,9 +24,7 @@ type IngestionPipeline struct {
 }
 
 func NewIngestionPipeline(handlers []module.HTTPIngestionHandler, es *EventService, frontendFS fs.FS) *IngestionPipeline {
-	// Create file server for embedded frontend.
 	fileServer := http.FileServer(http.FS(frontendFS))
-
 	return &IngestionPipeline{
 		handlers:     handlers,
 		eventService: es,
@@ -29,9 +33,15 @@ func NewIngestionPipeline(handlers []module.HTTPIngestionHandler, es *EventServi
 }
 
 func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Only try ingestion handlers for POST/PUT requests.
-	// GET requests go straight to frontend (unless matched by API routes).
 	if r.Method == http.MethodPost || r.Method == http.MethodPut {
+		// Detect event type from userinfo/headers/basic-auth.
+		if detected := detectEventType(r); detected != nil {
+			r.Header.Set(HeaderDetectedType, detected.Type)
+			if detected.Project != "" {
+				r.Header.Set(HeaderDetectedProject, detected.Project)
+			}
+		}
+
 		for _, h := range p.handlers {
 			if !h.Match(r) {
 				continue
@@ -43,9 +53,13 @@ func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-
 			if incoming == nil {
 				continue
+			}
+
+			// Override project from detection if handler didn't set it.
+			if incoming.Project == "" {
+				incoming.Project = r.Header.Get(HeaderDetectedProject)
 			}
 
 			if err := p.eventService.HandleIncoming(r.Context(), incoming); err != nil {
@@ -62,10 +76,8 @@ func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Serve frontend static files.
-	// For SPA: if the file doesn't exist, serve index.html.
 	path := r.URL.Path
 	if path != "/" && !strings.Contains(path, ".") {
-		// SPA route — serve index.html for paths without extensions.
 		r.URL.Path = "/"
 	}
 	p.frontend.ServeHTTP(w, r)

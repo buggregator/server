@@ -1,0 +1,21 @@
+# Buggregator configuration file.
+#
+# Place as buggregator.yaml next to the binary, or specify with --config flag.
+# All values support environment variable substitution: ${VAR} and ${VAR:default}
+#
+# Every setting has a sensible default — this file is entirely optional.
+
+server:
+  addr: ${HTTP_ADDR::8000}
+
+database:
+  driver: sqlite
+  dsn: ${DATABASE_DSN::memory:}       # ":memory:" (default), "data.db", or full path
+
+tcp:
+  smtp:
+    addr: ${SMTP_ADDR::1025}
+  monolog:
+    addr: ${MONOLOG_ADDR::9913}
+  var-dumper:
+    addr: ${VAR_DUMPER_ADDR::9912}

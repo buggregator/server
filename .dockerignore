@@ -1,0 +1,9 @@
+buggregator
+buggregator-*
+php/vardumper/vendor
+php/vardumper/box.phar
+php/vardumper/micro-*.sfx
+php/vardumper/vardumper-parser.phar
+*.md
+.git
+.gitignore

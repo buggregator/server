@@ -1,0 +1,52 @@
+services:
+  buggregator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${HTTP_PORT:-8000}:8000"       # HTTP + WebSocket + Frontend
+      - "${SMTP_PORT:-1025}:1025"       # SMTP
+      - "${VAR_DUMPER_PORT:-9912}:9912" # VarDumper
+      - "${MONOLOG_PORT:-9913}:9913"    # Monolog
+    networks:
+      - buggregator
+
+  # Laravel demo app with all integrations pre-configured
+  examples:
+    image: ghcr.io/buggregator/examples:latest
+    depends_on:
+      - buggregator
+    ports:
+      - "${EXAMPLES_PORT:-8080}:8000"
+    environment:
+      APP_ENV: production
+      APP_KEY: base64:kMvf1mHFIuCf+ZqMiId7yo6v4oKtjuWqnlxJTWsWv7k=
+      APP_URL: http://localhost:${EXAMPLES_PORT:-8080}
+      LOG_LEVEL: debug
+      BROADCAST_DRIVER: log
+      CACHE_DRIVER: array
+      QUEUE_CONNECTION: sync
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /app/database/db.sqlite
+
+      # Buggregator integrations — all pointing to the Go server
+      BUGGREGATOR_URL: http://buggregator:8000
+      MAIL_HOST: buggregator
+      MAIL_PORT: 1025
+      MAIL_ENCRYPTION: null
+      MAIL_FROM_ADDRESS: sender@example.com
+      MAIL_FROM_NAME: "Demo App"
+      RAY_HOST: ray@buggregator
+      RAY_PORT: 8000
+      VAR_DUMPER_SERVER: buggregator:9912
+      SENTRY_LARAVEL_DSN: http://sentry@buggregator:8000/default
+      LOG_SOCKET_URL: buggregator:9913
+      INSPECTOR_URL: http://inspector@buggregator:8000
+      INSPECTOR_API_KEY: test
+      PROFILER_ENDPOINT: http://profiler@buggregator:8000
+      HTTP_DUMP_ENDPOINT: http://http-dump@buggregator:8000
+    networks:
+      - buggregator
+
+networks:
+  buggregator:

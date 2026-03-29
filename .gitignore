@@ -1,2 +1,8 @@
-buggregator
+/buggregator
+/buggregator-*
 *.exe
+php/vardumper/vendor/
+php/vardumper/box.phar
+php/vardumper/micro-*.sfx
+php/vardumper/vardumper-parser.phar
+modules/vardumper/bin/vardumper-parser-*

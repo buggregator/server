@@ -17,6 +17,9 @@ func (h *handler) Match(r *http.Request) bool {
 	if r.Method != http.MethodPost {
 		return false
 	}
+	if r.Header.Get("X-Buggregator-Detected-Type") == "ray" {
+		return true
+	}
 	ua := strings.ToLower(r.Header.Get("User-Agent"))
 	return strings.HasPrefix(ua, "ray")
 }

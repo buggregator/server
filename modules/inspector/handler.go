@@ -17,7 +17,9 @@ func (h *handler) Match(r *http.Request) bool {
 	if r.Method != http.MethodPost {
 		return false
 	}
-	return r.Header.Get("X-Inspector-Key") != "" || r.Header.Get("X-Inspector-Version") != ""
+	return r.Header.Get("X-Buggregator-Detected-Type") == "inspector" ||
+		r.Header.Get("X-Inspector-Key") != "" ||
+		r.Header.Get("X-Inspector-Version") != ""
 }
 
 func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {

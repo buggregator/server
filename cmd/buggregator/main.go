@@ -16,6 +16,7 @@ import (
 	"github.com/buggregator/go-buggregator/modules/ray"
 	"github.com/buggregator/go-buggregator/modules/sentry"
 	smtpmod "github.com/buggregator/go-buggregator/modules/smtp"
+	"github.com/buggregator/go-buggregator/modules/vardumper"
 )
 
 func main() {
@@ -36,9 +37,16 @@ func main() {
 	registry := module.NewRegistry()
 
 	// TCP modules need the event service, which needs the registry.
-	// We set it after construction.
 	monologMod := monolog.New(cfg.MonologAddr)
 	smtpMod := smtpmod.New(cfg.SMTPAddr)
+	vardumperMod := vardumper.New(cfg.VarDumperAddr)
+
+	// Start the embedded PHP parser for VarDumper.
+	if err := vardumperMod.StartPHP(); err != nil {
+		slog.Error("failed to start VarDumper PHP parser", "err", err)
+		os.Exit(1)
+	}
+	defer vardumperMod.StopPHP()
 
 	// Register modules — adding a new one is one line here.
 	registry.Register(sentry.New())
@@ -47,12 +55,14 @@ func main() {
 	registry.Register(profiler.New())
 	registry.Register(monologMod)
 	registry.Register(smtpMod)
+	registry.Register(vardumperMod)
 	registry.Register(httpdumps.New()) // catch-all, must be last
 
 	// Build the event service and inject into TCP modules.
 	eventService := httpserver.NewEventService(store, hub, registry)
 	monologMod.SetEventService(eventService)
 	smtpMod.SetEventService(eventService)
+	vardumperMod.SetEventService(eventService)
 
 	application := app.New(cfg, db, registry, hub, store)
 	application.Run()
