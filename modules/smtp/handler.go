@@ -122,17 +122,18 @@ type Attachment struct {
 }
 
 // ParsedEmail is the structure stored as event payload.
+// Field names match the original PHP Buggregator Message::jsonSerialize().
 type ParsedEmail struct {
-	Subject       string         `json:"subject"`
-	From          []EmailAddress `json:"from"`
-	To            []EmailAddress `json:"to"`
-	Cc            []EmailAddress `json:"cc"`
-	ReplyTo       []EmailAddress `json:"reply_to"`
-	AllRecipients []string       `json:"all_recipients"`
-	TextBody      string         `json:"text_body"`
-	HTMLBody      string         `json:"html_body"`
-	Raw           string         `json:"raw"`
-	Attachments   []Attachment   `json:"attachments"`
+	ID       *string        `json:"id"`
+	Subject  string         `json:"subject"`
+	From     []EmailAddress `json:"from"`
+	To       []EmailAddress `json:"to"`
+	Cc       []EmailAddress `json:"cc"`
+	Bcc      []string       `json:"bcc"`
+	ReplyTo  []EmailAddress `json:"reply_to"`
+	Text     string         `json:"text"`
+	HTML     string         `json:"html"`
+	Raw      string         `json:"raw"`
 }
 
 func parseEmail(raw []byte, recipients []string) (*ParsedEmail, error) {
@@ -141,15 +142,42 @@ func parseEmail(raw []byte, recipients []string) (*ParsedEmail, error) {
 		return nil, err
 	}
 
+	// Parse Message-ID.
+	var msgID *string
+	if id := msg.Header.Get("Message-ID"); id != "" {
+		msgID = &id
+	}
+
+	to := parseAddresses(msg.Header, "To")
+	cc := parseAddresses(msg.Header, "Cc")
+
+	// Calculate BCC: recipients not in To or CC.
+	visibleEmails := make(map[string]bool)
+	for _, addr := range to {
+		visibleEmails[addr.Email] = true
+	}
+	for _, addr := range cc {
+		visibleEmails[addr.Email] = true
+	}
+	var bcc []string
+	for _, r := range recipients {
+		if !visibleEmails[r] {
+			bcc = append(bcc, r)
+		}
+	}
+	if bcc == nil {
+		bcc = []string{}
+	}
+
 	parsed := &ParsedEmail{
-		Subject:       msg.Header.Get("Subject"),
-		Raw:           string(raw),
-		From:          parseAddresses(msg.Header, "From"),
-		To:            parseAddresses(msg.Header, "To"),
-		Cc:            parseAddresses(msg.Header, "Cc"),
-		ReplyTo:       parseAddresses(msg.Header, "Reply-To"),
-		AllRecipients: recipients,
-		Attachments:   []Attachment{},
+		ID:      msgID,
+		Subject: msg.Header.Get("Subject"),
+		Raw:     string(raw),
+		From:    parseAddresses(msg.Header, "From"),
+		To:      to,
+		Cc:      cc,
+		Bcc:     bcc,
+		ReplyTo: parseAddresses(msg.Header, "Reply-To"),
 	}
 
 	contentType := msg.Header.Get("Content-Type")
@@ -162,9 +190,9 @@ func parseEmail(raw []byte, recipients []string) (*ParsedEmail, error) {
 		body, _ := io.ReadAll(msg.Body)
 		decoded := decodeContent(body, msg.Header.Get("Content-Transfer-Encoding"))
 		if strings.HasPrefix(mediaType, "text/html") {
-			parsed.HTMLBody = string(decoded)
+			parsed.HTML = string(decoded)
 		} else {
-			parsed.TextBody = string(decoded)
+			parsed.Text = string(decoded)
 		}
 		return parsed, nil
 	}
@@ -185,46 +213,41 @@ func parseEmail(raw []byte, recipients []string) (*ParsedEmail, error) {
 }
 
 func processPart(part *multipart.Part, parsed *ParsedEmail) {
-	disposition := part.Header.Get("Content-Disposition")
 	ct := part.Header.Get("Content-Type")
+	disposition := part.Header.Get("Content-Disposition")
 
-	if strings.HasPrefix(disposition, "attachment") || strings.HasPrefix(disposition, "inline") {
-		content, _ := io.ReadAll(part)
-		encoding := part.Header.Get("Content-Transfer-Encoding")
-		if strings.EqualFold(encoding, "base64") {
-			if decoded, err := base64.StdEncoding.DecodeString(string(content)); err == nil {
-				content = decoded
+	mediaType, params, _ := mime.ParseMediaType(ct)
+
+	// Recurse into nested multipart (multipart/alternative, multipart/mixed, etc.)
+	if strings.HasPrefix(mediaType, "multipart/") {
+		if boundary := params["boundary"]; boundary != "" {
+			mr := multipart.NewReader(part, boundary)
+			for {
+				subpart, err := mr.NextPart()
+				if err != nil {
+					break
+				}
+				processPart(subpart, parsed)
 			}
 		}
-
-		filename := part.FileName()
-		if filename == "" {
-			filename = "unnamed"
-		}
-		mimeType := ct
-		if idx := strings.Index(mimeType, ";"); idx > 0 {
-			mimeType = strings.TrimSpace(mimeType[:idx])
-		}
-		if mimeType == "" {
-			mimeType = "application/octet-stream"
-		}
-
-		parsed.Attachments = append(parsed.Attachments, Attachment{
-			Filename: filename,
-			Content:  base64.StdEncoding.EncodeToString(content),
-			Type:     mimeType,
-		})
 		return
 	}
 
-	mediaType, _, _ := mime.ParseMediaType(ct)
+	// Attachment.
+	if strings.HasPrefix(disposition, "attachment") || strings.HasPrefix(disposition, "inline") {
+		// TODO: store attachments in separate table (smtp_attachments)
+		io.ReadAll(part) // drain
+		return
+	}
+
+	// Body content.
 	body, _ := io.ReadAll(part)
 	decoded := decodeContent(body, part.Header.Get("Content-Transfer-Encoding"))
 
 	if strings.HasPrefix(mediaType, "text/html") {
-		parsed.HTMLBody += string(decoded)
-	} else {
-		parsed.TextBody += string(decoded)
+		parsed.HTML += string(decoded)
+	} else if strings.HasPrefix(mediaType, "text/plain") || ct == "" {
+		parsed.Text += string(decoded)
 	}
 }
 

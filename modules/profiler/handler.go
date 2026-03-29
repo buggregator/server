@@ -46,14 +46,16 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 		return nil, err
 	}
 
-	// Build event payload.
+	// Build event payload matching PHP Buggregator format.
+	// profile_uuid is used by the frontend to fetch call-graph/top/flame-chart.
 	payload := map[string]any{
-		"app_name":    incoming.AppName,
-		"hostname":    incoming.Hostname,
-		"date":        incoming.Date,
-		"tags":        incoming.Tags,
-		"peaks":       peaks,
-		"total_edges": len(edges),
+		"profile_uuid": uuid,
+		"app_name":     incoming.AppName,
+		"hostname":     incoming.Hostname,
+		"date":         incoming.Date,
+		"tags":         incoming.Tags,
+		"peaks":        peaks,
+		"total_edges":  len(edges),
 	}
 	b, _ := json.Marshal(payload)
 
