@@ -1,0 +1,28 @@
+# Simplified Dockerfile for e2e testing — no frontend, no PHP parser needed.
+
+FROM golang:1.26-alpine AS builder
+
+WORKDIR /build
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY cmd/ cmd/
+COPY internal/ internal/
+COPY modules/ modules/
+
+# Create placeholder embeds.
+RUN mkdir -p internal/frontend/dist && \
+    echo '<!DOCTYPE html><html><body>test</body></html>' > internal/frontend/dist/index.html
+RUN mkdir -p modules/vardumper/bin && \
+    echo 'placeholder' > modules/vardumper/bin/vardumper-parser-linux-amd64 && \
+    echo 'placeholder' > modules/vardumper/bin/vardumper-parser-linux-arm64
+
+RUN CGO_ENABLED=0 go build -o buggregator ./cmd/buggregator
+
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates
+COPY --from=builder /build/buggregator /usr/local/bin/buggregator
+
+EXPOSE 8000 8001
+ENTRYPOINT ["buggregator"]

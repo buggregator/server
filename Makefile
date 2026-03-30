@@ -12,7 +12,7 @@ MICRO_URL_BASE = https://dl.static-php.dev/static-php-cli/common
 
 .PHONY: build run clean frontend deps vardumper-php vardumper-deps vardumper-phar \
         vardumper-all vardumper-linux-amd64 vardumper-linux-arm64 vardumper-darwin-amd64 vardumper-darwin-arm64 \
-        vardumper-windows-amd64
+        vardumper-windows-amd64 test test-mcp e2e-mcp
 
 # ============================================================
 # Frontend
@@ -135,6 +135,21 @@ release: deps frontend vardumper-all
 
 run: build
 	./$(BINARY)
+
+# ============================================================
+# Tests
+# ============================================================
+
+test:
+	go test ./... -count=1
+
+test-mcp:
+	go test -v -count=1 ./internal/mcp/
+
+# Run MCP e2e tests in Docker (builds buggregator + test runner)
+e2e-mcp:
+	docker compose -f docker-compose.e2e-mcp.yaml up --build --abort-on-container-exit --exit-code-from mcp-test
+	docker compose -f docker-compose.e2e-mcp.yaml down
 
 clean:
 	rm -f $(BINARY) $(BINARY)-*

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -20,83 +19,38 @@ func registerAPI(mux *http.ServeMux, db *sql.DB, store event.Store) {
 	mux.HandleFunc("GET /api/profiler/{uuid}/flame-chart", handleFlameChart(db))
 }
 
-// --- Edge loading ---
-
-type edgeRow struct {
-	UUID       string
-	Callee     string
-	Caller     *string
-	ParentUUID *string
-	Cost       Metrics
-	Diff       Diffs
-	Percents   Percentages
-}
-
-func loadAllEdges(db *sql.DB, profileUUID string) ([]edgeRow, error) {
-	rows, err := db.Query(`SELECT uuid, callee, caller, parent_uuid,
-		cpu, wt, ct, mu, pmu,
-		d_cpu, d_wt, d_ct, d_mu, d_pmu,
-		p_cpu, p_wt, p_ct, p_mu, p_pmu
-		FROM profile_edges WHERE profile_uuid = ? ORDER BY "order" ASC`, profileUUID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var edges []edgeRow
-	for rows.Next() {
-		var e edgeRow
-		err := rows.Scan(&e.UUID, &e.Callee, &e.Caller, &e.ParentUUID,
-			&e.Cost.CPU, &e.Cost.WallTime, &e.Cost.Calls, &e.Cost.Memory, &e.Cost.PeakMem,
-			&e.Diff.CPU, &e.Diff.WallTime, &e.Diff.Calls, &e.Diff.Memory, &e.Diff.PeakMem,
-			&e.Percents.CPU, &e.Percents.WallTime, &e.Percents.Calls, &e.Percents.Memory, &e.Percents.PeakMem,
-		)
-		if err != nil {
-			return nil, err
-		}
-		edges = append(edges, e)
-	}
-	return edges, rows.Err()
-}
-
-func loadPeaks(db *sql.DB, uuid string) (Metrics, string, error) {
-	var peaks Metrics
-	var name string
-	err := db.QueryRow(`SELECT name, cpu, wt, ct, mu, pmu FROM profiles WHERE uuid = ?`, uuid).
-		Scan(&name, &peaks.CPU, &peaks.WallTime, &peaks.Calls, &peaks.Memory, &peaks.PeakMem)
-	return peaks, name, err
-}
+// --- Edge loading (delegated to query.go) ---
 
 // --- Summary ---
 
 func handleSummary(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		uuid := r.PathValue("uuid")
-		edges, err := loadAllEdges(db, uuid)
+		edges, err := LoadAllEdges(db, uuid)
 		if err != nil {
 			http.Error(w, "not found", 404)
 			return
 		}
 
-		peaks, _, _ := loadPeaks(db, uuid)
+		peaks, _, _ := LoadPeaks(db, uuid)
 
 		// Aggregate functions (sum by callee)
-		funcs := aggregateFunctions(edges, peaks)
+		funcs := AggregateFunctions(edges, peaks)
 
 		var slowest, memHotspot, mostCalled map[string]any
 
 		for _, f := range funcs {
-			if f.callee == "main()" {
+			if f.Callee == "main()" {
 				continue
 			}
-			if slowest == nil || f.exclWt > slowest["excl_wt"].(int64) {
-				slowest = map[string]any{"function": f.callee, "excl_wt": f.exclWt, "p_excl_wt": round1(f.pExclWt)}
+			if slowest == nil || f.ExclWt > slowest["excl_wt"].(int64) {
+				slowest = map[string]any{"function": f.Callee, "excl_wt": f.ExclWt, "p_excl_wt": round1(f.PExclWt)}
 			}
-			if memHotspot == nil || f.exclMu > memHotspot["excl_mu"].(int64) {
-				memHotspot = map[string]any{"function": f.callee, "excl_mu": f.exclMu, "p_excl_mu": round1(f.pExclMu)}
+			if memHotspot == nil || f.ExclMu > memHotspot["excl_mu"].(int64) {
+				memHotspot = map[string]any{"function": f.Callee, "excl_mu": f.ExclMu, "p_excl_mu": round1(f.PExclMu)}
 			}
-			if mostCalled == nil || f.ct > mostCalled["ct"].(int64) {
-				mostCalled = map[string]any{"function": f.callee, "ct": f.ct}
+			if mostCalled == nil || f.Ct > mostCalled["ct"].(int64) {
+				mostCalled = map[string]any{"function": f.Callee, "ct": f.Ct}
 			}
 		}
 
@@ -121,21 +75,21 @@ func handleTopFunctions(db *sql.DB) http.HandlerFunc {
 			}
 		}
 
-		edges, err := loadAllEdges(db, uuid)
+		edges, err := LoadAllEdges(db, uuid)
 		if err != nil {
 			http.Error(w, "not found", 404)
 			return
 		}
 
-		peaks, _, _ := loadPeaks(db, uuid)
-		funcs := aggregateFunctions(edges, peaks)
+		peaks, _, _ := LoadPeaks(db, uuid)
+		funcs := AggregateFunctions(edges, peaks)
 
 		// Sort by metric (default: cpu).
 		metric := r.URL.Query().Get("metric")
 		if metric == "" {
 			metric = "cpu"
 		}
-		sortFunctions(funcs, metric)
+		SortFunctions(funcs, metric)
 
 		if len(funcs) > limit {
 			funcs = funcs[:limit]
@@ -144,7 +98,7 @@ func handleTopFunctions(db *sql.DB) http.HandlerFunc {
 		// Build response.
 		functions := make([]map[string]any, len(funcs))
 		for i, f := range funcs {
-			functions[i] = f.toMap()
+			functions[i] = f.ToMap()
 		}
 
 		writeJSON(w, map[string]any{
@@ -160,7 +114,7 @@ func handleTopFunctions(db *sql.DB) http.HandlerFunc {
 func handleCallGraph(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		uuid := r.PathValue("uuid")
-		edges, err := loadAllEdges(db, uuid)
+		edges, err := LoadAllEdges(db, uuid)
 		if err != nil {
 			http.Error(w, "not found", 404)
 			return
@@ -176,7 +130,7 @@ func handleCallGraph(db *sql.DB) http.HandlerFunc {
 		percentage := parseFloat(r.URL.Query().Get("percentage"), 10) // 0-100, default 10
 
 		// Build nodes (one per unique callee).
-		nodeMap := make(map[string]*edgeRow)
+		nodeMap := make(map[string]*EdgeRow)
 		for i := range edges {
 			e := &edges[i]
 			if _, ok := nodeMap[e.Callee]; !ok {
@@ -188,7 +142,7 @@ func handleCallGraph(db *sql.DB) http.HandlerFunc {
 		registeredUUIDs := make(map[string]bool) // track included nodes for edge filtering
 		nodes := make([]map[string]any, 0, len(nodeMap))
 		for _, e := range nodeMap {
-			pct := getPercent(e, metric)
+			pct := GetEdgePercent(e, metric)
 
 			// Filtering logic (matching PHP):
 			// Exclude if: NOT important (pct < percentage) AND satisfied (pct <= threshold)
@@ -218,7 +172,7 @@ func handleCallGraph(db *sql.DB) http.HandlerFunc {
 					"cost": map[string]any{
 						"cpu": e.Cost.CPU, "wt": e.Cost.WallTime, "mu": e.Cost.Memory, "pmu": e.Cost.PeakMem, "ct": e.Cost.Calls,
 					},
-					"metrics":   map[string]any{"cost": metricValue(e, metric), "percents": pct},
+					"metrics":   map[string]any{"cost": GetEdgeMetricValue(e, metric), "percents": pct},
 					"color":     nodeColor,
 					"textColor": txtColor,
 				},
@@ -240,7 +194,7 @@ func handleCallGraph(db *sql.DB) http.HandlerFunc {
 				continue
 			}
 
-			pct := getPercent(&e, metric)
+			pct := GetEdgePercent(&e, metric)
 			isImportant := pct >= percentage
 			edgeColor := "#FFFFFF"
 			if isImportant {
@@ -270,7 +224,7 @@ func handleCallGraph(db *sql.DB) http.HandlerFunc {
 func handleFlameChart(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		uuid := r.PathValue("uuid")
-		edges, err := loadAllEdges(db, uuid)
+		edges, err := LoadAllEdges(db, uuid)
 		if err != nil {
 			http.Error(w, "not found", 404)
 			return
@@ -281,7 +235,7 @@ func handleFlameChart(db *sql.DB) http.HandlerFunc {
 			metric = "wt"
 		}
 
-		peaks, _, _ := loadPeaks(db, uuid)
+		peaks, _, _ := LoadPeaks(db, uuid)
 		peakVal := float64(peakMetricValue(peaks, metric))
 		divisor := metricDivisor(metric)
 
@@ -296,9 +250,9 @@ func handleFlameChart(db *sql.DB) http.HandlerFunc {
 			Color    string       `json:"color"`
 		}
 
-		nodesByCallee := make(map[string]*edgeRow)
-		childrenMap := make(map[string][]edgeRow) // parent callee → children
-		var roots []edgeRow
+		nodesByCallee := make(map[string]*EdgeRow)
+		childrenMap := make(map[string][]EdgeRow) // parent callee → children
+		var roots []EdgeRow
 
 		for _, e := range edges {
 			if _, ok := nodesByCallee[e.Callee]; !ok {
@@ -311,9 +265,9 @@ func handleFlameChart(db *sql.DB) http.HandlerFunc {
 			}
 		}
 
-		var buildNode func(e edgeRow, start float64) *flameNode
-		buildNode = func(e edgeRow, start float64) *flameNode {
-			val := float64(metricValue(&e, metric))
+		var buildNode func(e EdgeRow, start float64) *flameNode
+		buildNode = func(e EdgeRow, start float64) *flameNode {
+			val := float64(GetEdgeMetricValue(&e, metric))
 			duration := val / divisor
 			pct := 0.0
 			if peakVal > 0 {
@@ -357,124 +311,6 @@ func handleFlameChart(db *sql.DB) http.HandlerFunc {
 }
 
 // --- Helpers ---
-
-type funcStats struct {
-	callee                                                     string
-	ct, cpu, wt, mu, pmu                                       int64
-	exclCpu, exclWt, exclMu, exclPmu, exclCt                  int64
-	pCpu, pWt, pMu, pPmu                                      float64
-	pExclCpu, pExclWt, pExclMu, pExclPmu                      float64
-}
-
-func (f *funcStats) toMap() map[string]any {
-	return map[string]any{
-		"function": f.callee,
-		"ct": f.ct, "cpu": f.cpu, "wt": f.wt, "mu": f.mu, "pmu": f.pmu,
-		"excl_cpu": f.exclCpu, "excl_wt": f.exclWt, "excl_mu": f.exclMu, "excl_pmu": f.exclPmu, "excl_ct": f.exclCt,
-		"p_cpu": f.pCpu, "p_wt": f.pWt, "p_mu": f.pMu, "p_pmu": f.pPmu,
-		"p_excl_cpu": f.pExclCpu, "p_excl_wt": f.pExclWt, "p_excl_mu": f.pExclMu, "p_excl_pmu": f.pExclPmu,
-	}
-}
-
-func aggregateFunctions(edges []edgeRow, peaks Metrics) []funcStats {
-	agg := make(map[string]*funcStats)
-	for _, e := range edges {
-		f, ok := agg[e.Callee]
-		if !ok {
-			f = &funcStats{callee: e.Callee}
-			agg[e.Callee] = f
-		}
-		f.ct += e.Cost.Calls
-		f.cpu += e.Cost.CPU
-		f.wt += e.Cost.WallTime
-		f.mu += e.Cost.Memory
-		f.pmu += e.Cost.PeakMem
-		f.exclCpu += e.Diff.CPU
-		f.exclWt += e.Diff.WallTime
-		f.exclMu += e.Diff.Memory
-		f.exclPmu += e.Diff.PeakMem
-		f.exclCt += e.Diff.Calls
-	}
-
-	result := make([]funcStats, 0, len(agg))
-	for _, f := range agg {
-		f.pCpu = pctF(f.cpu, peaks.CPU)
-		f.pWt = pctF(f.wt, peaks.WallTime)
-		f.pMu = pctF(f.mu, peaks.Memory)
-		f.pPmu = pctF(f.pmu, peaks.PeakMem)
-		f.pExclCpu = pctF(f.exclCpu, peaks.CPU)
-		f.pExclWt = pctF(f.exclWt, peaks.WallTime)
-		f.pExclMu = pctF(f.exclMu, peaks.Memory)
-		f.pExclPmu = pctF(f.exclPmu, peaks.PeakMem)
-		result = append(result, *f)
-	}
-	return result
-}
-
-func sortFunctions(funcs []funcStats, metric string) {
-	sort.Slice(funcs, func(i, j int) bool {
-		return getFuncMetric(&funcs[i], metric) > getFuncMetric(&funcs[j], metric)
-	})
-}
-
-func getFuncMetric(f *funcStats, metric string) int64 {
-	switch metric {
-	case "cpu":
-		return f.cpu
-	case "wt":
-		return f.wt
-	case "mu":
-		return f.mu
-	case "pmu":
-		return f.pmu
-	case "ct":
-		return f.ct
-	case "excl_cpu":
-		return f.exclCpu
-	case "excl_wt":
-		return f.exclWt
-	case "excl_mu":
-		return f.exclMu
-	case "excl_pmu":
-		return f.exclPmu
-	case "excl_ct":
-		return f.exclCt
-	default:
-		return f.cpu
-	}
-}
-
-func getPercent(e *edgeRow, metric string) float64 {
-	switch metric {
-	case "cpu":
-		return e.Percents.CPU
-	case "wt":
-		return e.Percents.WallTime
-	case "mu":
-		return e.Percents.Memory
-	case "pmu":
-		return e.Percents.PeakMem
-	default:
-		return e.Percents.CPU
-	}
-}
-
-func metricValue(e *edgeRow, metric string) int64 {
-	switch metric {
-	case "cpu":
-		return e.Cost.CPU
-	case "wt":
-		return e.Cost.WallTime
-	case "mu":
-		return e.Cost.Memory
-	case "pmu":
-		return e.Cost.PeakMem
-	case "ct":
-		return e.Cost.Calls
-	default:
-		return e.Cost.CPU
-	}
-}
 
 func peakMetricValue(p Metrics, metric string) int64 {
 	switch metric {

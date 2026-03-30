@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/buggregator/go-buggregator/internal/app"
+	mcpserver "github.com/buggregator/go-buggregator/internal/mcp"
 	"github.com/buggregator/go-buggregator/internal/metrics"
 	"github.com/buggregator/go-buggregator/internal/module"
 	httpserver "github.com/buggregator/go-buggregator/internal/server/http"
@@ -23,6 +25,19 @@ import (
 )
 
 func main() {
+	// MCP proxy subcommand: "buggregator mcp" bridges stdio to the running instance.
+	if len(os.Args) > 1 && os.Args[1] == "mcp" {
+		socketPath := os.Getenv("MCP_SOCKET_PATH")
+		if socketPath == "" {
+			socketPath = "/tmp/buggregator-mcp.sock"
+		}
+		if err := mcpserver.RunProxy(socketPath); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
 
 	cfg := app.LoadConfig()
