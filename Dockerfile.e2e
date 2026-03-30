@@ -1,15 +1,10 @@
 # Simplified Dockerfile for e2e testing — no frontend, no PHP parser needed.
-# Build context is go-buggregator/ with .mcp-sdk/ pre-copied by the e2e script.
 
 FROM golang:1.26-alpine AS builder
 
 WORKDIR /build
 
-# Copy MCP SDK (pre-copied into .mcp-sdk/ by the e2e runner).
-COPY .mcp-sdk/ /mcp/go-sdk/
-
 COPY go.mod go.sum ./
-RUN sed -i 's|../../mcp/go-sdk|/mcp/go-sdk|' go.mod
 RUN go mod download
 
 COPY cmd/ cmd/

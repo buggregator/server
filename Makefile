@@ -147,13 +147,9 @@ test-mcp:
 	go test -v -count=1 ./internal/mcp/
 
 # Run MCP e2e tests in Docker (builds buggregator + test runner)
-# Requires MCP SDK at ../../mcp/go-sdk (relative to this repo)
 e2e-mcp:
-	@echo "Copying MCP SDK into build context..."
-	@rm -rf .mcp-sdk && cp -r ../../mcp/go-sdk .mcp-sdk
 	docker compose -f docker-compose.e2e-mcp.yaml up --build --abort-on-container-exit --exit-code-from mcp-test
 	docker compose -f docker-compose.e2e-mcp.yaml down
-	@rm -rf .mcp-sdk
 
 clean:
 	rm -f $(BINARY) $(BINARY)-*
