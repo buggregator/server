@@ -11,7 +11,8 @@ BOX_VERSION = 4.6.6
 MICRO_URL_BASE = https://dl.static-php.dev/static-php-cli/common
 
 .PHONY: build run clean frontend deps vardumper-php vardumper-deps vardumper-phar \
-        vardumper-all vardumper-linux-amd64 vardumper-linux-arm64 vardumper-darwin-amd64 vardumper-darwin-arm64
+        vardumper-all vardumper-linux-amd64 vardumper-linux-arm64 vardumper-darwin-amd64 vardumper-darwin-arm64 \
+        vardumper-windows-amd64
 
 # ============================================================
 # Frontend
@@ -84,8 +85,16 @@ vardumper-darwin-amd64: vardumper-phar
 vardumper-darwin-arm64: vardumper-phar
 	$(call build_vardumper_binary,macos,aarch64,darwin,arm64)
 
+# Windows: no static-php micro.sfx available — create empty placeholder.
+# VarDumper module will not work on Windows, but the server will compile.
+vardumper-windows-amd64: vardumper-phar
+	@mkdir -p $(PHP_BIN_DIR)
+	@echo "No static-php micro.sfx available for Windows — creating placeholder"
+	@echo "placeholder" > $(PHP_BIN_DIR)/vardumper-parser-windows-amd64.exe
+	@echo "Built $(PHP_BIN_DIR)/vardumper-parser-windows-amd64.exe (placeholder — VarDumper disabled on Windows)"
+
 # Build all platforms
-vardumper-all: vardumper-linux-amd64 vardumper-linux-arm64 vardumper-darwin-amd64 vardumper-darwin-arm64
+vardumper-all: vardumper-linux-amd64 vardumper-linux-arm64 vardumper-darwin-amd64 vardumper-darwin-arm64 vardumper-windows-amd64
 
 # Build for current platform only
 vardumper-php: vardumper-phar
@@ -117,10 +126,11 @@ build-cross: deps
 
 # Build all platforms
 release: deps frontend vardumper-all
-	GOOS=linux GOARCH=amd64 go build -o $(BINARY)-linux-amd64 ./cmd/buggregator
-	GOOS=linux GOARCH=arm64 go build -o $(BINARY)-linux-arm64 ./cmd/buggregator
-	GOOS=darwin GOARCH=amd64 go build -o $(BINARY)-darwin-amd64 ./cmd/buggregator
-	GOOS=darwin GOARCH=arm64 go build -o $(BINARY)-darwin-arm64 ./cmd/buggregator
+	GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o $(BINARY)-linux-amd64 ./cmd/buggregator
+	GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o $(BINARY)-linux-arm64 ./cmd/buggregator
+	GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o $(BINARY)-darwin-amd64 ./cmd/buggregator
+	GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o $(BINARY)-darwin-arm64 ./cmd/buggregator
+	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o $(BINARY)-windows-amd64.exe ./cmd/buggregator
 	@echo "Release binaries built."
 
 run: build

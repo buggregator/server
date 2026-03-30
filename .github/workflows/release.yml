@@ -23,18 +23,27 @@ jobs:
             goarch: amd64
             spc_os: linux
             spc_arch: x86_64
+            ext: ""
           - goos: linux
             goarch: arm64
             spc_os: linux
             spc_arch: aarch64
+            ext: ""
           - goos: darwin
             goarch: amd64
             spc_os: macos
             spc_arch: x86_64
+            ext: ""
           - goos: darwin
             goarch: arm64
             spc_os: macos
             spc_arch: aarch64
+            ext: ""
+          - goos: windows
+            goarch: amd64
+            spc_os: ""
+            spc_arch: ""
+            ext: ".exe"
 
     steps:
       - uses: actions/checkout@v4
@@ -59,16 +68,22 @@ jobs:
       # Build PHP VarDumper parser
       - name: Build VarDumper PHP binary
         run: |
-          cd php/vardumper
-          composer install --no-dev --optimize-autoloader --quiet
-          curl -sL https://github.com/box-project/box/releases/download/4.6.6/box.phar -o box.phar
-          php box.phar compile --quiet
-          curl -sL "https://dl.static-php.dev/static-php-cli/common/php-${PHP_VERSION}-micro-${{ matrix.spc_os }}-${{ matrix.spc_arch }}.tar.gz" \
-            -o /tmp/micro.tar.gz
-          mkdir -p /tmp/micro && tar -xzf /tmp/micro.tar.gz -C /tmp/micro/
-          mkdir -p ../../modules/vardumper/bin
-          cat /tmp/micro/micro.sfx vardumper-parser.phar > ../../modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}
-          chmod +x ../../modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}
+          mkdir -p modules/vardumper/bin
+          if [ "${{ matrix.spc_os }}" = "" ]; then
+            # No static-php micro.sfx for this platform — create placeholder.
+            echo "placeholder" > modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+            echo "VarDumper PHP binary not available for ${{ matrix.goos }}/${{ matrix.goarch }} — placeholder created"
+          else
+            cd php/vardumper
+            composer install --no-dev --optimize-autoloader --quiet
+            curl -sL https://github.com/box-project/box/releases/download/4.6.6/box.phar -o box.phar
+            php box.phar compile --quiet
+            curl -sL "https://dl.static-php.dev/static-php-cli/common/php-${PHP_VERSION}-micro-${{ matrix.spc_os }}-${{ matrix.spc_arch }}.tar.gz" \
+              -o /tmp/micro.tar.gz
+            mkdir -p /tmp/micro && tar -xzf /tmp/micro.tar.gz -C /tmp/micro/
+            cat /tmp/micro/micro.sfx vardumper-parser.phar > ../../modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}
+            chmod +x ../../modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}
+          fi
 
       # Build Go binary
       - name: Build
@@ -77,13 +92,13 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
         run: |
-          go build -ldflags="-s -w" -o buggregator-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/buggregator
+          go build -ldflags="-s -w" -o buggregator-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }} ./cmd/buggregator
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: buggregator-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: buggregator-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: buggregator-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
 
   docker:
     runs-on: ubuntu-latest
