@@ -85,77 +85,8 @@ jobs:
           name: buggregator-${{ matrix.goos }}-${{ matrix.goarch }}
           path: buggregator-${{ matrix.goos }}-${{ matrix.goarch }}
 
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-
-      # Download frontend
-      - name: Download frontend
-        shell: bash
-        run: |
-          mkdir -p internal/frontend/dist
-          ASSET_URL=$(curl -s "https://api.github.com/repos/buggregator/frontend/releases/tags/${FRONTEND_VERSION}" \
-            | jq -r '.assets[0].url')
-          curl -sL -H "Accept: application/octet-stream" "$ASSET_URL" -o /tmp/frontend.zip
-          unzip -qo /tmp/frontend.zip -d internal/frontend/dist/
-
-      # Cache the Windows micro.sfx built by SPC (avoids rebuilding every release)
-      - name: Cache Windows micro.sfx
-        id: cache-micro
-        uses: actions/cache@v4
-        with:
-          path: php/vardumper/.spc
-          key: windows-micro-sfx-php${{ env.PHP_VERSION }}
-
-      # Build micro.sfx only if not cached
-      - name: Build Windows micro.sfx
-        if: steps.cache-micro.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          cd php/vardumper
-          New-Item -ItemType Directory -Force -Path ".spc"
-          Invoke-WebRequest -Uri "https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-windows-x64.exe" -OutFile ".spc/spc.exe"
-          .spc/spc.exe download micro --for-extensions=ctype,mbstring,phar,tokenizer,filter --with-php=8.4 --prefer-pre-built
-          .spc/spc.exe doctor --auto-fix
-          .spc/spc.exe build "ctype,mbstring,phar,tokenizer,filter" --build-micro
-
-      # Build VarDumper PHP parser and combine with cached micro.sfx
-      - name: Build VarDumper PHP binary
-        shell: bash
-        run: |
-          cd php/vardumper
-          composer install --no-dev --optimize-autoloader --quiet
-          curl -sL https://github.com/box-project/box/releases/download/4.6.6/box.phar -o box.phar
-          COMPOSER_PATH=$(which composer)
-          php box.phar compile --no-parallel --composer-bin "$COMPOSER_PATH"
-          ls -la vardumper-parser.phar
-          mkdir -p ../../modules/vardumper/bin
-          .spc/spc.exe micro:combine vardumper-parser.phar --output=../../modules/vardumper/bin/vardumper-parser-windows-amd64.exe
-
-      # Build Go binary
-      - name: Build
-        env:
-          GOOS: windows
-          GOARCH: amd64
-          CGO_ENABLED: "0"
-        shell: bash
-        run: |
-          go build -ldflags="-s -w" -o buggregator-windows-amd64.exe ./cmd/buggregator
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: buggregator-windows-amd64
-          path: buggregator-windows-amd64.exe
+  # TODO: Windows build disabled — box.phar cannot detect composer on Windows CI.
+  # See: https://github.com/box-project/box/issues/1097
 
   docker:
     runs-on: ubuntu-latest
@@ -192,7 +123,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: [build-unix, build-windows]
+    needs: [build-unix]
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
