@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/buggregator/go-buggregator/internal/auth"
 	"github.com/buggregator/go-buggregator/internal/event"
 	"github.com/buggregator/go-buggregator/internal/frontend"
 	mcpserver "github.com/buggregator/go-buggregator/internal/mcp"
@@ -67,8 +68,44 @@ func (a *App) Run() {
 	// Build the event service that ties ingestion -> store -> broadcast.
 	eventService := httpserver.NewEventService(store, a.hub, a.registry, a.metrics)
 
-	// Register core API routes.
-	httpserver.RegisterAPI(mux, store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes())
+	// Set up authentication.
+	authSettings := httpserver.AuthSettings{Enabled: a.cfg.Auth.Enabled}
+	var authMiddleware func(http.Handler) http.Handler
+
+	if a.cfg.Auth.Enabled {
+		if a.cfg.Auth.JWTSecret == "" {
+			slog.Error("AUTH_JWT_SECRET is required when auth is enabled")
+			os.Exit(1)
+		}
+
+		tokens := auth.NewTokenStore(a.cfg.Auth.JWTSecret)
+		authMiddleware = auth.Middleware(tokens, true)
+		authSettings.LoginURL = auth.LoginURL()
+
+		oauth, err := auth.NewOAuthClient(
+			a.cfg.Auth.Provider,
+			a.cfg.Auth.ProviderURL,
+			a.cfg.Auth.ClientID,
+			a.cfg.Auth.ClientSecret,
+			a.cfg.Auth.CallbackURL,
+			a.cfg.Auth.Scopes,
+		)
+		if err != nil {
+			slog.Error("failed to initialize OAuth client", "err", err)
+			os.Exit(1)
+		}
+
+		handlers := auth.NewHandlers(oauth, tokens)
+		handlers.RegisterRoutes(mux)
+		handlers.RegisterProtectedRoutes(mux, authMiddleware)
+
+		slog.Info("authentication enabled", "provider", a.cfg.Auth.Provider)
+	} else {
+		authMiddleware = func(next http.Handler) http.Handler { return next }
+	}
+
+	// Register core API routes (settings endpoint is public, others go through auth middleware).
+	httpserver.RegisterAPI(mux, store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes(), authSettings, authMiddleware)
 
 	// Register attachment API endpoints.
 	httpserver.RegisterAttachmentAPI(mux, a.db, a.attachments)

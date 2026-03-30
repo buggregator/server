@@ -25,6 +25,21 @@ metrics:
   addr: ${METRICS_ADDR:}                  # Separate metrics server address (e.g., ":9090")
                                           # Leave empty to serve /metrics on the main HTTP server
 
+# Authentication via OAuth2/OIDC providers.
+# Supported providers: auth0, google, github, keycloak, gitlab, oidc (generic OIDC).
+# For OIDC-compatible providers (auth0, google, keycloak, gitlab, oidc), endpoints are
+# auto-discovered from provider_url via .well-known/openid-configuration.
+# For GitHub, endpoints are hardcoded (no OIDC support).
+# auth:
+#   enabled: false
+#   provider: ${AUTH_PROVIDER:oidc}               # Provider type
+#   provider_url: ${AUTH_PROVIDER_URL:}            # OIDC issuer URL (e.g., https://xxx.us.auth0.com)
+#   client_id: ${AUTH_CLIENT_ID:}                  # OAuth2 client ID
+#   client_secret: ${AUTH_CLIENT_SECRET:}          # OAuth2 client secret
+#   callback_url: ${AUTH_CALLBACK_URL:}            # Callback URL (e.g., http://localhost:8000/auth/sso/callback)
+#   scopes: ${AUTH_SCOPES:openid,email,profile}    # Comma-separated scopes
+#   jwt_secret: ${AUTH_JWT_SECRET:}                # Secret for signing internal JWT tokens (required)
+
 # TCP servers
 tcp:
   smtp:

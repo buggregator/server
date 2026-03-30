@@ -8,22 +8,38 @@ import (
 	"github.com/buggregator/go-buggregator/internal/event"
 )
 
+// AuthSettings holds auth info exposed via /api/settings.
+type AuthSettings struct {
+	Enabled  bool
+	LoginURL string
+}
+
 // RegisterAPI registers core API routes on the given mux.
-func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewRegistry, es *EventService, version string, db *sql.DB, enabledEvents []string) {
+// authMiddleware wraps protected routes; pass a no-op when auth is disabled.
+func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewRegistry, es *EventService, version string, db *sql.DB, enabledEvents []string, authSettings AuthSettings, authMiddleware func(http.Handler) http.Handler) {
+	// Public routes (no auth required).
 	mux.HandleFunc("GET /api/version", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]string{"version": version})
 	})
 
 	mux.HandleFunc("GET /api/settings", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]any{
-			"auth":    map[string]any{"enabled": false},
+			"auth": map[string]any{
+				"enabled":   authSettings.Enabled,
+				"login_url": authSettings.LoginURL,
+			},
 			"version": version,
 			"events":  enabledEvents,
 		})
 	})
 
+	// Protected routes (require auth when enabled).
+	protect := func(pattern string, handler http.HandlerFunc) {
+		mux.Handle(pattern, authMiddleware(handler))
+	}
+
 	// List events.
-	mux.HandleFunc("GET /api/events", func(w http.ResponseWriter, r *http.Request) {
+	protect("GET /api/events", func(w http.ResponseWriter, r *http.Request) {
 		opts := event.FindOptions{
 			Type:    r.URL.Query().Get("type"),
 			Project: r.URL.Query().Get("project"),
@@ -40,7 +56,7 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 	})
 
 	// List event previews.
-	mux.HandleFunc("GET /api/events/preview", func(w http.ResponseWriter, r *http.Request) {
+	protect("GET /api/events/preview", func(w http.ResponseWriter, r *http.Request) {
 		opts := event.FindOptions{
 			Type:    r.URL.Query().Get("type"),
 			Project: r.URL.Query().Get("project"),
@@ -58,7 +74,7 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 	})
 
 	// Get single event.
-	mux.HandleFunc("GET /api/event/{uuid}", func(w http.ResponseWriter, r *http.Request) {
+	protect("GET /api/event/{uuid}", func(w http.ResponseWriter, r *http.Request) {
 		uuid := r.PathValue("uuid")
 		ev, err := store.FindByUUID(r.Context(), uuid)
 		if err != nil {
@@ -73,7 +89,7 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 	})
 
 	// Delete single event.
-	mux.HandleFunc("DELETE /api/event/{uuid}", func(w http.ResponseWriter, r *http.Request) {
+	protect("DELETE /api/event/{uuid}", func(w http.ResponseWriter, r *http.Request) {
 		uuid := r.PathValue("uuid")
 		ev, _ := store.FindByUUID(r.Context(), uuid)
 		if err := store.Delete(r.Context(), uuid); err != nil {
@@ -89,7 +105,7 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 	})
 
 	// Clear events.
-	mux.HandleFunc("DELETE /api/events", func(w http.ResponseWriter, r *http.Request) {
+	protect("DELETE /api/events", func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
 			Type    string   `json:"type"`
 			Project string   `json:"project"`
@@ -111,7 +127,7 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 	})
 
 	// Pin event.
-	mux.HandleFunc("POST /api/event/{uuid}/pin", func(w http.ResponseWriter, r *http.Request) {
+	protect("POST /api/event/{uuid}/pin", func(w http.ResponseWriter, r *http.Request) {
 		uuid := r.PathValue("uuid")
 		if err := store.Pin(r.Context(), uuid); err != nil {
 			writeError(w, err.Error(), http.StatusInternalServerError)
@@ -121,7 +137,7 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 	})
 
 	// Unpin event.
-	mux.HandleFunc("DELETE /api/event/{uuid}/pin", func(w http.ResponseWriter, r *http.Request) {
+	protect("DELETE /api/event/{uuid}/pin", func(w http.ResponseWriter, r *http.Request) {
 		uuid := r.PathValue("uuid")
 		if err := store.Unpin(r.Context(), uuid); err != nil {
 			writeError(w, err.Error(), http.StatusInternalServerError)
@@ -131,7 +147,7 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 	})
 
 	// List projects.
-	mux.HandleFunc("GET /api/projects", func(w http.ResponseWriter, r *http.Request) {
+	protect("GET /api/projects", func(w http.ResponseWriter, r *http.Request) {
 		rows, err := db.QueryContext(r.Context(), `SELECT key, name FROM projects`)
 		if err != nil {
 			writeError(w, err.Error(), http.StatusInternalServerError)

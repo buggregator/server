@@ -42,7 +42,8 @@ func setupAPI(t *testing.T) (*http.ServeMux, *storage.SQLiteStore) {
 	es := serverhttp.NewEventService(store, hub, registry, nil)
 
 	mux := http.NewServeMux()
-	serverhttp.RegisterAPI(mux, store, event.NewPreviewRegistry(), es, "test-version", db, []string{"sentry", "ray"})
+	noopMiddleware := func(next http.Handler) http.Handler { return next }
+	serverhttp.RegisterAPI(mux, store, event.NewPreviewRegistry(), es, "test-version", db, []string{"sentry", "ray"}, serverhttp.AuthSettings{}, noopMiddleware)
 
 	return mux, store
 }
