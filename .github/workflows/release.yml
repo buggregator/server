@@ -135,7 +135,8 @@ jobs:
           cd php/vardumper
           composer install --no-dev --optimize-autoloader --quiet
           Invoke-WebRequest -Uri "https://github.com/box-project/box/releases/download/4.6.6/box.phar" -OutFile "box.phar"
-          php box.phar compile --no-parallel --composer-bin (Get-Command composer).Source
+          $composerBin = (Get-Command composer).Source
+          php box.phar compile --no-parallel --composer-bin $composerBin
           if (-not (Test-Path "vardumper-parser.phar")) {
             Write-Error "Failed to build vardumper-parser.phar"
             exit 1
