@@ -11,6 +11,7 @@ Drop-in replacement for [Buggregator](https://github.com/buggregator/server) tha
 - **Embedded frontend** — web UI served from the binary itself
 - **Real-time updates** — built-in WebSocket with Centrifugo v5 protocol emulation
 - **Modular architecture** — enable/disable modules via config
+- **OAuth2/OIDC authentication** — optional SSO via Auth0, Google, GitHub, Keycloak, GitLab, or any OIDC provider
 - **Cross-platform** — Linux, macOS (amd64, arm64)
 
 ## Supported Modules
@@ -103,6 +104,18 @@ tcp:
   var-dumper:
     addr: ":9912"
 
+# Authentication (disabled by default)
+# Supports: auth0, google, github, keycloak, gitlab, oidc (generic)
+auth:
+  enabled: true
+  provider: auth0
+  provider_url: https://your-tenant.us.auth0.com
+  client_id: your-client-id
+  client_secret: your-client-secret
+  callback_url: http://localhost:8000/auth/sso/callback
+  scopes: openid,email,profile
+  jwt_secret: your-secret-for-signing-tokens
+
 # MCP — AI assistant integration (disabled by default)
 mcp:
   enabled: true
@@ -161,6 +174,14 @@ projects:
 | `CLIENT_SUPPORTED_EVENTS` | all | Comma-separated list of enabled modules |
 | `METRICS_ENABLED` | `false` | Enable Prometheus metrics |
 | `METRICS_ADDR` | — | Separate metrics server address (e.g., `:9090`) |
+| `AUTH_ENABLED` | `false` | Enable OAuth2/OIDC authentication |
+| `AUTH_PROVIDER` | `oidc` | Provider type: `auth0`, `google`, `github`, `keycloak`, `gitlab`, `oidc` |
+| `AUTH_PROVIDER_URL` | — | OIDC issuer URL (e.g., `https://xxx.us.auth0.com`) |
+| `AUTH_CLIENT_ID` | — | OAuth2 client ID |
+| `AUTH_CLIENT_SECRET` | — | OAuth2 client secret |
+| `AUTH_CALLBACK_URL` | — | OAuth2 callback URL (e.g., `http://localhost:8000/auth/sso/callback`) |
+| `AUTH_SCOPES` | `openid,email,profile` | Comma-separated OAuth2 scopes |
+| `AUTH_JWT_SECRET` | — | Secret for signing internal JWT tokens (required when auth enabled) |
 
 Config file values support `${VAR}` and `${VAR:default}` syntax for environment variable substitution.
 
@@ -171,6 +192,7 @@ Config file values support `${VAR}` and `${VAR:default}` syntax for environment 
 │            Single Go Binary              │
 │                                          │
 │  HTTP :8000                              │
+│  ├── Auth (OAuth2/OIDC, optional)        │
 │  ├── REST API (events CRUD)              │
 │  ├── Ingestion Pipeline                  │
 │  │   ├── Sentry  (X-Sentry-Auth)         │
@@ -254,6 +276,77 @@ PROFILER_ENDPOINT=http://profiler@localhost:8000
 HTTP_DUMP_ENDPOINT=http://http-dump@localhost:8000
 SMS_ENDPOINT=http://localhost:8000/sms
 ```
+
+## Authentication
+
+Buggregator supports optional OAuth2/OIDC authentication. When enabled, API routes require a valid token and the frontend shows a login page with SSO.
+
+Disabled by default — all endpoints are open without any token.
+
+### Supported Providers
+
+| Provider | Type | Discovery |
+|----------|------|-----------|
+| Auth0 | OIDC | Auto via `.well-known/openid-configuration` |
+| Google | OIDC | Auto |
+| Keycloak | OIDC | Auto |
+| Okta | OIDC | Auto |
+| Azure AD | OIDC | Auto |
+| GitLab | OIDC | Auto |
+| GitHub | OAuth2 | Hardcoded (no OIDC) |
+| `oidc` | Generic OIDC | Auto |
+
+### Quick Setup (Auth0 Example)
+
+1. Create an application in [Auth0 Dashboard](https://manage.auth0.com/)
+2. Set **Allowed Callback URL** to `http://localhost:8000/auth/sso/callback`
+3. Run:
+
+```bash
+AUTH_ENABLED=true \
+AUTH_PROVIDER=auth0 \
+AUTH_PROVIDER_URL=https://your-tenant.us.auth0.com \
+AUTH_CLIENT_ID=your-client-id \
+AUTH_CLIENT_SECRET=your-client-secret \
+AUTH_CALLBACK_URL=http://localhost:8000/auth/sso/callback \
+AUTH_JWT_SECRET=any-random-secret-string \
+./buggregator
+```
+
+### Quick Setup (GitHub Example)
+
+1. Create an OAuth App at [GitHub Developer Settings](https://github.com/settings/developers)
+2. Set **Authorization callback URL** to `http://localhost:8000/auth/sso/callback`
+3. Run:
+
+```bash
+AUTH_ENABLED=true \
+AUTH_PROVIDER=github \
+AUTH_CLIENT_ID=your-github-client-id \
+AUTH_CLIENT_SECRET=your-github-client-secret \
+AUTH_CALLBACK_URL=http://localhost:8000/auth/sso/callback \
+AUTH_SCOPES=read:user,user:email \
+AUTH_JWT_SECRET=any-random-secret-string \
+./buggregator
+```
+
+### Auth Endpoints
+
+```
+GET /auth/sso/login       Redirects to OAuth2 provider
+GET /auth/sso/callback    OAuth2 callback, exchanges code for JWT
+GET /api/me               Returns authenticated user profile
+```
+
+### How It Works
+
+1. Frontend fetches `/api/settings` — if `auth.enabled` is `true`, shows login page
+2. User clicks "Continue with SSO" → browser navigates to `/auth/sso/login`
+3. Server redirects to the OAuth2 provider's authorization page
+4. After login, provider redirects back to `/auth/sso/callback`
+5. Server exchanges the code for user info, creates an internal JWT (HS256, 30-day expiry)
+6. Redirects to frontend `/login?token=<jwt>` — frontend stores it in localStorage
+7. All subsequent API requests include the token via `X-Auth-Token` header
 
 ## MCP (Model Context Protocol)
 
@@ -412,6 +505,8 @@ GET /connection/websocket        WebSocket (Centrifugo v5 protocol)
 | [gopkg.in/yaml.v3](https://pkg.go.dev/gopkg.in/yaml.v3) | YAML config |
 | [prometheus/client_golang](https://github.com/prometheus/client_golang) | Prometheus metrics |
 | [modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) | MCP server (AI tool integration) |
+| [golang-jwt/jwt](https://github.com/golang-jwt/jwt) | JWT token creation and validation |
+| [golang.org/x/oauth2](https://pkg.go.dev/golang.org/x/oauth2) | OAuth2 client |
 
 ## License
 
