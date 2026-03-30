@@ -1,18 +1,85 @@
-# Go-Buggregator
+# Debug everything. Install nothing.
 
-A lightweight, standalone debugging server for PHP applications — packed into a single Go binary.
+<a href="https://discord.gg/vDsCD3EKUB"><img src="https://img.shields.io/badge/discord-chat-magenta.svg"></a>
+[![Twitter](https://img.shields.io/badge/twitter-Follow-blue)](https://twitter.com/buggregator)
+[![Support me on Patreon](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fshieldsio-patreon.vercel.app%2Fapi%3Fusername%3Dbutschster%26type%3Dpatrons&style=flat)](https://patreon.com/butschster)
+[![CI](https://github.com/buggregator/server/actions/workflows/ci.yml/badge.svg)](https://github.com/buggregator/server/actions/workflows/ci.yml)
+[![Downloads](https://img.shields.io/docker/pulls/butschster/buggregator.svg)](https://hub.docker.com/repository/docker/butschster/buggregator)
 
-Drop-in replacement for [Buggregator](https://github.com/buggregator/server) that requires no PHP runtime, no RoadRunner, no Centrifugo, and no external database.
+<a href="https://www.producthunt.com/posts/buggregator?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-buggregator" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=478631&theme=light" alt="Buggregator - The&#0032;Ultimate&#0032;Debugging&#0032;Server&#0032;for&#0032;PHP | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 
-## Features
+**One binary. Exceptions, dumps, emails, profiling, logs — all in one real-time UI. Works with the SDKs you already have. No cloud account. No code changes. No runtime dependencies.**
 
-- **Single binary** — download and run, zero dependencies
-- **SQLite in-memory** by default — no database setup, no leftover files
-- **Embedded frontend** — web UI served from the binary itself
-- **Real-time updates** — built-in WebSocket with Centrifugo v5 protocol emulation
-- **Modular architecture** — enable/disable modules via config
-- **OAuth2/OIDC authentication** — optional SSO via Auth0, Google, GitHub, Keycloak, GitLab, or any OIDC provider
-- **Cross-platform** — Linux, macOS (amd64, arm64)
+Buggregator v2.0 is a complete rewrite in Go — a single self-contained binary with an embedded SQLite database, web UI, and WebSocket server. No PHP runtime, no RoadRunner, no Centrifugo, no external database.
+
+| | |
+|---|---|
+| **Server** | `v2.0.0` |
+| **Frontend** | `v1.30.0` |
+
+> Looking for the PHP version? See the [1.x branch](https://github.com/buggregator/server/tree/1.x).
+
+Watch our introduction video on [YouTube](https://www.youtube.com/watch?v=yKWbuw8xN_c)
+
+## Quick Start
+
+```bash
+docker run --pull always \
+  -p 127.0.0.1:8000:8000 \
+  -p 127.0.0.1:1025:1025 \
+  -p 127.0.0.1:9912:9912 \
+  -p 127.0.0.1:9913:9913 \
+  ghcr.io/buggregator/server:latest
+```
+
+Open http://127.0.0.1:8000 and start debugging. That's it.
+
+### Standalone Binary
+
+```bash
+# Download the latest release
+curl -sL https://github.com/buggregator/server/releases/latest/download/buggregator-linux-amd64 -o buggregator
+chmod +x buggregator
+./buggregator
+```
+
+> No Docker? No binary? Use [Buggregator Trap](https://docs.buggregator.dev/trap/what-is-trap.html) — a lightweight PHP CLI alternative.
+
+## Key Features
+
+### [Xhprof Profiler](https://docs.buggregator.dev/config/xhprof.html)
+
+Watch our intro video about profiler on [YouTube](https://www.youtube.com/watch?v=2QbgjIVnz78&pp=ygULYnVnZ3JlZ2F0b3I%3D).
+
+![xhprof](https://github.com/buggregator/server/assets/773481/d69e1158-599d-4546-96a9-40a42cb060f4)
+
+### [Symfony VarDumper Server](https://docs.buggregator.dev/config/var-dumper.html)
+
+![var-dumper](https://github.com/buggregator/server/assets/773481/b77fa867-0a8e-431a-9126-f69959dc18f4)
+
+### [Spatie Ray Debug Tool](https://docs.buggregator.dev/config/ray.html)
+
+![ray](https://github.com/buggregator/server/assets/773481/168b27f7-75b1-4837-b0a1-37146d5b8b52)
+
+### [Fake SMTP Server](https://docs.buggregator.dev/config/smtp.html)
+
+![smtp](https://github.com/buggregator/server/assets/773481/8dd60ddf-c8d8-4a26-a8c0-b05052414a5f)
+
+### [Sentry Compatibility](https://docs.buggregator.dev/config/sentry.html)
+
+![sentry](https://github.com/buggregator/server/assets/773481/e979fda5-54c8-42cc-8224-a1c5d828569a)
+
+### [Monolog Server](https://docs.buggregator.dev/config/monolog.html)
+
+![monolog](https://github.com/buggregator/server/assets/773481/21919110-fd4d-490d-a78e-41242d329885)
+
+### [Inspector Compatibility](https://docs.buggregator.dev/config/inspector.html)
+
+![inspector](https://github.com/buggregator/server/assets/773481/ab002ecf-e1dc-4433-90d4-0e42ff8c0ab3)
+
+### [HTTP Requests Dump Server](https://docs.buggregator.dev/config/http-dumps.html)
+
+![http dumps](https://github.com/buggregator/server/assets/773481/fc823390-b490-4bbb-a787-44471eca9fb6)
 
 ## Supported Modules
 
@@ -27,57 +94,7 @@ Drop-in replacement for [Buggregator](https://github.com/buggregator/server) tha
 | SMS | `sms` | HTTP `/sms` | SMS gateway capture (41 providers) |
 | HTTP Dump | `http-dump` | HTTP | Catch-all HTTP request capture |
 | Profiler | `profiler` | HTTP | XHProf profiling (call graph, flame chart, top functions) |
-| Webhooks | `webhooks` | — | Send HTTP POST notifications when events are received |
-
-## Quick Start
-
-```bash
-# Download the latest release
-curl -sL https://github.com/buggregator/go-server/releases/latest/download/buggregator-linux-amd64 -o buggregator
-chmod +x buggregator
-
-# Run with defaults (in-memory SQLite, all modules enabled)
-./buggregator
-```
-
-Open http://localhost:8000 in your browser.
-
-## Docker
-
-```bash
-# Run from Docker Hub
-docker run -p 8000:8000 -p 1025:1025 -p 9912:9912 -p 9913:9913 ghcr.io/buggregator/go-server:latest
-
-# Or with docker-compose (includes Laravel examples app)
-docker compose up
-```
-
-## Building from Source
-
-### Prerequisites
-
-- Go 1.22+
-- PHP 8.1+ with Composer (for VarDumper module build)
-- Make
-
-### Build
-
-```bash
-# Full build: downloads frontend, builds PHP parser, compiles Go binary
-make build
-
-# Build for all platforms
-make release
-
-# Build for a specific platform
-make build-cross GOOS=darwin GOARCH=arm64
-```
-
-### Build Steps (what `make build` does)
-
-1. **Frontend**: Downloads pre-built frontend from [buggregator/frontend](https://github.com/buggregator/frontend) releases
-2. **PHP VarDumper parser**: Builds a self-contained PHP binary (`micro.sfx` + Composer deps + parser script) via [static-php-cli](https://github.com/crazywhalecc/static-php-cli)
-3. **Go binary**: Compiles everything into a single binary with `go:embed`
+| Webhooks | `webhooks` | — | HTTP POST notifications when events are received |
 
 ## Configuration
 
@@ -121,8 +138,6 @@ mcp:
   enabled: true
   transport: socket              # "socket" or "http"
   socket_path: /tmp/buggregator-mcp.sock
-  # addr: ":8001"               # for transport=http
-  # auth_token: "secret"        # Bearer token for HTTP transport
 
 # Enable/disable modules (all enabled by default)
 modules:
@@ -138,12 +153,12 @@ modules:
 
 # Webhooks — HTTP POST notifications on events
 webhooks:
-  - event: "*"                          # "*" for all, or specific type
+  - event: "*"
     url: https://slack.example.com/webhook
     headers:
       Authorization: "Bearer token"
-    verify_ssl: false                   # default: false
-    retry: true                         # retry up to 3x with backoff (default: true)
+    verify_ssl: false
+    retry: true
   - event: sentry
     url: https://pagerduty.example.com/alert
 
@@ -151,8 +166,6 @@ webhooks:
 projects:
   - key: my-app
     name: My Application
-  - key: staging
-    name: Staging
 ```
 
 ### Configuration Priority
@@ -173,89 +186,20 @@ projects:
 | `VAR_DUMPER_ADDR` | `:9912` | VarDumper TCP address |
 | `CLIENT_SUPPORTED_EVENTS` | all | Comma-separated list of enabled modules |
 | `METRICS_ENABLED` | `false` | Enable Prometheus metrics |
-| `METRICS_ADDR` | — | Separate metrics server address (e.g., `:9090`) |
+| `METRICS_ADDR` | — | Separate metrics server address |
 | `AUTH_ENABLED` | `false` | Enable OAuth2/OIDC authentication |
-| `AUTH_PROVIDER` | `oidc` | Provider type: `auth0`, `google`, `github`, `keycloak`, `gitlab`, `oidc` |
-| `AUTH_PROVIDER_URL` | — | OIDC issuer URL (e.g., `https://xxx.us.auth0.com`) |
+| `AUTH_PROVIDER` | `oidc` | Provider: `auth0`, `google`, `github`, `keycloak`, `gitlab`, `oidc` |
+| `AUTH_PROVIDER_URL` | — | OIDC issuer URL |
 | `AUTH_CLIENT_ID` | — | OAuth2 client ID |
 | `AUTH_CLIENT_SECRET` | — | OAuth2 client secret |
-| `AUTH_CALLBACK_URL` | — | OAuth2 callback URL (e.g., `http://localhost:8000/auth/sso/callback`) |
+| `AUTH_CALLBACK_URL` | — | OAuth2 callback URL |
 | `AUTH_SCOPES` | `openid,email,profile` | Comma-separated OAuth2 scopes |
-| `AUTH_JWT_SECRET` | — | Secret for signing internal JWT tokens (required when auth enabled) |
-
-Config file values support `${VAR}` and `${VAR:default}` syntax for environment variable substitution.
-
-## Architecture
-
-```
-┌──────────────────────────────────────────┐
-│            Single Go Binary              │
-│                                          │
-│  HTTP :8000                              │
-│  ├── Auth (OAuth2/OIDC, optional)        │
-│  ├── REST API (events CRUD)              │
-│  ├── Ingestion Pipeline                  │
-│  │   ├── Sentry  (X-Sentry-Auth)         │
-│  │   ├── Ray     (User-Agent: Ray)       │
-│  │   ├── Inspector (X-Inspector-*)       │
-│  │   ├── Profiler  (X-Profiler-*)        │
-│  │   ├── SMS     (/sms endpoint)         │
-│  │   └── HttpDump (catch-all)            │
-│  ├── WebSocket (/connection/ws)          │
-│  │   └── Centrifugo v5 protocol          │
-│  └── Frontend (embedded SPA)             │
-│                                          │
-│  TCP :9912 — VarDumper → PHP parser      │
-│  TCP :9913 — Monolog (ndjson)            │
-│  TCP :1025 — SMTP (go-smtp)             │
-│                                          │
-│  MCP (Unix socket)                       │
-│  └── AI tool integration (8 tools)       │
-│      ├── events_list / event_get / delete│
-│      ├── profiler_summary / top / graph  │
-│      ├── sentry_event                    │
-│      └── vardump_get                     │
-│                                          │
-│  SQLite (in-memory or file)              │
-└──────────────────────────────────────────┘
-```
-
-### Event Detection
-
-Events are routed to modules by:
-1. **URI userinfo**: `http://sentry@host:8000` → Sentry module
-2. **Headers**: `X-Buggregator-Event: profiler` → Profiler module
-3. **Basic Auth**: `Authorization: Basic base64(type:project)`
-4. **Module-specific**: `X-Sentry-Auth`, `User-Agent: Ray`, etc.
-
-### Adding a New Module
-
-1. Create `modules/yourtype/module.go`:
-
-```go
-type Module struct { module.BaseModule }
-func New() *Module             { return &Module{} }
-func (m *Module) Name() string { return "YourType" }
-func (m *Module) Type() string { return "your-type" }
-func (m *Module) HTTPHandler() module.HTTPIngestionHandler { return &handler{} }
-func (m *Module) PreviewMapper() event.PreviewMapper       { return &preview{} }
-```
-
-2. Add SQL migrations in `modules/yourtype/migrations/`
-3. Register in `cmd/buggregator/main.go`:
-```go
-registry.Register(yourtype.New())
-```
-
-### Migration System
-
-Each module has a `migrations/` directory with SQL files (embedded via `go:embed`), sorted by filename:
-
-```
-modules/profiler/migrations/
-├── 2024_01_01_000010_create_profiles_table.sql
-└── 2024_01_01_000011_create_profile_edges_table.sql
-```
+| `AUTH_JWT_SECRET` | — | Secret for signing internal JWT tokens |
+| `MCP_ENABLED` | `false` | Enable MCP server |
+| `MCP_TRANSPORT` | `socket` | `socket` (local) or `http` (remote) |
+| `MCP_SOCKET_PATH` | `/tmp/buggregator-mcp.sock` | Unix socket path |
+| `MCP_ADDR` | `:8001` | HTTP listen address for MCP |
+| `MCP_AUTH_TOKEN` | — | Bearer token for HTTP MCP transport |
 
 ## PHP Client Configuration
 
@@ -277,237 +221,77 @@ HTTP_DUMP_ENDPOINT=http://http-dump@localhost:8000
 SMS_ENDPOINT=http://localhost:8000/sms
 ```
 
-## Authentication
-
-Buggregator supports optional OAuth2/OIDC authentication. When enabled, API routes require a valid token and the frontend shows a login page with SSO.
-
-Disabled by default — all endpoints are open without any token.
-
-### Supported Providers
-
-| Provider | Type | Discovery |
-|----------|------|-----------|
-| Auth0 | OIDC | Auto via `.well-known/openid-configuration` |
-| Google | OIDC | Auto |
-| Keycloak | OIDC | Auto |
-| Okta | OIDC | Auto |
-| Azure AD | OIDC | Auto |
-| GitLab | OIDC | Auto |
-| GitHub | OAuth2 | Hardcoded (no OIDC) |
-| `oidc` | Generic OIDC | Auto |
-
-### Quick Setup (Auth0 Example)
-
-1. Create an application in [Auth0 Dashboard](https://manage.auth0.com/)
-2. Set **Allowed Callback URL** to `http://localhost:8000/auth/sso/callback`
-3. Run:
-
-```bash
-AUTH_ENABLED=true \
-AUTH_PROVIDER=auth0 \
-AUTH_PROVIDER_URL=https://your-tenant.us.auth0.com \
-AUTH_CLIENT_ID=your-client-id \
-AUTH_CLIENT_SECRET=your-client-secret \
-AUTH_CALLBACK_URL=http://localhost:8000/auth/sso/callback \
-AUTH_JWT_SECRET=any-random-secret-string \
-./buggregator
-```
-
-### Quick Setup (GitHub Example)
-
-1. Create an OAuth App at [GitHub Developer Settings](https://github.com/settings/developers)
-2. Set **Authorization callback URL** to `http://localhost:8000/auth/sso/callback`
-3. Run:
-
-```bash
-AUTH_ENABLED=true \
-AUTH_PROVIDER=github \
-AUTH_CLIENT_ID=your-github-client-id \
-AUTH_CLIENT_SECRET=your-github-client-secret \
-AUTH_CALLBACK_URL=http://localhost:8000/auth/sso/callback \
-AUTH_SCOPES=read:user,user:email \
-AUTH_JWT_SECRET=any-random-secret-string \
-./buggregator
-```
-
-### Auth Endpoints
-
-```
-GET /auth/sso/login       Redirects to OAuth2 provider
-GET /auth/sso/callback    OAuth2 callback, exchanges code for JWT
-GET /api/me               Returns authenticated user profile
-```
-
-### How It Works
-
-1. Frontend fetches `/api/settings` — if `auth.enabled` is `true`, shows login page
-2. User clicks "Continue with SSO" → browser navigates to `/auth/sso/login`
-3. Server redirects to the OAuth2 provider's authorization page
-4. After login, provider redirects back to `/auth/sso/callback`
-5. Server exchanges the code for user info, creates an internal JWT (HS256, 30-day expiry)
-6. Redirects to frontend `/login?token=<jwt>` — frontend stores it in localStorage
-7. All subsequent API requests include the token via `X-Auth-Token` header
-
 ## MCP (Model Context Protocol)
 
 Buggregator includes a built-in MCP server that lets AI assistants (Claude Code, Cursor, etc.) query and analyze debugging data directly.
 
-### How It Works
-
-The main process listens on a Unix socket for MCP connections. A thin proxy subcommand bridges stdio to that socket:
-
 ```
-AI Assistant ──stdio──▶ buggregator mcp ──unix socket──▶ buggregator (main process)
+AI Assistant --stdio--> buggregator mcp --unix socket--> buggregator (main process)
 ```
-
-Both share the same in-memory data — the AI sees exactly what you see in the web UI.
 
 ### Setup
 
-1. Start Buggregator as usual:
-   ```bash
-   ./buggregator
-   ```
+**Claude Code** (`~/.claude.json` or project settings):
+```json
+{
+  "mcpServers": {
+    "buggregator": {
+      "command": "./buggregator",
+      "args": ["mcp"]
+    }
+  }
+}
+```
 
-2. Configure your AI tool:
-
-   **Claude Code** (`~/.claude.json` or project settings):
-   ```json
-   {
-     "mcpServers": {
-       "buggregator": {
-         "command": "./buggregator",
-         "args": ["mcp"]
-       }
-     }
-   }
-   ```
-
-   **Cursor** (`.cursor/mcp.json`):
-   ```json
-   {
-     "mcpServers": {
-       "buggregator": {
-         "command": "./buggregator",
-         "args": ["mcp"]
-       }
-     }
-   }
-   ```
+**Cursor** (`.cursor/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "buggregator": {
+      "command": "./buggregator",
+      "args": ["mcp"]
+    }
+  }
+}
+```
 
 ### Available Tools
 
-#### General
-
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `events_list` | List captured events | `type` (sentry, profiler, var-dump, ...), `project`, `limit` (default 20, max 100) |
+| `events_list` | List captured events | `type`, `project`, `limit` (default 20, max 100) |
 | `event_get` | Get full event payload | `uuid` |
 | `event_delete` | Delete an event | `uuid` |
-
-#### Profiler
-
-Tools for analyzing XHProf profiling data — find bottlenecks, understand call chains, optimize performance.
-
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `profiler_summary` | Quick overview: totals, slowest function, memory hotspot, most called | `uuid` |
-| `profiler_top` | Top functions sorted by metric | `uuid`, `metric` (cpu/wt/mu/pmu/ct + excl_ variants), `limit` (default 50, 5–200) |
-| `profiler_call_graph` | Filtered call graph — shows only significant paths | `uuid`, `metric`, `percentage` (min importance, default 1%), `threshold` |
-
-**Example prompts:**
-- "What's the slowest function in the latest profile?"
-- "Show me top 10 functions by exclusive wall time"
-- "Show the call graph filtering out everything below 5% CPU"
-
-#### Sentry
-
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `sentry_event` | Structured error details: exception chain, stack traces, tags | `uuid` |
-
-**Example prompts:**
-- "What errors came in today? Analyze the latest Sentry event and suggest a fix"
-- "Show me the stack trace for error XYZ"
-
-#### VarDumper
-
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
+| `profiler_summary` | Profile overview: totals, slowest function, memory hotspot | `uuid` |
+| `profiler_top` | Top functions sorted by metric | `uuid`, `metric`, `limit` |
+| `profiler_call_graph` | Filtered call graph with significant paths | `uuid`, `metric`, `percentage`, `threshold` |
+| `sentry_event` | Structured error: exception chain, stack traces, tags | `uuid` |
 | `vardump_get` | Variable value with HTML stripped | `uuid` |
 
-**Example prompts:**
-- "What's the value of the last dumped variable?"
+## Building from Source
 
-### Configuration
+### Prerequisites
 
-MCP is disabled by default. Enable it in config or via environment variables:
+- Go 1.22+
+- PHP 8.1+ with Composer (for VarDumper module)
+- Make
 
-```yaml
-# buggregator.yaml
-mcp:
-  enabled: true
-  transport: socket              # "socket" (Unix socket) or "http" (HTTP SSE for remote)
-  socket_path: /tmp/buggregator-mcp.sock  # for transport=socket
-  addr: ":8001"                  # for transport=http
-  auth_token: "my-secret-token"  # Bearer token auth for HTTP transport (optional)
+```bash
+make build          # Full build: downloads frontend, builds PHP parser, compiles binary
+make run            # Build and run
+make build-cross GOOS=darwin GOARCH=arm64   # Cross-compile
 ```
 
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `MCP_ENABLED` | `false` | Enable MCP server |
-| `MCP_TRANSPORT` | `socket` | `socket` (local) or `http` (remote) |
-| `MCP_SOCKET_PATH` | `/tmp/buggregator-mcp.sock` | Unix socket path |
-| `MCP_ADDR` | `:8001` | HTTP listen address (for `transport=http`) |
-| `MCP_AUTH_TOKEN` | — | Bearer token (for `transport=http`) |
+## Documentation
 
-**Transport options:**
+See the [documentation](https://docs.buggregator.dev/) for detailed installation and usage instructions.
 
-- **`socket`** (default) — Unix socket, for local AI tools (Claude Code, Cursor). Use `buggregator mcp` to bridge stdio.
-- **`http`** — HTTP SSE, for remote access when Buggregator runs in infrastructure. Supports bearer token auth. AI tools connect directly via HTTP URL.
+## Contributing
 
-## API
+We enthusiastically invite you to contribute to Buggregator Server! Whether you've uncovered a bug, have innovative feature suggestions, or wish to contribute in any other capacity, we warmly welcome your participation. Simply open an issue or submit a pull request on our GitHub repository to get started.
 
-### Events
-```
-GET    /api/events               List events (?type=sentry&project=default)
-GET    /api/events/preview       List with previews
-GET    /api/event/{uuid}         Get single event
-DELETE /api/event/{uuid}         Delete event
-DELETE /api/events               Clear events
-POST   /api/event/{uuid}/pin     Pin event
-DELETE /api/event/{uuid}/pin     Unpin event
-```
-
-### Profiler
-```
-GET /api/profiler/{uuid}/summary
-GET /api/profiler/{uuid}/call-graph?metric=cpu&threshold=1&percentage=10
-GET /api/profiler/{uuid}/top?limit=100&metric=cpu
-GET /api/profiler/{uuid}/flame-chart?metric=wt
-```
-
-### Other
-```
-GET /api/version                 Server version
-GET /api/settings                Settings and enabled modules
-GET /api/projects                Project list
-GET /connection/websocket        WebSocket (Centrifugo v5 protocol)
-```
-
-## Dependencies
-
-| Dependency | Purpose |
-|-----------|---------|
-| [modernc.org/sqlite](https://pkg.go.dev/modernc.org/sqlite) | Pure Go SQLite (no CGO) |
-| [nhooyr.io/websocket](https://pkg.go.dev/nhooyr.io/websocket) | WebSocket server |
-| [go-smtp](https://github.com/emersion/go-smtp) | SMTP server |
-| [gopkg.in/yaml.v3](https://pkg.go.dev/gopkg.in/yaml.v3) | YAML config |
-| [prometheus/client_golang](https://github.com/prometheus/client_golang) | Prometheus metrics |
-| [modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) | MCP server (AI tool integration) |
-| [golang-jwt/jwt](https://github.com/golang-jwt/jwt) | JWT token creation and validation |
-| [golang.org/x/oauth2](https://pkg.go.dev/golang.org/x/oauth2) | OAuth2 client |
+> Read more about how to contribute [here](https://docs.buggregator.dev/contributing.html).
 
 ## License
 
-MIT
+Buggregator is open-sourced software licensed under the MIT License.
