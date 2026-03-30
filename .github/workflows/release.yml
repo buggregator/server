@@ -135,7 +135,8 @@ jobs:
           cd php/vardumper
           composer install --no-dev --optimize-autoloader --quiet
           curl -sL https://github.com/box-project/box/releases/download/4.6.6/box.phar -o box.phar
-          php box.phar compile --no-parallel
+          COMPOSER_PATH=$(which composer)
+          php box.phar compile --no-parallel --composer-bin "$COMPOSER_PATH"
           ls -la vardumper-parser.phar
           mkdir -p ../../modules/vardumper/bin
           .spc/spc.exe micro:combine vardumper-parser.phar --output=../../modules/vardumper/bin/vardumper-parser-windows-amd64.exe
