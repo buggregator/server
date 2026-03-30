@@ -18,6 +18,7 @@ type Config struct {
 	Storage  StorageConfig   `yaml:"storage"`
 	TCP      TCPConfig       `yaml:"tcp"`
 	Metrics  MetricsConfig   `yaml:"metrics"`
+	MCP      MCPConfig       `yaml:"mcp"`
 	Modules  ModulesConfig   `yaml:"modules"`
 	Webhooks []WebhookDef    `yaml:"webhooks"`
 	Projects []ProjectDef    `yaml:"projects"`
@@ -29,6 +30,15 @@ type Config struct {
 	SMTPAddr      string `yaml:"-"`
 	MonologAddr   string `yaml:"-"`
 	VarDumperAddr string `yaml:"-"`
+}
+
+// MCPConfig controls the MCP (Model Context Protocol) server.
+type MCPConfig struct {
+	Enabled    bool   `yaml:"enabled"`     // Enable MCP server (default: false).
+	Transport  string `yaml:"transport"`   // "socket" (Unix socket, default) or "http" (HTTP SSE for remote access).
+	SocketPath string `yaml:"socket_path"` // Unix socket path (for transport=socket). Default: /tmp/buggregator-mcp.sock
+	Addr       string `yaml:"addr"`        // HTTP listen address (for transport=http). Default: :8001
+	AuthToken  string `yaml:"auth_token"`  // Bearer token for HTTP transport auth. Empty = no auth.
 }
 
 // WebhookDef defines a webhook from config.
@@ -162,6 +172,13 @@ func LoadConfig() Config {
 	// Metrics.
 	cfg.Metrics.Enabled = fileCfg.Metrics.Enabled || os.Getenv("METRICS_ENABLED") == "true"
 	cfg.Metrics.Addr = coalesce(os.Getenv("METRICS_ADDR"), fileCfg.Metrics.Addr)
+
+	// MCP.
+	cfg.MCP.Enabled = fileCfg.MCP.Enabled || os.Getenv("MCP_ENABLED") == "true"
+	cfg.MCP.Transport = coalesce(os.Getenv("MCP_TRANSPORT"), fileCfg.MCP.Transport, "socket")
+	cfg.MCP.SocketPath = coalesce(os.Getenv("MCP_SOCKET_PATH"), fileCfg.MCP.SocketPath, "/tmp/buggregator-mcp.sock")
+	cfg.MCP.Addr = coalesce(os.Getenv("MCP_ADDR"), fileCfg.MCP.Addr, ":8001")
+	cfg.MCP.AuthToken = coalesce(os.Getenv("MCP_AUTH_TOKEN"), fileCfg.MCP.AuthToken)
 
 	// Modules: merge from file config, env override.
 	cfg.Modules = fileCfg.Modules

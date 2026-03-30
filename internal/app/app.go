@@ -12,6 +12,7 @@ import (
 
 	"github.com/buggregator/go-buggregator/internal/event"
 	"github.com/buggregator/go-buggregator/internal/frontend"
+	mcpserver "github.com/buggregator/go-buggregator/internal/mcp"
 	"github.com/buggregator/go-buggregator/internal/metrics"
 	"github.com/buggregator/go-buggregator/internal/module"
 	httpserver "github.com/buggregator/go-buggregator/internal/server/http"
@@ -134,6 +135,25 @@ func (a *App) Run() {
 	// Register ingestion pipeline + frontend fallback as catch-all.
 	pipeline := httpserver.NewIngestionPipeline(a.registry.Handlers(), eventService, frontendFS)
 	mux.Handle("/", pipeline)
+
+	// Start MCP server if enabled.
+	if a.cfg.MCP.Enabled {
+		mcpSrv := mcpserver.NewServer(a.db, store)
+		switch a.cfg.MCP.Transport {
+		case "http":
+			go func() {
+				if err := mcpserver.StartHTTP(ctx, a.cfg.MCP.Addr, a.cfg.MCP.AuthToken, mcpSrv); err != nil {
+					slog.Error("MCP HTTP server error", "err", err)
+				}
+			}()
+		default: // "socket"
+			go func() {
+				if err := mcpserver.StartListener(ctx, a.cfg.MCP.SocketPath, mcpSrv); err != nil {
+					slog.Error("MCP listener error", "err", err)
+				}
+			}()
+		}
+	}
 
 	// Start TCP servers.
 	tcpManager := tcp.NewManager(a.registry.TCPServers(), a.metrics)

@@ -1,0 +1,40 @@
+# MCP e2e test compose.
+# Run: make e2e-mcp (which copies the MCP SDK first, then runs this)
+services:
+  buggregator:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    environment:
+      MCP_ENABLED: "true"
+      MCP_TRANSPORT: http
+      MCP_ADDR: ":8001"
+      MCP_AUTH_TOKEN: "e2e-test-token"
+      CLIENT_SUPPORTED_EVENTS: "sentry,profiler,ray,inspector,http-dump,sms"
+    networks:
+      - mcp-test
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/api/version"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  mcp-test:
+    build:
+      context: .
+      dockerfile: e2e/mcp/Dockerfile
+    depends_on:
+      buggregator:
+        condition: service_healthy
+    environment:
+      BUGGREGATOR_URL: http://buggregator:8000
+      MCP_URL: http://buggregator:8001
+      MCP_AUTH_TOKEN: "e2e-test-token"
+    networks:
+      - mcp-test
+
+networks:
+  mcp-test:

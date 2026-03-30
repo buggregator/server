@@ -103,6 +103,14 @@ tcp:
   var-dumper:
     addr: ":9912"
 
+# MCP — AI assistant integration (disabled by default)
+mcp:
+  enabled: true
+  transport: socket              # "socket" or "http"
+  socket_path: /tmp/buggregator-mcp.sock
+  # addr: ":8001"               # for transport=http
+  # auth_token: "secret"        # Bearer token for HTTP transport
+
 # Enable/disable modules (all enabled by default)
 modules:
   sentry: true
@@ -159,28 +167,35 @@ Config file values support `${VAR}` and `${VAR:default}` syntax for environment 
 ## Architecture
 
 ```
-┌─────────────────────────────────────┐
-│          Single Go Binary           │
-│                                     │
-│  HTTP :8000                         │
-│  ├── REST API (events CRUD)         │
-│  ├── Ingestion Pipeline             │
-│  │   ├── Sentry  (X-Sentry-Auth)    │
-│  │   ├── Ray     (User-Agent: Ray)  │
-│  │   ├── Inspector (X-Inspector-*)  │
-│  │   ├── Profiler  (X-Profiler-*)   │
-│  │   ├── SMS     (/sms endpoint)    │
-│  │   └── HttpDump (catch-all)       │
-│  ├── WebSocket (/connection/ws)     │
-│  │   └── Centrifugo v5 protocol     │
-│  └── Frontend (embedded SPA)        │
-│                                     │
-│  TCP :9912 — VarDumper → PHP parser │
-│  TCP :9913 — Monolog (ndjson)       │
-│  TCP :1025 — SMTP (go-smtp)        │
-│                                     │
-│  SQLite (in-memory or file)         │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│            Single Go Binary              │
+│                                          │
+│  HTTP :8000                              │
+│  ├── REST API (events CRUD)              │
+│  ├── Ingestion Pipeline                  │
+│  │   ├── Sentry  (X-Sentry-Auth)         │
+│  │   ├── Ray     (User-Agent: Ray)       │
+│  │   ├── Inspector (X-Inspector-*)       │
+│  │   ├── Profiler  (X-Profiler-*)        │
+│  │   ├── SMS     (/sms endpoint)         │
+│  │   └── HttpDump (catch-all)            │
+│  ├── WebSocket (/connection/ws)          │
+│  │   └── Centrifugo v5 protocol          │
+│  └── Frontend (embedded SPA)             │
+│                                          │
+│  TCP :9912 — VarDumper → PHP parser      │
+│  TCP :9913 — Monolog (ndjson)            │
+│  TCP :1025 — SMTP (go-smtp)             │
+│                                          │
+│  MCP (Unix socket)                       │
+│  └── AI tool integration (8 tools)       │
+│      ├── events_list / event_get / delete│
+│      ├── profiler_summary / top / graph  │
+│      ├── sentry_event                    │
+│      └── vardump_get                     │
+│                                          │
+│  SQLite (in-memory or file)              │
+└──────────────────────────────────────────┘
 ```
 
 ### Event Detection
@@ -240,6 +255,124 @@ HTTP_DUMP_ENDPOINT=http://http-dump@localhost:8000
 SMS_ENDPOINT=http://localhost:8000/sms
 ```
 
+## MCP (Model Context Protocol)
+
+Buggregator includes a built-in MCP server that lets AI assistants (Claude Code, Cursor, etc.) query and analyze debugging data directly.
+
+### How It Works
+
+The main process listens on a Unix socket for MCP connections. A thin proxy subcommand bridges stdio to that socket:
+
+```
+AI Assistant ──stdio──▶ buggregator mcp ──unix socket──▶ buggregator (main process)
+```
+
+Both share the same in-memory data — the AI sees exactly what you see in the web UI.
+
+### Setup
+
+1. Start Buggregator as usual:
+   ```bash
+   ./buggregator
+   ```
+
+2. Configure your AI tool:
+
+   **Claude Code** (`~/.claude.json` or project settings):
+   ```json
+   {
+     "mcpServers": {
+       "buggregator": {
+         "command": "./buggregator",
+         "args": ["mcp"]
+       }
+     }
+   }
+   ```
+
+   **Cursor** (`.cursor/mcp.json`):
+   ```json
+   {
+     "mcpServers": {
+       "buggregator": {
+         "command": "./buggregator",
+         "args": ["mcp"]
+       }
+     }
+   }
+   ```
+
+### Available Tools
+
+#### General
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `events_list` | List captured events | `type` (sentry, profiler, var-dump, ...), `project`, `limit` (default 20, max 100) |
+| `event_get` | Get full event payload | `uuid` |
+| `event_delete` | Delete an event | `uuid` |
+
+#### Profiler
+
+Tools for analyzing XHProf profiling data — find bottlenecks, understand call chains, optimize performance.
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `profiler_summary` | Quick overview: totals, slowest function, memory hotspot, most called | `uuid` |
+| `profiler_top` | Top functions sorted by metric | `uuid`, `metric` (cpu/wt/mu/pmu/ct + excl_ variants), `limit` (default 50, 5–200) |
+| `profiler_call_graph` | Filtered call graph — shows only significant paths | `uuid`, `metric`, `percentage` (min importance, default 1%), `threshold` |
+
+**Example prompts:**
+- "What's the slowest function in the latest profile?"
+- "Show me top 10 functions by exclusive wall time"
+- "Show the call graph filtering out everything below 5% CPU"
+
+#### Sentry
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `sentry_event` | Structured error details: exception chain, stack traces, tags | `uuid` |
+
+**Example prompts:**
+- "What errors came in today? Analyze the latest Sentry event and suggest a fix"
+- "Show me the stack trace for error XYZ"
+
+#### VarDumper
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `vardump_get` | Variable value with HTML stripped | `uuid` |
+
+**Example prompts:**
+- "What's the value of the last dumped variable?"
+
+### Configuration
+
+MCP is disabled by default. Enable it in config or via environment variables:
+
+```yaml
+# buggregator.yaml
+mcp:
+  enabled: true
+  transport: socket              # "socket" (Unix socket) or "http" (HTTP SSE for remote)
+  socket_path: /tmp/buggregator-mcp.sock  # for transport=socket
+  addr: ":8001"                  # for transport=http
+  auth_token: "my-secret-token"  # Bearer token auth for HTTP transport (optional)
+```
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `MCP_ENABLED` | `false` | Enable MCP server |
+| `MCP_TRANSPORT` | `socket` | `socket` (local) or `http` (remote) |
+| `MCP_SOCKET_PATH` | `/tmp/buggregator-mcp.sock` | Unix socket path |
+| `MCP_ADDR` | `:8001` | HTTP listen address (for `transport=http`) |
+| `MCP_AUTH_TOKEN` | — | Bearer token (for `transport=http`) |
+
+**Transport options:**
+
+- **`socket`** (default) — Unix socket, for local AI tools (Claude Code, Cursor). Use `buggregator mcp` to bridge stdio.
+- **`http`** — HTTP SSE, for remote access when Buggregator runs in infrastructure. Supports bearer token auth. AI tools connect directly via HTTP URL.
+
 ## API
 
 ### Events
@@ -278,6 +411,7 @@ GET /connection/websocket        WebSocket (Centrifugo v5 protocol)
 | [go-smtp](https://github.com/emersion/go-smtp) | SMTP server |
 | [gopkg.in/yaml.v3](https://pkg.go.dev/gopkg.in/yaml.v3) | YAML config |
 | [prometheus/client_golang](https://github.com/prometheus/client_golang) | Prometheus metrics |
+| [modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) | MCP server (AI tool integration) |
 
 ## License
 
