@@ -11,6 +11,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// AuthConfig controls authentication via OAuth2/OIDC providers.
+type AuthConfig struct {
+	Enabled      bool   `yaml:"enabled"`       // Enable authentication (default: false).
+	Provider     string `yaml:"provider"`      // Provider type: "auth0", "google", "github", "keycloak", "gitlab", "oidc" (default: "oidc").
+	ProviderURL  string `yaml:"provider_url"`  // OIDC issuer URL (e.g., https://xxx.us.auth0.com). Used for OIDC discovery.
+	ClientID     string `yaml:"client_id"`     // OAuth2 client ID.
+	ClientSecret string `yaml:"client_secret"` // OAuth2 client secret.
+	CallbackURL  string `yaml:"callback_url"`  // OAuth2 callback URL (e.g., http://localhost:8000/auth/sso/callback).
+	Scopes       string `yaml:"scopes"`        // Comma-separated scopes (default: "openid,email,profile").
+	JWTSecret    string `yaml:"jwt_secret"`    // Secret for signing internal JWT tokens. Required when auth is enabled.
+}
+
 // Config holds application configuration.
 type Config struct {
 	Server   ServerConfig    `yaml:"server"`
@@ -19,6 +31,7 @@ type Config struct {
 	TCP      TCPConfig       `yaml:"tcp"`
 	Metrics  MetricsConfig   `yaml:"metrics"`
 	MCP      MCPConfig       `yaml:"mcp"`
+	Auth     AuthConfig      `yaml:"auth"`
 	Modules  ModulesConfig   `yaml:"modules"`
 	Webhooks []WebhookDef    `yaml:"webhooks"`
 	Projects []ProjectDef    `yaml:"projects"`
@@ -179,6 +192,16 @@ func LoadConfig() Config {
 	cfg.MCP.SocketPath = coalesce(os.Getenv("MCP_SOCKET_PATH"), fileCfg.MCP.SocketPath, "/tmp/buggregator-mcp.sock")
 	cfg.MCP.Addr = coalesce(os.Getenv("MCP_ADDR"), fileCfg.MCP.Addr, ":8001")
 	cfg.MCP.AuthToken = coalesce(os.Getenv("MCP_AUTH_TOKEN"), fileCfg.MCP.AuthToken)
+
+	// Auth.
+	cfg.Auth.Enabled = fileCfg.Auth.Enabled || os.Getenv("AUTH_ENABLED") == "true"
+	cfg.Auth.Provider = coalesce(os.Getenv("AUTH_PROVIDER"), fileCfg.Auth.Provider, "oidc")
+	cfg.Auth.ProviderURL = coalesce(os.Getenv("AUTH_PROVIDER_URL"), fileCfg.Auth.ProviderURL)
+	cfg.Auth.ClientID = coalesce(os.Getenv("AUTH_CLIENT_ID"), fileCfg.Auth.ClientID)
+	cfg.Auth.ClientSecret = coalesce(os.Getenv("AUTH_CLIENT_SECRET"), fileCfg.Auth.ClientSecret)
+	cfg.Auth.CallbackURL = coalesce(os.Getenv("AUTH_CALLBACK_URL"), fileCfg.Auth.CallbackURL)
+	cfg.Auth.Scopes = coalesce(os.Getenv("AUTH_SCOPES"), fileCfg.Auth.Scopes, "openid,email,profile")
+	cfg.Auth.JWTSecret = coalesce(os.Getenv("AUTH_JWT_SECRET"), fileCfg.Auth.JWTSecret)
 
 	// Modules: merge from file config, env override.
 	cfg.Modules = fileCfg.Modules
