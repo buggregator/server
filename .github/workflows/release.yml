@@ -130,18 +130,15 @@ jobs:
 
       # Build VarDumper PHP parser and combine with cached micro.sfx
       - name: Build VarDumper PHP binary
-        shell: pwsh
+        shell: bash
         run: |
           cd php/vardumper
           composer install --no-dev --optimize-autoloader --quiet
-          Invoke-WebRequest -Uri "https://github.com/box-project/box/releases/download/4.6.6/box.phar" -OutFile "box.phar"
-          php box.phar compile --no-parallel --allow-composer-check-failure
-          if (-not (Test-Path "vardumper-parser.phar")) {
-            Write-Error "Failed to build vardumper-parser.phar"
-            exit 1
-          }
-          New-Item -ItemType Directory -Force -Path "../../modules/vardumper/bin"
-          .spc/spc.exe micro:combine vardumper-parser.phar --output="../../modules/vardumper/bin/vardumper-parser-windows-amd64.exe"
+          curl -sL https://github.com/box-project/box/releases/download/4.6.6/box.phar -o box.phar
+          php box.phar compile --no-parallel
+          ls -la vardumper-parser.phar
+          mkdir -p ../../modules/vardumper/bin
+          .spc/spc.exe micro:combine vardumper-parser.phar --output=../../modules/vardumper/bin/vardumper-parser-windows-amd64.exe
 
       # Build Go binary
       - name: Build
