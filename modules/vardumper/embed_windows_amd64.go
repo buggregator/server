@@ -2,6 +2,7 @@
 
 package vardumper
 
-// phpBinary is empty on Windows — static-php does not provide micro.sfx for Windows.
-// The VarDumper module will fail to start and should be disabled on this platform.
+import _ "embed"
+
+//go:embed bin/vardumper-parser-windows-amd64.exe
 var phpBinary []byte

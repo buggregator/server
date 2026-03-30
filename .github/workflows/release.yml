@@ -14,7 +14,7 @@ env:
   PHP_VERSION: "8.4.19"
 
 jobs:
-  build:
+  build-unix:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -23,27 +23,18 @@ jobs:
             goarch: amd64
             spc_os: linux
             spc_arch: x86_64
-            ext: ""
           - goos: linux
             goarch: arm64
             spc_os: linux
             spc_arch: aarch64
-            ext: ""
           - goos: darwin
             goarch: amd64
             spc_os: macos
             spc_arch: x86_64
-            ext: ""
           - goos: darwin
             goarch: arm64
             spc_os: macos
             spc_arch: aarch64
-            ext: ""
-          - goos: windows
-            goarch: amd64
-            spc_os: ""
-            spc_arch: ""
-            ext: ".exe"
 
     steps:
       - uses: actions/checkout@v4
@@ -65,25 +56,19 @@ jobs:
           curl -sL -H "Accept: application/octet-stream" "$ASSET_URL" -o /tmp/frontend.zip
           unzip -qo /tmp/frontend.zip -d internal/frontend/dist/
 
-      # Build PHP VarDumper parser
+      # Build PHP VarDumper parser using pre-built micro.sfx from static-php CDN
       - name: Build VarDumper PHP binary
         run: |
-          mkdir -p modules/vardumper/bin
-          if [ "${{ matrix.spc_os }}" = "" ]; then
-            # No static-php micro.sfx for this platform — create placeholder.
-            echo "placeholder" > modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
-            echo "VarDumper PHP binary not available for ${{ matrix.goos }}/${{ matrix.goarch }} — placeholder created"
-          else
-            cd php/vardumper
-            composer install --no-dev --optimize-autoloader --quiet
-            curl -sL https://github.com/box-project/box/releases/download/4.6.6/box.phar -o box.phar
-            php box.phar compile --quiet
-            curl -sL "https://dl.static-php.dev/static-php-cli/common/php-${PHP_VERSION}-micro-${{ matrix.spc_os }}-${{ matrix.spc_arch }}.tar.gz" \
-              -o /tmp/micro.tar.gz
-            mkdir -p /tmp/micro && tar -xzf /tmp/micro.tar.gz -C /tmp/micro/
-            cat /tmp/micro/micro.sfx vardumper-parser.phar > ../../modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}
-            chmod +x ../../modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}
-          fi
+          cd php/vardumper
+          composer install --no-dev --optimize-autoloader --quiet
+          curl -sL https://github.com/box-project/box/releases/download/4.6.6/box.phar -o box.phar
+          php box.phar compile --quiet
+          curl -sL "https://dl.static-php.dev/static-php-cli/common/php-${PHP_VERSION}-micro-${{ matrix.spc_os }}-${{ matrix.spc_arch }}.tar.gz" \
+            -o /tmp/micro.tar.gz
+          mkdir -p /tmp/micro && tar -xzf /tmp/micro.tar.gz -C /tmp/micro/
+          mkdir -p ../../modules/vardumper/bin
+          cat /tmp/micro/micro.sfx vardumper-parser.phar > ../../modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}
+          chmod +x ../../modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}
 
       # Build Go binary
       - name: Build
@@ -92,17 +77,87 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
         run: |
-          go build -ldflags="-s -w" -o buggregator-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }} ./cmd/buggregator
+          go build -ldflags="-s -w" -o buggregator-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/buggregator
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: buggregator-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: buggregator-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+          path: buggregator-${{ matrix.goos }}-${{ matrix.goarch }}
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+
+      # Download frontend
+      - name: Download frontend
+        shell: bash
+        run: |
+          mkdir -p internal/frontend/dist
+          ASSET_URL=$(curl -s "https://api.github.com/repos/buggregator/frontend/releases/tags/${FRONTEND_VERSION}" \
+            | jq -r '.assets[0].url')
+          curl -sL -H "Accept: application/octet-stream" "$ASSET_URL" -o /tmp/frontend.zip
+          unzip -qo /tmp/frontend.zip -d internal/frontend/dist/
+
+      # Cache the Windows micro.sfx built by SPC (avoids rebuilding every release)
+      - name: Cache Windows micro.sfx
+        id: cache-micro
+        uses: actions/cache@v4
+        with:
+          path: php/vardumper/.spc
+          key: windows-micro-sfx-php${{ env.PHP_VERSION }}
+
+      # Build micro.sfx only if not cached
+      - name: Build Windows micro.sfx
+        if: steps.cache-micro.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          cd php/vardumper
+          New-Item -ItemType Directory -Force -Path ".spc"
+          Invoke-WebRequest -Uri "https://dl.static-php.dev/static-php-cli/spc-bin/nightly/spc-windows-x64.exe" -OutFile ".spc/spc.exe"
+          .spc/spc.exe download micro --for-extensions=ctype,mbstring,phar,tokenizer,filter --with-php=8.4 --prefer-pre-built
+          .spc/spc.exe doctor --auto-fix
+          .spc/spc.exe build "ctype,mbstring,phar,tokenizer,filter" --build-micro
+
+      # Build VarDumper PHP parser and combine with cached micro.sfx
+      - name: Build VarDumper PHP binary
+        shell: pwsh
+        run: |
+          cd php/vardumper
+          composer install --no-dev --optimize-autoloader --quiet
+          Invoke-WebRequest -Uri "https://github.com/box-project/box/releases/download/4.6.6/box.phar" -OutFile "box.phar"
+          php box.phar compile --quiet
+          New-Item -ItemType Directory -Force -Path "../../modules/vardumper/bin"
+          .spc/spc.exe micro:combine vardumper-parser.phar --output="../../modules/vardumper/bin/vardumper-parser-windows-amd64.exe"
+
+      # Build Go binary
+      - name: Build
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+        shell: bash
+        run: |
+          go build -ldflags="-s -w" -o buggregator-windows-amd64.exe ./cmd/buggregator
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: buggregator-windows-amd64
+          path: buggregator-windows-amd64.exe
 
   docker:
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-unix
     steps:
       - uses: actions/checkout@v4
 
@@ -135,7 +190,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build-unix, build-windows]
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
