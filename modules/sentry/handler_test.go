@@ -169,7 +169,7 @@ func TestHandleEnvelope(t *testing.T) {
 		}
 	})
 
-	t.Run("envelope without valid payload fallback", func(t *testing.T) {
+	t.Run("envelope without valid payload returns nil", func(t *testing.T) {
 		body := []byte(`{"event_id":"test-id"}
 {"type":"event"}
 not valid json`)
@@ -177,11 +177,10 @@ not valid json`)
 		if err != nil {
 			t.Fatal(err)
 		}
-		// Should fallback to wrapping entire envelope
-		var p map[string]any
-		json.Unmarshal(inc.Payload, &p)
-		if _, ok := p["envelope"]; !ok {
-			t.Error("expected fallback envelope wrapping")
+		// Envelopes with no valid JSON payload return nil — the handler matched
+		// but there's nothing to store in the canonical events table.
+		if inc != nil {
+			t.Errorf("expected nil incoming for invalid payload, got %+v", inc)
 		}
 	})
 }
