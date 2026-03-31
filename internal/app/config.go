@@ -160,7 +160,7 @@ func LoadConfig() Config {
 	var configFile string
 	flag.StringVar(&configFile, "config", "", "Path to config file (buggregator.yaml)")
 
-	cfg := Config{Version: "1.0.0"}
+	cfg := Config{}
 
 	flag.StringVar(&cfg.Server.Addr, "http-addr", "", "HTTP listen address")
 	flag.StringVar(&cfg.Database.DSN, "db", "", "SQLite DSN")

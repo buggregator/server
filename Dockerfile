@@ -52,7 +52,8 @@ COPY --from=php-builder /php/vardumper-parser modules/vardumper/bin/vardumper-pa
 # Copy frontend into the embed location
 COPY --from=frontend /frontend/ internal/frontend/dist/
 
-RUN CGO_ENABLED=0 go build -o buggregator ./cmd/buggregator
+ARG VERSION=dev
+RUN CGO_ENABLED=0 go build -ldflags="-s -w -X main.version=${VERSION}" -o buggregator ./cmd/buggregator
 
 # Stage 4: Final minimal image
 FROM alpine:3.20

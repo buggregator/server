@@ -24,6 +24,9 @@ import (
 	"github.com/buggregator/go-buggregator/modules/webhooks"
 )
 
+// version is set at build time via -ldflags "-X main.version=...".
+var version = "dev"
+
 func main() {
 	// MCP proxy subcommand: "buggregator mcp" bridges stdio to the running instance.
 	if len(os.Args) > 1 && os.Args[1] == "mcp" {
@@ -41,6 +44,7 @@ func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
 
 	cfg := app.LoadConfig()
+	cfg.Version = version
 
 	db, err := storage.Open(cfg.DatabaseDSN)
 	if err != nil {
