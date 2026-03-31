@@ -128,6 +128,99 @@ func TestDecodeContent(t *testing.T) {
 	})
 }
 
+func TestConvertToUTF8(t *testing.T) {
+	t.Run("utf-8 passthrough", func(t *testing.T) {
+		input := []byte("Привет мир")
+		got := convertToUTF8(input, "utf-8")
+		if string(got) != "Привет мир" {
+			t.Errorf("got %q", got)
+		}
+	})
+
+	t.Run("empty charset passthrough", func(t *testing.T) {
+		input := []byte("hello")
+		got := convertToUTF8(input, "")
+		if string(got) != "hello" {
+			t.Errorf("got %q", got)
+		}
+	})
+
+	t.Run("windows-1250 czech", func(t *testing.T) {
+		// "týmu se vám ozve" in windows-1250
+		win1250 := []byte{0x74, 0xFD, 0x6D, 0x75, 0x20, 0x73, 0x65, 0x20, 0x76, 0xE1, 0x6D, 0x20, 0x6F, 0x7A, 0x76, 0x65}
+		got := convertToUTF8(win1250, "windows-1250")
+		want := "týmu se vám ozve"
+		if string(got) != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("iso-8859-1 latin", func(t *testing.T) {
+		// "café" in iso-8859-1: 0x63 0x61 0x66 0xe9
+		latin1 := []byte{0x63, 0x61, 0x66, 0xe9}
+		got := convertToUTF8(latin1, "iso-8859-1")
+		if string(got) != "café" {
+			t.Errorf("got %q, want %q", got, "café")
+		}
+	})
+
+	t.Run("unknown charset passthrough", func(t *testing.T) {
+		input := []byte("data")
+		got := convertToUTF8(input, "x-nonexistent-999")
+		if string(got) != "data" {
+			t.Errorf("got %q", got)
+		}
+	})
+}
+
+func TestParseEmail_CharsetConversion(t *testing.T) {
+	t.Run("single part windows-1250", func(t *testing.T) {
+		// "café" in windows-1250: 0x63 0x61 0x66 0xe9
+		body := string([]byte{0x63, 0x61, 0x66, 0xe9})
+		raw := []byte("From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: Test\r\nContent-Type: text/plain; charset=windows-1250\r\n\r\n" + body)
+
+		parsed, _, err := parseEmail(raw, []string{"recipient@example.com"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if parsed.Text != "café" {
+			t.Errorf("Text = %q, want %q", parsed.Text, "café")
+		}
+	})
+
+	t.Run("single part html iso-8859-2", func(t *testing.T) {
+		// "Vaše zpráva" in iso-8859-2: V=56 a=61 š=B9 e=65 sp=20 z=7A p=70 r=72 á=E1 v=76 a=61
+		body := string([]byte{0x56, 0x61, 0xB9, 0x65, 0x20, 0x7A, 0x70, 0x72, 0xE1, 0x76, 0x61})
+		raw := []byte("From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: Test\r\nContent-Type: text/html; charset=iso-8859-2\r\n\r\n" + body)
+
+		parsed, _, err := parseEmail(raw, []string{"recipient@example.com"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := "Vaše zpráva"
+		if parsed.HTML != want {
+			t.Errorf("HTML = %q, want %q", parsed.HTML, want)
+		}
+	})
+
+	t.Run("multipart with charset", func(t *testing.T) {
+		// "café" in iso-8859-1
+		body := string([]byte{0x63, 0x61, 0x66, 0xe9})
+		raw := []byte("From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: Test\r\nContent-Type: multipart/alternative; boundary=\"bnd\"\r\n\r\n--bnd\r\nContent-Type: text/plain; charset=iso-8859-1\r\n\r\n" + body + "\r\n--bnd\r\nContent-Type: text/html; charset=iso-8859-1\r\n\r\n<p>" + body + "</p>\r\n--bnd--")
+
+		parsed, _, err := parseEmail(raw, []string{"recipient@example.com"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(parsed.Text, "café") {
+			t.Errorf("Text = %q, want to contain %q", parsed.Text, "café")
+		}
+		if !strings.Contains(parsed.HTML, "café") {
+			t.Errorf("HTML = %q, want to contain %q", parsed.HTML, "café")
+		}
+	})
+}
+
 func TestParseAddresses(t *testing.T) {
 	t.Run("name and email", func(t *testing.T) {
 		header := make(map[string][]string)
