@@ -19,6 +19,7 @@ import (
 	"github.com/buggregator/go-buggregator/internal/event"
 	"github.com/buggregator/go-buggregator/internal/storage"
 	gosmtp "github.com/emersion/go-smtp"
+	"golang.org/x/text/encoding/ianaindex"
 )
 
 // smtpServer wraps go-smtp and implements tcp.Starter.
@@ -226,6 +227,7 @@ func parseEmail(raw []byte, recipients []string) (*ParsedEmail, []parsedAttachme
 	if err != nil || !strings.HasPrefix(mediaType, "multipart/") {
 		body, _ := io.ReadAll(msg.Body)
 		decoded := decodeContent(body, msg.Header.Get("Content-Transfer-Encoding"))
+		decoded = convertToUTF8(decoded, params["charset"])
 		if strings.HasPrefix(mediaType, "text/html") {
 			parsed.HTML = string(decoded)
 		} else {
@@ -307,6 +309,7 @@ func processPart(part *multipart.Part, parsed *ParsedEmail, atts *[]parsedAttach
 	// Body content.
 	body, _ := io.ReadAll(part)
 	decoded := decodeContent(body, part.Header.Get("Content-Transfer-Encoding"))
+	decoded = convertToUTF8(decoded, params["charset"])
 
 	if strings.HasPrefix(mediaType, "text/html") {
 		parsed.HTML += string(decoded)
@@ -344,4 +347,22 @@ func decodeContent(data []byte, encoding string) []byte {
 	default:
 		return data
 	}
+}
+
+// convertToUTF8 converts data from the given charset to UTF-8.
+// If charset is empty, "utf-8", or "us-ascii", the data is returned as-is.
+func convertToUTF8(data []byte, charset string) []byte {
+	charset = strings.ToLower(strings.TrimSpace(charset))
+	if charset == "" || charset == "utf-8" || charset == "us-ascii" {
+		return data
+	}
+	enc, err := ianaindex.MIME.Encoding(charset)
+	if err != nil || enc == nil {
+		return data
+	}
+	decoded, err := enc.NewDecoder().Bytes(data)
+	if err != nil {
+		return data
+	}
+	return decoded
 }
