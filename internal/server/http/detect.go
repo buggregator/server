@@ -36,7 +36,15 @@ func detectEventType(r *http.Request) *DetectedEvent {
 		}
 	}
 
-	// Method 3: Basic Auth (Authorization: Basic base64(type:project))
+	// Method 3: SDK-specific headers that identify the event type.
+	if r.Header.Get("X-Sentry-Auth") != "" || strings.HasSuffix(r.URL.Path, "/envelope") || strings.HasSuffix(r.URL.Path, "/store") {
+		return &DetectedEvent{Type: "sentry"}
+	}
+	if r.Header.Get("X-Inspector-Key") != "" || r.Header.Get("X-Inspector-Version") != "" {
+		return &DetectedEvent{Type: "inspector"}
+	}
+
+	// Method 4: Basic Auth (Authorization: Basic base64(type:project))
 	if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Basic ") {
 		decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(auth, "Basic "))
 		if err == nil {

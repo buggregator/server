@@ -94,6 +94,38 @@ func TestDetectEventType(t *testing.T) {
 			wantNil: true,
 		},
 		{
+			name: "X-Sentry-Auth header detects sentry",
+			makeRequest: func() *nethttp.Request {
+				r := httptest.NewRequest("POST", "http://localhost/api/1/envelope/", nil)
+				r.Header.Set("X-Sentry-Auth", "Sentry sentry_key=abc")
+				return r
+			},
+			wantType: "sentry",
+		},
+		{
+			name: "envelope path suffix detects sentry",
+			makeRequest: func() *nethttp.Request {
+				return httptest.NewRequest("POST", "http://localhost/api/1/envelope", nil)
+			},
+			wantType: "sentry",
+		},
+		{
+			name: "store path suffix detects sentry",
+			makeRequest: func() *nethttp.Request {
+				return httptest.NewRequest("POST", "http://localhost/api/1/store", nil)
+			},
+			wantType: "sentry",
+		},
+		{
+			name: "X-Inspector-Key header detects inspector",
+			makeRequest: func() *nethttp.Request {
+				r := httptest.NewRequest("POST", "http://localhost/", nil)
+				r.Header.Set("X-Inspector-Key", "test-key")
+				return r
+			},
+			wantType: "inspector",
+		},
+		{
 			name: "URI userinfo takes priority over headers",
 			makeRequest: func() *nethttp.Request {
 				r := httptest.NewRequest("POST", "http://localhost/", nil)

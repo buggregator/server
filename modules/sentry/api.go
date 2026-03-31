@@ -15,6 +15,30 @@ func registerAPI(mux *http.ServeMux, db *sql.DB) {
 	mux.HandleFunc("GET /api/sentry/logs", handleLogsList(db))
 	mux.HandleFunc("GET /api/sentry/service-map", handleServiceMap(db))
 	mux.HandleFunc("GET /api/sentry/counts", handleCounts(db))
+	mux.HandleFunc("DELETE /api/sentry/all", handleClearAll(db))
+}
+
+// handleClearAll deletes all data from sentry structured tables.
+func handleClearAll(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Order matters: child tables first (FK cascades handle some, but be explicit).
+		tables := []string{
+			"sentry_breadcrumbs",
+			"sentry_exceptions",
+			"sentry_error_events",
+			"sentry_spans",
+			"sentry_transactions",
+			"sentry_traces",
+			"sentry_logs",
+		}
+		for _, t := range tables {
+			if _, err := db.Exec("DELETE FROM " + t); err != nil {
+				apiError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+		apiJSON(w, map[string]any{"status": true})
+	}
 }
 
 // pagination extracts page/limit from query params with defaults.

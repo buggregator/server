@@ -8,6 +8,8 @@
 # HTTP server
 server:
   addr: ${HTTP_ADDR::8000}
+  cors_origins:                           # Allowed CORS origins. Default: ["*"] (all origins).
+    - "*"                                 # Use specific origins to restrict: ["http://localhost:3000"]
 
 # Database
 database:

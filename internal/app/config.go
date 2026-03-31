@@ -70,7 +70,8 @@ type MetricsConfig struct {
 }
 
 type ServerConfig struct {
-	Addr string `yaml:"addr"`
+	Addr        string   `yaml:"addr"`
+	CORSOrigins []string `yaml:"cors_origins"` // Allowed CORS origins. Empty = CORS disabled. Use ["*"] to allow all.
 }
 
 type StorageConfig struct {
@@ -202,6 +203,15 @@ func LoadConfig() Config {
 	cfg.Auth.CallbackURL = coalesce(os.Getenv("AUTH_CALLBACK_URL"), fileCfg.Auth.CallbackURL)
 	cfg.Auth.Scopes = coalesce(os.Getenv("AUTH_SCOPES"), fileCfg.Auth.Scopes, "openid,email,profile")
 	cfg.Auth.JWTSecret = coalesce(os.Getenv("AUTH_JWT_SECRET"), fileCfg.Auth.JWTSecret)
+
+	// CORS origins.
+	cfg.Server.CORSOrigins = fileCfg.Server.CORSOrigins
+	if env := os.Getenv("CORS_ORIGINS"); env != "" {
+		cfg.Server.CORSOrigins = strings.Split(env, ",")
+	}
+	if len(cfg.Server.CORSOrigins) == 0 {
+		cfg.Server.CORSOrigins = []string{"*"}
+	}
 
 	// Modules: merge from file config, env override.
 	cfg.Modules = fileCfg.Modules

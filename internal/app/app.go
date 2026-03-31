@@ -210,10 +210,13 @@ func (a *App) Run() {
 	// Start WebSocket hub.
 	go a.hub.Run(ctx)
 
-	// Start HTTP server (with optional metrics middleware).
+	// Start HTTP server (with CORS and optional metrics middleware).
 	var handler http.Handler = mux
+	if len(a.cfg.Server.CORSOrigins) > 0 {
+		handler = httpserver.CORSMiddleware(handler, a.cfg.Server.CORSOrigins)
+	}
 	if a.metrics != nil {
-		handler = metrics.HTTPMiddleware(mux, a.metrics)
+		handler = metrics.HTTPMiddleware(handler, a.metrics)
 	}
 
 	srv := &http.Server{Addr: a.cfg.HTTPAddr, Handler: handler}
