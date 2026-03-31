@@ -1,4 +1,4 @@
-FRONTEND_VERSION ?= 1.29.1
+FRONTEND_VERSION ?= 1.31.0
 FRONTEND_URL = https://github.com/buggregator/frontend/releases/download/$(FRONTEND_VERSION)/frontend-$(FRONTEND_VERSION).zip
 FRONTEND_DIR = internal/frontend/dist
 BINARY = buggregator

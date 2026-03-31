@@ -10,7 +10,7 @@ permissions:
   packages: write
 
 env:
-  FRONTEND_VERSION: "1.30.0"
+  FRONTEND_VERSION: "1.31.0"
   PHP_VERSION: "8.4.19"
 
 jobs:

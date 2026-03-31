@@ -25,7 +25,7 @@ RUN ARCH=$(case ${TARGETARCH} in amd64) echo "x86_64";; arm64) echo "aarch64";; 
 
 # Stage 2: Download frontend
 FROM alpine:3.20 AS frontend
-ARG FRONTEND_VERSION=1.29.1
+ARG FRONTEND_VERSION=1.31.0
 RUN apk add --no-cache curl unzip \
     && mkdir -p /frontend \
     && curl -sL "https://github.com/buggregator/frontend/releases/download/${FRONTEND_VERSION}/frontend-${FRONTEND_VERSION}.zip" -o /tmp/fe.zip \
