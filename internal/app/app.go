@@ -162,11 +162,19 @@ func (a *App) Run() {
 	mux.HandleFunc("GET /connection/websocket", a.hub.HandleUpgrade)
 	mux.HandleFunc("GET /ws", a.hub.HandleUpgrade)
 
-	// Prepare embedded frontend filesystem.
-	frontendFS, err := fs.Sub(frontend.Dist, "dist")
-	if err != nil {
-		slog.Error("failed to load frontend", "err", err)
-		os.Exit(1)
+	// Prepare frontend filesystem.
+	// When FRONTEND_DIR is set, serve from disk (for development); otherwise use embedded build.
+	var frontendFS fs.FS
+	if dir := os.Getenv("FRONTEND_DIR"); dir != "" {
+		slog.Info("serving frontend from disk", "dir", dir)
+		frontendFS = os.DirFS(dir)
+	} else {
+		var err error
+		frontendFS, err = fs.Sub(frontend.Dist, "dist")
+		if err != nil {
+			slog.Error("failed to load frontend", "err", err)
+			os.Exit(1)
+		}
 	}
 
 	// Register ingestion pipeline + frontend fallback as catch-all.

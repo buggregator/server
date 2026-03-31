@@ -151,11 +151,13 @@ func TestExtractProject(t *testing.T) {
 }
 
 func TestHandleEnvelope(t *testing.T) {
+	h := &handler{} // no db — structured storage silently skipped
+
 	t.Run("valid envelope", func(t *testing.T) {
 		body := []byte(`{"event_id":"test-id"}
 {"type":"event"}
 {"message":"payload data"}`)
-		inc, err := handleEnvelope(body, "proj")
+		inc, err := h.handleEnvelope(body, "proj")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -171,7 +173,7 @@ func TestHandleEnvelope(t *testing.T) {
 		body := []byte(`{"event_id":"test-id"}
 {"type":"event"}
 not valid json`)
-		inc, err := handleEnvelope(body, "")
+		inc, err := h.handleEnvelope(body, "")
 		if err != nil {
 			t.Fatal(err)
 		}
