@@ -162,11 +162,19 @@ func (a *App) Run() {
 	mux.HandleFunc("GET /connection/websocket", a.hub.HandleUpgrade)
 	mux.HandleFunc("GET /ws", a.hub.HandleUpgrade)
 
-	// Prepare embedded frontend filesystem.
-	frontendFS, err := fs.Sub(frontend.Dist, "dist")
-	if err != nil {
-		slog.Error("failed to load frontend", "err", err)
-		os.Exit(1)
+	// Prepare frontend filesystem.
+	// When FRONTEND_DIR is set, serve from disk (for development); otherwise use embedded build.
+	var frontendFS fs.FS
+	if dir := os.Getenv("FRONTEND_DIR"); dir != "" {
+		slog.Info("serving frontend from disk", "dir", dir)
+		frontendFS = os.DirFS(dir)
+	} else {
+		var err error
+		frontendFS, err = fs.Sub(frontend.Dist, "dist")
+		if err != nil {
+			slog.Error("failed to load frontend", "err", err)
+			os.Exit(1)
+		}
 	}
 
 	// Register ingestion pipeline + frontend fallback as catch-all.
@@ -202,10 +210,13 @@ func (a *App) Run() {
 	// Start WebSocket hub.
 	go a.hub.Run(ctx)
 
-	// Start HTTP server (with optional metrics middleware).
+	// Start HTTP server (with CORS and optional metrics middleware).
 	var handler http.Handler = mux
+	if len(a.cfg.Server.CORSOrigins) > 0 {
+		handler = httpserver.CORSMiddleware(handler, a.cfg.Server.CORSOrigins)
+	}
 	if a.metrics != nil {
-		handler = metrics.HTTPMiddleware(mux, a.metrics)
+		handler = metrics.HTTPMiddleware(handler, a.metrics)
 	}
 
 	srv := &http.Server{Addr: a.cfg.HTTPAddr, Handler: handler}

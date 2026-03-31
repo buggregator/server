@@ -49,6 +49,11 @@ func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	shouldIngest := r.Method == http.MethodPost || r.Method == http.MethodPut || detected != nil
 
 	if shouldIngest {
+		// If the event type was explicitly detected (e.g., sentry@host in DSN),
+		// only handlers that match the detected type should process the request.
+		// This prevents the catch-all HTTP dump from capturing SDK-specific traffic.
+		detectedType := r.Header.Get(HeaderDetectedType)
+
 		for _, h := range p.handlers {
 			if !h.Match(r) {
 				continue
@@ -61,6 +66,16 @@ func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if incoming == nil {
+				// The handler matched but chose not to produce a canonical event
+				// (e.g., Sentry transaction/spans/logs stored in structured tables only).
+				// If the event type was explicitly detected, stop the pipeline — don't
+				// fall through to lower-priority handlers like HTTP dump.
+				if detectedType != "" {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"status":true}`))
+					return
+				}
 				continue
 			}
 

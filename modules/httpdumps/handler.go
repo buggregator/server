@@ -20,6 +20,11 @@ type handler struct {
 func (h *handler) Priority() int { return 9999 }
 
 func (h *handler) Match(r *http.Request) bool {
+	// Don't capture requests that belong to a specific module (e.g., sentry@host, inspector@host).
+	// HTTP dump is the catch-all for unrecognized traffic only.
+	if detected := r.Header.Get("X-Buggregator-Detected-Type"); detected != "" && detected != "http-dump" {
+		return false
+	}
 	return true
 }
 

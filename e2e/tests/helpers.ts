@@ -15,13 +15,17 @@ export async function triggerExample(action: string, route = '/example/call'): P
   // We don't care about the response, just that it was sent
 }
 
-/** Clear all events via the API */
+/** Clear all events via the API (including sentry structured tables) */
 export async function clearEvents(): Promise<void> {
   await fetch(`${BUGGREGATOR_URL}/api/events`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({}),
   });
+  // Also clear sentry structured tables.
+  await fetch(`${BUGGREGATOR_URL}/api/sentry/all`, {
+    method: 'DELETE',
+  }).catch(() => {});
 }
 
 /** Get event count from the API */

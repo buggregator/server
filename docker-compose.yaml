@@ -8,6 +8,10 @@ services:
       - "${SMTP_PORT:-1025}:1025"       # SMTP
       - "${VAR_DUMPER_PORT:-9912}:9912" # VarDumper
       - "${MONOLOG_PORT:-9913}:9913"    # Monolog
+    volumes:
+      - ../frontend/dist:/app/frontend/dist:ro  # Mount local frontend build for development
+    environment:
+      FRONTEND_DIR: /app/frontend/dist          # Serve from mounted volume instead of embedded
     networks:
       - buggregator
 
@@ -40,12 +44,17 @@ services:
       RAY_PORT: 8000
       VAR_DUMPER_SERVER: buggregator:9912
       SENTRY_LARAVEL_DSN: http://sentry@buggregator:8000/default
+      SENTRY_TRACES_SAMPLE_RATE: "1.0"
       LOG_SOCKET_URL: buggregator:9913
       INSPECTOR_URL: http://inspector@buggregator:8000
       INSPECTOR_API_KEY: test
       PROFILER_ENDPOINT: http://profiler@buggregator:8000
       HTTP_DUMP_ENDPOINT: http://http-dump@buggregator:8000
       SMS_ENDPOINT: http://buggregator:8000/sms
+    volumes:
+      - ../examples/app:/app/app:ro
+      - ../examples/routes:/app/routes:ro
+      - ../examples/config/sentry.php:/app/config/sentry.php:ro
     networks:
       - buggregator
 
