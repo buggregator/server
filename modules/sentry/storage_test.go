@@ -336,7 +336,7 @@ func TestFingerprint(t *testing.T) {
 	})
 
 	t.Run("message event", func(t *testing.T) {
-		ev := &ErrorEvent{Message: "Something happened"}
+		ev := &ErrorEvent{Message: FlexibleMessage{Text: "Something happened"}}
 		fp := computeFingerprint(ev)
 		if len(fp) != 16 {
 			t.Errorf("fingerprint length = %d, want 16", len(fp))

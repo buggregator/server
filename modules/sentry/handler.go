@@ -113,7 +113,7 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 	for _, item := range items {
 		switch item.Type {
 		case "event":
-			uuid, payload := h.handleEventItem(item, project)
+			uuid, payload := h.handleEventItem(item, envHeader.EventID, project)
 			if uuid != "" {
 				primaryUUID = uuid
 			}
@@ -177,22 +177,33 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 }
 
 // handleEventItem processes an "event" envelope item (error/message event).
-func (h *handler) handleEventItem(item EnvelopeItem, project string) (string, json.RawMessage) {
+// envelopeEventID is the event_id from the envelope header — Sentry SDK v4+
+// omits event_id from the item payload, so we inject it when missing.
+func (h *handler) handleEventItem(item EnvelopeItem, envelopeEventID string, project string) (string, json.RawMessage) {
 	var ev ErrorEvent
 	if err := json.Unmarshal(item.Payload, &ev); err != nil {
 		slog.Warn("sentry: failed to parse error event", "err", err)
 		return "", item.Payload
 	}
 
+	// Sentry SDK v4+ sends event_id only in the envelope header, not in
+	// the item payload. Inject it so downstream consumers (frontend, API)
+	// always see it in the payload.
 	uuid := ev.EventID
+	payload := item.Payload
+	if uuid == "" && envelopeEventID != "" {
+		uuid = envelopeEventID
+		ev.EventID = envelopeEventID
+		payload = injectEventID(payload, envelopeEventID)
+	}
 
 	if h.db != nil {
-		if _, err := storeErrorEvent(h.db, &ev, item.Payload, project); err != nil {
+		if _, err := storeErrorEvent(h.db, &ev, payload, project); err != nil {
 			slog.Warn("sentry: failed to store structured error event", "err", err)
 		}
 	}
 
-	return uuid, item.Payload
+	return uuid, payload
 }
 
 // handleTransactionItem processes a "transaction" envelope item.
@@ -259,6 +270,21 @@ func (h *handler) handleLogItem(item EnvelopeItem) {
 			slog.Warn("sentry: failed to store logs (array)", "err", err)
 		}
 	}
+}
+
+// injectEventID adds "event_id" to a JSON payload that lacks it.
+// Used to normalize Sentry SDK v4+ payloads which omit event_id from item bodies.
+func injectEventID(payload json.RawMessage, eventID string) json.RawMessage {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &obj); err != nil {
+		return payload
+	}
+	obj["event_id"] = json.RawMessage(`"` + eventID + `"`)
+	result, err := json.Marshal(obj)
+	if err != nil {
+		return payload
+	}
+	return result
 }
 
 // decompress handles gzip and deflate Content-Encoding.

@@ -1,6 +1,84 @@
 package sentry
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"time"
+)
+
+// FlexibleTS handles Sentry timestamps which can be either a numeric epoch
+// (float64, used by SDK v3/v4) or an ISO 8601 string (used by SDK v2).
+type FlexibleTS struct {
+	value json.Number // normalized to json.Number for downstream consumers
+}
+
+func (t *FlexibleTS) UnmarshalJSON(data []byte) error {
+	// Try as number first (v3/v4: 1774960590.323397).
+	var num json.Number
+	if json.Unmarshal(data, &num) == nil {
+		t.value = num
+		return nil
+	}
+
+	// Try as quoted string (v2: "2026-03-31T12:44:44Z").
+	var s string
+	if json.Unmarshal(data, &s) == nil {
+		// Convert ISO 8601 to epoch seconds for uniform downstream handling.
+		if parsed, err := time.Parse(time.RFC3339, s); err == nil {
+			epoch := float64(parsed.UnixNano()) / 1e9
+			t.value = json.Number(strconv.FormatFloat(epoch, 'f', 6, 64))
+			return nil
+		}
+		// Unrecognized string — store as-is.
+		t.value = json.Number(s)
+		return nil
+	}
+
+	return fmt.Errorf("FlexibleTS: cannot unmarshal %s", string(data))
+}
+
+// Number returns the underlying json.Number for use with parseTimestamp.
+func (t FlexibleTS) Number() json.Number { return t.value }
+
+// FlexibleMessage handles Sentry "message" which can be a plain string
+// or an object {"message":"...", "params":[...], "formatted":"..."}.
+type FlexibleMessage struct {
+	Text      string   // plain message or the "formatted" / "message" fallback
+	Template  string   // the original template (message field from object form)
+	Params    []string // interpolation parameters
+}
+
+func (m *FlexibleMessage) UnmarshalJSON(data []byte) error {
+	// Try plain string first (most common).
+	var s string
+	if json.Unmarshal(data, &s) == nil {
+		m.Text = s
+		return nil
+	}
+
+	// Try structured form {"message":"...", "params":[...], "formatted":"..."}.
+	var obj struct {
+		Message   string   `json:"message"`
+		Params    []string `json:"params"`
+		Formatted string   `json:"formatted"`
+	}
+	if json.Unmarshal(data, &obj) == nil {
+		m.Template = obj.Message
+		m.Params = obj.Params
+		if obj.Formatted != "" {
+			m.Text = obj.Formatted
+		} else {
+			m.Text = obj.Message
+		}
+		return nil
+	}
+
+	return fmt.Errorf("FlexibleMessage: cannot unmarshal %s", string(data))
+}
+
+// String returns the display text.
+func (m FlexibleMessage) String() string { return m.Text }
 
 // EnvelopeItem represents a single parsed item from a Sentry envelope.
 type EnvelopeItem struct {
@@ -25,7 +103,7 @@ type ItemHeader struct {
 // ErrorEvent represents a parsed Sentry error event.
 type ErrorEvent struct {
 	EventID     string          `json:"event_id"`
-	Timestamp   json.Number     `json:"timestamp"`
+	Timestamp   FlexibleTS      `json:"timestamp"`
 	Platform    string          `json:"platform"`
 	Level       string          `json:"level"`
 	Logger      string          `json:"logger"`
@@ -33,7 +111,7 @@ type ErrorEvent struct {
 	ServerName  string          `json:"server_name"`
 	Environment string          `json:"environment"`
 	Release     string          `json:"release"`
-	Message     string          `json:"message"`
+	Message     FlexibleMessage `json:"message"`
 	LogEntry    *LogEntry       `json:"logentry"`
 	Exception   *ExceptionList  `json:"exception"`
 	Breadcrumbs *BreadcrumbList `json:"breadcrumbs"`
@@ -149,8 +227,8 @@ type LogRecord struct {
 
 // effectiveMessage returns the event message, checking logentry fallback.
 func (e *ErrorEvent) effectiveMessage() string {
-	if e.Message != "" {
-		return e.Message
+	if e.Message.Text != "" {
+		return e.Message.Text
 	}
 	if e.LogEntry != nil {
 		return e.LogEntry.Message

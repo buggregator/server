@@ -38,7 +38,7 @@ func storeErrorEvent(db *sql.DB, ev *ErrorEvent, payload json.RawMessage, projec
 		}
 	}
 
-	eventTS := parseTimestamp(ev.Timestamp)
+	eventTS := parseTimestamp(ev.Timestamp.Number())
 
 	_, err = tx.Exec(
 		`INSERT INTO sentry_error_events
