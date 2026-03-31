@@ -165,6 +165,48 @@ func TestParseAddresses(t *testing.T) {
 	})
 }
 
+func TestParseEmail_RFC2047Subject(t *testing.T) {
+	tests := []struct {
+		name    string
+		subject string
+		want    string
+	}{
+		{
+			name:    "Q-encoded UTF-8",
+			subject: "=?utf-8?Q?Handled_with_Care_by_Chuck_Norris=E2=80=94Your_Package?=",
+			want:    "Handled with Care by Chuck Norris\u2014Your Package",
+		},
+		{
+			name:    "B-encoded UTF-8",
+			subject: "=?utf-8?B?SGVsbG8gV29ybGQ=?=",
+			want:    "Hello World",
+		},
+		{
+			name:    "mixed encoded and plain",
+			subject: "Handled with Care by Chuck =?utf-8?Q?Norris=E2=80=94Your?= Package Is Shipped!",
+			want:    "Handled with Care by Chuck Norris\u2014Your Package Is Shipped!",
+		},
+		{
+			name:    "plain subject unchanged",
+			subject: "Plain Subject",
+			want:    "Plain Subject",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			raw := []byte("From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: " + tt.subject + "\r\nContent-Type: text/plain\r\n\r\ntest body")
+			parsed, _, err := parseEmail(raw, []string{"recipient@example.com"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if parsed.Subject != tt.want {
+				t.Errorf("Subject = %q, want %q", parsed.Subject, tt.want)
+			}
+		})
+	}
+}
+
 func TestPreviewMapper(t *testing.T) {
 	m := &previewMapper{}
 

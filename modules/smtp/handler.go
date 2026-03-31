@@ -199,9 +199,16 @@ func parseEmail(raw []byte, recipients []string) (*ParsedEmail, []parsedAttachme
 		bcc = []string{}
 	}
 
+	// Decode RFC 2047 encoded-word in Subject header (e.g. =?utf-8?Q?...?=).
+	subject := msg.Header.Get("Subject")
+	dec := new(mime.WordDecoder)
+	if decoded, err := dec.DecodeHeader(subject); err == nil {
+		subject = decoded
+	}
+
 	parsed := &ParsedEmail{
 		ID:      msgID,
-		Subject: msg.Header.Get("Subject"),
+		Subject: subject,
 		Raw:     string(raw),
 		From:    parseAddresses(msg.Header, "From"),
 		To:      to,
