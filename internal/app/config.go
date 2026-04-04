@@ -43,6 +43,7 @@ type Config struct {
 	SMTPAddr      string `yaml:"-"`
 	MonologAddr   string `yaml:"-"`
 	VarDumperAddr string `yaml:"-"`
+	ProxyAddr     string `yaml:"-"`
 }
 
 // MCPConfig controls the MCP (Model Context Protocol) server.
@@ -88,6 +89,7 @@ type TCPConfig struct {
 	SMTP      TCPServerConfig `yaml:"smtp"`
 	Monolog   TCPServerConfig `yaml:"monolog"`
 	VarDumper TCPServerConfig `yaml:"var-dumper"`
+	Proxy     TCPServerConfig `yaml:"proxy"`
 }
 
 type TCPServerConfig struct {
@@ -178,6 +180,7 @@ func LoadConfig() Config {
 	cfg.TCP.SMTP.Addr = coalesce(cfg.TCP.SMTP.Addr, os.Getenv("SMTP_ADDR"), fileCfg.TCP.SMTP.Addr, ":1025")
 	cfg.TCP.Monolog.Addr = coalesce(cfg.TCP.Monolog.Addr, os.Getenv("MONOLOG_ADDR"), fileCfg.TCP.Monolog.Addr, ":9913")
 	cfg.TCP.VarDumper.Addr = coalesce(cfg.TCP.VarDumper.Addr, os.Getenv("VAR_DUMPER_ADDR"), fileCfg.TCP.VarDumper.Addr, ":9912")
+	cfg.TCP.Proxy.Addr = coalesce(os.Getenv("PROXY_ADDR"), fileCfg.TCP.Proxy.Addr, ":8080")
 
 	// Storage.
 	cfg.Storage.Mode = coalesce(os.Getenv("STORAGE_MODE"), fileCfg.Storage.Mode, "memory")
@@ -231,6 +234,7 @@ func LoadConfig() Config {
 	cfg.SMTPAddr = cfg.TCP.SMTP.Addr
 	cfg.MonologAddr = cfg.TCP.Monolog.Addr
 	cfg.VarDumperAddr = cfg.TCP.VarDumper.Addr
+	cfg.ProxyAddr = cfg.TCP.Proxy.Addr
 
 	return cfg
 }
@@ -324,7 +328,7 @@ func coalesce(values ...string) string {
 }
 
 func (c Config) String() string {
-	return fmt.Sprintf("http=%s db=%s smtp=%s monolog=%s vardumper=%s modules=%v",
+	return fmt.Sprintf("http=%s db=%s smtp=%s monolog=%s vardumper=%s proxy=%s modules=%v",
 		c.Server.Addr, c.Database.DSN, c.TCP.SMTP.Addr, c.TCP.Monolog.Addr, c.TCP.VarDumper.Addr,
-		c.Modules.EnabledTypes())
+		c.TCP.Proxy.Addr, c.Modules.EnabledTypes())
 }
