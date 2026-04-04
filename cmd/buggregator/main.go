@@ -19,6 +19,7 @@ import (
 	"github.com/buggregator/go-buggregator/modules/ray"
 	"github.com/buggregator/go-buggregator/modules/sentry"
 	"github.com/buggregator/go-buggregator/modules/sms"
+	"github.com/buggregator/go-buggregator/modules/proxy"
 	smtpmod "github.com/buggregator/go-buggregator/modules/smtp"
 	"github.com/buggregator/go-buggregator/modules/vardumper"
 	"github.com/buggregator/go-buggregator/modules/webhooks"
@@ -75,6 +76,7 @@ func main() {
 	monologMod := monolog.New(cfg.MonologAddr)
 	smtpMod := smtpmod.New(cfg.SMTPAddr, attachments, db)
 	vardumperMod := vardumper.New(cfg.VarDumperAddr)
+	proxyMod := proxy.New(cfg.ProxyAddr)
 
 	// Start VarDumper PHP parser (only if enabled).
 	if enabled.IsEnabled("var-dump") {
@@ -110,6 +112,9 @@ func main() {
 	if enabled.IsEnabled("sms") {
 		registry.Register(sms.New())
 	}
+	// HTTP proxy — stores events as http-dump with response data.
+	registry.Register(proxyMod)
+
 	// Register webhooks module if any webhooks are configured.
 	if len(cfg.Webhooks) > 0 {
 		whConfigs := make([]webhooks.WebhookConfig, len(cfg.Webhooks))
@@ -149,6 +154,7 @@ func main() {
 	if enabled.IsEnabled("var-dump") {
 		vardumperMod.SetEventService(eventService)
 	}
+	proxyMod.SetEventService(eventService)
 
 	application := app.New(cfg, db, registry, hub, store, attachments, collector)
 	application.Run()

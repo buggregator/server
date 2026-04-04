@@ -54,6 +54,7 @@ services:
     volumes:
       - ../examples/app:/app/app:ro
       - ../examples/routes:/app/routes:ro
+      - ../examples/resources:/app/resources:ro
       - ../examples/config/sentry.php:/app/config/sentry.php:ro
     networks:
       - buggregator
