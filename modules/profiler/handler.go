@@ -1,7 +1,6 @@
 package profiler
 
 import (
-	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -11,7 +10,6 @@ import (
 )
 
 type handler struct {
-	db *sql.DB
 }
 
 func (h *handler) Priority() int { return 40 }
@@ -40,14 +38,11 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 	// Process the profile (compute diffs, percentages, edges).
 	peaks, edges := Process(&incoming)
 
-	// Store in profiler-specific tables.
 	uuid := event.GenerateUUID()
-	if err := storeProfile(h.db, uuid, incoming.AppName, peaks, edges); err != nil {
-		return nil, err
-	}
 
 	// Build event payload matching PHP Buggregator format.
-	// profile_uuid is used by the frontend to fetch call-graph/top/flame-chart.
+	// peaks and edges are embedded so OnEventStored can store them
+	// without re-parsing the original payload.
 	payload := map[string]any{
 		"profile_uuid": uuid,
 		"app_name":     incoming.AppName,
@@ -55,6 +50,7 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 		"date":         incoming.Date,
 		"tags":         incoming.Tags,
 		"peaks":        peaks,
+		"edges":        edges,
 		"total_edges":  len(edges),
 	}
 	b, _ := json.Marshal(payload)
@@ -64,46 +60,4 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 		Type:    "profiler",
 		Payload: json.RawMessage(b),
 	}, nil
-}
-
-func storeProfile(db *sql.DB, uuid, name string, peaks Metrics, edges map[string]Edge) error {
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	_, err = tx.Exec(
-		`INSERT INTO profiles (uuid, name, cpu, wt, ct, mu, pmu) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		uuid, name, peaks.CPU, peaks.WallTime, peaks.Calls, peaks.Memory, peaks.PeakMem,
-	)
-	if err != nil {
-		return err
-	}
-
-	stmt, err := tx.Prepare(`INSERT INTO profile_edges
-		(uuid, profile_uuid, "order", cpu, wt, ct, mu, pmu, d_cpu, d_wt, d_ct, d_mu, d_pmu, p_cpu, p_wt, p_ct, p_mu, p_pmu, callee, caller, parent_uuid)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	order := 0
-	for _, edge := range edges {
-		edgeUUID := event.GenerateUUID()
-		_, err = stmt.Exec(
-			edgeUUID, uuid, order,
-			edge.Cost.CPU, edge.Cost.WallTime, edge.Cost.Calls, edge.Cost.Memory, edge.Cost.PeakMem,
-			edge.Diff.CPU, edge.Diff.WallTime, edge.Diff.Calls, edge.Diff.Memory, edge.Diff.PeakMem,
-			edge.Percents.CPU, edge.Percents.WallTime, edge.Percents.Calls, edge.Percents.Memory, edge.Percents.PeakMem,
-			edge.Callee, edge.Caller, edge.Parent,
-		)
-		if err != nil {
-			return err
-		}
-		order++
-	}
-
-	return tx.Commit()
 }

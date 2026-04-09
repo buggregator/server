@@ -37,7 +37,8 @@ func detectEventType(r *http.Request) *DetectedEvent {
 	}
 
 	// Method 3: SDK-specific headers that identify the event type.
-	if r.Header.Get("X-Sentry-Auth") != "" || strings.HasSuffix(r.URL.Path, "/envelope") || strings.HasSuffix(r.URL.Path, "/store") {
+	isSentryStore := strings.HasSuffix(r.URL.Path, "/store") && !strings.Contains(r.URL.Path, "/profiler/")
+	if r.Header.Get("X-Sentry-Auth") != "" || strings.HasSuffix(r.URL.Path, "/envelope") || isSentryStore {
 		return &DetectedEvent{Type: "sentry"}
 	}
 	if r.Header.Get("X-Inspector-Key") != "" || r.Header.Get("X-Inspector-Version") != "" {
