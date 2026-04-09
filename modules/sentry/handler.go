@@ -31,7 +31,8 @@ func (h *handler) Match(r *http.Request) bool {
 		return true
 	}
 	path := r.URL.Path
-	return strings.HasSuffix(path, "/store") || strings.HasSuffix(path, "/envelope")
+	isSentryStore := strings.HasSuffix(path, "/store") && !strings.Contains(path, "/profiler/")
+	return isSentryStore || strings.HasSuffix(path, "/envelope")
 }
 
 func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {

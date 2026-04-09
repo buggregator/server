@@ -117,6 +117,13 @@ func TestDetectEventType(t *testing.T) {
 			wantType: "sentry",
 		},
 		{
+			name: "profiler store path does not detect sentry",
+			makeRequest: func() *nethttp.Request {
+				return httptest.NewRequest("POST", "http://localhost/api/profiler/store", nil)
+			},
+			wantNil: true,
+		},
+		{
 			name: "X-Inspector-Key header detects inspector",
 			makeRequest: func() *nethttp.Request {
 				r := httptest.NewRequest("POST", "http://localhost/", nil)

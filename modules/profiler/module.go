@@ -2,6 +2,8 @@ package profiler
 
 import (
 	"database/sql"
+	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/buggregator/go-buggregator/internal/event"
@@ -29,7 +31,7 @@ func (m *Module) OnInit(db *sql.DB) error {
 }
 
 func (m *Module) HTTPHandler() module.HTTPIngestionHandler {
-	return &handler{db: m.db}
+	return &handler{}
 }
 
 func (m *Module) RegisterRoutes(mux *http.ServeMux, store event.Store) {
@@ -38,4 +40,25 @@ func (m *Module) RegisterRoutes(mux *http.ServeMux, store event.Store) {
 
 func (m *Module) PreviewMapper() event.PreviewMapper {
 	return &previewMapper{}
+}
+
+func (m *Module) OnEventStored(ev event.Event) {
+	if ev.Type != "profiler" || m.db == nil {
+		return
+	}
+
+	var payload struct {
+		ProfileUUID string          `json:"profile_uuid"`
+		AppName     string          `json:"app_name"`
+		Peaks       Metrics         `json:"peaks"`
+		Edges       map[string]Edge `json:"edges"`
+	}
+	if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+		slog.Warn("profiler: failed to parse event payload", "err", err)
+		return
+	}
+
+	if err := storeProfile(m.db, payload.ProfileUUID, payload.AppName, payload.Peaks, payload.Edges); err != nil {
+		slog.Warn("profiler: failed to store profile", "err", err)
+	}
 }
