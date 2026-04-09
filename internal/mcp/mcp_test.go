@@ -72,6 +72,7 @@ func ingestViaHandler(t *testing.T, reg *module.Registry, store event.Store, req
 			if err := store.Store(context.Background(), ev); err != nil {
 				t.Fatal(err)
 			}
+			reg.NotifyEventStored(ev)
 			return ev.UUID
 		}
 	}
