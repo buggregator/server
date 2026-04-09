@@ -265,6 +265,7 @@ func handleFlameChart(db *sql.DB) http.HandlerFunc {
 			}
 		}
 
+		visited := make(map[string]bool)
 		var buildNode func(e EdgeRow, start float64) *flameNode
 		buildNode = func(e EdgeRow, start float64) *flameNode {
 			val := float64(GetEdgeMetricValue(&e, metric))
@@ -285,11 +286,15 @@ func handleFlameChart(db *sql.DB) http.HandlerFunc {
 				Color: flameColor(pct),
 			}
 
-			childStart := start
-			for _, child := range childrenMap[e.Callee] {
-				childNode := buildNode(child, childStart)
-				node.Children = append(node.Children, childNode)
-				childStart += childNode.Duration
+			if !visited[e.Callee] {
+				visited[e.Callee] = true
+				childStart := start
+				for _, child := range childrenMap[e.Callee] {
+					childNode := buildNode(child, childStart)
+					node.Children = append(node.Children, childNode)
+					childStart += childNode.Duration
+				}
+				visited[e.Callee] = false
 			}
 			if node.Children == nil {
 				node.Children = []*flameNode{}
