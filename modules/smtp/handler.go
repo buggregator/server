@@ -76,9 +76,20 @@ type session struct {
 	backend *backend
 	from    string
 	to      []string
+	project string // extracted from SMTP AUTH username
 }
 
-func (s *session) AuthPlain(username, password string) error { return nil }
+func (s *session) AuthPlain(username, password string) error {
+	if username != "" {
+		// Support "project@host" or plain "project" as the mailbox identifier.
+		if idx := strings.Index(username, "@"); idx > 0 {
+			s.project = username[:idx]
+		} else {
+			s.project = username
+		}
+	}
+	return nil
+}
 func (s *session) Mail(from string, opts *gosmtp.MailOptions) error {
 	s.from = from
 	return nil
@@ -127,6 +138,7 @@ func (s *session) Data(r io.Reader) error {
 		UUID:    eventUUID,
 		Type:    "smtp",
 		Payload: json.RawMessage(payload),
+		Project: s.project,
 	}
 
 	if err := s.backend.eventService.HandleIncoming(context.Background(), inc); err != nil {
@@ -135,7 +147,7 @@ func (s *session) Data(r io.Reader) error {
 	return nil
 }
 
-func (s *session) Reset()        { s.from = ""; s.to = nil }
+func (s *session) Reset()        { s.from = ""; s.to = nil; s.project = "" }
 func (s *session) Logout() error { return nil }
 
 // EmailAddress represents an email address.
