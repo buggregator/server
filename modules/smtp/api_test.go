@@ -523,7 +523,7 @@ func TestSMTPAPI_Wait(t *testing.T) {
 		storeSMTPEvent(t, store, "wait-uuid1", ParsedEmail{
 			Subject: "Existing",
 			To:      []EmailAddress{{Email: "wait-user@example.com"}},
-		}, float64(time.Now().Add(-time.Second).UnixMicro())/1_000_000, "default")
+		}, tsAgo(time.Second), "default")
 
 		r := httptest.NewRequest("GET", "/api/smtp/messages/wait?to=wait-user@example.com&timeout=1s", nil)
 		w := httptest.NewRecorder()
@@ -535,7 +535,7 @@ func TestSMTPAPI_Wait(t *testing.T) {
 	})
 
 	t.Run("new event arrives", func(t *testing.T) {
-		cursor := float64(time.Now().UnixMicro()) / 1_000_000
+		cursor := tsNow()
 
 		resultCh := make(chan *httptest.ResponseRecorder, 1)
 		go func() {
@@ -556,7 +556,7 @@ func TestSMTPAPI_Wait(t *testing.T) {
 				Subject: "New Arrival",
 				To:      []EmailAddress{{Email: "newuser@example.com"}},
 			}),
-			Timestamp: float64(time.Now().UnixMicro()) / 1_000_000,
+			Timestamp: tsNow(),
 			Project:   "default",
 		}
 		store.Store(context.Background(), newEv)
@@ -751,4 +751,14 @@ func TestSessionAuthPlain(t *testing.T) {
 func mustMarshalJSON(v any) json.RawMessage {
 	b, _ := json.Marshal(v)
 	return b
+}
+
+// tsNow returns the current time as a unix float (matching event.Timestamp).
+func tsNow() float64 {
+	return float64(time.Now().UnixMicro()) / 1_000_000
+}
+
+// tsAgo returns a timestamp N seconds before now.
+func tsAgo(d time.Duration) float64 {
+	return float64(time.Now().Add(-d).UnixMicro()) / 1_000_000
 }

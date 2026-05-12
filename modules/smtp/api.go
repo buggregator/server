@@ -326,14 +326,20 @@ func parseFilter(r *http.Request) MessageFilter {
 	return f
 }
 
+// unixFloat converts a time.Time to a float64 unix timestamp with microsecond
+// precision (matching the internal event.Event.Timestamp representation).
+func unixFloat(t time.Time) float64 {
+	return float64(t.UnixMicro()) / 1_000_000
+}
+
 // parseTimestamp parses a timestamp from an RFC3339 string, unix-ms integer, or
 // plain float (unix seconds). Returns 0 on failure.
 func parseTimestamp(s string) float64 {
 	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
-		return float64(t.UnixMicro()) / 1_000_000
+		return unixFloat(t)
 	}
 	if t, err := time.Parse(time.RFC3339, s); err == nil {
-		return float64(t.UnixMicro()) / 1_000_000
+		return unixFloat(t)
 	}
 	if f, err := strconv.ParseFloat(s, 64); err == nil {
 		// Heuristic: values > 1e12 are milliseconds, otherwise seconds.
