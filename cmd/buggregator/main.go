@@ -144,7 +144,7 @@ func main() {
 	}
 
 	// Build event service and inject into TCP modules.
-	eventService := httpserver.NewEventService(store, hub, registry, collector)
+	eventService := httpserver.NewEventService(store, hub, registry, collector, db)
 	if enabled.IsEnabled("monolog") {
 		monologMod.SetEventService(eventService)
 	}

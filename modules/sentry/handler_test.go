@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -30,6 +31,9 @@ func TestHandler_Match(t *testing.T) {
 		{"POST with sentry auth", "POST", "/", map[string]string{"X-Sentry-Auth": "Sentry sentry_key=abc"}, true},
 		{"POST to /store", "POST", "/api/123/store", nil, true},
 		{"POST to /envelope", "POST", "/api/123/envelope", nil, true},
+		// Sentry PHP SDK 4.x posts to /api/{id}/envelope/ with a trailing slash.
+		{"POST to /envelope/ trailing slash", "POST", "/api/123/envelope/", nil, true},
+		{"POST to /store/ trailing slash", "POST", "/api/123/store/", nil, true},
 		{"GET request", "GET", "/api/123/store", nil, false},
 		{"POST to random path", "POST", "/random", nil, false},
 	}
@@ -69,9 +73,10 @@ func TestHandler_Handle_JSON(t *testing.T) {
 
 func TestHandler_Handle_Envelope(t *testing.T) {
 	h := &handler{}
-	envelope := `{"event_id":"env-uuid"}
-{"type":"event","length":25}
-{"message":"from envelope"}`
+	payload := `{"message":"from envelope"}`
+	envelope := "{\"event_id\":\"env-uuid\"}\n" +
+		"{\"type\":\"event\",\"length\":" + strconv.Itoa(len(payload)) + "}\n" +
+		payload
 
 	r := httptest.NewRequest("POST", "/api/proj/store", strings.NewReader(envelope))
 	inc, err := h.Handle(r)
@@ -85,6 +90,31 @@ func TestHandler_Handle_Envelope(t *testing.T) {
 	var p map[string]any
 	json.Unmarshal(inc.Payload, &p)
 	if p["message"] != "from envelope" {
+		t.Errorf("payload message = %v", p["message"])
+	}
+}
+
+func TestHandler_Handle_EnvelopeMultilinePayload(t *testing.T) {
+	// Payload contains literal newlines — must rely on length, not newline split.
+	h := &handler{}
+	payload := "{\n  \"message\": \"multi\\nline\"\n}"
+	envelope := "{\"event_id\":\"env-uuid\"}\n" +
+		"{\"type\":\"event\",\"length\":" + strconv.Itoa(len(payload)) + "}\n" +
+		payload
+
+	r := httptest.NewRequest("POST", "/api/proj/store", strings.NewReader(envelope))
+	inc, err := h.Handle(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inc == nil {
+		t.Fatal("incoming = nil")
+	}
+	var p map[string]any
+	if err := json.Unmarshal(inc.Payload, &p); err != nil {
+		t.Fatalf("payload not valid JSON: %v", err)
+	}
+	if p["message"] != "multi\nline" {
 		t.Errorf("payload message = %v", p["message"])
 	}
 }

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -71,9 +72,7 @@ func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				// If the event type was explicitly detected, stop the pipeline — don't
 				// fall through to lower-priority handlers like HTTP dump.
 				if detectedType != "" {
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"status":true}`))
+					writeIngestionResponse(w, detectedType, "")
 					return
 				}
 				continue
@@ -89,9 +88,7 @@ func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":true}`))
+			writeIngestionResponse(w, incoming.Type, incoming.UUID)
 			return
 		}
 	}
@@ -102,4 +99,18 @@ func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.URL.Path = "/"
 	}
 	p.frontend.ServeHTTP(w, r)
+}
+
+// writeIngestionResponse writes an ingestion acknowledgement. Sentry SDKs
+// inspect the body for {"id":"..."} to confirm successful delivery — returning
+// {"status":true} works for most SDKs but trips some validators. Other modules
+// stick with the legacy shape.
+func writeIngestionResponse(w http.ResponseWriter, eventType, eventID string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if eventType == "sentry" {
+		_ = json.NewEncoder(w).Encode(map[string]string{"id": eventID})
+		return
+	}
+	_, _ = w.Write([]byte(`{"status":true}`))
 }

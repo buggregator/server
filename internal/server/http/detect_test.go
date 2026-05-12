@@ -110,9 +110,24 @@ func TestDetectEventType(t *testing.T) {
 			wantType: "sentry",
 		},
 		{
+			// Sentry PHP SDK 4.x posts to /api/{id}/envelope/ with a trailing slash.
+			name: "envelope path with trailing slash detects sentry",
+			makeRequest: func() *nethttp.Request {
+				return httptest.NewRequest("POST", "http://localhost/api/1/envelope/", nil)
+			},
+			wantType: "sentry",
+		},
+		{
 			name: "store path suffix detects sentry",
 			makeRequest: func() *nethttp.Request {
 				return httptest.NewRequest("POST", "http://localhost/api/1/store", nil)
+			},
+			wantType: "sentry",
+		},
+		{
+			name: "store path with trailing slash detects sentry",
+			makeRequest: func() *nethttp.Request {
+				return httptest.NewRequest("POST", "http://localhost/api/1/store/", nil)
 			},
 			wantType: "sentry",
 		},
