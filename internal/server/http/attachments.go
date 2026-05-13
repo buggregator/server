@@ -9,18 +9,26 @@ import (
 )
 
 // RegisterAttachmentAPI registers attachment list/download/preview endpoints.
+//
+// Routes are namespaced under a literal `attachments` segment rather than
+// `/api/{module}/{eventUuid}/attachments/...`. The previous layout used a
+// wildcard at position 2, which collides with module routes like
+// `/api/smtp/message/{uuid}/raw` (both 4-segment patterns, neither more
+// specific) and made the server panic at startup.
 func RegisterAttachmentAPI(mux *http.ServeMux, db *sql.DB, store *storage.AttachmentStore) {
 	// SMTP attachments.
-	mux.HandleFunc("GET /api/smtp/{uuid}/attachments", listAttachments(db, "smtp_attachments"))
-	mux.HandleFunc("GET /api/smtp/{eventUuid}/attachments/{uuid}", downloadAttachment(db, store, "smtp_attachments"))
-	mux.HandleFunc("GET /api/smtp/{eventUuid}/attachments/preview/{uuid}", previewAttachment(db, store, "smtp_attachments"))
+	registerAttachmentsForModule(mux, db, store, "/api/smtp/attachments", "smtp_attachments")
 
-	// HTTP Dump attachments (support both /http-dump/ and /http-dumps/ paths).
-	for _, prefix := range []string{"/api/http-dump/", "/api/http-dumps/"} {
-		mux.HandleFunc("GET "+prefix+"{uuid}/attachments", listAttachments(db, "http_dump_attachments"))
-		mux.HandleFunc("GET "+prefix+"{eventUuid}/attachments/{uuid}", downloadAttachment(db, store, "http_dump_attachments"))
-		mux.HandleFunc("GET "+prefix+"{eventUuid}/attachments/preview/{uuid}", previewAttachment(db, store, "http_dump_attachments"))
-	}
+	// HTTP Dump attachments (support both /http-dump/ and /http-dumps/ paths
+	// for backwards compatibility with existing clients).
+	registerAttachmentsForModule(mux, db, store, "/api/http-dump/attachments", "http_dump_attachments")
+	registerAttachmentsForModule(mux, db, store, "/api/http-dumps/attachments", "http_dump_attachments")
+}
+
+func registerAttachmentsForModule(mux *http.ServeMux, db *sql.DB, store *storage.AttachmentStore, prefix, table string) {
+	mux.HandleFunc("GET "+prefix+"/{uuid}", listAttachments(db, table))
+	mux.HandleFunc("GET "+prefix+"/{eventUuid}/{uuid}", downloadAttachment(db, store, table))
+	mux.HandleFunc("GET "+prefix+"/{eventUuid}/preview/{uuid}", previewAttachment(db, store, table))
 }
 
 func listAttachments(db *sql.DB, table string) http.HandlerFunc {
