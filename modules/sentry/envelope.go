@@ -61,8 +61,13 @@ func parseEnvelopeItems(body []byte) (EnvelopeHeader, []EnvelopeItem, error) {
 
 		// Item payload: prefer the explicit length when present, otherwise read
 		// up to the next newline.
+		//
+		// The bound check uses subtraction (len(body)-pos) rather than addition
+		// (pos+ih.Length) to avoid signed-int overflow on a crafted envelope:
+		// a huge ih.Length combined with pos could wrap to a small (even
+		// negative) result, pass an additive bound, then panic when slicing.
 		var payload []byte
-		if ih.Length > 0 && pos+ih.Length <= len(body) {
+		if ih.Length > 0 && ih.Length <= len(body)-pos {
 			payload = body[pos : pos+ih.Length]
 			pos += ih.Length
 			// Skip the trailing newline (envelope spec allows but doesn't require it).

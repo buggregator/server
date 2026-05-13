@@ -2,6 +2,7 @@ package sentry
 
 import (
 	"encoding/json"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -147,5 +148,33 @@ func TestParseEnvelopeItems_LengthBeyondBody_FallsBackToNewline(t *testing.T) {
 	}
 	if !strings.Contains(string(items[0].Payload), "trimmed") {
 		t.Errorf("payload = %q, expected to contain 'trimmed'", items[0].Payload)
+	}
+}
+
+// A crafted envelope where length = math.MaxInt would overflow an additive
+// bound check (pos + ih.Length wraps to negative) and crash the server when
+// slicing. The subtractive bound (len(body)-pos) used in the parser is
+// overflow-safe — this test asserts we don't panic and fall through to the
+// newline-delimited path.
+func TestParseEnvelopeItems_LengthOverflow_DoesNotPanic(t *testing.T) {
+	body := []byte("{\"event_id\":\"e1\"}\n" +
+		"{\"type\":\"event\",\"length\":" + strconv.Itoa(math.MaxInt) + "}\n" +
+		`{"message":"safe"}`)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("parser panicked on overflow length: %v", r)
+		}
+	}()
+
+	_, items, err := parseEnvelopeItems(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("items = %d, want 1", len(items))
+	}
+	if !strings.Contains(string(items[0].Payload), "safe") {
+		t.Errorf("payload = %q, expected to contain 'safe'", items[0].Payload)
 	}
 }
