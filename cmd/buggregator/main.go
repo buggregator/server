@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"runtime"
 
 	"github.com/buggregator/go-buggregator/internal/app"
 	mcpserver "github.com/buggregator/go-buggregator/internal/mcp"
@@ -79,12 +80,22 @@ func main() {
 	proxyMod := proxy.New(cfg.ProxyAddr)
 
 	// Start VarDumper PHP parser (only if enabled).
+	//
+	// VarDumper bundles a standalone PHP runtime via static-php's micro.sfx,
+	// which has no Windows build. The embedded binary on Windows is a
+	// placeholder stub, so the parser would crash immediately — skip start-up
+	// entirely there and let the rest of the server run. TCPServers() returns
+	// nil when the parser isn't running, so the :9912 listener is also skipped.
 	if enabled.IsEnabled("var-dump") {
-		if err := vardumperMod.StartPHP(); err != nil {
-			slog.Error("failed to start VarDumper PHP parser", "err", err)
-			os.Exit(1)
+		if runtime.GOOS == "windows" {
+			slog.Warn("VarDumper module is not supported on Windows; module disabled")
+		} else {
+			if err := vardumperMod.StartPHP(); err != nil {
+				slog.Error("failed to start VarDumper PHP parser", "err", err)
+				os.Exit(1)
+			}
+			defer vardumperMod.StopPHP()
 		}
-		defer vardumperMod.StopPHP()
 	}
 
 	// Register enabled modules.
