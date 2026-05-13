@@ -21,11 +21,21 @@ jobs:
           mkdir -p internal/frontend/dist
           echo '<!DOCTYPE html><html><body>placeholder</body></html>' > internal/frontend/dist/index.html
 
-          # VarDumper PHP parser placeholder (embedded via go:embed per-platform)
+          # VarDumper PHP parser placeholders (embedded via go:embed per-platform).
+          # Each GOOS/GOARCH has its own embed_*.go, so we need a stub for every
+          # target that CI compiles.
           mkdir -p modules/vardumper/bin
           echo 'placeholder' > modules/vardumper/bin/vardumper-parser-linux-amd64
+          echo 'placeholder' > modules/vardumper/bin/vardumper-parser-windows-amd64.exe
 
       - name: Build
+        run: go build ./cmd/buggregator
+
+      - name: Build (windows/amd64)
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: "0"
         run: go build ./cmd/buggregator
 
       - name: Vet
