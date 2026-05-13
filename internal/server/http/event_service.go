@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"database/sql"
 	"log/slog"
 	"time"
 
@@ -19,10 +20,11 @@ type EventService struct {
 	hub      *ws.Hub
 	registry *module.Registry
 	metrics  *metrics.Collector
+	db       *sql.DB // optional; used to auto-register new project keys
 }
 
-func NewEventService(store event.Store, hub *ws.Hub, registry *module.Registry, m *metrics.Collector) *EventService {
-	return &EventService{store: store, hub: hub, registry: registry, metrics: m}
+func NewEventService(store event.Store, hub *ws.Hub, registry *module.Registry, m *metrics.Collector, db *sql.DB) *EventService {
+	return &EventService{store: store, hub: hub, registry: registry, metrics: m, db: db}
 }
 
 // HandleIncoming stores an event, broadcasts preview, and notifies modules.
@@ -30,6 +32,20 @@ func (s *EventService) HandleIncoming(ctx context.Context, inc *event.Incoming) 
 	// Assign default project if not set.
 	if inc.Project == "" {
 		inc.Project = defaultProject
+	}
+
+	// Auto-register the project so the frontend can see and switch to it.
+	// Sentry events arrive with a project key derived from the DSN path
+	// (e.g. /api/123/envelope/ → "123"), which won't exist in the projects
+	// table seeded only with "default". Without this row, the frontend filters
+	// the event out of the events list and the sidebar dot stays unlit.
+	if s.db != nil && inc.Project != defaultProject {
+		if _, err := s.db.ExecContext(ctx,
+			`INSERT OR IGNORE INTO projects (key, name) VALUES (?, ?)`,
+			inc.Project, inc.Project,
+		); err != nil {
+			slog.Warn("failed to register project", "key", inc.Project, "err", err)
+		}
 	}
 
 	ev := event.NewEvent(inc)

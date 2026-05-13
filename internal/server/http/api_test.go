@@ -39,7 +39,7 @@ func setupAPI(t *testing.T) (*http.ServeMux, *storage.SQLiteStore) {
 	store := storage.NewSQLiteStore(db)
 	hub := ws.NewHub()
 	registry := module.NewRegistry()
-	es := serverhttp.NewEventService(store, hub, registry, nil)
+	es := serverhttp.NewEventService(store, hub, registry, nil, db)
 
 	mux := http.NewServeMux()
 	noopMiddleware := func(next http.Handler) http.Handler { return next }

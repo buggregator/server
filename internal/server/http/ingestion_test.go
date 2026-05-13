@@ -134,7 +134,7 @@ func buildPipeline(t *testing.T) (*serverhttp.IngestionPipeline, *spyStore, []*s
 	})
 
 	hub := ws.NewHub()
-	es := serverhttp.NewEventService(store, hub, registry, nil)
+	es := serverhttp.NewEventService(store, hub, registry, nil, db)
 
 	emptyFS := fstest.MapFS{"index.html": {Data: []byte("<html></html>")}}
 	pipeline := serverhttp.NewIngestionPipeline(handlers, es, emptyFS)
@@ -536,6 +536,130 @@ func TestPipeline_HandlerSummary(t *testing.T) {
 				t.Errorf("expected %d events, got %d: %v", tc.wantEvents, len(events), types)
 			}
 		})
+	}
+}
+
+// TestPipeline_SentryResponse_ReturnsEventID asserts that Sentry SDKs receive
+// `{"id":"<event_id>"}` on ingest. Other modules keep the legacy
+// `{"status":true}` shape.
+func TestPipeline_SentryResponse_ReturnsEventID(t *testing.T) {
+	pipeline, _, _ := buildPipeline(t)
+
+	body := `{"event_id":"resp-uuid","sent_at":"2026-01-01T00:00:00Z"}
+{"type":"event"}
+{"event_id":"resp-uuid","level":"error","message":"x","exception":{"values":[{"type":"E","value":"v"}]}}`
+
+	r := httptest.NewRequest("POST", "http://localhost/api/default/envelope/", strings.NewReader(body))
+	r.URL.User = url.User("sentry")
+	r.Header.Set("X-Sentry-Auth", "Sentry sentry_key=abc")
+	w := httptest.NewRecorder()
+
+	pipeline.ServeHTTP(w, r)
+
+	if w.Code != 200 {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("response not JSON: %v body=%s", err, w.Body.String())
+	}
+	if resp["id"] != "resp-uuid" {
+		t.Errorf("response id = %q, want %q (body=%s)", resp["id"], "resp-uuid", w.Body.String())
+	}
+}
+
+// Sentry envelopes that only contain non-canonical items (transaction, logs,
+// session, …) still return a 200 — but with a Sentry-shaped body so the SDK
+// considers the request delivered.
+func TestPipeline_SentryResponse_TransactionOnly_ReturnsSentryShape(t *testing.T) {
+	pipeline, _, _ := buildPipeline(t)
+
+	body := `{"event_id":"txn-1"}
+{"type":"transaction"}
+{"event_id":"txn-1","type":"transaction","transaction":"X","start_timestamp":1.0,"timestamp":2.0,"contexts":{"trace":{"trace_id":"aa","span_id":"bb"}},"spans":[]}`
+
+	r := httptest.NewRequest("POST", "http://localhost/api/default/envelope/", strings.NewReader(body))
+	r.URL.User = url.User("sentry")
+	r.Header.Set("X-Sentry-Auth", "Sentry sentry_key=abc")
+	w := httptest.NewRecorder()
+	pipeline.ServeHTTP(w, r)
+
+	if w.Code != 200 {
+		t.Fatalf("status = %d", w.Code)
+	}
+
+	var resp map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("response not JSON: %v body=%s", err, w.Body.String())
+	}
+	if _, ok := resp["id"]; !ok {
+		t.Errorf("expected an `id` field in Sentry response, got %v", resp)
+	}
+}
+
+// Non-Sentry handlers must keep returning the legacy {"status":true} body to
+// avoid breaking existing clients.
+func TestPipeline_NonSentryResponse_KeepsLegacyShape(t *testing.T) {
+	pipeline, _, _ := buildPipeline(t)
+
+	r := httptest.NewRequest("POST", "http://localhost/anything", strings.NewReader(`{"x":1}`))
+	w := httptest.NewRecorder()
+	pipeline.ServeHTTP(w, r)
+
+	if w.Code != 200 {
+		t.Fatalf("status = %d", w.Code)
+	}
+
+	body := strings.TrimSpace(w.Body.String())
+	if body != `{"status":true}` {
+		t.Errorf("response = %q, want {\"status\":true}", body)
+	}
+}
+
+// TestPipeline_AutoCreatesSentryProject ensures the project key embedded in a
+// Sentry DSN path (e.g. /api/12345/envelope/ → "12345") becomes a real row in
+// the projects table, otherwise the frontend filters the event out of its list.
+func TestPipeline_AutoCreatesSentryProject(t *testing.T) {
+	db, err := storage.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	migrator := storage.NewMigrator(db)
+	if err := migrator.AddFromFS("core", storage.CoreMigrations, "migrations"); err != nil {
+		t.Fatal(err)
+	}
+	registry := module.NewRegistry()
+	registry.Register(sentry.New())
+
+	mux := http.NewServeMux()
+	store := storage.NewSQLiteStore(db)
+	if err := registry.Init(db, mux, store); err != nil {
+		t.Fatal(err)
+	}
+
+	hub := ws.NewHub()
+	es := serverhttp.NewEventService(store, hub, registry, nil, db)
+	pipeline := serverhttp.NewIngestionPipeline(registry.Handlers(), es, fstest.MapFS{"index.html": {Data: []byte("<html></html>")}})
+
+	body := `{"event_id":"sx-1","sent_at":"2026-01-01T00:00:00Z"}
+{"type":"event"}
+{"event_id":"sx-1","level":"error","message":"x","exception":{"values":[{"type":"E","value":"v"}]}}`
+
+	r := httptest.NewRequest("POST", "http://localhost/api/12345/envelope/", strings.NewReader(body))
+	r.Header.Set("X-Sentry-Auth", "Sentry sentry_key=abc")
+	w := httptest.NewRecorder()
+	pipeline.ServeHTTP(w, r)
+
+	if w.Code != 200 {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+
+	var name string
+	if err := db.QueryRow(`SELECT name FROM projects WHERE key = ?`, "12345").Scan(&name); err != nil {
+		t.Fatalf("project 12345 was not auto-registered: %v", err)
 	}
 }
 

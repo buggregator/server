@@ -30,7 +30,7 @@ func (h *handler) Match(r *http.Request) bool {
 	if r.Header.Get("X-Sentry-Auth") != "" {
 		return true
 	}
-	path := r.URL.Path
+	path := strings.TrimRight(r.URL.Path, "/")
 	isSentryStore := strings.HasSuffix(path, "/store") && !strings.Contains(path, "/profiler/")
 	return isSentryStore || strings.HasSuffix(path, "/envelope")
 }

@@ -66,7 +66,7 @@ func (a *App) Run() {
 	}
 
 	// Build the event service that ties ingestion -> store -> broadcast.
-	eventService := httpserver.NewEventService(store, a.hub, a.registry, a.metrics)
+	eventService := httpserver.NewEventService(store, a.hub, a.registry, a.metrics, a.db)
 
 	// Set up authentication.
 	authSettings := httpserver.AuthSettings{Enabled: a.cfg.Auth.Enabled}
