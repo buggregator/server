@@ -2,6 +2,7 @@ package http_test
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -617,10 +618,10 @@ func TestPipeline_NonSentryResponse_KeepsLegacyShape(t *testing.T) {
 	}
 }
 
-// TestPipeline_AutoCreatesSentryProject ensures the project key embedded in a
-// Sentry DSN path (e.g. /api/12345/envelope/ → "12345") becomes a real row in
-// the projects table, otherwise the frontend filters the event out of its list.
-func TestPipeline_AutoCreatesSentryProject(t *testing.T) {
+// newSentryPipeline builds a full ingestion pipeline backed by an in-memory DB
+// with the Sentry module registered, for end-to-end project-routing tests.
+func newSentryPipeline(t *testing.T) (*serverhttp.IngestionPipeline, *sql.DB) {
+	t.Helper()
 	db, err := storage.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -643,12 +644,21 @@ func TestPipeline_AutoCreatesSentryProject(t *testing.T) {
 	hub := ws.NewHub()
 	es := serverhttp.NewEventService(store, hub, registry, nil, db)
 	pipeline := serverhttp.NewIngestionPipeline(registry.Handlers(), es, fstest.MapFS{"index.html": {Data: []byte("<html></html>")}})
+	return pipeline, db
+}
+
+// TestPipeline_AutoCreatesSentryProject ensures a NAMED project key embedded in a
+// Sentry DSN path (e.g. /api/myteam/envelope/ → "myteam") becomes a real row in
+// the projects table, otherwise the frontend filters the event out of its list.
+// (Numeric ids route to the default project instead — see the test below.)
+func TestPipeline_AutoCreatesSentryProject(t *testing.T) {
+	pipeline, db := newSentryPipeline(t)
 
 	body := `{"event_id":"sx-1","sent_at":"2026-01-01T00:00:00Z"}
 {"type":"event"}
 {"event_id":"sx-1","level":"error","message":"x","exception":{"values":[{"type":"E","value":"v"}]}}`
 
-	r := httptest.NewRequest("POST", "http://localhost/api/12345/envelope/", strings.NewReader(body))
+	r := httptest.NewRequest("POST", "http://localhost/api/myteam/envelope/", strings.NewReader(body))
 	r.Header.Set("X-Sentry-Auth", "Sentry sentry_key=abc")
 	w := httptest.NewRecorder()
 	pipeline.ServeHTTP(w, r)
@@ -658,8 +668,136 @@ func TestPipeline_AutoCreatesSentryProject(t *testing.T) {
 	}
 
 	var name string
-	if err := db.QueryRow(`SELECT name FROM projects WHERE key = ?`, "12345").Scan(&name); err != nil {
-		t.Fatalf("project 12345 was not auto-registered: %v", err)
+	if err := db.QueryRow(`SELECT name FROM projects WHERE key = ?`, "myteam").Scan(&name); err != nil {
+		t.Fatalf("project myteam was not auto-registered: %v", err)
+	}
+}
+
+// TestPipeline_SentryNumericProjectRoutesToDefault is the regression test for
+// issue #338: the Sentry JS SDK forces a numeric DSN project id, which must land
+// in the default project rather than creating an orphan project named after the id.
+func TestPipeline_SentryNumericProjectRoutesToDefault(t *testing.T) {
+	pipeline, db := newSentryPipeline(t)
+
+	payload := `{"event_id":"8f78970685be481994063baacda75197","timestamp":1774960590.323397,"level":"error","exception":{"values":[{"type":"E","value":"v"}]}}`
+	r := httptest.NewRequest("POST", "http://localhost/api/1/store", strings.NewReader(payload))
+	r.Header.Set("X-Sentry-Auth", "Sentry sentry_key=abc")
+	w := httptest.NewRecorder()
+	pipeline.ServeHTTP(w, r)
+
+	if w.Code != 200 {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+
+	var orphan int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM projects WHERE key = ?`, "1").Scan(&orphan); err != nil {
+		t.Fatal(err)
+	}
+	if orphan != 0 {
+		t.Errorf("orphan project %q was created, want none", "1")
+	}
+
+	var project string
+	if err := db.QueryRow(`SELECT project FROM events WHERE uuid = ?`, "8f78970685be481994063baacda75197").Scan(&project); err != nil {
+		t.Fatalf("event was not stored: %v", err)
+	}
+	if project != "default" {
+		t.Errorf("event project = %q, want %q", project, "default")
+	}
+}
+
+// TestPipeline_SentryNumericProjectEnvelopeRoutesToDefault is the envelope-path
+// counterpart of the regression above — the path the Sentry JS SDK actually uses.
+func TestPipeline_SentryNumericProjectEnvelopeRoutesToDefault(t *testing.T) {
+	pipeline, db := newSentryPipeline(t)
+
+	body := `{"event_id":"env-err-1","sent_at":"2026-01-01T00:00:00Z"}
+{"type":"event"}
+{"event_id":"env-err-1","level":"error","message":"x","exception":{"values":[{"type":"E","value":"v"}]}}`
+	r := httptest.NewRequest("POST", "http://localhost/api/1/envelope/", strings.NewReader(body))
+	r.Header.Set("X-Sentry-Auth", "Sentry sentry_key=abc")
+	w := httptest.NewRecorder()
+	pipeline.ServeHTTP(w, r)
+
+	if w.Code != 200 {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+
+	var orphan int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM projects WHERE key = ?`, "1").Scan(&orphan); err != nil {
+		t.Fatal(err)
+	}
+	if orphan != 0 {
+		t.Errorf("orphan project %q was created, want none", "1")
+	}
+
+	var project string
+	if err := db.QueryRow(`SELECT project FROM events WHERE uuid = ?`, "env-err-1").Scan(&project); err != nil {
+		t.Fatalf("event was not stored: %v", err)
+	}
+	if project != "default" {
+		t.Errorf("event project = %q, want %q", project, "default")
+	}
+}
+
+// TestPipeline_SentryProjectHeaderOverridesNumeric confirms an explicit
+// X-Buggregator-Project still wins over numeric-resolution: the escape hatch for
+// directing a numeric DSN to a named project rather than to default.
+func TestPipeline_SentryProjectHeaderOverridesNumeric(t *testing.T) {
+	pipeline, db := newSentryPipeline(t)
+
+	payload := `{"event_id":"ovr-1","timestamp":1774960590.32,"level":"error","exception":{"values":[{"type":"E","value":"v"}]}}`
+	r := httptest.NewRequest("POST", "http://localhost/api/1/store", strings.NewReader(payload))
+	r.Header.Set("X-Buggregator-Event", "sentry")
+	r.Header.Set("X-Buggregator-Project", "web")
+	w := httptest.NewRecorder()
+	pipeline.ServeHTTP(w, r)
+
+	if w.Code != 200 {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+
+	var project string
+	if err := db.QueryRow(`SELECT project FROM events WHERE uuid = ?`, "ovr-1").Scan(&project); err != nil {
+		t.Fatalf("event was not stored: %v", err)
+	}
+	if project != "web" {
+		t.Errorf("event project = %q, want %q", project, "web")
+	}
+
+	var orphan int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM projects WHERE key = ?`, "1").Scan(&orphan); err != nil {
+		t.Fatal(err)
+	}
+	if orphan != 0 {
+		t.Errorf("orphan project %q was created, want none", "1")
+	}
+}
+
+// TestPipeline_SentryTransactionNumericProject_NoOrphanProject confirms a
+// transaction-only envelope on a numeric DSN creates no orphan project (it
+// produces no canonical event, so the auto-register path is never reached).
+func TestPipeline_SentryTransactionNumericProject_NoOrphanProject(t *testing.T) {
+	pipeline, db := newSentryPipeline(t)
+
+	body := `{"event_id":"tx-1","sent_at":"2026-01-01T00:00:00Z"}
+{"type":"transaction"}
+{"event_id":"tx-1","type":"transaction","transaction":"GET /","start_timestamp":1,"timestamp":2,"spans":[]}`
+	r := httptest.NewRequest("POST", "http://localhost/api/1/envelope/", strings.NewReader(body))
+	r.Header.Set("X-Sentry-Auth", "Sentry sentry_key=abc")
+	w := httptest.NewRecorder()
+	pipeline.ServeHTTP(w, r)
+
+	if w.Code != 200 {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+
+	var orphan int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM projects WHERE key = ?`, "1").Scan(&orphan); err != nil {
+		t.Fatal(err)
+	}
+	if orphan != 0 {
+		t.Errorf("orphan project %q was created by a transaction envelope, want none", "1")
 	}
 }
 

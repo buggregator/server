@@ -180,6 +180,53 @@ func TestExtractProject(t *testing.T) {
 	}
 }
 
+func TestResolveProject(t *testing.T) {
+	tests := []struct {
+		segment string
+		want    string
+	}{
+		{"1", ""},        // numeric DSN id (Sentry SDK-forced) → default
+		{"123", ""},      // multi-digit numeric → default
+		{"my-app", "my-app"},
+		{"", ""},
+		{"app2", "app2"}, // trailing digit is a named project
+		{"2team", "2team"},
+		{"١٢٣", "١٢٣"},   // Arabic-Indic digits are named, not numeric (ASCII only)
+		{"１２３", "１２３"}, // fullwidth digits are named, not numeric
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.segment, func(t *testing.T) {
+			if got := resolveProject(tt.segment); got != tt.want {
+				t.Errorf("resolveProject(%q) = %q, want %q", tt.segment, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsAllDigits(t *testing.T) {
+	tests := []struct {
+		s    string
+		want bool
+	}{
+		{"007", true},
+		{"0", true},
+		{"", false},
+		{"+1", false},
+		{" 1", false},
+		{"1.0", false},
+		{"abc", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.s, func(t *testing.T) {
+			if got := isAllDigits(tt.s); got != tt.want {
+				t.Errorf("isAllDigits(%q) = %v, want %v", tt.s, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestHandleEnvelope(t *testing.T) {
 	h := &handler{} // no db — structured storage silently skipped
 
@@ -215,6 +262,29 @@ not valid json`)
 	})
 }
 
+// TestHandler_NumericProject_Envelope routes a numeric DSN envelope to the
+// default project (empty project) — the JS SDK path of issue #338.
+func TestHandler_NumericProject_Envelope(t *testing.T) {
+	h := &handler{}
+
+	body := `{"event_id":"env-1"}
+{"type":"event"}
+{"event_id":"env-1","level":"error","exception":{"values":[{"type":"E","value":"v"}]}}`
+	r := httptest.NewRequest("POST", "/api/1/envelope/", strings.NewReader(body))
+	r.Header.Set("X-Sentry-Auth", "Sentry sentry_key=test")
+
+	inc, err := h.Handle(r)
+	if err != nil {
+		t.Fatalf("Handle() error: %v", err)
+	}
+	if inc == nil {
+		t.Fatal("Handle() returned nil, want non-nil incoming event")
+	}
+	if inc.Project != "" {
+		t.Errorf("Project = %q, want %q (routes to default)", inc.Project, "")
+	}
+}
+
 // TestHandler_SDKv3_PlainJSON tests Sentry PHP SDK v3 without tracing.
 // v3 sends plain JSON to /api/{project}/store with event_id in payload.
 func TestHandler_SDKv3_PlainJSON(t *testing.T) {
@@ -239,8 +309,10 @@ func TestHandler_SDKv3_PlainJSON(t *testing.T) {
 	if inc.UUID != "8f78970685be481994063baacda75197" {
 		t.Errorf("UUID = %q, want %q", inc.UUID, "8f78970685be481994063baacda75197")
 	}
-	if inc.Project != "1" {
-		t.Errorf("Project = %q, want %q", inc.Project, "1")
+	// A numeric DSN project id (forced by the Sentry SDKs) resolves to empty so
+	// the event lands in the default project downstream — see issue #338.
+	if inc.Project != "" {
+		t.Errorf("Project = %q, want %q", inc.Project, "")
 	}
 
 	// Payload must contain event_id so the frontend can identify the event.
