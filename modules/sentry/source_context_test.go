@@ -1,6 +1,7 @@
 package sentry
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"testing"
 )
@@ -98,6 +99,58 @@ func TestEnrichSourceContext_TopLevelAndThreads(t *testing.T) {
 				t.Fatalf("%s: expected enrichment", name)
 			}
 		})
+	}
+}
+
+func TestSourceMap_OriginalPosition(t *testing.T) {
+	// generated line 1 -> original line 1; generated line 2 -> original line 3.
+	sm := &sourceMap{
+		Mappings:       "AAAA;AAEA",
+		Sources:        []string{"original.js"},
+		SourcesContent: []string{"// header\n// header2\nthrow new Error(\"boom\");\n"},
+	}
+	srcIdx, origLine, _, ok := sm.originalPosition(2, 0)
+	if !ok {
+		t.Fatal("expected a mapping")
+	}
+	if srcIdx != 0 || origLine != 2 {
+		t.Fatalf("got srcIdx=%d origLine=%d, want 0 and 2", srcIdx, origLine)
+	}
+	lines, _ := sm.originalSourceLines(srcIdx)
+	if lines[origLine] != `throw new Error("boom");` {
+		t.Fatalf("original line = %q", lines[origLine])
+	}
+}
+
+func TestEnrichFrame_UsesOriginalSourceViaSourceMap(t *testing.T) {
+	smJSON := `{"version":3,"sources":["original.js"],` +
+		`"sourcesContent":["// header\n// header2\nthrow new Error(\"boom\");\n"],` +
+		`"mappings":"AAAA;AAEA","names":[]}`
+	b64 := base64.StdEncoding.EncodeToString([]byte(smJSON))
+	transformed := "var x = 1;\nthrow new Error(\"boom\");\n" +
+		"//# sourceMappingURL=data:application/json;base64," + b64
+
+	fetch := func(string) (string, bool) { return transformed, true }
+
+	// frame points at the GENERATED line 2; we expect the ORIGINAL (line 3) back.
+	payload := []byte(`{"exception":{"values":[{"stacktrace":{"frames":[
+		{"filename":"https://app/x.js","lineno":2,"colno":1}
+	]}}]}}`)
+
+	out, changed := enrichSourceContext(payload, fetch)
+	if !changed {
+		t.Fatal("expected enrichment")
+	}
+	frame := firstFrame(t, out)
+	if got := frame["context_line"]; got != `throw new Error("boom");` {
+		t.Fatalf("context_line = %v, want original throw line", got)
+	}
+	if got, _ := frame["lineno"].(float64); got != 3 {
+		t.Fatalf("lineno = %v, want 3 (original)", frame["lineno"])
+	}
+	pre := toStrings(frame["pre_context"])
+	if len(pre) != 2 || pre[0] != "// header" || pre[1] != "// header2" {
+		t.Fatalf("pre_context = %v, want original header lines", pre)
 	}
 }
 

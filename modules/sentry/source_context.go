@@ -77,8 +77,8 @@ func enrichSourceContext(payload json.RawMessage, fetch sourceFetcher) (json.Raw
 		return payload, false
 	}
 
-	cache := map[string][]string{} // url -> lines (per-event, dedupes refetches)
-	missing := map[string]bool{}   // url -> fetch already failed
+	cache := map[string]*fetchedSource{} // url -> parsed file (per-event, dedupes refetches)
+	missing := map[string]bool{}         // url -> fetch already failed
 	changed := false
 
 	visit := func(st any) {
@@ -119,7 +119,14 @@ func asAnySlice(v any) []any {
 	return s
 }
 
-func enrichStacktrace(st any, fetch sourceFetcher, cache map[string][]string, missing map[string]bool) bool {
+// fetchedSource is a transformed file plus its parsed source map (if any),
+// cached per event so multiple frames from the same file fetch once.
+type fetchedSource struct {
+	transformed []string
+	sm          *sourceMap
+}
+
+func enrichStacktrace(st any, fetch sourceFetcher, cache map[string]*fetchedSource, missing map[string]bool) bool {
 	stm, ok := st.(map[string]any)
 	if !ok {
 		return false
@@ -135,7 +142,7 @@ func enrichStacktrace(st any, fetch sourceFetcher, cache map[string][]string, mi
 	return changed
 }
 
-func enrichFrame(fm map[string]any, fetch sourceFetcher, cache map[string][]string, missing map[string]bool) bool {
+func enrichFrame(fm map[string]any, fetch sourceFetcher, cache map[string]*fetchedSource, missing map[string]bool) bool {
 	// Skip frames that already carry source.
 	if s, ok := fm["context_line"].(string); ok && s != "" {
 		return false
@@ -150,8 +157,9 @@ func enrichFrame(fm map[string]any, fetch sourceFetcher, cache map[string][]stri
 	if !ok || lineno < 1 {
 		return false
 	}
+	colno, _ := toLineNumber(fm["colno"]) // 1-based, 0 if absent
 
-	lines, ok := cache[filename]
+	src, ok := cache[filename]
 	if !ok {
 		if missing[filename] {
 			return false
@@ -161,15 +169,46 @@ func enrichFrame(fm map[string]any, fetch sourceFetcher, cache map[string][]stri
 			missing[filename] = true
 			return false
 		}
-		lines = strings.Split(text, "\n")
-		cache[filename] = lines
+		src = &fetchedSource{transformed: strings.Split(text, "\n")}
+		if sm, ok := extractSourceMap(text, filename, fetch); ok {
+			src.sm = sm
+		}
+		cache[filename] = src
 	}
 
-	if lineno > len(lines) {
+	// Prefer the original source via the source map; fall back to the
+	// transformed lines the dev server served.
+	if src.sm != nil {
+		genCol := colno - 1
+		if genCol < 0 {
+			genCol = 0
+		}
+		if srcIdx, origLine, origCol, ok := src.sm.originalPosition(lineno, genCol); ok {
+			if lines, ok := src.sm.originalSourceLines(srcIdx); ok && origLine < len(lines) {
+				applyContext(fm, lines, origLine)
+				// Re-point the frame at the original location. Keep `filename`
+				// (the dev-server URL is the precise path, e.g. .../+page.svelte)
+				// but expose the original name as `abs_path` for reference.
+				fm["lineno"] = origLine + 1
+				fm["colno"] = origCol + 1
+				if name := src.sm.sourceName(srcIdx); name != "" {
+					fm["abs_path"] = name
+				}
+				return true
+			}
+		}
+	}
+
+	if lineno > len(src.transformed) {
 		return false
 	}
+	applyContext(fm, src.transformed, lineno-1)
+	return true
+}
 
-	idx := lineno - 1
+// applyContext sets context_line / pre_context / post_context around a 0-based
+// line index, using sourceContextLines of surrounding context.
+func applyContext(fm map[string]any, lines []string, idx int) {
 	fm["context_line"] = lines[idx]
 
 	pre := make([]any, 0, sourceContextLines)
@@ -182,7 +221,6 @@ func enrichFrame(fm map[string]any, fetch sourceFetcher, cache map[string][]stri
 	}
 	fm["pre_context"] = pre
 	fm["post_context"] = post
-	return true
 }
 
 func toLineNumber(v any) (int, bool) {
