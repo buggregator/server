@@ -1,6 +1,7 @@
 package sentry
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -145,6 +146,29 @@ type Mechanism struct {
 
 type BreadcrumbList struct {
 	Values []Breadcrumb `json:"values"`
+}
+
+// UnmarshalJSON accepts both shapes Sentry SDKs emit for breadcrumbs: the
+// "interface" object form {"values": [...]} (Python/PHP) and the bare-array
+// form [...] (sentry.javascript / SvelteKit). Without this, a JS error event
+// fails to parse and never lands in the sentry tables.
+func (b *BreadcrumbList) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		return nil
+	}
+
+	if trimmed[0] == '[' {
+		return json.Unmarshal(trimmed, &b.Values)
+	}
+
+	type alias BreadcrumbList
+	var a alias
+	if err := json.Unmarshal(trimmed, &a); err != nil {
+		return err
+	}
+	b.Values = a.Values
+	return nil
 }
 
 type Breadcrumb struct {
