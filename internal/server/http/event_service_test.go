@@ -32,8 +32,8 @@ func TestEventService_HandleIncoming_AutoRegistersProject(t *testing.T) {
 	registry := module.NewRegistry()
 	es := serverhttp.NewEventService(store, hub, registry, nil, db)
 
-	// Simulate a Sentry event whose project key comes from the DSN path:
-	// /api/123/envelope/ → project "123".
+	// An event arriving with an explicit non-default project key (e.g. a named
+	// DSN path or an X-Buggregator-Project override) must auto-register that key.
 	inc := &event.Incoming{
 		UUID:    "evt-1",
 		Type:    "sentry",

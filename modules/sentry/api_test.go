@@ -208,6 +208,43 @@ func TestAPIExceptionDetail(t *testing.T) {
 	}
 }
 
+// TestAPIExceptionDetailByEventID covers Fix B: the detail endpoint must resolve
+// by event_id (the key the list and the frontend route use) and still return the
+// populated exceptions/breadcrumbs keyed off the internal id.
+func TestAPIExceptionDetailByEventID(t *testing.T) {
+	mux := http.NewServeMux()
+	seedTestData(t, mux)
+
+	req := httptest.NewRequest("GET", "/api/sentry/exceptions", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	var listResp map[string]any
+	json.Unmarshal(w.Body.Bytes(), &listResp)
+	first := listResp["data"].([]any)[0].(map[string]any)
+	eventID := first["event_id"].(string)
+	internalID := first["id"].(string)
+
+	req = httptest.NewRequest("GET", "/api/sentry/exceptions/"+eventID, nil)
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("status = %d, want 200 for event_id lookup", w.Code)
+	}
+
+	var detail map[string]any
+	json.Unmarshal(w.Body.Bytes(), &detail)
+
+	if detail["id"] != internalID {
+		t.Errorf("detail id = %v, want internal id %q", detail["id"], internalID)
+	}
+	excs, ok := detail["exceptions"].([]any)
+	if !ok || len(excs) == 0 {
+		t.Errorf("exceptions empty for event_id lookup, want populated (got %v)", detail["exceptions"])
+	}
+}
+
 func TestAPIExceptionDetailNotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	seedTestData(t, mux)

@@ -46,7 +46,7 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 	body = decompress(body, r.Header.Get("Content-Encoding"))
 
 	// Extract project from path: /api/{project}/store
-	project := extractProject(r.URL.Path)
+	project := resolveProject(extractProject(r.URL.Path))
 
 	// Try parsing as plain JSON first (legacy /store format).
 	var parsed map[string]any
@@ -54,6 +54,11 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 		uuid := ""
 		if id, ok := parsed["event_id"].(string); ok {
 			uuid = id
+		}
+
+		// Resolve source code for browser/JS frames that only carry file+line.
+		if enriched, changed := enrichSourceContext(body, nil); changed {
+			body = enriched
 		}
 
 		// Store structured data if DB is available.
@@ -196,6 +201,12 @@ func (h *handler) handleEventItem(item EnvelopeItem, envelopeEventID string, pro
 		uuid = envelopeEventID
 		ev.EventID = envelopeEventID
 		payload = injectEventID(payload, envelopeEventID)
+	}
+
+	// Resolve source code for browser/JS frames that only carry file+line.
+	if enriched, changed := enrichSourceContext(payload, nil); changed {
+		payload = enriched
+		_ = json.Unmarshal(payload, &ev) // re-parse so structured storage carries the code too
 	}
 
 	if h.db != nil {
@@ -370,4 +381,27 @@ func extractProject(path string) string {
 		return parts[1]
 	}
 	return ""
+}
+
+// resolveProject maps a Sentry DSN project segment to a Buggregator project key.
+// The Sentry JavaScript SDK rejects non-numeric DSN project ids, so a purely
+// numeric segment is the SDK-internal project id, not a Buggregator project name —
+// it resolves to empty so the event lands in the default project. Issue #338.
+func resolveProject(segment string) string {
+	if isAllDigits(segment) {
+		return ""
+	}
+	return segment
+}
+
+func isAllDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }

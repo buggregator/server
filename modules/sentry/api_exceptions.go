@@ -211,19 +211,21 @@ func handleExceptionDetail(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 
-		// Load error event.
+		// Load error event. The URL segment may be an internal id or a Sentry
+		// event_id (the exceptions list and the frontend route both key on
+		// event_id), so resolve by either and prefer the internal-id match.
 		var (
-			eventID, fingerprint, level, receivedAt, payloadStr string
-			handled                                             sql.NullBool
-			platform, environment, serverName, txn, release     sql.NullString
-			traceID, spanID                                     sql.NullString
-			eventTS                                             sql.NullString
+			internalID, eventID, fingerprint, level, receivedAt, payloadStr string
+			handled                                                         sql.NullBool
+			platform, environment, serverName, txn, release                 sql.NullString
+			traceID, spanID                                                 sql.NullString
+			eventTS                                                         sql.NullString
 		)
 		err := db.QueryRow(
-			`SELECT event_id, fingerprint, level, handled, platform, environment, server_name,
+			`SELECT id, event_id, fingerprint, level, handled, platform, environment, server_name,
 				"transaction", release, trace_id, span_id, received_at, event_ts, payload
-			FROM sentry_error_events WHERE id = ?`, id,
-		).Scan(&eventID, &fingerprint, &level, &handled, &platform, &environment,
+			FROM sentry_error_events WHERE id = ? OR event_id = ? ORDER BY (id = ?) DESC LIMIT 1`, id, id, id,
+		).Scan(&internalID, &eventID, &fingerprint, &level, &handled, &platform, &environment,
 			&serverName, &txn, &release, &traceID, &spanID, &receivedAt, &eventTS, &payloadStr)
 		if err == sql.ErrNoRows {
 			apiError(w, "not found", http.StatusNotFound)
@@ -234,11 +236,9 @@ func handleExceptionDetail(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Load exceptions.
-		exceptions := loadExceptions(db, id)
-
-		// Load breadcrumbs.
-		breadcrumbs := loadBreadcrumbs(db, id)
+		// Child tables key on the internal id, not the URL segment.
+		exceptions := loadExceptions(db, internalID)
+		breadcrumbs := loadBreadcrumbs(db, internalID)
 
 		// Load trace summary if trace_id exists.
 		var traceSummary any
@@ -253,7 +253,7 @@ func handleExceptionDetail(db *sql.DB) http.HandlerFunc {
 		}
 
 		result := map[string]any{
-			"id":            id,
+			"id":            internalID,
 			"event_id":      eventID,
 			"fingerprint":   fingerprint,
 			"level":         level,
