@@ -56,6 +56,11 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 			uuid = id
 		}
 
+		// Resolve source code for browser/JS frames that only carry file+line.
+		if enriched, changed := enrichSourceContext(body, nil); changed {
+			body = enriched
+		}
+
 		// Store structured data if DB is available.
 		h.storeJSONEvent(body, project)
 
@@ -196,6 +201,12 @@ func (h *handler) handleEventItem(item EnvelopeItem, envelopeEventID string, pro
 		uuid = envelopeEventID
 		ev.EventID = envelopeEventID
 		payload = injectEventID(payload, envelopeEventID)
+	}
+
+	// Resolve source code for browser/JS frames that only carry file+line.
+	if enriched, changed := enrichSourceContext(payload, nil); changed {
+		payload = enriched
+		_ = json.Unmarshal(payload, &ev) // re-parse so structured storage carries the code too
 	}
 
 	if h.db != nil {
