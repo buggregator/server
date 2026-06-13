@@ -478,6 +478,56 @@ func TestHandler_SDKv4_Envelope_MessageEvent(t *testing.T) {
 	}
 }
 
+// TestHandler_SDKv4_Envelope_TransactionEventIDFromHeader verifies transaction
+// items are persisted with event_id from the envelope header when omitted from
+// the transaction payload (Sentry PHP SDK v4+ shape).
+func TestHandler_SDKv4_Envelope_TransactionEventIDFromHeader(t *testing.T) {
+	db := setupTestDB(t)
+	h := &handler{db: db}
+
+	first := `{"sent_at":"2026-06-13T03:40:25Z","dsn":"http://test@localhost:8000/1","sdk":{"name":"sentry.php","version":"4.27.0"},"event_id":"b74b9242f81441c5b36d603a8c1fde33"}
+{"type":"transaction","content_type":"application/json"}
+{"timestamp":1781322025.308429,"platform":"php","sdk":{"name":"sentry.php","version":"4.27.0"},"start_timestamp":1781322025.138361,"transaction":"/somelink","server_name":"d78b669f473f","environment":"dev","contexts":{"trace":{"span_id":"cbd2ed7ada284a07","trace_id":"43cf0f64290d425fb2a52696eb56e5c3","op":"http.server"}},"spans":[],"transaction_info":{"source":"custom"}}`
+
+	second := `{"sent_at":"2026-06-13T03:40:25Z","dsn":"http://test@localhost:8000/1","sdk":{"name":"sentry.php","version":"4.27.0"},"event_id":"a58b0b34bc9c48e0be0ede07a93b3f4a"}
+{"type":"transaction","content_type":"application/json"}
+{"timestamp":1781322025.521973,"platform":"php","sdk":{"name":"sentry.php","version":"4.27.0"},"start_timestamp":1781322025.472156,"transaction":"/somelink/anotherone","server_name":"d78b669f473f","environment":"dev","contexts":{"trace":{"span_id":"c92f027e3d8d401d","trace_id":"51f437611edf44bda6dadb1703dbde98","op":"http.server"}},"spans":[],"transaction_info":{"source":"custom"}}`
+
+	for i, envelope := range []string{first, second} {
+		r := httptest.NewRequest("POST", "/api/1/envelope/", strings.NewReader(envelope))
+		r.Header.Set("Content-Type", "application/x-sentry-envelope")
+		r.Header.Set("X-Sentry-Auth", "Sentry sentry_version=7, sentry_client=sentry.php/4.27.0, sentry_key=test")
+
+		inc, err := h.Handle(r)
+		if err != nil {
+			t.Fatalf("Handle() [%d] error: %v", i, err)
+		}
+		if inc != nil {
+			t.Fatalf("Handle() [%d] = %+v, want nil (transactions should not create feed events)", i, inc)
+		}
+	}
+
+	var count int
+	err := db.QueryRow(`SELECT COUNT(*) FROM sentry_transactions`).Scan(&count)
+	if err != nil {
+		t.Fatalf("count query failed: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("sentry_transactions count = %d, want 2", count)
+	}
+
+	for _, id := range []string{"b74b9242f81441c5b36d603a8c1fde33", "a58b0b34bc9c48e0be0ede07a93b3f4a"} {
+		var exists int
+		err := db.QueryRow(`SELECT COUNT(*) FROM sentry_transactions WHERE event_id = ?`, id).Scan(&exists)
+		if err != nil {
+			t.Fatalf("event_id query failed for %s: %v", id, err)
+		}
+		if exists != 1 {
+			t.Fatalf("event_id %s count = %d, want 1", id, exists)
+		}
+	}
+}
+
 // TestHandler_SDKv2_PlainJSON tests Sentry PHP SDK v2.
 // v2 always sends plain JSON to /api/{project}/store with ISO 8601 timestamp string.
 func TestHandler_SDKv2_PlainJSON(t *testing.T) {
