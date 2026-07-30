@@ -131,7 +131,7 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 		case "transaction":
 			// Transactions are stored in structured tables (sentry_transactions, sentry_spans)
 			// but should NOT appear in the global event feed as empty sentry cards.
-			h.handleTransactionItem(item)
+			h.handleTransactionItem(item, envHeader.EventID)
 
 		case "spans":
 			h.handleSpansItem(item)
@@ -219,7 +219,9 @@ func (h *handler) handleEventItem(item EnvelopeItem, envelopeEventID string, pro
 }
 
 // handleTransactionItem processes a "transaction" envelope item.
-func (h *handler) handleTransactionItem(item EnvelopeItem) (string, json.RawMessage) {
+// envelopeEventID is used as a fallback for SDKs that only include event_id
+// in the envelope header and omit it in the transaction payload.
+func (h *handler) handleTransactionItem(item EnvelopeItem, envelopeEventID string) (string, json.RawMessage) {
 	var txn Transaction
 	if err := json.Unmarshal(item.Payload, &txn); err != nil {
 		slog.Warn("sentry: failed to parse transaction", "err", err)
@@ -227,14 +229,20 @@ func (h *handler) handleTransactionItem(item EnvelopeItem) (string, json.RawMess
 	}
 
 	uuid := txn.EventID
+	payload := item.Payload
+	if uuid == "" && envelopeEventID != "" {
+		uuid = envelopeEventID
+		txn.EventID = envelopeEventID
+		payload = injectEventID(payload, envelopeEventID)
+	}
 
 	if h.db != nil {
-		if _, err := storeTransaction(h.db, &txn, item.Payload); err != nil {
+		if _, err := storeTransaction(h.db, &txn, payload); err != nil {
 			slog.Warn("sentry: failed to store structured transaction", "err", err)
 		}
 	}
 
-	return uuid, item.Payload
+	return uuid, payload
 }
 
 // handleSpansItem processes a "spans" envelope item (Span v2 format).
