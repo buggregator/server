@@ -325,8 +325,8 @@ func TestParseEmail_InlineAttachmentWithCID(t *testing.T) {
 	if len(atts) != 1 {
 		t.Fatalf("expected 1 attachment, got %d", len(atts))
 	}
-	if atts[0].ContentID != "<logo123@example.com>" {
-		t.Errorf("ContentID = %q, want %q", atts[0].ContentID, "<logo123@example.com>")
+	if atts[0].ContentID != "logo123@example.com" {
+		t.Errorf("ContentID = %q, want %q", atts[0].ContentID, "logo123@example.com")
 	}
 	if atts[0].Filename != "logo.png" {
 		t.Errorf("Filename = %q, want %q", atts[0].Filename, "logo.png")
