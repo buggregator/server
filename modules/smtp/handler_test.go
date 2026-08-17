@@ -300,6 +300,78 @@ func TestParseEmail_RFC2047Subject(t *testing.T) {
 	}
 }
 
+func TestParseEmail_InlineAttachmentWithCID(t *testing.T) {
+	// Build a multipart/related email with an inline image referenced via cid:
+	raw := []byte("From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: CID Test\r\n" +
+		"Content-Type: multipart/related; boundary=\"rel\"\r\n\r\n" +
+		"--rel\r\nContent-Type: text/html\r\n\r\n" +
+		"<html><body><img src=\"cid:logo123@example.com\"></body></html>\r\n" +
+		"--rel\r\nContent-Type: image/png\r\nContent-Disposition: inline; filename=\"logo.png\"\r\n" +
+		"Content-ID: <logo123@example.com>\r\nContent-Transfer-Encoding: base64\r\n\r\n" +
+		"iVBORw0KGgo=\r\n" +
+		"--rel--")
+
+	parsed, atts, err := parseEmail(raw, []string{"recipient@example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// HTML should contain the cid: reference (replacement happens in Data(), not parseEmail).
+	if !strings.Contains(parsed.HTML, "cid:logo123@example.com") {
+		t.Errorf("HTML should still contain cid: reference, got %q", parsed.HTML)
+	}
+
+	// Should have one attachment with ContentID set.
+	if len(atts) != 1 {
+		t.Fatalf("expected 1 attachment, got %d", len(atts))
+	}
+	if atts[0].ContentID != "logo123@example.com" {
+		t.Errorf("ContentID = %q, want %q", atts[0].ContentID, "logo123@example.com")
+	}
+	if atts[0].Filename != "logo.png" {
+		t.Errorf("Filename = %q, want %q", atts[0].Filename, "logo.png")
+	}
+}
+
+func TestReplaceCIDReferences(t *testing.T) {
+	// Simulate the CID replacement logic from Data().
+	html := `<html><body><img src="cid:logo@example.com"><img src="cid:banner@example.com"></body></html>`
+	cidMap := map[string]string{
+		"logo@example.com":   "/api/smtp/attachments/evt-uuid/preview/att-uuid-1",
+		"banner@example.com": "/api/smtp/attachments/evt-uuid/preview/att-uuid-2",
+	}
+
+	for cid, url := range cidMap {
+		html = strings.ReplaceAll(html, "cid:"+cid, url)
+	}
+
+	if strings.Contains(html, "cid:") {
+		t.Errorf("HTML still contains cid: references: %s", html)
+	}
+	if !strings.Contains(html, "/api/smtp/attachments/evt-uuid/preview/att-uuid-1") {
+		t.Error("missing logo preview URL")
+	}
+	if !strings.Contains(html, "/api/smtp/attachments/evt-uuid/preview/att-uuid-2") {
+		t.Error("missing banner preview URL")
+	}
+}
+
+func TestReplaceCIDReferences_NoCID(t *testing.T) {
+	// When there are no CID references, HTML should remain unchanged.
+	html := `<html><body><p>No images</p></body></html>`
+	cidMap := map[string]string{}
+
+	if len(cidMap) > 0 {
+		for cid, url := range cidMap {
+			html = strings.ReplaceAll(html, "cid:"+cid, url)
+		}
+	}
+
+	if html != `<html><body><p>No images</p></body></html>` {
+		t.Errorf("HTML was modified unexpectedly: %s", html)
+	}
+}
+
 func TestPreviewMapper(t *testing.T) {
 	m := &previewMapper{}
 

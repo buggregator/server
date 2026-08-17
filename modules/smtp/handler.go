@@ -114,7 +114,8 @@ func (s *session) Data(r io.Reader) error {
 	// Generate event UUID for attachment storage.
 	eventUUID := event.GenerateUUID()
 
-	// Store attachments.
+	// Store attachments and collect CID→URL mappings for inline images.
+	cidMap := make(map[string]string) // cid -> preview URL
 	if s.backend.attachments != nil && len(attachments) > 0 {
 		for _, att := range attachments {
 			path := eventUUID + "/" + att.Filename
@@ -129,6 +130,17 @@ func (s *session) Data(r io.Reader) error {
 					attUUID, eventUUID, att.Filename, path, len(att.content), att.Type, att.ContentID,
 				)
 			}
+			if att.ContentID != "" {
+				cid := strings.Trim(att.ContentID, "<>")
+				cidMap[cid] = "/api/smtp/attachments/" + eventUUID + "/preview/" + attUUID
+			}
+		}
+	}
+
+	// Replace cid: references in HTML with attachment preview URLs.
+	if parsed.HTML != "" && len(cidMap) > 0 {
+		for cid, url := range cidMap {
+			parsed.HTML = strings.ReplaceAll(parsed.HTML, "cid:"+cid, url)
 		}
 	}
 
@@ -167,16 +179,16 @@ type parsedAttachment struct {
 // ParsedEmail is the structure stored as event payload.
 // Field names match the original PHP Buggregator Message::jsonSerialize().
 type ParsedEmail struct {
-	ID       *string        `json:"id"`
-	Subject  string         `json:"subject"`
-	From     []EmailAddress `json:"from"`
-	To       []EmailAddress `json:"to"`
-	Cc       []EmailAddress `json:"cc"`
-	Bcc      []string       `json:"bcc"`
-	ReplyTo  []EmailAddress `json:"reply_to"`
-	Text     string         `json:"text"`
-	HTML     string         `json:"html"`
-	Raw      string         `json:"raw"`
+	ID      *string        `json:"id"`
+	Subject string         `json:"subject"`
+	From    []EmailAddress `json:"from"`
+	To      []EmailAddress `json:"to"`
+	Cc      []EmailAddress `json:"cc"`
+	Bcc     []string       `json:"bcc"`
+	ReplyTo []EmailAddress `json:"reply_to"`
+	Text    string         `json:"text"`
+	HTML    string         `json:"html"`
+	Raw     string         `json:"raw"`
 }
 
 func parseEmail(raw []byte, recipients []string) (*ParsedEmail, []parsedAttachment, error) {
