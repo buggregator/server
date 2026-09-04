@@ -55,6 +55,14 @@ func handleExceptionsGrouped(db *sql.DB, w http.ResponseWriter, r *http.Request)
 		conditions = append(conditions, "e.level = ?")
 		args = append(args, v)
 	}
+	if v := q.Get("environment"); v != "" {
+		conditions = append(conditions, "e.environment = ?")
+		args = append(args, v)
+	}
+	if v := q.Get("project"); v != "" {
+		conditions = append(conditions, "e.project_id = ?")
+		args = append(args, v)
+	}
 	if v := q.Get("handled"); v != "" {
 		if v == "true" {
 			conditions = append(conditions, "e.handled = 1")
@@ -62,6 +70,9 @@ func handleExceptionsGrouped(db *sql.DB, w http.ResponseWriter, r *http.Request)
 			conditions = append(conditions, "e.handled = 0")
 		}
 	}
+
+	// Period: from/to/window. received_at is covered by idx_sentry_errors_received_at.
+	conditions, args = appendTimeConditions(conditions, args, r, "e.received_at", false)
 
 	where := ""
 	if len(conditions) > 0 {
@@ -142,6 +153,14 @@ func handleExceptionsChronological(db *sql.DB, w http.ResponseWriter, r *http.Re
 		conditions = append(conditions, "e.level = ?")
 		args = append(args, v)
 	}
+	if v := q.Get("environment"); v != "" {
+		conditions = append(conditions, "e.environment = ?")
+		args = append(args, v)
+	}
+	if v := q.Get("project"); v != "" {
+		conditions = append(conditions, "e.project_id = ?")
+		args = append(args, v)
+	}
 	if v := q.Get("handled"); v != "" {
 		if v == "true" {
 			conditions = append(conditions, "e.handled = 1")
@@ -149,6 +168,9 @@ func handleExceptionsChronological(db *sql.DB, w http.ResponseWriter, r *http.Re
 			conditions = append(conditions, "e.handled = 0")
 		}
 	}
+
+	// Period: from/to/window. received_at is covered by idx_sentry_errors_received_at.
+	conditions, args = appendTimeConditions(conditions, args, r, "e.received_at", false)
 
 	where := ""
 	if len(conditions) > 0 {

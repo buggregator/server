@@ -30,6 +30,8 @@ func handleLogsList(db *sql.DB) http.HandlerFunc {
 			conditions = append(conditions, "l.trace_id = ?")
 			args = append(args, v)
 		}
+		// Period: log_ts is stored in ISO form and covered by idx_sentry_logs_ts.
+		conditions, args = appendTimeConditions(conditions, args, r, "l.log_ts", true)
 
 		where := ""
 		if len(conditions) > 0 {
