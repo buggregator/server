@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
+
+	httpserver "github.com/buggregator/go-buggregator/internal/server/http"
 )
 
 func registerAPI(mux *http.ServeMux, db *sql.DB) {
@@ -39,6 +43,93 @@ func handleClearAll(db *sql.DB) http.HandlerFunc {
 		}
 		apiJSON(w, map[string]any{"status": true})
 	}
+}
+
+// timeWindow reads the period bounds from the query parameters.
+//
+//	from, to — unix seconds or RFC3339 ("2026-09-01T10:00:00Z", "2026-09-01");
+//	window   — a window relative to now: "24h", "15m", "7d".
+//
+// A zero result means "unbounded". None of the sentry endpoints could be
+// narrowed by time before, so on a stream of tens of thousands of events a day
+// the only way to reach a particular hour was to page through the whole list.
+func timeWindow(r *http.Request) (from, to time.Time) {
+	q := r.URL.Query()
+	from = parseWhen(q.Get("from"))
+	to = parseWhen(q.Get("to"))
+
+	if from.IsZero() && to.IsZero() {
+		if w := strings.TrimSpace(q.Get("window")); w != "" && w != "all" && w != "0" {
+			if d, err := httpserver.ParseWindow(w); err == nil && d > 0 {
+				from = time.Now().UTC().Add(-d)
+			}
+		}
+	}
+	return from, to
+}
+
+// parseWhen reads a single bound: unix seconds or one of the ISO forms.
+func parseWhen(v string) time.Time {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return time.Time{}
+	}
+	if f, err := strconv.ParseFloat(v, 64); err == nil && f > 0 {
+		return time.Unix(int64(f), 0).UTC()
+	}
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02T15:04:05", "2006-01-02"} {
+		if t, err := time.Parse(layout, v); err == nil {
+			return t.UTC()
+		}
+	}
+	return time.Time{}
+}
+
+// appendTimeConditions adds the period bounds to a WHERE clause.
+//
+// The stored format differs per column, hence the iso flag:
+//   - received_at, first_seen, last_seen — 'YYYY-MM-DD HH:MM:SS' (datetime('now'));
+//   - start_ts, end_ts of transactions and spans — ISO with T and Z.
+//
+// The comparison is done on strings: for both formats lexicographic order
+// matches chronological order, and the indexes on these columns are textual.
+func appendTimeConditions(conditions []string, args []any, r *http.Request, column string, iso bool) ([]string, []any) {
+	from, to := timeWindow(r)
+	layout := "2006-01-02 15:04:05"
+	if iso {
+		layout = "2006-01-02T15:04:05"
+	}
+	if !from.IsZero() {
+		conditions = append(conditions, column+" >= ?")
+		args = append(args, from.UTC().Format(layout))
+	}
+	if !to.IsZero() {
+		conditions = append(conditions, column+" <= ?")
+		args = append(args, to.UTC().Format(layout))
+	}
+	return conditions, args
+}
+
+// tsUTC wraps a time column so the value leaves the API as an ISO string with
+// an explicit zone: 2026-09-04T05:33:12Z.
+//
+// received_at, first_seen and last_seen are written with datetime('now'), which
+// is UTC but carries **no zone marker**: "2026-09-04 05:33:12". A browser reads
+// such a string as local time, so "last seen" in the UI was off by the viewer's
+// UTC offset — in UTC+3 a fresh error showed up as "3 hours ago". Sorting and
+// filtering still use the raw column; only the representation changes.
+func tsUTC(column string) string {
+	// COALESCE covers a value strftime cannot parse (empty string, garbage):
+	// the original value goes out instead of NULL.
+	return "COALESCE(strftime('%Y-%m-%dT%H:%M:%SZ', " + column + "), " + column + ")"
+}
+
+// whereOf builds a WHERE clause from conditions (empty string when there are none).
+func whereOf(conditions []string) string {
+	if len(conditions) == 0 {
+		return ""
+	}
+	return " WHERE " + strings.Join(conditions, " AND ")
 }
 
 // pagination extracts page/limit from query params with defaults.

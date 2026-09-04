@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/buggregator/go-buggregator/internal/auth"
@@ -105,7 +106,7 @@ func (a *App) Run() {
 	}
 
 	// Register core API routes (settings endpoint is public, others go through auth middleware).
-	httpserver.RegisterAPI(mux, store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes(), authSettings, authMiddleware)
+	httpserver.RegisterAPI(mux, store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes(), authSettings, authMiddleware, a.listLimits())
 
 	// Register attachment API endpoints.
 	httpserver.RegisterAttachmentAPI(mux, a.db, a.attachments)
@@ -231,4 +232,30 @@ func (a *App) Run() {
 	slog.Info("shutting down...")
 	_ = srv.Shutdown(context.Background())
 	tcpManager.Wait()
+}
+
+// listLimits turns the ui config section into list limits. An unreadable
+// default_window must not take the service down: the window is dropped and the
+// reason is logged.
+func (a *App) listLimits() httpserver.ListLimits {
+	lim := httpserver.ListLimits{
+		DefaultLimit: a.cfg.UI.DefaultLimit,
+		MaxLimit:     a.cfg.UI.MaxLimit,
+	}
+
+	switch w := strings.TrimSpace(a.cfg.UI.DefaultWindow); w {
+	case "", "all", "0":
+		lim.DefaultWindow = 0
+	default:
+		d, err := httpserver.ParseWindow(w)
+		if err != nil || d <= 0 {
+			slog.Warn("ui.default_window is not a duration, no time window applied", "value", w, "err", err)
+			d = 0
+		}
+		lim.DefaultWindow = d
+	}
+
+	slog.Info("event list limits", "default_limit", lim.DefaultLimit,
+		"max_limit", lim.MaxLimit, "default_window", lim.DefaultWindow)
+	return lim
 }

@@ -30,8 +30,8 @@ func handleExceptionsGrouped(db *sql.DB, w http.ResponseWriter, r *http.Request)
 		se.exception_type,
 		se.exception_value,
 		g.count,
-		g.first_seen,
-		g.last_seen,
+		` + tsUTC("g.first_seen") + ` as first_seen,
+		` + tsUTC("g.last_seen") + ` as last_seen,
 		g.level,
 		g.handled,
 		g.sample_event_id
@@ -55,6 +55,14 @@ func handleExceptionsGrouped(db *sql.DB, w http.ResponseWriter, r *http.Request)
 		conditions = append(conditions, "e.level = ?")
 		args = append(args, v)
 	}
+	if v := q.Get("environment"); v != "" {
+		conditions = append(conditions, "e.environment = ?")
+		args = append(args, v)
+	}
+	if v := q.Get("project"); v != "" {
+		conditions = append(conditions, "e.project_id = ?")
+		args = append(args, v)
+	}
 	if v := q.Get("handled"); v != "" {
 		if v == "true" {
 			conditions = append(conditions, "e.handled = 1")
@@ -62,6 +70,9 @@ func handleExceptionsGrouped(db *sql.DB, w http.ResponseWriter, r *http.Request)
 			conditions = append(conditions, "e.handled = 0")
 		}
 	}
+
+	// Period: from/to/window. received_at is covered by idx_sentry_errors_received_at.
+	conditions, args = appendTimeConditions(conditions, args, r, "e.received_at", false)
 
 	where := ""
 	if len(conditions) > 0 {
@@ -130,7 +141,7 @@ func handleExceptionsChronological(db *sql.DB, w http.ResponseWriter, r *http.Re
 		(SELECT COUNT(*) FROM sentry_error_events e2 WHERE e2.fingerprint = e.fingerprint) as occurrence_count,
 		(SELECT se.exception_type FROM sentry_exceptions se WHERE se.error_event_id = e.id AND se.position = 0 LIMIT 1) as exception_type,
 		(SELECT se.exception_value FROM sentry_exceptions se WHERE se.error_event_id = e.id AND se.position = 0 LIMIT 1) as exception_value,
-		e.level, e.handled, e."transaction", e.received_at, e.trace_id
+		e.level, e.handled, e."transaction", ` + tsUTC("e.received_at") + ` as received_at, e.trace_id
 	FROM sentry_error_events e`
 
 	countQuery := `SELECT COUNT(*) FROM sentry_error_events e`
@@ -142,6 +153,14 @@ func handleExceptionsChronological(db *sql.DB, w http.ResponseWriter, r *http.Re
 		conditions = append(conditions, "e.level = ?")
 		args = append(args, v)
 	}
+	if v := q.Get("environment"); v != "" {
+		conditions = append(conditions, "e.environment = ?")
+		args = append(args, v)
+	}
+	if v := q.Get("project"); v != "" {
+		conditions = append(conditions, "e.project_id = ?")
+		args = append(args, v)
+	}
 	if v := q.Get("handled"); v != "" {
 		if v == "true" {
 			conditions = append(conditions, "e.handled = 1")
@@ -149,6 +168,9 @@ func handleExceptionsChronological(db *sql.DB, w http.ResponseWriter, r *http.Re
 			conditions = append(conditions, "e.handled = 0")
 		}
 	}
+
+	// Period: from/to/window. received_at is covered by idx_sentry_errors_received_at.
+	conditions, args = appendTimeConditions(conditions, args, r, "e.received_at", false)
 
 	where := ""
 	if len(conditions) > 0 {
@@ -223,7 +245,7 @@ func handleExceptionDetail(db *sql.DB) http.HandlerFunc {
 		)
 		err := db.QueryRow(
 			`SELECT id, event_id, fingerprint, level, handled, platform, environment, server_name,
-				"transaction", release, trace_id, span_id, received_at, event_ts, payload
+				"transaction", release, trace_id, span_id, ` + tsUTC("received_at") + ` as received_at, event_ts, payload
 			FROM sentry_error_events WHERE id = ? OR event_id = ? ORDER BY (id = ?) DESC LIMIT 1`, id, id, id,
 		).Scan(&internalID, &eventID, &fingerprint, &level, &handled, &platform, &environment,
 			&serverName, &txn, &release, &traceID, &spanID, &receivedAt, &eventTS, &payloadStr)
