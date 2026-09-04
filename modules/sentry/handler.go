@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/klauspost/compress/zstd"
+
 	"github.com/buggregator/go-buggregator/internal/event"
 )
 
@@ -324,9 +326,21 @@ func decompress(data []byte, encoding string) []byte {
 		if d, err := decompressZlib(data); err == nil {
 			return d
 		}
+	case "zstd":
+		if d, err := decompressZstd(data); err == nil {
+			return d
+		}
 	}
 
 	// Auto-detect by magic bytes (Sentry SDKs sometimes omit the header).
+	if len(data) >= 4 {
+		// Zstd magic: 0x28 0xb5 0x2f 0xfd
+		if data[0] == 0x28 && data[1] == 0xb5 && data[2] == 0x2f && data[3] == 0xfd {
+			if d, err := decompressZstd(data); err == nil {
+				return d
+			}
+		}
+	}
 	if len(data) >= 2 {
 		// Gzip magic: 0x1f 0x8b
 		if data[0] == 0x1f && data[1] == 0x8b {
@@ -347,6 +361,15 @@ func decompress(data []byte, encoding string) []byte {
 
 func decompressGzip(data []byte) ([]byte, error) {
 	r, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return io.ReadAll(r)
+}
+
+func decompressZstd(data []byte) ([]byte, error) {
+	r, err := zstd.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}

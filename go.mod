@@ -5,6 +5,7 @@ go 1.26.1
 require (
 	github.com/emersion/go-smtp v0.24.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/klauspost/compress v1.18.0
 	github.com/modelcontextprotocol/go-sdk v1.4.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
