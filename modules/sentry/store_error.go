@@ -104,7 +104,7 @@ func storeErrorEvent(db *sql.DB, ev *ErrorEvent, payload json.RawMessage, projec
 	if ev.Breadcrumbs != nil {
 		for _, bc := range ev.Breadcrumbs.Values {
 			bcID := event.GenerateUUID()
-			bcTS := parseTimestamp(bc.Timestamp)
+			bcTS := parseTimestamp(bc.Timestamp.Number())
 
 			var data *string
 			if bc.Data != nil {

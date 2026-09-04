@@ -48,7 +48,7 @@ func storeLogs(db *sql.DB, logs []LogRecord) error {
 			sevNum = &v
 		}
 
-		logTS := parseLogTimestamp(log.Timestamp)
+		logTS := parseLogTimestamp(log.Timestamp.Number())
 
 		_, err = stmt.Exec(
 			id,
