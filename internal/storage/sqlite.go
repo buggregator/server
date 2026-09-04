@@ -62,6 +62,17 @@ func (s *SQLiteStore) FindAll(ctx context.Context, opts event.FindOptions) ([]ev
 		conditions = append(conditions, "project = ?")
 		args = append(args, opts.Project)
 	}
+	// Window bounds are compared numerically: timestamp is stored as text
+	// (fmt.Sprintf("%.6f")), and a string comparison would break as soon as the
+	// number of digits in unix seconds changes.
+	if opts.From > 0 {
+		conditions = append(conditions, "CAST(timestamp AS REAL) >= ?")
+		args = append(args, opts.From)
+	}
+	if opts.To > 0 {
+		conditions = append(conditions, "CAST(timestamp AS REAL) <= ?")
+		args = append(args, opts.To)
+	}
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}

@@ -133,9 +133,24 @@ func labelForNode(address, opType string) string {
 func handleCounts(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var exceptions, traces, logs int
-		db.QueryRow(`SELECT COUNT(*) FROM sentry_error_events`).Scan(&exceptions)
-		db.QueryRow(`SELECT COUNT(*) FROM sentry_traces`).Scan(&traces)
-		db.QueryRow(`SELECT COUNT(*) FROM sentry_logs`).Scan(&logs)
+		// The counters follow the same project and period as the lists they label.
+		// They used to count the whole database, so the project selected in the UI
+		// had no effect on the numbers next to the tabs.
+		var errConds, txnConds, logConds []string
+		var errArgs, txnArgs, logArgs []any
+		errConds, errArgs = appendTimeConditions(errConds, errArgs, r, "received_at", false)
+		txnConds, txnArgs = appendTimeConditions(txnConds, txnArgs, r, "start_ts", true)
+		logConds, logArgs = appendTimeConditions(logConds, logArgs, r, "log_ts", true)
+		if v := r.URL.Query().Get("project"); v != "" {
+			errConds = append(errConds, "project_id = ?")
+			errArgs = append(errArgs, v)
+		}
+
+		db.QueryRow(`SELECT COUNT(*) FROM sentry_error_events`+whereOf(errConds), errArgs...).Scan(&exceptions)
+		// Counted over sentry_transactions rather than sentry_traces: that is what
+		// the traces list shows, and it is the table carrying a timestamp to filter on.
+		db.QueryRow(`SELECT COUNT(*) FROM sentry_transactions`+whereOf(txnConds), txnArgs...).Scan(&traces)
+		db.QueryRow(`SELECT COUNT(*) FROM sentry_logs`+whereOf(logConds), logArgs...).Scan(&logs)
 
 		apiJSON(w, map[string]any{
 			"exceptions": exceptions,

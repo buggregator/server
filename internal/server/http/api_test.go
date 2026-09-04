@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/buggregator/go-buggregator/internal/event"
 	"github.com/buggregator/go-buggregator/internal/module"
@@ -16,6 +18,12 @@ import (
 )
 
 func setupAPI(t *testing.T) (*http.ServeMux, *storage.SQLiteStore) {
+	t.Helper()
+	// Empty limits keep the historical behaviour: return everything.
+	return setupAPILimits(t, serverhttp.ListLimits{})
+}
+
+func setupAPILimits(t *testing.T, limits serverhttp.ListLimits) (*http.ServeMux, *storage.SQLiteStore) {
 	t.Helper()
 	db, err := storage.Open(":memory:")
 	if err != nil {
@@ -43,7 +51,7 @@ func setupAPI(t *testing.T) (*http.ServeMux, *storage.SQLiteStore) {
 
 	mux := http.NewServeMux()
 	noopMiddleware := func(next http.Handler) http.Handler { return next }
-	serverhttp.RegisterAPI(mux, store, event.NewPreviewRegistry(), es, "test-version", db, []string{"sentry", "ray"}, serverhttp.AuthSettings{}, noopMiddleware)
+	serverhttp.RegisterAPI(mux, store, event.NewPreviewRegistry(), es, "test-version", db, []string{"sentry", "ray"}, serverhttp.AuthSettings{}, noopMiddleware, limits)
 
 	return mux, store
 }
@@ -257,5 +265,108 @@ func TestAPI_Projects(t *testing.T) {
 	proj := data[0].(map[string]any)
 	if proj["key"] != "default" {
 		t.Errorf("key = %v", proj["key"])
+	}
+}
+
+func TestAPI_Events_Limits(t *testing.T) {
+	store := func(t *testing.T, mux *http.ServeMux, s *storage.SQLiteStore, n int, ts float64) {
+		t.Helper()
+		ctx := context.Background()
+		for i := 0; i < n; i++ {
+			if err := s.Store(ctx, event.Event{
+				UUID:      "uuid-" + strconv.Itoa(i) + "-" + strconv.FormatFloat(ts, 'f', 0, 64),
+				Type:      "sentry",
+				Payload:   json.RawMessage(`{"message":"error"}`),
+				Timestamp: ts + float64(i),
+				Project:   "default",
+			}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	list := func(t *testing.T, mux *http.ServeMux, query string) (int, map[string]any) {
+		t.Helper()
+		r := httptest.NewRequest("GET", "/api/events"+query, nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, r)
+
+		var resp struct {
+			Data []event.Event  `json:"data"`
+			Meta map[string]any `json:"meta"`
+		}
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		return len(resp.Data), resp.Meta
+	}
+
+	now := float64(time.Now().Unix())
+
+	t.Run("default limit caps the response", func(t *testing.T) {
+		mux, s := setupAPILimits(t, serverhttp.ListLimits{DefaultLimit: 5, MaxLimit: 10})
+		store(t, mux, s, 12, now)
+
+		if n, meta := list(t, mux, ""); n != 5 || meta["limit"] != float64(5) {
+			t.Fatalf("got %d events, meta %v; want 5", n, meta)
+		}
+	})
+
+	t.Run("explicit limit is capped by max_limit", func(t *testing.T) {
+		mux, s := setupAPILimits(t, serverhttp.ListLimits{DefaultLimit: 5, MaxLimit: 10})
+		store(t, mux, s, 12, now)
+
+		if n, _ := list(t, mux, "?limit=1000"); n != 10 {
+			t.Fatalf("got %d events, want 10 (max_limit)", n)
+		}
+	})
+
+	t.Run("default window hides old events", func(t *testing.T) {
+		mux, s := setupAPILimits(t, serverhttp.ListLimits{DefaultLimit: 100, DefaultWindow: time.Hour})
+		store(t, mux, s, 3, now-24*3600) // yesterday
+		store(t, mux, s, 2, now-60)      // a minute ago
+
+		if n, _ := list(t, mux, ""); n != 2 {
+			t.Fatalf("got %d events in the last hour, want 2", n)
+		}
+		// window=all opts out of the default window.
+		if n, _ := list(t, mux, "?window=all"); n != 5 {
+			t.Fatalf("got %d events for window=all, want 5", n)
+		}
+		// An explicit window overrides the default one.
+		if n, _ := list(t, mux, "?window=7d"); n != 5 {
+			t.Fatalf("got %d events for window=7d, want 5", n)
+		}
+	})
+
+	t.Run("explicit from/to bounds", func(t *testing.T) {
+		mux, s := setupAPILimits(t, serverhttp.ListLimits{DefaultLimit: 100, DefaultWindow: time.Hour})
+		store(t, mux, s, 4, 1700000000) // long before the default window
+
+		from := strconv.FormatFloat(1700000000, 'f', 0, 64)
+		to := strconv.FormatFloat(1700000002, 'f', 0, 64)
+		if n, _ := list(t, mux, "?from="+from+"&to="+to); n != 3 {
+			t.Fatalf("got %d events for [%s..%s], want 3", n, from, to)
+		}
+		if n, _ := list(t, mux, "?from=2023-01-01"); n != 4 {
+			t.Fatalf("got %d events for an ISO from, want 4", n)
+		}
+	})
+}
+
+func TestParseWindow(t *testing.T) {
+	cases := map[string]time.Duration{
+		"15m":  15 * time.Minute,
+		"24h":  24 * time.Hour,
+		"7d":   7 * 24 * time.Hour,
+		"1.5d": 36 * time.Hour,
+	}
+	for in, want := range cases {
+		got, err := serverhttp.ParseWindow(in)
+		if err != nil || got != want {
+			t.Errorf("ParseWindow(%q) = %v, %v; want %v", in, got, err, want)
+		}
+	}
+	if _, err := serverhttp.ParseWindow("yesterday"); err == nil {
+		t.Error("ParseWindow(\"yesterday\") should fail")
 	}
 }

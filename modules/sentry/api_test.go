@@ -463,3 +463,95 @@ func TestAPIEmptyDatabase(t *testing.T) {
 		})
 	}
 }
+
+// The exceptions list could not be narrowed to a project: the column is filled
+// in on write, but the handler had no reader for it, so selecting a project in
+// the UI showed every project's errors. Same for environment, and for the
+// period there was no filter at all.
+func TestAPIExceptionsFilters(t *testing.T) {
+	db := setupTestDB(t)
+	mux := http.NewServeMux()
+	registerAPI(mux, db)
+
+	seed := func(eventID, env, project string) {
+		t.Helper()
+		payload, _ := json.Marshal(map[string]any{
+			"event_id":    eventID,
+			"level":       "error",
+			"environment": env,
+			"exception":   map[string]any{"values": []map[string]any{{"type": "RuntimeException", "value": eventID}}},
+		})
+		var ev ErrorEvent
+		if err := json.Unmarshal(payload, &ev); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := storeErrorEvent(db, &ev, payload, project); err != nil {
+			t.Fatalf("seed %s: %v", eventID, err)
+		}
+	}
+	seed("evt-prod-a", "production", "shop")
+	seed("evt-prod-b", "production", "shop")
+	seed("evt-stage", "staging", "shop")
+	seed("evt-other", "production", "billing")
+
+	count := func(query string) int {
+		t.Helper()
+		req := httptest.NewRequest("GET", "/api/sentry/exceptions"+query, nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		if w.Code != 200 {
+			t.Fatalf("status = %d for %q", w.Code, query)
+		}
+		var resp map[string]any
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		return len(resp["data"].([]any))
+	}
+
+	cases := map[string]struct {
+		query string
+		want  int
+	}{
+		"no filters":         {"", 4},
+		"by project":         {"?project=shop", 3},
+		"by environment":     {"?environment=staging", 1},
+		"project and env":    {"?project=shop&environment=production", 2},
+		"grouped by project": {"?grouped=true&project=billing", 1},
+		"within window":      {"?window=24h", 4},
+		"outside window":     {"?from=2030-01-01", 0},
+		"grouped in window":  {"?grouped=true&from=2030-01-01", 0},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			if got := count(tc.query); got != tc.want {
+				t.Errorf("%q returned %d events, want %d", tc.query, got, tc.want)
+			}
+		})
+	}
+}
+
+// The tab counters counted the whole database, so they disagreed with the lists
+// they label as soon as a project or a period was selected.
+func TestAPICountsFollowFilters(t *testing.T) {
+	mux := http.NewServeMux()
+	seedTestData(t, mux)
+
+	counts := func(query string) map[string]any {
+		t.Helper()
+		req := httptest.NewRequest("GET", "/api/sentry/counts"+query, nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		var resp map[string]any
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		return resp
+	}
+
+	if got := counts("?project=default")["exceptions"]; int(got.(float64)) != 3 {
+		t.Errorf("exceptions for the seeded project = %v, want 3", got)
+	}
+	if got := counts("?project=nonexistent")["exceptions"]; int(got.(float64)) != 0 {
+		t.Errorf("exceptions for an unknown project = %v, want 0", got)
+	}
+	if got := counts("?from=2030-01-01")["exceptions"]; int(got.(float64)) != 0 {
+		t.Errorf("exceptions in a future window = %v, want 0", got)
+	}
+}

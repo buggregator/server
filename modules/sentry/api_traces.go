@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -11,17 +12,36 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		limit, offset := pagination(r, 50)
 
-		countQuery := `SELECT COUNT(*) FROM sentry_transactions`
-		var total int
-		db.QueryRow(countQuery).Scan(&total)
+		// Period: start_ts of a transaction is in ISO form, index idx_sentry_txn_start.
+		// Plus environment and release filters: both columns are populated but had
+		// no reader.
+		var conditions []string
+		var args []any
+		conditions, args = appendTimeConditions(conditions, args, r, "t.start_ts", true)
+		if v := r.URL.Query().Get("environment"); v != "" {
+			conditions = append(conditions, "t.environment = ?")
+			args = append(args, v)
+		}
+		if v := r.URL.Query().Get("release"); v != "" {
+			conditions = append(conditions, "t.release = ?")
+			args = append(args, v)
+		}
+		where := ""
+		if len(conditions) > 0 {
+			where = " WHERE " + strings.Join(conditions, " AND ")
+		}
 
+		var total int
+		db.QueryRow(`SELECT COUNT(*) FROM sentry_transactions t`+where, args...).Scan(&total)
+
+		queryArgs := append(append([]any{}, args...), limit, offset)
 		rows, err := db.Query(
 			`SELECT t.trace_id, t.id, t.transaction_name, t.op, t.status, t.duration_ms,
 				tr.span_count, tr.error_count, t.start_ts
 			FROM sentry_transactions t
-			JOIN sentry_traces tr ON tr.trace_id = t.trace_id
+			JOIN sentry_traces tr ON tr.trace_id = t.trace_id`+where+`
 			ORDER BY t.start_ts DESC
-			LIMIT ? OFFSET ?`, limit, offset,
+			LIMIT ? OFFSET ?`, queryArgs...,
 		)
 		if err != nil {
 			apiError(w, err.Error(), http.StatusInternalServerError)
