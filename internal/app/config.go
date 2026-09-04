@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -23,6 +24,17 @@ type AuthConfig struct {
 	JWTSecret    string `yaml:"jwt_secret"`    // Secret for signing internal JWT tokens. Required when auth is enabled.
 }
 
+// UIConfig bounds the event lists served to the UI.
+//
+// /api/events and /api/events/preview used to return everything stored for a
+// project. The defaults below (1000 events, no time window) only cap the
+// response size; set default_window to also narrow it by time, e.g. "24h".
+type UIConfig struct {
+	DefaultLimit  int    `yaml:"default_limit"`  // events returned without a limit param (default 1000)
+	MaxLimit      int    `yaml:"max_limit"`      // ceiling for an explicit limit (default 5000)
+	DefaultWindow string `yaml:"default_window"` // time window without from/to: "24h", "7d"; empty or "all" = no window
+}
+
 // Config holds application configuration.
 type Config struct {
 	Server   ServerConfig    `yaml:"server"`
@@ -32,6 +44,7 @@ type Config struct {
 	Metrics  MetricsConfig   `yaml:"metrics"`
 	MCP      MCPConfig       `yaml:"mcp"`
 	Auth     AuthConfig      `yaml:"auth"`
+	UI       UIConfig        `yaml:"ui"`
 	Modules  ModulesConfig   `yaml:"modules"`
 	Webhooks []WebhookDef    `yaml:"webhooks"`
 	Projects []ProjectDef    `yaml:"projects"`
@@ -207,6 +220,11 @@ func LoadConfig() Config {
 	cfg.Auth.Scopes = coalesce(os.Getenv("AUTH_SCOPES"), fileCfg.Auth.Scopes, "openid,email,profile")
 	cfg.Auth.JWTSecret = coalesce(os.Getenv("AUTH_JWT_SECRET"), fileCfg.Auth.JWTSecret)
 
+	// UI list limits.
+	cfg.UI.DefaultLimit = coalesceInt(atoiOrZero(os.Getenv("UI_DEFAULT_LIMIT")), fileCfg.UI.DefaultLimit, 1000)
+	cfg.UI.MaxLimit = coalesceInt(atoiOrZero(os.Getenv("UI_MAX_LIMIT")), fileCfg.UI.MaxLimit, 5000)
+	cfg.UI.DefaultWindow = coalesce(os.Getenv("UI_DEFAULT_WINDOW"), fileCfg.UI.DefaultWindow)
+
 	// CORS origins.
 	cfg.Server.CORSOrigins = fileCfg.Server.CORSOrigins
 	if env := os.Getenv("CORS_ORIGINS"); env != "" {
@@ -316,6 +334,26 @@ func expandEnvVars(input string) string {
 		}
 		return defaultVal
 	})
+}
+
+// coalesceInt is coalesce for numbers: zero counts as "not set".
+func coalesceInt(values ...int) int {
+	for _, v := range values {
+		if v > 0 {
+			return v
+		}
+	}
+	return 0
+}
+
+// atoiOrZero lets an env variable be passed to coalesceInt in one expression: a
+// non-empty but non-numeric value counts as "not set".
+func atoiOrZero(s string) int {
+	n, err := strconv.Atoi(strings.TrimSpace(s))
+	if err != nil || n < 0 {
+		return 0
+	}
+	return n
 }
 
 func coalesce(values ...string) string {
