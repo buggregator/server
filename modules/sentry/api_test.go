@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -554,4 +555,44 @@ func TestAPICountsFollowFilters(t *testing.T) {
 	if got := counts("?from=2030-01-01")["exceptions"]; int(got.(float64)) != 0 {
 		t.Errorf("exceptions in a future window = %v, want 0", got)
 	}
+}
+
+// received_at / first_seen / last_seen are stored as datetime('now'), i.e. UTC
+// without a zone marker. A browser parses such a string as local time, so
+// "last seen" in the UI was off by the viewer's UTC offset. The API must hand
+// out an explicit zone.
+func TestAPIExceptionsTimestampsAreUTC(t *testing.T) {
+	mux := http.NewServeMux()
+	seedTestData(t, mux)
+
+	get := func(path string) map[string]any {
+		t.Helper()
+		req := httptest.NewRequest("GET", path, nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		if w.Code != 200 {
+			t.Fatalf("status = %d for %s", w.Code, path)
+		}
+		var resp map[string]any
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		return resp
+	}
+
+	assertZoned := func(what string, v any) {
+		t.Helper()
+		s, ok := v.(string)
+		if !ok || !strings.HasSuffix(s, "Z") || !strings.Contains(s, "T") {
+			t.Errorf("%s = %v, want an ISO 8601 string with a zone (…T…Z)", what, v)
+		}
+	}
+
+	grouped := get("/api/sentry/exceptions?grouped=true")["data"].([]any)[0].(map[string]any)
+	assertZoned("grouped first_seen", grouped["first_seen"])
+	assertZoned("grouped last_seen", grouped["last_seen"])
+
+	chronological := get("/api/sentry/exceptions")["data"].([]any)[0].(map[string]any)
+	assertZoned("received_at", chronological["received_at"])
+
+	detail := get("/api/sentry/exceptions/" + chronological["event_id"].(string))
+	assertZoned("detail received_at", detail["received_at"])
 }

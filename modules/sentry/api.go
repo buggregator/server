@@ -110,6 +110,20 @@ func appendTimeConditions(conditions []string, args []any, r *http.Request, colu
 	return conditions, args
 }
 
+// tsUTC wraps a time column so the value leaves the API as an ISO string with
+// an explicit zone: 2026-09-04T05:33:12Z.
+//
+// received_at, first_seen and last_seen are written with datetime('now'), which
+// is UTC but carries **no zone marker**: "2026-09-04 05:33:12". A browser reads
+// such a string as local time, so "last seen" in the UI was off by the viewer's
+// UTC offset — in UTC+3 a fresh error showed up as "3 hours ago". Sorting and
+// filtering still use the raw column; only the representation changes.
+func tsUTC(column string) string {
+	// COALESCE covers a value strftime cannot parse (empty string, garbage):
+	// the original value goes out instead of NULL.
+	return "COALESCE(strftime('%Y-%m-%dT%H:%M:%SZ', " + column + "), " + column + ")"
+}
+
 // whereOf builds a WHERE clause from conditions (empty string when there are none).
 func whereOf(conditions []string) string {
 	if len(conditions) == 0 {
