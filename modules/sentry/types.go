@@ -176,7 +176,7 @@ type Breadcrumb struct {
 	Category  string          `json:"category"`
 	Level     string          `json:"level"`
 	Message   string          `json:"message"`
-	Timestamp json.Number     `json:"timestamp"`
+	Timestamp FlexibleTS      `json:"timestamp"`
 	Data      json.RawMessage `json:"data"`
 }
 
@@ -199,8 +199,8 @@ type Transaction struct {
 	EventID      string          `json:"event_id"`
 	Type         string          `json:"type"`
 	Transaction  string          `json:"transaction"`
-	Timestamp    json.Number     `json:"timestamp"`
-	StartTime    json.Number     `json:"start_timestamp"`
+	Timestamp    FlexibleTS      `json:"timestamp"`
+	StartTime    FlexibleTS      `json:"start_timestamp"`
 	Platform     string          `json:"platform"`
 	Environment  string          `json:"environment"`
 	Release      string          `json:"release"`
@@ -216,16 +216,16 @@ type Transaction struct {
 
 // RawSpan represents a span within a transaction or spans envelope item.
 type RawSpan struct {
-	SpanID         string            `json:"span_id"`
-	ParentSpanID   string            `json:"parent_span_id"`
-	TraceID        string            `json:"trace_id"`
-	Op             string            `json:"op"`
-	Description    string            `json:"description"`
-	Status         string            `json:"status"`
-	StartTimestamp json.Number       `json:"start_timestamp"`
-	Timestamp      json.Number       `json:"timestamp"`
-	IsSegment      bool              `json:"is_segment"`
-	Data           map[string]string `json:"data"`
+	SpanID         string     `json:"span_id"`
+	ParentSpanID   string     `json:"parent_span_id"`
+	TraceID        string     `json:"trace_id"`
+	Op             string     `json:"op"`
+	Description    string     `json:"description"`
+	Status         string     `json:"status"`
+	StartTimestamp FlexibleTS `json:"start_timestamp"`
+	Timestamp      FlexibleTS `json:"timestamp"`
+	IsSegment      bool       `json:"is_segment"`
+	Data           SpanData   `json:"data"`
 }
 
 // SpansEnvelope represents a Sentry spans (v2) envelope item body.
@@ -240,13 +240,13 @@ type LogEnvelope struct {
 
 // LogRecord represents a single Sentry native log entry.
 type LogRecord struct {
-	TraceID        string            `json:"trace_id"`
-	SpanID         string            `json:"span_id"`
-	Level          string            `json:"level"`
-	SeverityNumber int               `json:"severity_number"`
-	Body           string            `json:"body"`
-	Timestamp      json.Number       `json:"timestamp"`
-	Attributes     map[string]any    `json:"attributes"`
+	TraceID        string         `json:"trace_id"`
+	SpanID         string         `json:"span_id"`
+	Level          string         `json:"level"`
+	SeverityNumber int            `json:"severity_number"`
+	Body           string         `json:"body"`
+	Timestamp      FlexibleTS     `json:"timestamp"`
+	Attributes     map[string]any `json:"attributes"`
 }
 
 // effectiveMessage returns the event message, checking logentry fallback.
@@ -274,4 +274,44 @@ func (e *ErrorEvent) spanID() string {
 		return e.Contexts.Trace.SpanID
 	}
 	return ""
+}
+
+// SpanData holds span attributes. SDKs put more than strings in there: numbers
+// and booleans as well (http.response.status_code: 200, http.request.redirect:
+// false). With the declared map[string]string a single numeric attribute made
+// the whole envelope item fail to unmarshal, so the transaction and all of its
+// spans were dropped. Values are normalized to strings, which keeps existing
+// consumers (classifySpan, extractServiceName, the spans table) unchanged.
+type SpanData map[string]string
+
+func (d *SpanData) UnmarshalJSON(data []byte) error {
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	out := make(SpanData, len(raw))
+	for k, v := range raw {
+		switch t := v.(type) {
+		case nil:
+			out[k] = ""
+		case string:
+			out[k] = t
+		case bool:
+			out[k] = strconv.FormatBool(t)
+		case json.Number:
+			out[k] = t.String()
+		case float64:
+			out[k] = strconv.FormatFloat(t, 'f', -1, 64)
+		default:
+			// Objects and arrays: keep the raw JSON rather than losing the value.
+			b, err := json.Marshal(t)
+			if err != nil {
+				return err
+			}
+			out[k] = string(b)
+		}
+	}
+	*d = out
+	return nil
 }
