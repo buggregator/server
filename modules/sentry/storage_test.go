@@ -572,3 +572,74 @@ func TestHandleItemsEmptyAndInvalidPayload(t *testing.T) {
 		}
 	}
 }
+
+// TestStoreTransaction_OpStatusFromTraceContext covers SDK v3/v4, which send
+// a transaction's op and status only in contexts.trace.
+func TestStoreTransaction_OpStatusFromTraceContext(t *testing.T) {
+	db := setupTestDB(t)
+
+	payload := json.RawMessage(`{"event_id":"txn-ctx","type":"transaction","transaction":"POST /checkout","start_timestamp":1792756800.0,"timestamp":1792756801.0,"contexts":{"trace":{"trace_id":"ffffffffffffffffffffffffffffffff","span_id":"1000000000000001","op":"http.server","status":"internal_error","origin":"manual"}},"spans":[]}`)
+
+	var txn Transaction
+	if err := json.Unmarshal(payload, &txn); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := storeTransaction(db, &txn, payload, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	var op, status sql.NullString
+	if err := db.QueryRow(`SELECT op, status FROM sentry_transactions WHERE event_id = ?`, "txn-ctx").Scan(&op, &status); err != nil {
+		t.Fatal(err)
+	}
+	if op.String != "http.server" {
+		t.Errorf("op = %q, want http.server from contexts.trace", op.String)
+	}
+	if status.String != "internal_error" {
+		t.Errorf("status = %q, want internal_error from contexts.trace", status.String)
+	}
+}
+
+// TestStoreSpansV2_ErrorStatus covers Span v2 items, whose status is "ok" or "error".
+func TestStoreSpansV2_ErrorStatus(t *testing.T) {
+	db := setupTestDB(t)
+
+	var envelope SpansEnvelope
+	err := json.Unmarshal([]byte(`{"items":[
+		{"trace_id":"9999999999999999999999999999999a","span_id":"5000000000000005","name":"chat claude","start_timestamp":1792756800.0,"end_timestamp":1792756801.0,"status":"error","attributes":{"sentry.op":{"type":"string","value":"gen_ai.chat"}}},
+		{"trace_id":"9999999999999999999999999999999a","span_id":"6000000000000006","name":"chat claude","start_timestamp":1792756801.0,"end_timestamp":1792756802.0,"status":"ok","attributes":{"sentry.op":{"type":"string","value":"gen_ai.chat"}}}
+	],"version":2}`), &envelope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storeSpansV2(db, envelope.Items, nil, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		spanID  string
+		isError int
+	}{
+		{"5000000000000005", 1},
+		{"6000000000000006", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.spanID, func(t *testing.T) {
+			var isError int
+			if err := db.QueryRow(`SELECT is_error FROM sentry_spans WHERE span_id = ?`, tt.spanID).Scan(&isError); err != nil {
+				t.Fatal(err)
+			}
+			if isError != tt.isError {
+				t.Errorf("is_error = %d, want %d", isError, tt.isError)
+			}
+		})
+	}
+
+	var errorCount int
+	if err := db.QueryRow(`SELECT error_count FROM sentry_traces WHERE trace_id = ?`, "9999999999999999999999999999999a").Scan(&errorCount); err != nil {
+		t.Fatal(err)
+	}
+	if errorCount != 1 {
+		t.Errorf("trace error_count = %d, want 1", errorCount)
+	}
+}

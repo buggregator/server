@@ -62,9 +62,14 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage, pro
 
 	op := txn.Op
 	status := txn.Status
-	// Fallback: extract op/status from contexts.trace if not on root.
-	if op == "" && txn.Contexts != nil && txn.Contexts.Trace != nil {
-		// Some SDKs put these in the transaction's contexts.trace.
+	// Fallback: SDK v3/v4 send op/status only in contexts.trace.
+	if txn.Contexts != nil && txn.Contexts.Trace != nil {
+		if op == "" {
+			op = txn.Contexts.Trace.Op
+		}
+		if status == "" {
+			status = txn.Contexts.Trace.Status
+		}
 	}
 
 	var measurements *string
@@ -118,7 +123,7 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage, pro
 			sDuration := computeDurationMS(span.StartTimestamp.Number(), span.Timestamp.Number())
 
 			isError := 0
-			if span.Status == "internal_error" || span.Status == "unknown_error" {
+			if isErrorStatus(span.Status) {
 				isError = 1
 				errorCount++
 			}
@@ -200,6 +205,8 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK, project string) error {
 	defer stmt.Close()
 
 	for traceID, group := range traceSpans {
+		traceErrors := 0
+
 		// Upsert trace.
 		_, err = dbTx.Exec(
 			`INSERT INTO sentry_traces (trace_id, span_count)
@@ -222,8 +229,9 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK, project string) error {
 			sDuration := computeDurationMS(span.StartTimestamp.Number(), span.Timestamp.Number())
 
 			isError := 0
-			if span.Status == "internal_error" || span.Status == "unknown_error" {
+			if isErrorStatus(span.Status) {
 				isError = 1
+				traceErrors++
 			}
 
 			var attrs *string
@@ -256,9 +264,25 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK, project string) error {
 				return fmt.Errorf("insert sentry_spans: %w", err)
 			}
 		}
+
+		if traceErrors > 0 {
+			_, err = dbTx.Exec(
+				`UPDATE sentry_traces SET error_count = error_count + ? WHERE trace_id = ?`,
+				traceErrors, traceID,
+			)
+			if err != nil {
+				return fmt.Errorf("update sentry_traces error_count: %w", err)
+			}
+		}
 	}
 
 	return dbTx.Commit()
+}
+
+// isErrorStatus reports whether a span status means failure: the v1 span
+// statuses internal_error/unknown_error, or "error" from Span v2 items.
+func isErrorStatus(status string) bool {
+	return status == "internal_error" || status == "unknown_error" || status == "error"
 }
 
 // computeDurationMS calculates the duration in milliseconds between two JSON number timestamps.
