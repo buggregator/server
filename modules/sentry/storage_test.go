@@ -403,31 +403,31 @@ func TestSpanClassifier(t *testing.T) {
 	}{
 		{
 			name:        "db.query",
-			span:        RawSpan{Op: "db.query", Data: map[string]string{"server.address": "db.host.com"}},
+			span:        RawSpan{Op: "db.query", Data: SpanData{"server.address": "db.host.com"}},
 			wantType:    "db",
 			wantAddress: "db.host.com",
 		},
 		{
 			name:        "db with db.name fallback",
-			span:        RawSpan{Op: "db.redis", Data: map[string]string{"db.name": "cache-0"}},
+			span:        RawSpan{Op: "db.redis", Data: SpanData{"db.name": "cache-0"}},
 			wantType:    "db",
 			wantAddress: "cache-0",
 		},
 		{
 			name:        "http.client",
-			span:        RawSpan{Op: "http.client", Data: map[string]string{"http.url": "https://api.example.com:8080/path"}},
+			span:        RawSpan{Op: "http.client", Data: SpanData{"http.url": "https://api.example.com:8080/path"}},
 			wantType:    "http",
 			wantAddress: "api.example.com:8080",
 		},
 		{
 			name:        "cache.get",
-			span:        RawSpan{Op: "cache.get", Data: map[string]string{"server.address": "redis.local"}},
+			span:        RawSpan{Op: "cache.get", Data: SpanData{"server.address": "redis.local"}},
 			wantType:    "cache",
 			wantAddress: "redis.local",
 		},
 		{
 			name:        "queue.publish",
-			span:        RawSpan{Op: "queue.publish", Data: map[string]string{"messaging.destination": "orders-queue"}},
+			span:        RawSpan{Op: "queue.publish", Data: SpanData{"messaging.destination": "orders-queue"}},
 			wantType:    "queue",
 			wantAddress: "orders-queue",
 		},
@@ -500,12 +500,9 @@ func TestSessionItemDiscarded(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Should still return a valid response (no error).
-	if inc == nil {
-		t.Fatal("expected non-nil incoming event")
-	}
-	if inc.Type != "sentry" {
-		t.Errorf("Type = %q, want 'sentry'", inc.Type)
+	// A session ping is not an event: it must not become a card in the feed.
+	if inc != nil {
+		t.Errorf("expected nil incoming event for session-only envelope, got %+v", inc)
 	}
 }
 

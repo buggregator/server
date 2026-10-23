@@ -173,7 +173,8 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 				kinds.add("trace")
 			}
 
-		case "spans":
+		case "spans", "span":
+			// "span" is the Span v2 item SDK v4 sends for gen_ai spans.
 			if h.handleSpansItem(item, project) {
 				kinds.add("trace")
 			}
@@ -188,12 +189,11 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 				kinds.add("metric")
 			}
 
-		case "session", "sessions", "client_report", "metric_buckets", "check_in",
-			"user_report", "attachment", "replay_event", "replay_recording", "statsd":
-			// Silently discard known non-essential item types.
-
 		default:
-			slog.Debug("sentry: ignoring unknown envelope item type", "type", item.Type)
+			// Known non-essential item types are silently discarded.
+			if !nonFeedItemTypes[item.Type] {
+				slog.Debug("sentry: ignoring unknown envelope item type", "type", item.Type)
+			}
 		}
 	}
 
@@ -207,7 +207,7 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 	if primaryPayload == nil {
 		primaryType = "sentry"
 		for _, item := range items {
-			if isStructuredOnlyItem(item.Type) {
+			if nonFeedItemTypes[item.Type] {
 				continue
 			}
 			if json.Valid([]byte(item.Payload)) {
@@ -236,9 +236,16 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 // omits event_id from the item payload, so we inject it when missing.
 func (h *handler) handleEventItem(item EnvelopeItem, envelopeEventID string, project string) (string, json.RawMessage) {
 	var ev ErrorEvent
+	parsed := true
 	if err := json.Unmarshal(item.Payload, &ev); err != nil {
 		slog.Warn("sentry: failed to parse error event", "err", err)
-		return "", item.Payload
+		// Still show the event in the feed: only structured storage is skipped.
+		parsed = false
+		var idOnly struct {
+			EventID string `json:"event_id"`
+		}
+		_ = json.Unmarshal(item.Payload, &idOnly)
+		ev.EventID = idOnly.EventID
 	}
 
 	// Sentry SDK v4+ sends event_id only in the envelope header, not in
@@ -258,7 +265,7 @@ func (h *handler) handleEventItem(item EnvelopeItem, envelopeEventID string, pro
 		_ = json.Unmarshal(payload, &ev) // re-parse so structured storage carries the code too
 	}
 
-	if h.db != nil {
+	if parsed && h.db != nil {
 		if _, err := storeErrorEvent(h.db, &ev, payload, project); err != nil {
 			slog.Warn("sentry: failed to store structured error event", "err", err)
 		}
@@ -393,14 +400,14 @@ func (h *handler) handleMetricItem(item EnvelopeItem, project string) bool {
 	return true
 }
 
-// isStructuredOnlyItem reports whether an envelope item type is stored only in
-// structured tables and must never become a card in the global event feed.
-func isStructuredOnlyItem(itemType string) bool {
-	switch itemType {
-	case "transaction", "spans", "log", "trace_metric":
-		return true
-	}
-	return false
+// nonFeedItemTypes are envelope item types that never become a card in the
+// event feed: they are stored in structured tables or discarded.
+var nonFeedItemTypes = map[string]bool{
+	"transaction": true, "spans": true, "span": true, "log": true, "trace_metric": true,
+	"session": true, "sessions": true, "client_report": true, "check_in": true,
+	"metric_buckets": true, "statsd": true,
+	"profile": true, "profile_chunk": true, "user_report": true, "attachment": true,
+	"replay_event": true, "replay_recording": true,
 }
 
 // injectEventID adds "event_id" to a JSON payload that lacks it.

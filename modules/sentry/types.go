@@ -59,14 +59,22 @@ func (m *FlexibleMessage) UnmarshalJSON(data []byte) error {
 	}
 
 	// Try structured form {"message":"...", "params":[...], "formatted":"..."}.
+	// Params are mixed values (captureMessage('%s has %d items', ['cart', 3])).
 	var obj struct {
-		Message   string   `json:"message"`
-		Params    []string `json:"params"`
-		Formatted string   `json:"formatted"`
+		Message   string            `json:"message"`
+		Params    []json.RawMessage `json:"params"`
+		Formatted string            `json:"formatted"`
 	}
 	if json.Unmarshal(data, &obj) == nil {
 		m.Template = obj.Message
-		m.Params = obj.Params
+		m.Params = make([]string, 0, len(obj.Params))
+		for _, p := range obj.Params {
+			var s string
+			if json.Unmarshal(p, &s) != nil {
+				s = string(p)
+			}
+			m.Params = append(m.Params, s)
+		}
 		if obj.Formatted != "" {
 			m.Text = obj.Formatted
 		} else {
@@ -228,6 +236,54 @@ type RawSpan struct {
 	Data           SpanData   `json:"data"`
 }
 
+// UnmarshalJSON also accepts the Span v2 format (SDK v4 "span" items):
+// name, end_timestamp and typed attributes {"key":{"type":"string","value":...}}.
+func (s *RawSpan) UnmarshalJSON(data []byte) error {
+	type rawSpan RawSpan
+	var v struct {
+		rawSpan
+		Name         string                     `json:"name"`
+		EndTimestamp FlexibleTS                 `json:"end_timestamp"`
+		Attributes   map[string]json.RawMessage `json:"attributes"`
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	*s = RawSpan(v.rawSpan)
+
+	if s.Description == "" {
+		s.Description = v.Name
+	}
+	if s.Timestamp.Number() == "" {
+		s.Timestamp = v.EndTimestamp
+	}
+	if len(v.Attributes) > 0 {
+		if s.Data == nil {
+			s.Data = make(SpanData, len(v.Attributes))
+		}
+		for key, raw := range v.Attributes {
+			var typed struct {
+				Value any `json:"value"`
+			}
+			var val any
+			if json.Unmarshal(raw, &typed) == nil && typed.Value != nil {
+				val = typed.Value
+			} else if json.Unmarshal(raw, &val) != nil {
+				continue
+			}
+			str, err := spanDataString(val)
+			if err != nil {
+				return err
+			}
+			s.Data[key] = str
+		}
+	}
+	if s.Op == "" {
+		s.Op = s.Data["sentry.op"]
+	}
+	return nil
+}
+
 // SpansEnvelope represents a Sentry spans (v2) envelope item body.
 type SpansEnvelope struct {
 	Items []RawSpan `json:"items"`
@@ -310,26 +366,35 @@ func (d *SpanData) UnmarshalJSON(data []byte) error {
 
 	out := make(SpanData, len(raw))
 	for k, v := range raw {
-		switch t := v.(type) {
-		case nil:
-			out[k] = ""
-		case string:
-			out[k] = t
-		case bool:
-			out[k] = strconv.FormatBool(t)
-		case json.Number:
-			out[k] = t.String()
-		case float64:
-			out[k] = strconv.FormatFloat(t, 'f', -1, 64)
-		default:
-			// Objects and arrays: keep the raw JSON rather than losing the value.
-			b, err := json.Marshal(t)
-			if err != nil {
-				return err
-			}
-			out[k] = string(b)
+		str, err := spanDataString(v)
+		if err != nil {
+			return err
 		}
+		out[k] = str
 	}
 	*d = out
 	return nil
+}
+
+// spanDataString normalizes one span attribute value to a string.
+func spanDataString(v any) (string, error) {
+	switch t := v.(type) {
+	case nil:
+		return "", nil
+	case string:
+		return t, nil
+	case bool:
+		return strconv.FormatBool(t), nil
+	case json.Number:
+		return t.String(), nil
+	case float64:
+		return strconv.FormatFloat(t, 'f', -1, 64), nil
+	default:
+		// Objects and arrays: keep the raw JSON rather than losing the value.
+		b, err := json.Marshal(t)
+		if err != nil {
+			return "", err
+		}
+		return string(b), nil
+	}
 }
