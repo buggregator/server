@@ -32,6 +32,7 @@ type Config struct {
 	TCP      TCPConfig       `yaml:"tcp"`
 	Metrics  MetricsConfig   `yaml:"metrics"`
 	MCP      MCPConfig       `yaml:"mcp"`
+	Xdebug   XdebugConfig    `yaml:"xdebug"`
 	Auth     AuthConfig      `yaml:"auth"`
 	Modules  ModulesConfig   `yaml:"modules"`
 	Webhooks []WebhookDef    `yaml:"webhooks"`
@@ -54,6 +55,15 @@ type MCPConfig struct {
 	SocketPath string `yaml:"socket_path"` // Unix socket path (for transport=socket). Default: /tmp/buggregator-mcp.sock
 	Addr       string `yaml:"addr"`        // HTTP listen address (for transport=http). Default: :8001
 	AuthToken  string `yaml:"auth_token"`  // Bearer token for HTTP transport auth. Empty = no auth.
+}
+
+// XdebugConfig controls the Xdebug (DBGp) proxy: Xdebug → Buggregator → IDE,
+// with read-only MCP tools on the same paused session.
+type XdebugConfig struct {
+	Enabled   bool   `yaml:"enabled"`    // Enable the proxy (default: false).
+	Addr      string `yaml:"addr"`       // Where Xdebug connects. Default: 127.0.0.1:9003
+	IDEAddr   string `yaml:"ide_addr"`   // Where the IDE listens. Default: 127.0.0.1:9004
+	AllowEval bool   `yaml:"allow_eval"` // Expose the xdebug_eval MCP tool (default: false).
 }
 
 // WebhookDef defines a webhook from config.
@@ -213,6 +223,12 @@ func LoadConfig() Config {
 	cfg.MCP.SocketPath = coalesce(os.Getenv("MCP_SOCKET_PATH"), fileCfg.MCP.SocketPath, "/tmp/buggregator-mcp.sock")
 	cfg.MCP.Addr = coalesce(os.Getenv("MCP_ADDR"), fileCfg.MCP.Addr, ":8001")
 	cfg.MCP.AuthToken = coalesce(os.Getenv("MCP_AUTH_TOKEN"), fileCfg.MCP.AuthToken)
+
+	// Xdebug proxy.
+	cfg.Xdebug.Enabled = fileCfg.Xdebug.Enabled || os.Getenv("XDEBUG_PROXY_ENABLED") == "true"
+	cfg.Xdebug.Addr = coalesce(os.Getenv("XDEBUG_PROXY_ADDR"), fileCfg.Xdebug.Addr, "127.0.0.1:9003")
+	cfg.Xdebug.IDEAddr = coalesce(os.Getenv("XDEBUG_PROXY_IDE_ADDR"), fileCfg.Xdebug.IDEAddr, "127.0.0.1:9004")
+	cfg.Xdebug.AllowEval = fileCfg.Xdebug.AllowEval || os.Getenv("XDEBUG_PROXY_ALLOW_EVAL") == "true"
 
 	// Auth.
 	cfg.Auth.Enabled = fileCfg.Auth.Enabled || os.Getenv("AUTH_ENABLED") == "true"

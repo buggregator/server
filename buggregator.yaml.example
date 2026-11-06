@@ -53,6 +53,17 @@ tcp:
   var-dumper:
     addr: ${VAR_DUMPER_ADDR::9912}
 
+# Xdebug proxy: PHP/Xdebug -> Buggregator -> IDE, plus read-only MCP tools
+# (xdebug_sessions, xdebug_location, xdebug_stack, xdebug_variables, xdebug_property,
+# xdebug_eval) on the same paused session. Off by default. MCP tools need mcp.enabled.
+# Same host: point Xdebug at addr (xdebug.client_port=9003) and move the IDE's
+# debug port to ide_addr (PhpStorm: Settings > PHP > Debug > Debug port 9004).
+# xdebug:
+#   enabled: ${XDEBUG_PROXY_ENABLED:false}
+#   addr: ${XDEBUG_PROXY_ADDR:127.0.0.1:9003}         # Where Xdebug connects
+#   ide_addr: ${XDEBUG_PROXY_IDE_ADDR:127.0.0.1:9004} # Where the IDE listens
+#   allow_eval: ${XDEBUG_PROXY_ALLOW_EVAL:false}      # Let MCP clients evaluate PHP expressions
+
 # Enable/disable modules. All enabled by default.
 # Set to false to disable a module entirely (TCP port won't bind, events ignored).
 # Can also be controlled via CLIENT_SUPPORTED_EVENTS env (comma-separated list).
