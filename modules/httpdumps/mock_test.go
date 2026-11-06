@@ -388,3 +388,33 @@ func TestSetMockRules_SkipsInvalid(t *testing.T) {
 		t.Errorf("config rules = %+v", rules)
 	}
 }
+
+// The security headers keep an HTML mock out of the UI's origin: a rule must
+// not be able to weaken or drop them.
+func TestMockServer_RuleCannotOverrideSecurityHeaders(t *testing.T) {
+	env := newMockEnv(t, nil)
+	env.create(t, `{"path":"/page","headers":{"content-security-policy":"sandbox allow-scripts allow-same-origin","X-Content-Type-Options":"","Content-Type":"text/html"},"body":"<script>alert(1)</script>"}`)
+
+	w := env.do(t, "GET", "/mock/page", "", nil)
+	if got := w.Header().Values("Content-Security-Policy"); len(got) != 1 || got[0] != "sandbox" {
+		t.Errorf("Content-Security-Policy = %q, want [sandbox]", got)
+	}
+	if got := w.Header().Values("X-Content-Type-Options"); len(got) != 1 || got[0] != "nosniff" {
+		t.Errorf("X-Content-Type-Options = %q, want [nosniff]", got)
+	}
+}
+
+// A client cannot mark an API rule read-only.
+func TestMockAPI_UpdateIgnoresReadOnly(t *testing.T) {
+	env := newMockEnv(t, nil)
+	a := env.create(t, `{"path":"/a","read_only":true}`)
+	if a.ReadOnly {
+		t.Error("create returned read_only true")
+	}
+	w := env.do(t, "PUT", "/api/mocks/"+a.ID, `{"path":"/a","read_only":true,"source":"config"}`, nil)
+	var upd MockRule
+	json.Unmarshal(w.Body.Bytes(), &upd)
+	if upd.ReadOnly || upd.Source != "api" {
+		t.Errorf("update returned read_only %v source %q, want false api", upd.ReadOnly, upd.Source)
+	}
+}

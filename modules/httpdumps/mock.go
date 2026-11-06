@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sort"
 	"strings"
@@ -245,6 +246,14 @@ func (s *mockStore) reload() error {
 	return nil
 }
 
+// refresh reloads the cache after a successful write. The write stands even
+// if the reload fails: the error is logged and the next write retries.
+func (s *mockStore) refresh() {
+	if err := s.reload(); err != nil {
+		slog.Warn("mock: failed to reload rules after a write", "err", err)
+	}
+}
+
 // list returns every rule in matching order.
 func (s *mockStore) list() []MockRule {
 	s.mu.RLock()
@@ -288,19 +297,20 @@ func (s *mockStore) create(r MockRule) (MockRule, error) {
 	r.ReadOnly = false
 	r.CreatedAt, r.UpdatedAt = now, now
 
-	var next int
-	s.db.QueryRow(`SELECT COALESCE(MAX(position), -1) + 1 FROM mock_rules`).Scan(&next)
-	r.Position = next
-
+	// The position is taken in the INSERT itself, so two creates at once
+	// cannot get the same one.
 	headers, _ := json.Marshal(r.Headers)
 	if _, err := s.db.Exec(`INSERT INTO mock_rules
 		(id, project, name, method, path, status, headers, body, delay_ms, enabled, position, created_at, updated_at)
-		VALUES (?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES (?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?,
+			(SELECT COALESCE(MAX(position), -1) + 1 FROM mock_rules), ?, ?)`,
 		r.ID, r.Project, r.Name, r.Method, r.Path, r.Status, string(headers), r.Body, r.DelayMs, boolInt(r.Enabled),
-		r.Position, r.CreatedAt, r.UpdatedAt); err != nil {
+		r.CreatedAt, r.UpdatedAt); err != nil {
 		return MockRule{}, err
 	}
-	return r, s.reload()
+	s.db.QueryRow(`SELECT position FROM mock_rules WHERE id = ?`, r.ID).Scan(&r.Position)
+	s.refresh()
+	return r, nil
 }
 
 func (s *mockStore) update(id string, r MockRule) (MockRule, error) {
@@ -315,6 +325,7 @@ func (s *mockStore) update(id string, r MockRule) (MockRule, error) {
 		return MockRule{}, err
 	}
 	r.ID, r.Source, r.Position, r.CreatedAt = id, "api", old.Position, old.CreatedAt
+	r.ReadOnly = false
 	r.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 
 	headers, _ := json.Marshal(r.Headers)
@@ -324,7 +335,8 @@ func (s *mockStore) update(id string, r MockRule) (MockRule, error) {
 		r.UpdatedAt, id); err != nil {
 		return MockRule{}, err
 	}
-	return r, s.reload()
+	s.refresh()
+	return r, nil
 }
 
 func (s *mockStore) delete(id string) error {
@@ -338,7 +350,8 @@ func (s *mockStore) delete(id string) error {
 	if _, err := s.db.Exec(`DELETE FROM mock_rules WHERE id = ?`, id); err != nil {
 		return err
 	}
-	return s.reload()
+	s.refresh()
+	return nil
 }
 
 // reorder puts the listed stored rules first, in that order; the rest keep
@@ -382,7 +395,8 @@ func (s *mockStore) reorder(ids []string) error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	return s.reload()
+	s.refresh()
+	return nil
 }
 
 func boolInt(b bool) int {
