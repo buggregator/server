@@ -24,6 +24,20 @@ type AuthConfig struct {
 	JWTSecret    string `yaml:"jwt_secret"`    // Secret for signing internal JWT tokens. Required when auth is enabled.
 }
 
+// UIConfig bounds the event lists served to the UI.
+//
+// /api/events and /api/events/preview used to return everything stored for a
+// project. By default they still do: the current UI loads the list once and
+// does not page, so a cap would hide older events. default_limit and
+// default_window opt in to smaller responses.
+//
+// The limits are pointers so an explicit 0 (no limit) differs from "not set".
+type UIConfig struct {
+	DefaultLimit  *int   `yaml:"default_limit"`  // events returned without a limit param; unset or 0 = unlimited
+	MaxLimit      *int   `yaml:"max_limit"`      // ceiling for an explicit limit (default 5000); 0 = no ceiling
+	DefaultWindow string `yaml:"default_window"` // time window without from/to: "24h", "7d"; empty or "all" = no window
+}
+
 // Config holds application configuration.
 type Config struct {
 	Server   ServerConfig    `yaml:"server"`
@@ -33,6 +47,7 @@ type Config struct {
 	Metrics  MetricsConfig   `yaml:"metrics"`
 	MCP      MCPConfig       `yaml:"mcp"`
 	Auth     AuthConfig      `yaml:"auth"`
+	UI       UIConfig        `yaml:"ui"`
 	Modules  ModulesConfig   `yaml:"modules"`
 	Webhooks []WebhookDef    `yaml:"webhooks"`
 	Projects []ProjectDef    `yaml:"projects"`
@@ -179,6 +194,9 @@ func LoadConfig() Config {
 	flag.StringVar(&cfg.TCP.SMTP.Addr, "smtp-addr", "", "SMTP listen address")
 	flag.StringVar(&cfg.TCP.Monolog.Addr, "monolog-addr", "", "Monolog TCP listen address")
 	flag.StringVar(&cfg.TCP.VarDumper.Addr, "vardumper-addr", "", "VarDumper TCP listen address")
+	var uiDefaultLimit, uiMaxLimit string
+	flag.StringVar(&uiDefaultLimit, "ui-default-limit", "", "Events per list without a limit param (0 = unlimited)")
+	flag.StringVar(&uiMaxLimit, "ui-max-limit", "", "Ceiling for an explicit list limit (0 = no ceiling)")
 	flag.Parse()
 
 	fileCfg := loadConfigFile(configFile)
@@ -223,6 +241,11 @@ func LoadConfig() Config {
 	cfg.Auth.CallbackURL = coalesce(os.Getenv("AUTH_CALLBACK_URL"), fileCfg.Auth.CallbackURL)
 	cfg.Auth.Scopes = coalesce(os.Getenv("AUTH_SCOPES"), fileCfg.Auth.Scopes, "openid,email,profile")
 	cfg.Auth.JWTSecret = coalesce(os.Getenv("AUTH_JWT_SECRET"), fileCfg.Auth.JWTSecret)
+
+	// UI list limits.
+	cfg.UI.DefaultLimit = resolveLimit(0, fileCfg.UI.DefaultLimit, uiDefaultLimit, os.Getenv("UI_DEFAULT_LIMIT"))
+	cfg.UI.MaxLimit = resolveLimit(5000, fileCfg.UI.MaxLimit, uiMaxLimit, os.Getenv("UI_MAX_LIMIT"))
+	cfg.UI.DefaultWindow = coalesce(os.Getenv("UI_DEFAULT_WINDOW"), fileCfg.UI.DefaultWindow)
 
 	// CORS origins.
 	cfg.Server.CORSOrigins = fileCfg.Server.CORSOrigins
@@ -333,6 +356,22 @@ func expandEnvVars(input string) string {
 		}
 		return defaultVal
 	})
+}
+
+// resolveLimit picks a list limit by priority: the first of values (flag, then
+// env) that is a number >= 0, then the config file, then def. 0 is a real
+// value (no limit); only an empty or unreadable value counts as "not set".
+func resolveLimit(def int, file *int, values ...string) *int {
+	for _, s := range values {
+		if n, err := strconv.Atoi(strings.TrimSpace(s)); err == nil && n >= 0 {
+			return &n
+		}
+	}
+	if file != nil && *file >= 0 {
+		n := *file
+		return &n
+	}
+	return &def
 }
 
 func coalesce(values ...string) string {

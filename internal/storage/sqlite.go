@@ -130,14 +130,31 @@ func (s *SQLiteStore) FindAll(ctx context.Context, opts event.FindOptions) ([]ev
 		conditions = append(conditions, "project = ?")
 		args = append(args, opts.Project)
 	}
+	// Window bounds are compared numerically: timestamp is stored as text
+	// (fmt.Sprintf("%.6f")), and a string comparison would break as soon as the
+	// number of digits in unix seconds changes.
+	if opts.From > 0 {
+		conditions = append(conditions, "CAST(timestamp AS REAL) >= ?")
+		args = append(args, opts.From)
+	}
+	if opts.To > 0 {
+		conditions = append(conditions, "CAST(timestamp AS REAL) <= ?")
+		args = append(args, opts.To)
+	}
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	query += " ORDER BY timestamp DESC"
+	if opts.PinnedFirst {
+		query += " ORDER BY is_pinned DESC, timestamp DESC"
+	} else {
+		query += " ORDER BY timestamp DESC"
+	}
 
 	if opts.Limit > 0 {
 		query += fmt.Sprintf(" LIMIT %d", opts.Limit)
+	} else if opts.Offset > 0 {
+		query += " LIMIT -1" // SQLite needs a LIMIT before OFFSET; -1 = no limit
 	}
 	if opts.Offset > 0 {
 		query += fmt.Sprintf(" OFFSET %d", opts.Offset)
