@@ -282,7 +282,10 @@ func (h *handler) handleLogItem(item EnvelopeItem) {
 
 	// Log items can be {"items": [...]} or a bare array.
 	var envelope LogEnvelope
-	if err := json.Unmarshal(item.Payload, &envelope); err == nil && len(envelope.Items) > 0 {
+	if err := json.Unmarshal(item.Payload, &envelope); err == nil && envelope.Items != nil {
+		if len(envelope.Items) == 0 {
+			return // {"items": []}: nothing to store, nothing dropped
+		}
 		if err := storeLogs(h.db, envelope.Items); err != nil {
 			slog.Warn("sentry: failed to store logs", "err", err)
 		}
@@ -290,7 +293,11 @@ func (h *handler) handleLogItem(item EnvelopeItem) {
 	}
 
 	var logs []LogRecord
-	if err := json.Unmarshal(item.Payload, &logs); err == nil && len(logs) > 0 {
+	if err := json.Unmarshal(item.Payload, &logs); err != nil {
+		slog.Debug("sentry: dropped log item, neither {\"items\": [...]} nor an array", "err", err)
+		return
+	}
+	if len(logs) > 0 {
 		if err := storeLogs(h.db, logs); err != nil {
 			slog.Warn("sentry: failed to store logs (array)", "err", err)
 		}
@@ -305,7 +312,10 @@ func (h *handler) handleMetricItem(item EnvelopeItem) {
 
 	// Metric items can be {"items": [...]} or a bare array.
 	var envelope MetricEnvelope
-	if err := json.Unmarshal(item.Payload, &envelope); err == nil && len(envelope.Items) > 0 {
+	if err := json.Unmarshal(item.Payload, &envelope); err == nil && envelope.Items != nil {
+		if len(envelope.Items) == 0 {
+			return // {"items": []}: nothing to store, nothing dropped
+		}
 		if err := storeMetrics(h.db, envelope.Items); err != nil {
 			slog.Warn("sentry: failed to store metrics", "err", err)
 		}
@@ -313,7 +323,11 @@ func (h *handler) handleMetricItem(item EnvelopeItem) {
 	}
 
 	var metrics []MetricRecord
-	if err := json.Unmarshal(item.Payload, &metrics); err == nil && len(metrics) > 0 {
+	if err := json.Unmarshal(item.Payload, &metrics); err != nil {
+		slog.Debug("sentry: dropped metric item, neither {\"items\": [...]} nor an array", "err", err)
+		return
+	}
+	if len(metrics) > 0 {
 		if err := storeMetrics(h.db, metrics); err != nil {
 			slog.Warn("sentry: failed to store metrics (array)", "err", err)
 		}

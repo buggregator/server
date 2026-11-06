@@ -1,8 +1,10 @@
 package sentry
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -535,5 +537,41 @@ func TestHandlerWithDB(t *testing.T) {
 	db.QueryRow(`SELECT COUNT(*) FROM sentry_exceptions`).Scan(&excCount)
 	if excCount != 1 {
 		t.Errorf("exceptions = %d, want 1", excCount)
+	}
+}
+
+// An empty {"items": []} log or metric item is valid: it stores nothing and
+// must not log the "neither {items} nor an array" drop line. A payload that is
+// neither still logs it.
+func TestHandleItemsEmptyAndInvalidPayload(t *testing.T) {
+	db := setupTestDB(t)
+	h := &handler{db: db}
+
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	tests := []struct {
+		payload  string
+		wantDrop bool
+	}{
+		{`{"items": []}`, false},
+		{`[]`, false},
+		{`"neither"`, true},
+	}
+	for _, tt := range tests {
+		for _, itemType := range []string{"log", "trace_metric"} {
+			buf.Reset()
+			item := EnvelopeItem{Type: itemType, Payload: json.RawMessage(tt.payload)}
+			if itemType == "log" {
+				h.handleLogItem(item)
+			} else {
+				h.handleMetricItem(item)
+			}
+			if got := strings.Contains(buf.String(), "neither"); got != tt.wantDrop {
+				t.Errorf("%s %s: drop line logged = %v, want %v; log: %q", itemType, tt.payload, got, tt.wantDrop, buf.String())
+			}
+		}
 	}
 }
