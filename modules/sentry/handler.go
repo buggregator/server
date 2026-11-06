@@ -133,16 +133,16 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 		case "transaction":
 			// Transactions are stored in structured tables (sentry_transactions, sentry_spans)
 			// but should NOT appear in the global event feed as empty sentry cards.
-			h.handleTransactionItem(item, envHeader.EventID)
+			h.handleTransactionItem(item, envHeader.EventID, project)
 
 		case "spans":
-			h.handleSpansItem(item)
+			h.handleSpansItem(item, project)
 
 		case "log":
-			h.handleLogItem(item)
+			h.handleLogItem(item, project)
 
 		case "trace_metric":
-			h.handleMetricItem(item)
+			h.handleMetricItem(item, project)
 
 		case "session", "sessions", "client_report", "metric_buckets", "check_in",
 			"user_report", "attachment", "replay_event", "replay_recording", "statsd":
@@ -226,7 +226,7 @@ func (h *handler) handleEventItem(item EnvelopeItem, envelopeEventID string, pro
 // handleTransactionItem processes a "transaction" envelope item.
 // envelopeEventID is used as a fallback for SDKs that only include event_id
 // in the envelope header and omit it in the transaction payload.
-func (h *handler) handleTransactionItem(item EnvelopeItem, envelopeEventID string) (string, json.RawMessage) {
+func (h *handler) handleTransactionItem(item EnvelopeItem, envelopeEventID, project string) (string, json.RawMessage) {
 	var txn Transaction
 	if err := json.Unmarshal(item.Payload, &txn); err != nil {
 		slog.Warn("sentry: failed to parse transaction", "err", err)
@@ -242,7 +242,7 @@ func (h *handler) handleTransactionItem(item EnvelopeItem, envelopeEventID strin
 	}
 
 	if h.db != nil {
-		if _, err := storeTransaction(h.db, &txn, payload); err != nil {
+		if _, err := storeTransaction(h.db, &txn, payload, project); err != nil {
 			slog.Warn("sentry: failed to store structured transaction", "err", err)
 		}
 	}
@@ -251,7 +251,7 @@ func (h *handler) handleTransactionItem(item EnvelopeItem, envelopeEventID strin
 }
 
 // handleSpansItem processes a "spans" envelope item (Span v2 format).
-func (h *handler) handleSpansItem(item EnvelopeItem) {
+func (h *handler) handleSpansItem(item EnvelopeItem, project string) {
 	if h.db == nil {
 		return
 	}
@@ -259,7 +259,7 @@ func (h *handler) handleSpansItem(item EnvelopeItem) {
 	// Spans v2 can be either {"items": [...]} or a bare array [...].
 	var envelope SpansEnvelope
 	if err := json.Unmarshal(item.Payload, &envelope); err == nil && len(envelope.Items) > 0 {
-		if err := storeSpansV2(h.db, envelope.Items, nil); err != nil {
+		if err := storeSpansV2(h.db, envelope.Items, nil, project); err != nil {
 			slog.Warn("sentry: failed to store spans v2", "err", err)
 		}
 		return
@@ -268,14 +268,14 @@ func (h *handler) handleSpansItem(item EnvelopeItem) {
 	// Try as bare array.
 	var spans []RawSpan
 	if err := json.Unmarshal(item.Payload, &spans); err == nil && len(spans) > 0 {
-		if err := storeSpansV2(h.db, spans, nil); err != nil {
+		if err := storeSpansV2(h.db, spans, nil, project); err != nil {
 			slog.Warn("sentry: failed to store spans v2 (array)", "err", err)
 		}
 	}
 }
 
 // handleLogItem processes a "log" envelope item.
-func (h *handler) handleLogItem(item EnvelopeItem) {
+func (h *handler) handleLogItem(item EnvelopeItem, project string) {
 	if h.db == nil {
 		return
 	}
@@ -286,7 +286,7 @@ func (h *handler) handleLogItem(item EnvelopeItem) {
 		if len(envelope.Items) == 0 {
 			return // {"items": []}: nothing to store, nothing dropped
 		}
-		if err := storeLogs(h.db, envelope.Items); err != nil {
+		if err := storeLogs(h.db, envelope.Items, project); err != nil {
 			slog.Warn("sentry: failed to store logs", "err", err)
 		}
 		return
@@ -298,14 +298,14 @@ func (h *handler) handleLogItem(item EnvelopeItem) {
 		return
 	}
 	if len(logs) > 0 {
-		if err := storeLogs(h.db, logs); err != nil {
+		if err := storeLogs(h.db, logs, project); err != nil {
 			slog.Warn("sentry: failed to store logs (array)", "err", err)
 		}
 	}
 }
 
 // handleMetricItem processes a "trace_metric" envelope item.
-func (h *handler) handleMetricItem(item EnvelopeItem) {
+func (h *handler) handleMetricItem(item EnvelopeItem, project string) {
 	if h.db == nil {
 		return
 	}
@@ -316,7 +316,7 @@ func (h *handler) handleMetricItem(item EnvelopeItem) {
 		if len(envelope.Items) == 0 {
 			return // {"items": []}: nothing to store, nothing dropped
 		}
-		if err := storeMetrics(h.db, envelope.Items); err != nil {
+		if err := storeMetrics(h.db, envelope.Items, project); err != nil {
 			slog.Warn("sentry: failed to store metrics", "err", err)
 		}
 		return
@@ -328,7 +328,7 @@ func (h *handler) handleMetricItem(item EnvelopeItem) {
 		return
 	}
 	if len(metrics) > 0 {
-		if err := storeMetrics(h.db, metrics); err != nil {
+		if err := storeMetrics(h.db, metrics, project); err != nil {
 			slog.Warn("sentry: failed to store metrics (array)", "err", err)
 		}
 	}

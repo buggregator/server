@@ -228,16 +228,18 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 	// Clear events.
 	protect("DELETE /api/events", func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
-			Type    string   `json:"type"`
-			Project string   `json:"project"`
-			UUIDs   []string `json:"uuids"`
+			Type       string   `json:"type"`
+			Project    string   `json:"project"`
+			UUIDs      []string `json:"uuids"`
+			KeepPinned bool     `json:"keep_pinned"`
 		}
 		json.NewDecoder(r.Body).Decode(&body)
 
 		opts := event.DeleteOptions{
-			Type:    body.Type,
-			Project: body.Project,
-			UUIDs:   body.UUIDs,
+			Type:       body.Type,
+			Project:    body.Project,
+			UUIDs:      body.UUIDs,
+			KeepPinned: body.KeepPinned,
 		}
 		if err := store.DeleteAll(r.Context(), opts); err != nil {
 			writeError(w, err.Error(), http.StatusInternalServerError)

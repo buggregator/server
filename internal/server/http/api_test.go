@@ -249,6 +249,27 @@ func TestAPI_DeleteAll(t *testing.T) {
 	}
 }
 
+// keep_pinned reaches the store: the body field is read.
+func TestAPI_DeleteAll_KeepPinned(t *testing.T) {
+	mux, store := setupAPI(t)
+	ctx := context.Background()
+	for _, u := range []string{"p1", "u1"} {
+		store.Store(ctx, event.Event{UUID: u, Type: "sentry", Payload: json.RawMessage(`{}`), Timestamp: 1.0, Project: "default"})
+	}
+	store.Pin(ctx, "p1")
+
+	r := httptest.NewRequest("DELETE", "/api/events", strings.NewReader(`{"type":"sentry","project":"default","keep_pinned":true}`))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+	if w.Code != 200 {
+		t.Fatalf("status = %d", w.Code)
+	}
+	all, _ := store.FindAll(ctx, event.FindOptions{})
+	if len(all) != 1 || all[0].UUID != "p1" {
+		t.Errorf("left %v, want only pinned p1", all)
+	}
+}
+
 func TestAPI_Projects(t *testing.T) {
 	mux, _ := setupAPI(t)
 

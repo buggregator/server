@@ -223,7 +223,7 @@ func TestStoreTransaction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	id, err := storeTransaction(db, &txn, payload)
+	id, err := storeTransaction(db, &txn, payload, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -301,7 +301,7 @@ func TestStoreLogs(t *testing.T) {
 		{Level: "info", Body: "Request completed"},
 	}
 
-	err := storeLogs(db, logs)
+	err := storeLogs(db, logs, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,7 +332,7 @@ func TestStoreMetrics(t *testing.T) {
 		{Type: "counter", Value: 1}, // no name: dropped
 	}
 
-	if err := storeMetrics(db, metrics); err != nil {
+	if err := storeMetrics(db, metrics, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -565,9 +565,9 @@ func TestHandleItemsEmptyAndInvalidPayload(t *testing.T) {
 			buf.Reset()
 			item := EnvelopeItem{Type: itemType, Payload: json.RawMessage(tt.payload)}
 			if itemType == "log" {
-				h.handleLogItem(item)
+				h.handleLogItem(item, "")
 			} else {
-				h.handleMetricItem(item)
+				h.handleMetricItem(item, "")
 			}
 			if got := strings.Contains(buf.String(), "neither"); got != tt.wantDrop {
 				t.Errorf("%s %s: drop line logged = %v, want %v; log: %q", itemType, tt.payload, got, tt.wantDrop, buf.String())
