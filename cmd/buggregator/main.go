@@ -25,6 +25,7 @@ import (
 	smtpmod "github.com/buggregator/go-buggregator/modules/smtp"
 	"github.com/buggregator/go-buggregator/modules/vardumper"
 	"github.com/buggregator/go-buggregator/modules/webhooks"
+	"github.com/buggregator/go-buggregator/modules/xdebug"
 )
 
 // version is set at build time via -ldflags "-X main.version=...".
@@ -123,6 +124,14 @@ func main() {
 	}
 	if enabled.IsEnabled("sms") {
 		registry.Register(sms.New())
+	}
+	// Xdebug proxy — off by default; forwards DBGp to the IDE, adds read-only MCP tools.
+	if cfg.Xdebug.Enabled {
+		registry.Register(xdebug.New(xdebug.Config{
+			Addr:      cfg.Xdebug.Addr,
+			IDEAddr:   cfg.Xdebug.IDEAddr,
+			AllowEval: cfg.Xdebug.AllowEval,
+		}))
 	}
 	// HTTP proxy — stores events as http-dump with response data.
 	registry.Register(proxyMod)

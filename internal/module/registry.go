@@ -83,6 +83,11 @@ func (r *Registry) Init(db *sql.DB, mux *http.ServeMux, store event.Store) error
 	return nil
 }
 
+// Modules returns the registered modules in registration order.
+func (r *Registry) Modules() []Module {
+	return r.modules
+}
+
 // Handlers returns HTTP ingestion handlers sorted by priority.
 func (r *Registry) Handlers() []HTTPIngestionHandler {
 	return r.handlers
