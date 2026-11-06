@@ -51,14 +51,22 @@ func readPacket(r *bufio.Reader) ([]byte, error) {
 	if n > maxPacketSize {
 		return nil, errPacketTooLarge
 	}
-	buf := make([]byte, n+1)
-	if _, err := io.ReadFull(r, buf); err != nil {
+	// Grow with the data, not with the declared length: an idle connection
+	// that only announced a big packet holds no memory.
+	var buf bytes.Buffer
+	buf.Grow(min(n, 64<<10))
+	if _, err := io.CopyN(&buf, r, int64(n)); err != nil {
+		if errors.Is(err, io.EOF) {
+			err = io.ErrUnexpectedEOF
+		}
 		return nil, err
 	}
-	if buf[n] != 0 {
+	if b, err := r.ReadByte(); err != nil {
+		return nil, err
+	} else if b != 0 {
 		return nil, errors.New("dbgp: packet not NUL-terminated")
 	}
-	return buf[:n], nil
+	return buf.Bytes(), nil
 }
 
 // encodePacket frames an engine packet.
@@ -95,9 +103,6 @@ func readCommand(r *bufio.Reader) (string, error) {
 // so base64 data and quoted file names are never touched.
 func commandTID(line string) (name string, start, end int, ok bool) {
 	head := line
-	if i := strings.Index(line, " -- "); i >= 0 {
-		head = line[:i]
-	}
 	type tok struct{ s, e int }
 	var toks []tok
 	i := 0
@@ -124,6 +129,9 @@ func commandTID(line string) (name string, start, end int, ok bool) {
 			for i < len(head) && head[i] != ' ' {
 				i++
 			}
+		}
+		if head[s:i] == "--" {
+			break // base64 data follows; a quoted " -- " was skipped above
 		}
 		toks = append(toks, tok{s, i})
 	}

@@ -243,10 +243,10 @@ func LoadConfig() Config {
 	cfg.MCP.AuthToken = coalesce(os.Getenv("MCP_AUTH_TOKEN"), fileCfg.MCP.AuthToken)
 
 	// Xdebug proxy.
-	cfg.Xdebug.Enabled = fileCfg.Xdebug.Enabled || os.Getenv("XDEBUG_PROXY_ENABLED") == "true"
+	cfg.Xdebug.Enabled = envBool("XDEBUG_PROXY_ENABLED", fileCfg.Xdebug.Enabled)
 	cfg.Xdebug.Addr = coalesce(os.Getenv("XDEBUG_PROXY_ADDR"), fileCfg.Xdebug.Addr, "127.0.0.1:9003")
 	cfg.Xdebug.IDEAddr = coalesce(os.Getenv("XDEBUG_PROXY_IDE_ADDR"), fileCfg.Xdebug.IDEAddr, "127.0.0.1:9004")
-	cfg.Xdebug.AllowEval = fileCfg.Xdebug.AllowEval || os.Getenv("XDEBUG_PROXY_ALLOW_EVAL") == "true"
+	cfg.Xdebug.AllowEval = envBool("XDEBUG_PROXY_ALLOW_EVAL", fileCfg.Xdebug.AllowEval)
 
 	// Auth.
 	cfg.Auth.Enabled = fileCfg.Auth.Enabled || os.Getenv("AUTH_ENABLED") == "true"
@@ -293,6 +293,18 @@ func LoadConfig() Config {
 	cfg.ProxyAddr = cfg.TCP.Proxy.Addr
 
 	return cfg
+}
+
+// envBool returns the env var as a bool when it is set ("true"/"false"),
+// otherwise def. Unlike "file || env", the env can also switch a setting off.
+func envBool(name string, def bool) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(name))) {
+	case "true", "1", "yes":
+		return true
+	case "false", "0", "no":
+		return false
+	}
+	return def
 }
 
 // modulesFromCSV creates ModulesConfig from a comma-separated list of enabled types.

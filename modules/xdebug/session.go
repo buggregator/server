@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -35,6 +36,7 @@ var agentCommands = map[string]bool{
 type pending struct {
 	ideTID string      // origin IDE: the IDE's own transaction id
 	reply  chan []byte // origin agent
+	cont   bool        // a continuation: its reply carries the engine's new status
 }
 
 // Session is one Xdebug connection proxied to the IDE.
@@ -55,6 +57,7 @@ type Session struct {
 	nextTID  int
 	pending  map[int]pending
 	status   string
+	conts    int // continuations sent and not answered yet
 	file     string
 	line     int
 	closed   bool
@@ -140,8 +143,10 @@ func (s *Session) forwardIDE(r *bufio.Reader) error {
 			return errSessionClosed
 		}
 		tid := s.allocTID()
-		s.pending[tid] = pending{ideTID: line[start:end]}
-		if continuations[name] {
+		cont := continuations[name]
+		s.pending[tid] = pending{ideTID: line[start:end], cont: cont}
+		if cont {
+			s.conts++
 			s.status = "running"
 		}
 		s.mu.Unlock()
@@ -175,16 +180,21 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 			}
 			continue
 		}
+		tid, _ := strconv.Atoi(rt.TransactionID)
 		s.mu.Lock()
-		if rt.Status != "" {
+		p, found := s.pending[tid]
+		delete(s.pending, tid)
+		if found && p.cont {
+			s.conts--
+		}
+		// While a continuation is in flight the engine is running: a late reply
+		// to an earlier command (e.g. status) must not report it paused again.
+		if rt.Status != "" && (s.conts == 0 || (found && p.cont)) {
 			s.status = rt.Status
 			if rt.Status == "break" {
 				s.file, s.line = breakLocation(body)
 			}
 		}
-		tid, _ := strconv.Atoi(rt.TransactionID)
-		p, found := s.pending[tid]
-		delete(s.pending, tid)
 		s.mu.Unlock()
 
 		switch {
@@ -205,6 +215,11 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 func (s *Session) Command(name, args string, data []byte) ([]byte, error) {
 	if !agentCommands[name] {
 		return nil, fmt.Errorf("command %q is not allowed", name)
+	}
+	// NUL ends a DBGp command: inside args it would smuggle a second command
+	// (e.g. "run") past the allow-list. data is base64 and cannot carry one.
+	if strings.ContainsRune(args, 0) {
+		return nil, errors.New("arguments must not contain NUL")
 	}
 	t := time.NewTimer(s.timeout)
 	defer t.Stop()
