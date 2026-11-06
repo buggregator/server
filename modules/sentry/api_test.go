@@ -563,12 +563,14 @@ func TestAPIMetricsSameTimestampNewestFirst(t *testing.T) {
 	registerAPI(mux, db)
 
 	storeMetrics(db, []MetricRecord{
-		{Name: "first", Type: "counter", Value: 1, Timestamp: "1678272501"},
-		{Name: "second", Type: "counter", Value: 1, Timestamp: "1678272501"},
-		{Name: "third", Type: "counter", Value: 1, Timestamp: "1678272501"},
+		{Name: "first", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: "1678272501"},
+		{Name: "second", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: "1678272501"},
+		{Name: "third", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: "1678272501"},
 	})
 
-	got := pagedField(t, mux, "/api/sentry/metrics?type=counter", "name", 3)
+	// trace_id makes SQLite use its index and sort; without the rowid
+	// tie-breaker the rows come back in insertion order.
+	got := pagedField(t, mux, "/api/sentry/metrics?trace_id=trace-abc", "name", 3)
 	want := []string{"third", "second", "first"}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Errorf("pages = %v, want %v", got, want)
@@ -606,6 +608,8 @@ func TestAPILogsFilterByLevels(t *testing.T) {
 		{"level=info", 1},
 		{"level=warning,error", 2},
 		{"level=warn,warning", 1},
+		{"level=warn,%20warning", 1},
+		{"level=info,,%20", 1},
 		{"level=fatal", 0},
 	}
 

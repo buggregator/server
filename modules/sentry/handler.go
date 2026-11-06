@@ -282,7 +282,10 @@ func (h *handler) handleLogItem(item EnvelopeItem) {
 
 	// Log items can be {"items": [...]} or a bare array.
 	var envelope LogEnvelope
-	if err := json.Unmarshal(item.Payload, &envelope); err == nil && len(envelope.Items) > 0 {
+	if err := json.Unmarshal(item.Payload, &envelope); err == nil && envelope.Items != nil {
+		if len(envelope.Items) == 0 {
+			return // {"items": []}: nothing to store, nothing dropped
+		}
 		if err := storeLogs(h.db, envelope.Items); err != nil {
 			slog.Warn("sentry: failed to store logs", "err", err)
 		}
@@ -309,7 +312,10 @@ func (h *handler) handleMetricItem(item EnvelopeItem) {
 
 	// Metric items can be {"items": [...]} or a bare array.
 	var envelope MetricEnvelope
-	if err := json.Unmarshal(item.Payload, &envelope); err == nil && len(envelope.Items) > 0 {
+	if err := json.Unmarshal(item.Payload, &envelope); err == nil && envelope.Items != nil {
+		if len(envelope.Items) == 0 {
+			return // {"items": []}: nothing to store, nothing dropped
+		}
 		if err := storeMetrics(h.db, envelope.Items); err != nil {
 			slog.Warn("sentry: failed to store metrics", "err", err)
 		}

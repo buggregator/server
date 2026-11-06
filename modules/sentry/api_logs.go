@@ -23,12 +23,15 @@ func handleLogsList(db *sql.DB) http.HandlerFunc {
 		var args []any
 
 		// One level or several, comma-separated: "warn,warning".
-		if v := q.Get("level"); v != "" {
-			levels := strings.Split(v, ",")
-			conditions = append(conditions, "l.level IN (?"+strings.Repeat(", ?", len(levels)-1)+")")
-			for _, level := range levels {
-				args = append(args, level)
+		var levels []any
+		for _, level := range strings.Split(q.Get("level"), ",") {
+			if level = strings.TrimSpace(level); level != "" {
+				levels = append(levels, level)
 			}
+		}
+		if len(levels) > 0 {
+			conditions = append(conditions, "l.level IN (?"+strings.Repeat(", ?", len(levels)-1)+")")
+			args = append(args, levels...)
 		}
 		if v := q.Get("trace_id"); v != "" {
 			conditions = append(conditions, "l.trace_id = ?")
