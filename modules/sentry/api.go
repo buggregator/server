@@ -183,6 +183,25 @@ func appendTimeConditions(conditions []string, args []any, r *http.Request, colu
 }
 
 // whereOf builds a WHERE clause from conditions (empty string when there are none).
+// appendProject narrows a query to ?project when it is given; without it every
+// project is read, as before.
+func appendProject(conditions []string, args []any, r *http.Request, column string) ([]string, []any) {
+	if v := strings.TrimSpace(r.URL.Query().Get("project")); v != "" {
+		conditions = append(conditions, column+" = ?")
+		args = append(args, v)
+	}
+	return conditions, args
+}
+
+// projectClause is " AND <column> = ?" with its argument for ?project, or nothing.
+func projectClause(r *http.Request, column string) (string, []any) {
+	conds, args := appendProject(nil, nil, r, column)
+	if len(conds) == 0 {
+		return "", nil
+	}
+	return " AND " + conds[0], args
+}
+
 func whereOf(conditions []string) string {
 	if len(conditions) == 0 {
 		return ""

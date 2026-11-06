@@ -35,6 +35,7 @@ func handleMetricsList(db *sql.DB) http.HandlerFunc {
 
 		// Period: metric_ts is stored in ISO form, same window as /api/sentry/counts.
 		conditions, args = appendTimeConditions(conditions, args, r, "metric_ts", true)
+		conditions, args = appendProject(conditions, args, r, "project_id")
 
 		where := ""
 		if len(conditions) > 0 {
