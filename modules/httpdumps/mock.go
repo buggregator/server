@@ -287,6 +287,44 @@ func (s *mockStore) match(method, path, project string) *MockRule {
 	return nil
 }
 
+// MockNear is a rule that missed a request by one condition. Reason is
+// "disabled", "method" or "project".
+type MockNear struct {
+	RuleID   string `json:"rule_id"`
+	RuleName string `json:"rule_name"`
+	Reason   string `json:"reason"`
+}
+
+const maxMockNear = 5
+
+// near lists, in matching order, the rules whose path matches the request but
+// that missed it by exactly one other condition: why no rule matched.
+func (s *mockStore) near(method, path, project string) []MockNear {
+	var out []MockNear
+	for _, r := range s.list() {
+		if !matchMockPath(r.Path, path) {
+			continue
+		}
+		var misses []string
+		if !r.Enabled {
+			misses = append(misses, "disabled")
+		}
+		if r.Method != "ANY" && r.Method != method {
+			misses = append(misses, "method")
+		}
+		if r.Project != "" && r.Project != project {
+			misses = append(misses, "project")
+		}
+		if len(misses) == 1 {
+			out = append(out, MockNear{RuleID: r.ID, RuleName: r.Name, Reason: misses[0]})
+			if len(out) == maxMockNear {
+				break
+			}
+		}
+	}
+	return out
+}
+
 func (s *mockStore) create(r MockRule) (MockRule, error) {
 	if err := r.Normalize(); err != nil {
 		return MockRule{}, err

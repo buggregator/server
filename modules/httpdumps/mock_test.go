@@ -216,8 +216,8 @@ func TestMockServer_CapturesEveryRequest(t *testing.T) {
 	}
 
 	missing := byURI["mock/missing"]
-	if v, present := missing["payload"].(map[string]any)["mock"]; !present || v != nil {
-		t.Errorf("unmatched request mock = %v (present %v), want null", v, present)
+	if v, _ := missing["payload"].(map[string]any)["mock"].(map[string]any); v == nil || v["matched"] != false || v["rule_id"] != nil || v["status"] != float64(404) {
+		t.Errorf("unmatched request mock = %v, want matched false, rule_id null, status 404", v)
 	}
 	if missing["project"] != "shop" {
 		t.Errorf("unmatched request project = %v, want shop", missing["project"])
@@ -416,5 +416,92 @@ func TestMockAPI_UpdateIgnoresReadOnly(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &upd)
 	if upd.ReadOnly || upd.Source != "api" {
 		t.Errorf("update returned read_only %v source %q, want false api", upd.ReadOnly, upd.Source)
+	}
+}
+
+func mockField(t *testing.T, ev map[string]any) map[string]any {
+	t.Helper()
+	info, _ := ev["payload"].(map[string]any)["mock"].(map[string]any)
+	if info == nil {
+		t.Fatalf("no mock field in %v", ev["payload"])
+	}
+	return info
+}
+
+// The captured request keeps what was sent, not a link to a rule that can
+// change: status, headers (with the security ones), body and delay.
+func TestMockServer_StoresWhatWasSent(t *testing.T) {
+	env := newMockEnv(t, nil)
+	rule := env.create(t, `{"name":"order","path":"/orders","status":201,"headers":{"X-Shop":"1"},"body":"first","delay_ms":5}`)
+	env.do(t, "GET", "/mock/orders", "", nil)
+	if w := env.do(t, "PUT", "/api/mocks/"+rule.ID, `{"name":"order v2","path":"/orders","status":500,"body":"second"}`, nil); w.Code != http.StatusOK {
+		t.Fatalf("update: %d %s", w.Code, w.Body.String())
+	}
+
+	info := mockField(t, env.requests(t, "")[0])
+	if info["matched"] != true || info["rule_id"] != rule.ID || info["rule_name"] != "order" ||
+		info["status"] != float64(201) || info["body"] != "first" || info["body_size"] != float64(5) ||
+		info["body_truncated"] != false || info["delay_ms"] != float64(5) {
+		t.Errorf("mock = %v", info)
+	}
+	hdr, _ := info["headers"].(map[string]any)
+	if hdr["X-Shop"] != "1" || hdr["Content-Security-Policy"] != "sandbox" {
+		t.Errorf("headers = %v", hdr)
+	}
+	if _, ok := info["near"]; ok {
+		t.Error("matched request has near")
+	}
+}
+
+func TestMockServer_StoresBodyPrefix(t *testing.T) {
+	env := newMockEnv(t, nil)
+	big := strings.Repeat("a", MaxMockSentBody+10)
+	env.create(t, `{"path":"/big","body":"`+big+`"}`)
+	if w := env.do(t, "GET", "/mock/big", "", nil); w.Body.Len() != len(big) {
+		t.Fatalf("served %d bytes, want %d", w.Body.Len(), len(big))
+	}
+	info := mockField(t, env.requests(t, "")[0])
+	if b, _ := info["body"].(string); len(b) != MaxMockSentBody || info["body_size"] != float64(len(big)) || info["body_truncated"] != true {
+		t.Errorf("body len %d, size %v, truncated %v", len(b), info["body_size"], info["body_truncated"])
+	}
+}
+
+// An unmatched request says which rules almost matched and why.
+func TestMockServer_Near(t *testing.T) {
+	env := newMockEnv(t, nil)
+	off := env.create(t, `{"name":"off","method":"GET","path":"/users/{id}","enabled":false}`)
+	post := env.create(t, `{"name":"post","method":"POST","path":"/users/{id}"}`)
+	shop := env.create(t, `{"name":"shop","method":"GET","path":"/users/*","project":"shop"}`)
+	env.create(t, `{"name":"two misses","method":"POST","path":"/users/{id}","enabled":false}`)
+	env.create(t, `{"name":"other path","method":"GET","path":"/orders/{id}"}`)
+
+	w := env.do(t, "GET", "/mock/users/7", "", nil)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status %d, want 404", w.Code)
+	}
+	info := mockField(t, env.requests(t, "")[0])
+	if info["matched"] != false || !strings.Contains(info["body"].(string), "no mock rule matched GET /users/7") {
+		t.Errorf("mock = %v", info)
+	}
+	got, _ := json.Marshal(info["near"])
+	want, _ := json.Marshal([]MockNear{
+		{RuleID: off.ID, RuleName: "off", Reason: "disabled"},
+		{RuleID: post.ID, RuleName: "post", Reason: "method"},
+		{RuleID: shop.ID, RuleName: "shop", Reason: "project"},
+	})
+	var wantAny any
+	json.Unmarshal(want, &wantAny)
+	want, _ = json.Marshal(wantAny)
+	if string(got) != string(want) {
+		t.Errorf("near = %s\nwant   %s", got, want)
+	}
+
+	env.do(t, "GET", "/mock/nothing", "", nil)
+	for _, ev := range env.requests(t, "") {
+		if p := ev["payload"].(map[string]any)["request"].(map[string]any)["uri"]; p == "mock/nothing" {
+			if near, _ := mockField(t, ev)["near"].([]any); near == nil || len(near) != 0 {
+				t.Errorf("near for no candidates = %v, want []", mockField(t, ev)["near"])
+			}
+		}
 	}
 }
