@@ -19,6 +19,8 @@ var (
 	errNotPaused      = errors.New("session is not paused (the script is running or has not stopped at a breakpoint yet)")
 	errSessionClosed  = errors.New("session closed")
 	errCommandTimeout = errors.New("timed out waiting for Xdebug")
+	errNoSession      = errors.New("no such xdebug session")
+	errSessionLive    = errors.New("session is live: only a closed session can be dismissed")
 )
 
 // continuations resume the script: after one is sent the engine is running.
@@ -63,28 +65,103 @@ type Session struct {
 	closed   bool
 	agentSem chan struct{} // one agent command at a time; others wait their turn
 	timeout  time.Duration
+
+	pauseSeq     int // bumped on every transition into break; keys the read cache
+	pausedAt     time.Time
+	cache        map[string][]byte // UI reads of the current pause
+	cacheSeq     int
+	ideConnected bool
+	closeReason  string
+	closedAt     time.Time
+	kind         string // http or cli, read once at the first break
+	target       string // "GET /checkout?…" or the CLI command line
+	targetDone   bool
+	agentCalls   int
+	agentLog     []AgentCall // ring, newest last
+	notify       func(event string, payload any)
 }
+
+// Close reasons of a session (tombstone).
+const (
+	ReasonIDEUnreachable = "ide_unreachable"
+	ReasonIDEClosed      = "ide_closed"
+	ReasonEngineClosed   = "engine_closed"
+	ReasonStopped        = "stopped"
+)
+
+const agentLogSize = 200
 
 // Info is a snapshot of a session for listing.
 type Info struct {
-	ID        string    `json:"id"`
-	IDEKey    string    `json:"idekey,omitempty"`
-	FileURI   string    `json:"fileuri,omitempty"`
-	Language  string    `json:"language,omitempty"`
-	Engine    string    `json:"engine,omitempty"`
-	Status    string    `json:"status"`
-	File      string    `json:"file,omitempty"`
-	Line      int       `json:"line,omitempty"`
-	StartedAt time.Time `json:"started_at"`
+	ID           string     `json:"id"`
+	IDEKey       string     `json:"idekey"`
+	State        string     `json:"state"` // starting, break, running, stopping, stopped, detached
+	Kind         string     `json:"kind,omitempty"`
+	Target       string     `json:"target,omitempty"`
+	EntryFile    string     `json:"entry_file"`
+	Language     string     `json:"language,omitempty"`
+	Engine       string     `json:"engine,omitempty"`
+	IDEConnected bool       `json:"ide_connected"`
+	LastFile     string     `json:"last_file,omitempty"`
+	LastLine     int        `json:"last_line,omitempty"`
+	StartedAt    time.Time  `json:"started_at"`
+	PausedAt     *time.Time `json:"paused_at,omitempty"`
+	AgentCalls   int        `json:"agent_calls"`
+	ClosedReason string     `json:"closed_reason,omitempty"`
+	ClosedAt     *time.Time `json:"closed_at,omitempty"`
 }
 
 func (s *Session) Info() Info {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return Info{
-		ID: s.ID, IDEKey: s.IDEKey, FileURI: s.FileURI, Language: s.Language, Engine: s.Engine,
-		Status: s.status, File: s.file, Line: s.line, StartedAt: s.StartedAt,
+	return s.infoLocked()
+}
+
+func (s *Session) infoLocked() Info {
+	in := Info{
+		ID: s.ID, IDEKey: s.IDEKey, State: s.stateLocked(), Kind: s.kind, Target: s.target,
+		EntryFile: s.FileURI, Language: s.Language, Engine: s.Engine, IDEConnected: s.ideConnected,
+		LastFile: s.file, LastLine: s.line, StartedAt: s.StartedAt, AgentCalls: s.agentCalls,
+		ClosedReason: s.closeReason,
 	}
+	if !s.pausedAt.IsZero() {
+		t := s.pausedAt
+		in.PausedAt = &t
+	}
+	if s.closed {
+		t := s.closedAt
+		in.ClosedAt = &t
+	}
+	return in
+}
+
+// stateLocked is the state shown to clients. Caller holds mu.
+func (s *Session) stateLocked() string {
+	if s.closed {
+		if s.closeReason == ReasonIDEUnreachable || s.closeReason == ReasonIDEClosed {
+			return "detached"
+		}
+		return "stopped"
+	}
+	return s.status
+}
+
+// statusEvent is the payload of session.status. Caller holds mu.
+func (s *Session) statusEventLocked() map[string]any {
+	return map[string]any{"id": s.ID, "state": s.stateLocked(), "file": s.file, "line": s.line, "kind": s.kind, "target": s.target}
+}
+
+func (s *Session) emit(event string, payload any) {
+	if s.notify != nil {
+		s.notify(event, payload)
+	}
+}
+
+// Closed reports whether the session is a tombstone.
+func (s *Session) Closed() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.closed
 }
 
 // Paused reports whether the engine is stopped at a breakpoint.
@@ -107,7 +184,7 @@ type initPacket struct {
 func newSession(id string, engine net.Conn, initBody []byte, timeout time.Duration) *Session {
 	s := &Session{
 		ID: id, StartedAt: time.Now(), engine: engine,
-		pending: map[int]pending{}, status: "starting", timeout: timeout,
+		pending: map[int]pending{}, status: "starting", timeout: timeout, cache: map[string][]byte{},
 		agentSem: make(chan struct{}, 1),
 	}
 	var ip initPacket
@@ -145,11 +222,18 @@ func (s *Session) forwardIDE(r *bufio.Reader) error {
 		tid := s.allocTID()
 		cont := continuations[name]
 		s.pending[tid] = pending{ideTID: line[start:end], cont: cont}
+		var ev map[string]any
 		if cont {
 			s.conts++
-			s.status = "running"
+			if s.status != "running" {
+				s.status = "running"
+				ev = s.statusEventLocked()
+			}
 		}
 		s.mu.Unlock()
+		if ev != nil {
+			s.emit("session.status", ev)
+		}
 		err = s.writeEngineLocked(line[:start] + strconv.Itoa(tid) + line[end:])
 		s.writeMu.Unlock()
 		if err != nil {
@@ -191,13 +275,34 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 		// to an earlier command (e.g. status) or to an earlier continuation must
 		// not report it paused again. conts is already decremented for this
 		// reply, so the last continuation's reply sets the status.
+		var ev map[string]any
+		resolve := false
 		if rt.Status != "" && s.conts == 0 {
+			prev := s.status
 			s.status = rt.Status
 			if rt.Status == "break" {
-				s.file, s.line = breakLocation(body)
+				// Xdebug also puts status="break" on plain replies (even errors);
+				// only a reply that names a location moves the current line.
+				if f, l := breakLocation(body); f != "" {
+					s.file, s.line = f, l
+				}
+				if prev != "break" {
+					s.pauseSeq++
+					s.pausedAt = time.Now()
+					resolve = !s.targetDone
+				}
+			}
+			if prev != s.status || rt.Status == "break" {
+				ev = s.statusEventLocked()
 			}
 		}
 		s.mu.Unlock()
+		if ev != nil {
+			s.emit("session.status", ev)
+		}
+		if resolve {
+			go s.resolveTarget()
+		}
 
 		switch {
 		case !found:
@@ -317,21 +422,31 @@ func (s *Session) detach() {
 	s.writeMu.Unlock()
 }
 
-// close fails pending agent calls; it does not close the connections.
-func (s *Session) close() {
+// close fails pending agent calls and turns the session into a tombstone
+// with a reason; it does not close the connections.
+func (s *Session) close(reason string) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if s.closed {
+		s.mu.Unlock()
 		return
 	}
+	if reason == ReasonEngineClosed && (s.status == "stopping" || s.status == "stopped") {
+		reason = ReasonStopped
+	}
 	s.closed = true
-	s.status = "stopped"
+	s.closeReason = reason
+	s.closedAt = time.Now()
+	s.ideConnected = false
+	s.cache = map[string][]byte{}
 	for tid, p := range s.pending {
 		if p.reply != nil {
 			close(p.reply)
 		}
 		delete(s.pending, tid)
 	}
+	ev := map[string]any{"id": s.ID, "reason": reason, "state": s.stateLocked()}
+	s.mu.Unlock()
+	s.emit("session.closed", ev)
 }
 
 // breakLocation reads <xdebug:message filename lineno> from a break response.
@@ -340,7 +455,7 @@ func breakLocation(body []byte) (string, int) {
 		Message struct {
 			Filename string `xml:"filename,attr"`
 			Lineno   int    `xml:"lineno,attr"`
-		} `xml:"message"`
+		} `xml:"https://xdebug.org/dbgp/xdebug message"` // not <error><message>
 	}
 	if err := unmarshalXML(body, &r); err != nil {
 		return "", 0

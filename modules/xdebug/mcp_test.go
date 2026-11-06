@@ -116,7 +116,7 @@ func TestMCPTools_ReadPausedSession(t *testing.T) {
 	go serveEngine(t, e, stop)
 
 	out, isErr := callTool(t, cs, "xdebug_sessions", map[string]any{})
-	if isErr || !strings.Contains(out, `"status": "break"`) || !strings.Contains(out, `"idekey": "PHPSTORM"`) {
+	if isErr || !strings.Contains(out, `"state": "break"`) || !strings.Contains(out, `"idekey": "PHPSTORM"`) {
 		t.Fatalf("sessions: %s", out)
 	}
 

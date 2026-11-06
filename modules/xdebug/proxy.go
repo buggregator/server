@@ -19,9 +19,15 @@ type Proxy struct {
 	initTimeout    time.Duration
 	commandTimeout time.Duration
 
+	tombstoneTTL time.Duration
+	readTarget   bool // read $_SERVER at the first break for the session title
+
 	mu       sync.Mutex
 	nextID   int
-	sessions map[string]*Session
+	sessions map[string]*Session // live sessions and tombstones
+
+	// notify receives session.* and agent.* events for the UI; must not block.
+	notify func(event string, payload any)
 }
 
 func NewProxy(ideAddr string) *Proxy {
@@ -30,8 +36,56 @@ func NewProxy(ideAddr string) *Proxy {
 		dialTimeout:    2 * time.Second,
 		initTimeout:    10 * time.Second,
 		commandTimeout: 10 * time.Second,
+		tombstoneTTL:   10 * time.Minute,
+		readTarget:     true,
 		sessions:       map[string]*Session{},
 	}
+}
+
+// SetNotify sets the event sink (WebSocket broadcast). Call before serving.
+func (p *Proxy) SetNotify(fn func(event string, payload any)) {
+	p.notify = fn
+}
+
+func (p *Proxy) emit(event string, payload any) {
+	if p.notify != nil {
+		p.notify(event, payload)
+	}
+}
+
+// register adds a session and announces it.
+func (p *Proxy) register(s *Session) {
+	s.notify = p.notify
+	p.mu.Lock()
+	p.sessions[s.ID] = s
+	p.mu.Unlock()
+	p.emit("session.created", s.Info())
+}
+
+// bury keeps a closed session as a tombstone until the TTL ends or it is dismissed.
+func (p *Proxy) bury(s *Session) {
+	time.AfterFunc(p.tombstoneTTL, func() {
+		p.mu.Lock()
+		if p.sessions[s.ID] == s {
+			delete(p.sessions, s.ID)
+		}
+		p.mu.Unlock()
+	})
+}
+
+// Dismiss removes a tombstone. A live session is never touched.
+func (p *Proxy) Dismiss(id string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	s, ok := p.sessions[id]
+	if !ok {
+		return errNoSession
+	}
+	if !s.Closed() {
+		return errSessionLive
+	}
+	delete(p.sessions, id)
+	return nil
 }
 
 // HandleConnection implements tcp.ConnectionHandler for one Xdebug connection.
@@ -52,11 +106,15 @@ func (p *Proxy) HandleConnection(engine net.Conn) {
 	id := strconv.Itoa(p.nextID)
 	p.mu.Unlock()
 	s := newSession(id, engine, initBody, p.commandTimeout)
+	s.targetDone = !p.readTarget
 
 	ide, err := net.DialTimeout("tcp", p.ideAddr, p.dialTimeout)
 	if err != nil {
 		slog.Warn("xdebug: IDE is not reachable, detaching so the script runs on", "ide", p.ideAddr, "file", s.FileURI, "err", err)
 		s.detach()
+		p.register(s)
+		s.close(ReasonIDEUnreachable)
+		p.bury(s)
 		return
 	}
 	defer ide.Close()
@@ -65,12 +123,16 @@ func (p *Proxy) HandleConnection(engine net.Conn) {
 	if err := s.writeIDE(initBody); err != nil {
 		slog.Warn("xdebug: cannot send init to IDE", "err", err)
 		s.detach()
+		p.register(s)
+		s.close(ReasonIDEUnreachable)
+		p.bury(s)
 		return
 	}
 
-	p.mu.Lock()
-	p.sessions[id] = s
-	p.mu.Unlock()
+	s.mu.Lock()
+	s.ideConnected = true
+	s.mu.Unlock()
+	p.register(s)
 	slog.Info("xdebug: session started", "session", id, "file", s.FileURI, "idekey", s.IDEKey)
 
 	ideDone := make(chan error, 1)
@@ -80,23 +142,21 @@ func (p *Proxy) HandleConnection(engine net.Conn) {
 
 	select {
 	case err := <-engineDone:
-		s.close()
+		s.close(ReasonEngineClosed)
 		ide.Close()
 		<-ideDone
 		slog.Info("xdebug: session ended", "session", id, "err", quietEOF(err))
 	case err := <-ideDone:
 		// The IDE went away first: let the script finish without a debugger,
 		// then give the engine a moment to close its side.
-		s.close()
+		s.close(ReasonIDEClosed)
 		slog.Info("xdebug: IDE disconnected, detaching", "session", id, "err", quietEOF(err))
 		s.detach()
 		_ = engine.SetReadDeadline(time.Now().Add(2 * time.Second))
 		<-engineDone
 	}
 
-	p.mu.Lock()
-	delete(p.sessions, id)
-	p.mu.Unlock()
+	p.bury(s)
 }
 
 // Sessions lists live sessions, oldest first.
@@ -122,13 +182,16 @@ func (p *Proxy) Session(id string) (*Session, error) {
 		s, ok := p.sessions[id]
 		p.mu.Unlock()
 		if !ok {
-			return nil, fmt.Errorf("no xdebug session %q (use xdebug_sessions)", id)
+			return nil, fmt.Errorf("%w: %q (use xdebug_sessions)", errNoSession, id)
 		}
 		return s, nil
 	}
-	var paused []*Session
-	all := p.Sessions()
-	for _, s := range all {
+	var paused, all []*Session
+	for _, s := range p.Sessions() {
+		if s.Closed() {
+			continue
+		}
+		all = append(all, s)
 		if s.Paused() {
 			paused = append(paused, s)
 		}

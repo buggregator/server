@@ -125,13 +125,17 @@ func main() {
 	if enabled.IsEnabled("sms") {
 		registry.Register(sms.New())
 	}
-	// Xdebug proxy — off by default; forwards DBGp to the IDE, adds read-only MCP tools.
+	// Xdebug proxy — off by default; forwards DBGp to the IDE, adds read-only
+	// MCP tools and the /api/xdebug routes + "xdebug" WebSocket channel for the UI.
 	if cfg.Xdebug.Enabled {
-		registry.Register(xdebug.New(xdebug.Config{
+		xdebugMod := xdebug.New(xdebug.Config{
 			Addr:      cfg.Xdebug.Addr,
 			IDEAddr:   cfg.Xdebug.IDEAddr,
 			AllowEval: cfg.Xdebug.AllowEval,
-		}))
+		})
+		xdebugMod.SetBroadcaster(hub)
+		hub.AddServerChannel(xdebug.Channel)
+		registry.Register(xdebugMod)
 	}
 	// HTTP proxy — stores events as http-dump with response data.
 	registry.Register(proxyMod)
