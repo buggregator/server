@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
 	"net/http"
 	"strconv"
@@ -253,7 +254,13 @@ func handleFlameChart(db *sql.DB) http.HandlerFunc {
 		}
 
 		peaks, _, _ := LoadPeaks(db, uuid)
-		writeJSON(w, buildFlameChart(edges, metric, float64(peakMetricValue(peaks, metric))))
+		tree, nodes, truncated := buildFlameChart(edges, metric, float64(peakMetricValue(peaks, metric)))
+		if truncated {
+			slog.Warn("profiler: flame chart truncated at node/depth cap",
+				"uuid", uuid, "nodes", nodes, "edges", len(edges),
+				"max_nodes", maxFlameNodes, "max_depth", maxFlameDepth)
+		}
+		writeJSON(w, tree)
 	}
 }
 
@@ -264,7 +271,8 @@ func handleFlameChart(db *sql.DB) http.HandlerFunc {
 // path — exponential on real profiles (#356). Instead each function is
 // expanded once, under the edge that reaches it at the smallest depth; its
 // other call sites are shown as leaves. Every edge becomes at most one node.
-func buildFlameChart(edges []EdgeRow, metric string, peakVal float64) []*flameNode {
+// It returns the tree, its node count, and whether a cap cut it short.
+func buildFlameChart(edges []EdgeRow, metric string, peakVal float64) (tree []*flameNode, count int, truncated bool) {
 	divisor := metricDivisor(metric)
 
 	childrenMap := make(map[string][]int) // caller → edge indexes
@@ -297,7 +305,6 @@ func buildFlameChart(edges []EdgeRow, metric string, peakVal float64) []*flameNo
 		}
 	}
 
-	count := 0
 	var buildNode func(i int, start float64, depth int) *flameNode
 	buildNode = func(i int, start float64, depth int) *flameNode {
 		count++
@@ -320,12 +327,17 @@ func buildFlameChart(edges []EdgeRow, metric string, peakVal float64) []*flameNo
 			Color: flameColor(pct),
 		}
 
-		if expandedBy[e.Callee] != i || depth >= maxFlameDepth {
+		if expandedBy[e.Callee] != i {
+			return node
+		}
+		if depth >= maxFlameDepth {
+			truncated = truncated || len(childrenMap[e.Callee]) > 0
 			return node
 		}
 		childStart := start
 		for _, c := range childrenMap[e.Callee] {
 			if count >= maxFlameNodes {
+				truncated = true
 				break
 			}
 			child := buildNode(c, childStart, depth+1)
@@ -335,17 +347,18 @@ func buildFlameChart(edges []EdgeRow, metric string, peakVal float64) []*flameNo
 		return node
 	}
 
-	result := make([]*flameNode, 0, len(roots))
+	tree = make([]*flameNode, 0, len(roots))
 	start := 0.0
 	for _, i := range roots {
 		if count >= maxFlameNodes {
+			truncated = true
 			break
 		}
 		node := buildNode(i, start, 0)
-		result = append(result, node)
+		tree = append(tree, node)
 		start += node.Duration
 	}
-	return result
+	return tree, count, truncated
 }
 
 // --- Helpers ---

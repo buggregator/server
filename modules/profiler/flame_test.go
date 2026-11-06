@@ -37,7 +37,10 @@ func TestBuildFlameChart_Tree(t *testing.T) {
 		flameEdge("main()", "b", 3000),
 		flameEdge("a", "c", 2000),
 	}
-	got := buildFlameChart(edges, "wt", 10000)
+	got, _, truncated := buildFlameChart(edges, "wt", 10000)
+	if truncated {
+		t.Error("small tree reported as truncated")
+	}
 
 	if len(got) != 1 || got[0].Name != "main()" || got[0].Duration != 10 {
 		t.Fatalf("root = %+v", got)
@@ -74,9 +77,15 @@ func TestBuildFlameChart_DiamondLattice(t *testing.T) {
 		}
 	}
 
-	got := buildFlameChart(edges, "wt", 1000)
+	got, nodes, truncated := buildFlameChart(edges, "wt", 1000)
+	if truncated {
+		t.Error("lattice reported as truncated")
+	}
 
 	total, depth := countFlameNodes(got)
+	if total != nodes {
+		t.Errorf("reported nodes = %d, counted %d", nodes, total)
+	}
 	if total > len(edges) {
 		t.Errorf("nodes = %d, want at most one per edge (%d)", total, len(edges))
 	}
@@ -93,7 +102,8 @@ func TestBuildFlameChart_Recursion(t *testing.T) {
 		flameEdge("b", "a", 30),
 		flameEdge("a", "a", 10),
 	}
-	total, _ := countFlameNodes(buildFlameChart(edges, "wt", 100))
+	tree, _, _ := buildFlameChart(edges, "wt", 100)
+	total, _ := countFlameNodes(tree)
 	if total != len(edges) {
 		t.Errorf("nodes = %d, want %d", total, len(edges))
 	}
@@ -105,7 +115,11 @@ func TestBuildFlameChart_Limits(t *testing.T) {
 		for i := 0; i < maxFlameNodes+100; i++ {
 			edges = append(edges, flameEdge("main()", fmt.Sprintf("f%d", i), 1))
 		}
-		total, _ := countFlameNodes(buildFlameChart(edges, "wt", 1))
+		tree, _, truncated := buildFlameChart(edges, "wt", 1)
+		total, _ := countFlameNodes(tree)
+		if !truncated {
+			t.Error("truncated = false, want true")
+		}
 		if total != maxFlameNodes {
 			t.Errorf("nodes = %d, want %d", total, maxFlameNodes)
 		}
@@ -116,7 +130,11 @@ func TestBuildFlameChart_Limits(t *testing.T) {
 		for i := 0; i < maxFlameDepth+100; i++ {
 			edges = append(edges, flameEdge(fmt.Sprintf("f%d", i), fmt.Sprintf("f%d", i+1), 1))
 		}
-		_, depth := countFlameNodes(buildFlameChart(edges, "wt", 1))
+		tree, _, truncated := buildFlameChart(edges, "wt", 1)
+		_, depth := countFlameNodes(tree)
+		if !truncated {
+			t.Error("truncated = false, want true")
+		}
 		if depth != maxFlameDepth+1 {
 			t.Errorf("depth = %d, want %d", depth, maxFlameDepth+1)
 		}
