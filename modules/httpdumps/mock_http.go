@@ -71,7 +71,7 @@ func (m *mockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		for k, v := range rule.Headers {
 			if http.CanonicalHeaderKey(k) == "Set-Cookie" {
-				if v = scopeMockCookie(v, path); v == "" {
+				if v = scopeMockCookie(v); v == "" {
 					continue
 				}
 			}
@@ -123,10 +123,10 @@ func isPreflight(r *http.Request) bool {
 }
 
 // scopeMockCookie keeps a rule's cookie inside the mock server: no Domain, and
-// a Path under MockPrefix (the rule's own path, or the request path's when it
-// has none), so a mock cannot set or shadow cookies of the Buggregator UI.
-// An unreadable cookie is dropped ("").
-func scopeMockCookie(v, requestPath string) string {
+// a Path under MockPrefix (MockPrefix + the cookie's own Path, or MockPrefix + "/"
+// when it has none), so a mock cannot set or shadow cookies of the Buggregator
+// UI. An unreadable cookie is dropped ("").
+func scopeMockCookie(v string) string {
 	c, err := http.ParseSetCookie(v)
 	if err != nil {
 		return ""
