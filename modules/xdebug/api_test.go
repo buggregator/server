@@ -27,6 +27,18 @@ func (r *recorder) notify(name string, payload any) {
 	r.mu.Unlock()
 }
 
+func (r *recorder) count(name string) int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	n := 0
+	for _, e := range r.events {
+		if e.name == name {
+			n++
+		}
+	}
+	return n
+}
+
 func (r *recorder) names() []string {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -64,6 +76,11 @@ type countingEngine struct {
 	mu    sync.Mutex
 	seen  []string
 	extra map[string]string // command name → inner XML
+	attrs string            // extra reply attributes, e.g. status="break" as real Xdebug sends
+}
+
+func (c *countingEngine) response(cmd, tid, attrs, inner string) string {
+	return response(cmd, tid, c.attrs+attrs, inner)
 }
 
 func (c *countingEngine) count(prefix string) int {
@@ -92,27 +109,27 @@ func (c *countingEngine) serve(t *testing.T, e *fakeEngine) {
 		name := cmdNameRe.FindString(line)
 		tid := tidRe.FindStringSubmatch(line)[1]
 		if inner, ok := c.extra[name]; ok {
-			send(response(name, tid, "", inner))
+			send(c.response(name, tid, "", inner))
 			continue
 		}
 		switch name {
 		case "stack_get":
-			send(response(name, tid, "", `<stack where="App\Http\Kernel->handle" level="0" type="file" filename="file:///app/src/Kernel.php" lineno="40"></stack>`+
+			send(c.response(name, tid, "", `<stack where="App\Http\Kernel->handle" level="0" type="file" filename="file:///app/src/Kernel.php" lineno="40"></stack>`+
 				`<stack where="Illuminate\Pipeline->then" level="1" type="file" filename="file:///app/vendor/laravel/Pipeline.php" lineno="9"></stack>`))
 		case "context_names":
-			send(response(name, tid, "", `<context name="Locals" id="0"></context><context name="Superglobals" id="1"></context><context name="User defined constants" id="2"></context>`))
+			send(c.response(name, tid, "", `<context name="Locals" id="0"></context><context name="Superglobals" id="1"></context><context name="User defined constants" id="2"></context>`))
 		case "context_get":
-			send(response(name, tid, "", `<property name="$id" fullname="$id" type="int"><![CDATA[42]]></property>`))
+			send(c.response(name, tid, "", `<property name="$id" fullname="$id" type="int"><![CDATA[42]]></property>`))
 		case "property_get":
-			send(response(name, tid, "", `<property name="$id" fullname="$id" type="int"><![CDATA[42]]></property>`))
+			send(c.response(name, tid, "", `<property name="$id" fullname="$id" type="int"><![CDATA[42]]></property>`))
 		case "source":
-			send(response(name, tid, ` encoding="base64"`, b64("<?php\r\n$a = 1;\n")))
+			send(c.response(name, tid, ` encoding="base64"`, b64("<?php\r\n$a = 1;\n")))
 		case "breakpoint_list":
-			send(response(name, tid, "", `<breakpoint type="line" filename="file:///app/src/Kernel.php" lineno="40" state="enabled" hit_count="2" hit_value="0" id="170001"></breakpoint>`))
+			send(c.response(name, tid, "", `<breakpoint type="line" filename="file:///app/src/Kernel.php" lineno="40" state="enabled" hit_count="2" hit_value="0" id="170001"></breakpoint>`))
 		case "eval":
-			send(response(name, tid, "", `<property type="int"><![CDATA[7]]></property>`))
+			send(c.response(name, tid, "", `<property type="int"><![CDATA[7]]></property>`))
 		default:
-			send(response(name, tid, "", `<error code="4"><message><![CDATA[unimplemented]]></message></error>`))
+			send(c.response(name, tid, "", `<error code="4"><message><![CDATA[unimplemented]]></message></error>`))
 		}
 	}
 }
@@ -271,6 +288,41 @@ func TestAPI_EvalRefusesNonJSONContentType(t *testing.T) {
 	}
 	if code, body := a.doType(t, "POST", path, "application/json; charset=utf-8", `{"expression":"3+4"}`); code != 200 || !strings.Contains(body, `"value":"7"`) {
 		t.Fatalf("json eval: %d %s", code, body)
+	}
+}
+
+// Real Xdebug puts status="break" on every reply during a pause. Reads and
+// evals must not announce a new break: a client that re-reads on break loops.
+func TestAPI_ReadsDuringPauseEmitNoStatus(t *testing.T) {
+	a := newAPIHarness(t, true)
+	e, d, s := a.connect(t)
+	pause(t, e, d, "1")
+	waitFor(t, "break event", func() bool {
+		return a.rec.find("session.status", func(p any) bool {
+			m := p.(map[string]any)
+			return m["state"] == "break" && m["pause_seq"] == 1
+		})
+	})
+	before := a.rec.count("session.status")
+	eng := &countingEngine{attrs: ` status="break" reason="ok"`}
+	go eng.serve(t, e)
+
+	base := "/api/xdebug/sessions/" + s.ID
+	for _, path := range []string{"/stack", "/variables", "/breakpoints"} {
+		if code, body := a.do(t, "GET", base+path, ""); code != 200 {
+			t.Fatalf("GET %s: %d %s", path, code, body)
+		}
+	}
+	for i := 0; i < 3; i++ {
+		if code, body := a.do(t, "POST", base+"/eval", `{"expression":"3+4"}`); code != 200 {
+			t.Fatalf("eval: %d %s", code, body)
+		}
+	}
+	if n := a.rec.count("session.status"); n != before {
+		t.Fatalf("session.status sent %d times during the pause, want 0", n-before)
+	}
+	if st := s.Info().State; st != "break" {
+		t.Fatalf("state = %q, want break", st)
 	}
 }
 
