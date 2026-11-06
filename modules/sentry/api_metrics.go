@@ -8,7 +8,7 @@ import (
 )
 
 // handleMetricsList lists stored trace metrics, newest first.
-// Filters: name, type (counter, gauge, distribution), trace_id, and search -
+// Filters: name, type (counter, gauge, distribution), trace_id, from/to/window, and search -
 // a part of the name, case-insensitive for ASCII as LIKE is.
 func handleMetricsList(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -32,6 +32,9 @@ func handleMetricsList(db *sql.DB) http.HandlerFunc {
 			conditions = append(conditions, `name LIKE ? ESCAPE '\'`)
 			args = append(args, "%"+likeEscaper.Replace(v)+"%")
 		}
+
+		// Period: metric_ts is stored in ISO form, same window as /api/sentry/counts.
+		conditions, args = appendTimeConditions(conditions, args, r, "metric_ts", true)
 
 		where := ""
 		if len(conditions) > 0 {

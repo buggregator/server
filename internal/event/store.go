@@ -8,6 +8,15 @@ type FindOptions struct {
 	Project string
 	Limit   int
 	Offset  int
+
+	// From and To bound the selection by event time (unix seconds with a
+	// fraction, same as Event.Timestamp). Zero means "no bound".
+	From float64
+	To   float64
+
+	// PinnedFirst puts pinned events before the rest, so a limit never
+	// pushes a pinned event out of the list.
+	PinnedFirst bool
 }
 
 // DeleteOptions configures batch deletion.
