@@ -728,8 +728,8 @@ func TestExtractLinks(t *testing.T) {
 	}
 }
 
-// TestSessionAuthPlain verifies project extraction from SMTP AUTH.
-func TestSessionAuthPlain(t *testing.T) {
+// TestSessionSetProject verifies project extraction from the SMTP AUTH username.
+func TestSessionSetProject(t *testing.T) {
 	tests := []struct {
 		username string
 		want     string
@@ -741,9 +741,9 @@ func TestSessionAuthPlain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		s := &session{}
-		s.AuthPlain(tt.username, "password")
+		s.setProject(tt.username)
 		if s.project != tt.want {
-			t.Errorf("AuthPlain(%q) project = %q, want %q", tt.username, s.project, tt.want)
+			t.Errorf("setProject(%q) project = %q, want %q", tt.username, s.project, tt.want)
 		}
 	}
 }
