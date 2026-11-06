@@ -239,8 +239,8 @@ func (a *App) Run() {
 // reason is logged.
 func (a *App) listLimits() httpserver.ListLimits {
 	lim := httpserver.ListLimits{
-		DefaultLimit: a.cfg.UI.DefaultLimit,
-		MaxLimit:     a.cfg.UI.MaxLimit,
+		DefaultLimit: derefInt(a.cfg.UI.DefaultLimit),
+		MaxLimit:     derefInt(a.cfg.UI.MaxLimit),
 	}
 
 	switch w := strings.TrimSpace(a.cfg.UI.DefaultWindow); w {
@@ -258,4 +258,11 @@ func (a *App) listLimits() httpserver.ListLimits {
 	slog.Info("event list limits", "default_limit", lim.DefaultLimit,
 		"max_limit", lim.MaxLimit, "default_window", lim.DefaultWindow)
 	return lim
+}
+
+func derefInt(p *int) int {
+	if p == nil {
+		return 0
+	}
+	return *p
 }

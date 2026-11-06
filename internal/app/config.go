@@ -27,11 +27,14 @@ type AuthConfig struct {
 // UIConfig bounds the event lists served to the UI.
 //
 // /api/events and /api/events/preview used to return everything stored for a
-// project. The defaults below (1000 events, no time window) only cap the
-// response size; set default_window to also narrow it by time, e.g. "24h".
+// project. By default they still do: the current UI loads the list once and
+// does not page, so a cap would hide older events. default_limit and
+// default_window opt in to smaller responses.
+//
+// The limits are pointers so an explicit 0 (no limit) differs from "not set".
 type UIConfig struct {
-	DefaultLimit  int    `yaml:"default_limit"`  // events returned without a limit param (default 1000)
-	MaxLimit      int    `yaml:"max_limit"`      // ceiling for an explicit limit (default 5000)
+	DefaultLimit  *int   `yaml:"default_limit"`  // events returned without a limit param; unset or 0 = unlimited
+	MaxLimit      *int   `yaml:"max_limit"`      // ceiling for an explicit limit (default 5000); 0 = no ceiling
 	DefaultWindow string `yaml:"default_window"` // time window without from/to: "24h", "7d"; empty or "all" = no window
 }
 
@@ -182,6 +185,9 @@ func LoadConfig() Config {
 	flag.StringVar(&cfg.TCP.SMTP.Addr, "smtp-addr", "", "SMTP listen address")
 	flag.StringVar(&cfg.TCP.Monolog.Addr, "monolog-addr", "", "Monolog TCP listen address")
 	flag.StringVar(&cfg.TCP.VarDumper.Addr, "vardumper-addr", "", "VarDumper TCP listen address")
+	var uiDefaultLimit, uiMaxLimit string
+	flag.StringVar(&uiDefaultLimit, "ui-default-limit", "", "Events per list without a limit param (0 = unlimited)")
+	flag.StringVar(&uiMaxLimit, "ui-max-limit", "", "Ceiling for an explicit list limit (0 = no ceiling)")
 	flag.Parse()
 
 	fileCfg := loadConfigFile(configFile)
@@ -221,8 +227,8 @@ func LoadConfig() Config {
 	cfg.Auth.JWTSecret = coalesce(os.Getenv("AUTH_JWT_SECRET"), fileCfg.Auth.JWTSecret)
 
 	// UI list limits.
-	cfg.UI.DefaultLimit = coalesceInt(atoiOrZero(os.Getenv("UI_DEFAULT_LIMIT")), fileCfg.UI.DefaultLimit, 1000)
-	cfg.UI.MaxLimit = coalesceInt(atoiOrZero(os.Getenv("UI_MAX_LIMIT")), fileCfg.UI.MaxLimit, 5000)
+	cfg.UI.DefaultLimit = resolveLimit(0, fileCfg.UI.DefaultLimit, uiDefaultLimit, os.Getenv("UI_DEFAULT_LIMIT"))
+	cfg.UI.MaxLimit = resolveLimit(5000, fileCfg.UI.MaxLimit, uiMaxLimit, os.Getenv("UI_MAX_LIMIT"))
 	cfg.UI.DefaultWindow = coalesce(os.Getenv("UI_DEFAULT_WINDOW"), fileCfg.UI.DefaultWindow)
 
 	// CORS origins.
@@ -336,24 +342,20 @@ func expandEnvVars(input string) string {
 	})
 }
 
-// coalesceInt is coalesce for numbers: zero counts as "not set".
-func coalesceInt(values ...int) int {
-	for _, v := range values {
-		if v > 0 {
-			return v
+// resolveLimit picks a list limit by priority: the first of values (flag, then
+// env) that is a number >= 0, then the config file, then def. 0 is a real
+// value (no limit); only an empty or unreadable value counts as "not set".
+func resolveLimit(def int, file *int, values ...string) *int {
+	for _, s := range values {
+		if n, err := strconv.Atoi(strings.TrimSpace(s)); err == nil && n >= 0 {
+			return &n
 		}
 	}
-	return 0
-}
-
-// atoiOrZero lets an env variable be passed to coalesceInt in one expression: a
-// non-empty but non-numeric value counts as "not set".
-func atoiOrZero(s string) int {
-	n, err := strconv.Atoi(strings.TrimSpace(s))
-	if err != nil || n < 0 {
-		return 0
+	if file != nil && *file >= 0 {
+		n := *file
+		return &n
 	}
-	return n
+	return &def
 }
 
 func coalesce(values ...string) string {

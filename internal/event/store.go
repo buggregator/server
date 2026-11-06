@@ -13,6 +13,10 @@ type FindOptions struct {
 	// fraction, same as Event.Timestamp). Zero means "no bound".
 	From float64
 	To   float64
+
+	// PinnedFirst puts pinned events before the rest, so a limit never
+	// pushes a pinned event out of the list.
+	PinnedFirst bool
 }
 
 // DeleteOptions configures batch deletion.
