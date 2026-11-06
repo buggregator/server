@@ -18,7 +18,6 @@ var (
 	errNotPaused      = errors.New("session is not paused (the script is running or has not stopped at a breakpoint yet)")
 	errSessionClosed  = errors.New("session closed")
 	errCommandTimeout = errors.New("timed out waiting for Xdebug")
-	errBusy           = errors.New("another agent command is in progress on this session")
 )
 
 // continuations resume the script: after one is sent the engine is running.
@@ -52,15 +51,15 @@ type Session struct {
 
 	writeMu sync.Mutex // serialises writes to the engine; taken before mu
 
-	mu      sync.Mutex
-	nextTID int
-	pending map[int]pending
-	status  string
-	file    string
-	line    int
-	closed  bool
-	agentMu sync.Mutex
-	timeout time.Duration
+	mu       sync.Mutex
+	nextTID  int
+	pending  map[int]pending
+	status   string
+	file     string
+	line     int
+	closed   bool
+	agentSem chan struct{} // one agent command at a time; others wait their turn
+	timeout  time.Duration
 }
 
 // Info is a snapshot of a session for listing.
@@ -106,6 +105,7 @@ func newSession(id string, engine net.Conn, initBody []byte, timeout time.Durati
 	s := &Session{
 		ID: id, StartedAt: time.Now(), engine: engine,
 		pending: map[int]pending{}, status: "starting", timeout: timeout,
+		agentSem: make(chan struct{}, 1),
 	}
 	var ip initPacket
 	if err := unmarshalXML(initBody, &ip); err == nil {
@@ -206,10 +206,14 @@ func (s *Session) Command(name, args string, data []byte) ([]byte, error) {
 	if !agentCommands[name] {
 		return nil, fmt.Errorf("command %q is not allowed", name)
 	}
-	if !s.agentMu.TryLock() {
-		return nil, errBusy
+	t := time.NewTimer(s.timeout)
+	defer t.Stop()
+	select {
+	case s.agentSem <- struct{}{}:
+		defer func() { <-s.agentSem }()
+	case <-t.C:
+		return nil, errCommandTimeout
 	}
-	defer s.agentMu.Unlock()
 
 	reply := make(chan []byte, 1)
 	s.writeMu.Lock()
@@ -242,8 +246,7 @@ func (s *Session) Command(name, args string, data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	t := time.NewTimer(s.timeout)
-	defer t.Stop()
+	t.Reset(s.timeout)
 	select {
 	case body, ok := <-reply:
 		if !ok {

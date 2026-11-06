@@ -384,3 +384,27 @@ func TestProxy_AgentCallFailsWhenEngineCloses(t *testing.T) {
 		t.Fatal("agent call hangs after the engine closed")
 	}
 }
+
+func TestProxy_ConcurrentAgentCallsQueue(t *testing.T) {
+	h := newHarness(t)
+	e, d, s := h.connect(t)
+	pause(t, e, d, "1")
+
+	stop := make(chan struct{})
+	defer close(stop)
+	go serveEngine(t, e, stop)
+
+	errc := make(chan error, 3)
+	for i := 0; i < 3; i++ {
+		go func() {
+			_, err := s.Command("stack_get", "", nil)
+			errc <- err
+		}()
+	}
+	for i := 0; i < 3; i++ {
+		if err := <-errc; err != nil {
+			t.Fatalf("call %d: %v", i, err)
+		}
+	}
+	d.expectQuiet(100 * time.Millisecond)
+}
