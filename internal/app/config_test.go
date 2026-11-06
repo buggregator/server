@@ -205,3 +205,24 @@ func TestResolveLimit(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvBool(t *testing.T) {
+	tests := []struct {
+		env  string
+		def  bool
+		want bool
+	}{
+		{"", true, true},
+		{"", false, false},
+		{"false", true, false}, // env switches off a yaml true
+		{"true", false, true},
+		{"0", true, false},
+		{"junk", true, true},
+	}
+	for _, tt := range tests {
+		t.Setenv("BUGGREGATOR_TEST_BOOL", tt.env)
+		if got := envBool("BUGGREGATOR_TEST_BOOL", tt.def); got != tt.want {
+			t.Errorf("env=%q def=%v: got %v", tt.env, tt.def, got)
+		}
+	}
+}

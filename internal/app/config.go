@@ -46,6 +46,7 @@ type Config struct {
 	TCP      TCPConfig       `yaml:"tcp"`
 	Metrics  MetricsConfig   `yaml:"metrics"`
 	MCP      MCPConfig       `yaml:"mcp"`
+	Xdebug   XdebugConfig    `yaml:"xdebug"`
 	Auth     AuthConfig      `yaml:"auth"`
 	UI       UIConfig        `yaml:"ui"`
 	Modules  ModulesConfig   `yaml:"modules"`
@@ -70,6 +71,15 @@ type MCPConfig struct {
 	SocketPath string `yaml:"socket_path"` // Unix socket path (for transport=socket). Default: /tmp/buggregator-mcp.sock
 	Addr       string `yaml:"addr"`        // HTTP listen address (for transport=http). Default: :8001
 	AuthToken  string `yaml:"auth_token"`  // Bearer token for HTTP transport auth. Empty = no auth.
+}
+
+// XdebugConfig controls the Xdebug (DBGp) proxy: Xdebug → Buggregator → IDE,
+// with read-only MCP tools on the same paused session.
+type XdebugConfig struct {
+	Enabled   bool   `yaml:"enabled"`    // Enable the proxy (default: false).
+	Addr      string `yaml:"addr"`       // Where Xdebug connects. Default: 127.0.0.1:9003
+	IDEAddr   string `yaml:"ide_addr"`   // Where the IDE listens. Default: 127.0.0.1:9004
+	AllowEval bool   `yaml:"allow_eval"` // Expose the xdebug_eval MCP tool (default: false).
 }
 
 // WebhookDef defines a webhook from config.
@@ -246,6 +256,12 @@ func LoadConfig() Config {
 	cfg.MCP.Addr = coalesce(os.Getenv("MCP_ADDR"), fileCfg.MCP.Addr, ":8001")
 	cfg.MCP.AuthToken = coalesce(os.Getenv("MCP_AUTH_TOKEN"), fileCfg.MCP.AuthToken)
 
+	// Xdebug proxy.
+	cfg.Xdebug.Enabled = envBool("XDEBUG_PROXY_ENABLED", fileCfg.Xdebug.Enabled)
+	cfg.Xdebug.Addr = coalesce(os.Getenv("XDEBUG_PROXY_ADDR"), fileCfg.Xdebug.Addr, "127.0.0.1:9003")
+	cfg.Xdebug.IDEAddr = coalesce(os.Getenv("XDEBUG_PROXY_IDE_ADDR"), fileCfg.Xdebug.IDEAddr, "127.0.0.1:9004")
+	cfg.Xdebug.AllowEval = envBool("XDEBUG_PROXY_ALLOW_EVAL", fileCfg.Xdebug.AllowEval)
+
 	// Auth.
 	cfg.Auth.Enabled = fileCfg.Auth.Enabled || os.Getenv("AUTH_ENABLED") == "true"
 	cfg.Auth.Provider = coalesce(os.Getenv("AUTH_PROVIDER"), fileCfg.Auth.Provider, "oidc")
@@ -294,6 +310,18 @@ func LoadConfig() Config {
 	cfg.ProxyAddr = cfg.TCP.Proxy.Addr
 
 	return cfg
+}
+
+// envBool returns the env var as a bool when it is set ("true"/"false"),
+// otherwise def. Unlike "file || env", the env can also switch a setting off.
+func envBool(name string, def bool) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(name))) {
+	case "true", "1", "yes":
+		return true
+	case "false", "0", "no":
+		return false
+	}
+	return def
 }
 
 // modulesFromCSV creates ModulesConfig from a comma-separated list of enabled types.

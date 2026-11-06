@@ -187,7 +187,13 @@ func (a *App) Run() {
 
 	// Start MCP server if enabled.
 	if a.cfg.MCP.Enabled {
-		mcpSrv := mcpserver.NewServer(a.db, store)
+		var providers []mcpserver.ToolProvider
+		for _, m := range a.registry.Modules() {
+			if tp, ok := m.(mcpserver.ToolProvider); ok {
+				providers = append(providers, tp)
+			}
+		}
+		mcpSrv := mcpserver.NewServer(a.db, store, providers...)
 		switch a.cfg.MCP.Transport {
 		case "http":
 			go func() {
