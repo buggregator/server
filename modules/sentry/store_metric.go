@@ -9,7 +9,8 @@ import (
 )
 
 // storeMetrics batch inserts Sentry trace metric items.
-func storeMetrics(db *sql.DB, metrics []MetricRecord) error {
+func storeMetrics(db *sql.DB, metrics []MetricRecord, project string) error {
+	project = projectKey(project)
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -22,8 +23,8 @@ func storeMetrics(db *sql.DB, metrics []MetricRecord) error {
 
 	stmt, err := tx.Prepare(
 		`INSERT INTO sentry_metrics
-			(id, trace_id, span_id, name, type, value, unit, attributes, metric_ts)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, trace_id, span_id, name, type, value, unit, attributes, metric_ts, project_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 	)
 	if err != nil {
 		return fmt.Errorf("prepare sentry_metrics: %w", err)
@@ -52,6 +53,7 @@ func storeMetrics(db *sql.DB, metrics []MetricRecord) error {
 			nullIfEmpty(m.Unit),
 			attrs,
 			parseLogTimestamp(m.Timestamp),
+			project,
 		)
 		if err != nil {
 			return fmt.Errorf("insert sentry_metrics: %w", err)

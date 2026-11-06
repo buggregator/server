@@ -18,6 +18,7 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 		var conditions []string
 		var args []any
 		conditions, args = appendTimeConditions(conditions, args, r, "t.start_ts", true)
+		conditions, args = appendProject(conditions, args, r, "t.project_id")
 		if v := r.URL.Query().Get("environment"); v != "" {
 			conditions = append(conditions, "t.environment = ?")
 			args = append(args, v)
@@ -69,9 +70,10 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 		rows.Close()
 
 		// Now build response with preview spans (connection is free).
+		pc, pa := projectClause(r, "project_id")
 		var data []map[string]any
 		for _, tr := range traceRows {
-			previewSpans := loadPreviewSpans(db, tr.traceID, tr.startTS, 3)
+			previewSpans := loadPreviewSpans(db, tr.traceID, tr.startTS, 3, pc, pa)
 
 			data = append(data, map[string]any{
 				"trace_id":         tr.traceID,
@@ -98,6 +100,10 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		traceID := r.PathValue("traceId")
+		// ?project: only that project's part of the trace (a distributed trace
+		// can hold spans of several projects).
+		pc, pa := projectClause(r, "project_id")
+		targs := append([]any{traceID}, pa...)
 
 		// Load transaction.
 		var (
@@ -108,7 +114,7 @@ func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 		)
 		err := db.QueryRow(
 			`SELECT id, transaction_name, op, status, start_ts, end_ts, duration_ms
-			FROM sentry_transactions WHERE trace_id = ? ORDER BY start_ts LIMIT 1`, traceID,
+			FROM sentry_transactions WHERE trace_id = ?`+pc+` ORDER BY start_ts LIMIT 1`, targs...,
 		).Scan(&txnID, &txnName, &op, &status, &startTS, &endTS, &durationMS)
 		if err == sql.ErrNoRows {
 			apiError(w, "trace not found", http.StatusNotFound)
@@ -120,14 +126,14 @@ func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 		}
 
 		// Load all spans.
-		spans := loadAllSpans(db, traceID, startTS)
+		spans := loadAllSpans(db, traceID, startTS, pc, pa)
 
 		// Load related errors.
-		relatedErrors := loadRelatedErrors(db, traceID)
+		relatedErrors := loadRelatedErrors(db, traceID, pc, pa)
 
 		// Count related logs.
 		var relatedLogCount int
-		db.QueryRow(`SELECT COUNT(*) FROM sentry_logs WHERE trace_id = ?`, traceID).Scan(&relatedLogCount)
+		db.QueryRow(`SELECT COUNT(*) FROM sentry_logs WHERE trace_id = ?`+pc, targs...).Scan(&relatedLogCount)
 
 		result := map[string]any{
 			"trace_id": traceID,
@@ -149,11 +155,11 @@ func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func loadAllSpans(db *sql.DB, traceID string, txnStartTS sql.NullString) []map[string]any {
+func loadAllSpans(db *sql.DB, traceID string, txnStartTS sql.NullString, projectClause string, projectArgs []any) []map[string]any {
 	rows, err := db.Query(
 		`SELECT span_id, parent_span_id, op, description, status, start_ts, duration_ms,
 			peer_type, peer_address, is_error
-		FROM sentry_spans WHERE trace_id = ? ORDER BY start_ts`, traceID,
+		FROM sentry_spans WHERE trace_id = ?`+projectClause+` ORDER BY start_ts`, append([]any{traceID}, projectArgs...)...,
 	)
 	if err != nil {
 		return []map[string]any{}
@@ -197,13 +203,13 @@ func loadAllSpans(db *sql.DB, traceID string, txnStartTS sql.NullString) []map[s
 	return result
 }
 
-func loadRelatedErrors(db *sql.DB, traceID string) []map[string]any {
+func loadRelatedErrors(db *sql.DB, traceID string, projectClause string, projectArgs []any) []map[string]any {
 	// Use a single query to avoid nested connection issues with SQLite.
 	rows, err := db.Query(
 		`SELECT e.event_id, se.exception_type, e.received_at
 		FROM sentry_error_events e
 		LEFT JOIN sentry_exceptions se ON se.error_event_id = e.id AND se.position = 0
-		WHERE e.trace_id = ? ORDER BY e.received_at DESC`, traceID,
+		WHERE e.trace_id = ?`+strings.Replace(projectClause, "project_id", "e.project_id", 1)+` ORDER BY e.received_at DESC`, append([]any{traceID}, projectArgs...)...,
 	)
 	if err != nil {
 		return []map[string]any{}

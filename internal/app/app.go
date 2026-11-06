@@ -234,7 +234,8 @@ func (a *App) Run() {
 	// Start HTTP server (with CORS and optional metrics middleware).
 	var handler http.Handler = mux
 	if len(a.cfg.Server.CORSOrigins) > 0 {
-		handler = httpserver.CORSMiddleware(handler, a.cfg.Server.CORSOrigins)
+		// "/mock/" is httpdumps.MockPrefix: mock OPTIONS rules answer preflights.
+		handler = httpserver.CORSMiddleware(handler, a.cfg.Server.CORSOrigins, "/mock/")
 	}
 	if a.metrics != nil {
 		handler = metrics.HTTPMiddleware(handler, a.metrics)

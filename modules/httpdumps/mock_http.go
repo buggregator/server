@@ -55,7 +55,11 @@ func (m *mockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h := w.Header()
 	status, delayMs := http.StatusNotFound, 0
 	var body []byte
-	if rule == nil {
+	if rule == nil && isPreflight(r) {
+		// No OPTIONS rule: answer the CORS preflight as the CORS middleware
+		// would (it set the Access-Control headers when the origin is allowed).
+		status = http.StatusNoContent
+	} else if rule == nil {
 		h.Set("Content-Type", "application/json")
 		body, _ = json.Marshal(map[string]string{
 			"error": "no mock rule matched " + r.Method + " " + path,
@@ -66,6 +70,11 @@ func (m *mockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		for k, v := range rule.Headers {
+			if http.CanonicalHeaderKey(k) == "Set-Cookie" {
+				if v = scopeMockCookie(v, path); v == "" {
+					continue
+				}
+			}
 			h.Set(k, v)
 		}
 		status, delayMs = rule.Status, rule.DelayMs
@@ -106,6 +115,29 @@ func setSniffedContentType(h http.Header, status int, body []byte) {
 		return
 	}
 	h.Set("Content-Type", http.DetectContentType(body))
+}
+
+func isPreflight(r *http.Request) bool {
+	return r.Method == http.MethodOptions && r.Header.Get("Origin") != "" &&
+		r.Header.Get("Access-Control-Request-Method") != ""
+}
+
+// scopeMockCookie keeps a rule's cookie inside the mock server: no Domain, and
+// a Path under MockPrefix (the rule's own path, or the request path's when it
+// has none), so a mock cannot set or shadow cookies of the Buggregator UI.
+// An unreadable cookie is dropped ("").
+func scopeMockCookie(v, requestPath string) string {
+	c, err := http.ParseSetCookie(v)
+	if err != nil {
+		return ""
+	}
+	c.Domain = ""
+	p := c.Path
+	if !strings.HasPrefix(p, "/") {
+		p = "/"
+	}
+	c.Path = MockPrefix + p
+	return c.String()
 }
 
 func setMockSecurityHeaders(h http.Header) {
