@@ -1,8 +1,11 @@
 package sentry
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
+	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/buggregator/go-buggregator/internal/storage"
@@ -320,6 +323,37 @@ func TestStoreLogs(t *testing.T) {
 	}
 }
 
+func TestStoreMetrics(t *testing.T) {
+	db := setupTestDB(t)
+
+	metrics := []MetricRecord{
+		{TraceID: "trace-1", SpanID: "span-1", Name: "http.client.duration", Type: "distribution", Value: 12.5, Unit: "millisecond", Timestamp: "1788420877.523564"},
+		{Name: "order.status", Type: "gauge", Value: 3, Attributes: map[string]any{"status": map[string]any{"type": "string", "value": "qa"}}},
+		{Type: "counter", Value: 1}, // no name: dropped
+	}
+
+	if err := storeMetrics(db, metrics); err != nil {
+		t.Fatal(err)
+	}
+
+	var count int
+	db.QueryRow(`SELECT COUNT(*) FROM sentry_metrics`).Scan(&count)
+	if count != 2 {
+		t.Errorf("metric count = %d, want 2", count)
+	}
+
+	var traceID, metricType, unit, metricTS string
+	var value float64
+	db.QueryRow(`SELECT trace_id, type, value, unit, metric_ts FROM sentry_metrics WHERE name = ?`, "http.client.duration").
+		Scan(&traceID, &metricType, &value, &unit, &metricTS)
+	if traceID != "trace-1" || metricType != "distribution" || value != 12.5 || unit != "millisecond" {
+		t.Errorf("got trace_id=%q type=%q value=%v unit=%q", traceID, metricType, value, unit)
+	}
+	if !strings.HasPrefix(metricTS, "2026-09-03T07:34:37.5") {
+		t.Errorf("metric_ts = %q, want 2026-09-03T07:34:37.5…", metricTS)
+	}
+}
+
 func TestFingerprint(t *testing.T) {
 	t.Run("exception event", func(t *testing.T) {
 		ev := &ErrorEvent{
@@ -503,5 +537,41 @@ func TestHandlerWithDB(t *testing.T) {
 	db.QueryRow(`SELECT COUNT(*) FROM sentry_exceptions`).Scan(&excCount)
 	if excCount != 1 {
 		t.Errorf("exceptions = %d, want 1", excCount)
+	}
+}
+
+// An empty {"items": []} log or metric item is valid: it stores nothing and
+// must not log the "neither {items} nor an array" drop line. A payload that is
+// neither still logs it.
+func TestHandleItemsEmptyAndInvalidPayload(t *testing.T) {
+	db := setupTestDB(t)
+	h := &handler{db: db}
+
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	tests := []struct {
+		payload  string
+		wantDrop bool
+	}{
+		{`{"items": []}`, false},
+		{`[]`, false},
+		{`"neither"`, true},
+	}
+	for _, tt := range tests {
+		for _, itemType := range []string{"log", "trace_metric"} {
+			buf.Reset()
+			item := EnvelopeItem{Type: itemType, Payload: json.RawMessage(tt.payload)}
+			if itemType == "log" {
+				h.handleLogItem(item)
+			} else {
+				h.handleMetricItem(item)
+			}
+			if got := strings.Contains(buf.String(), "neither"); got != tt.wantDrop {
+				t.Errorf("%s %s: drop line logged = %v, want %v; log: %q", itemType, tt.payload, got, tt.wantDrop, buf.String())
+			}
+		}
 	}
 }

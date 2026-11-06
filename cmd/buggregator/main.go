@@ -48,7 +48,7 @@ func main() {
 	cfg := app.LoadConfig()
 	cfg.Version = version
 
-	db, err := storage.Open(cfg.DatabaseDSN)
+	db, err := storage.OpenPooled(cfg.DatabaseDSN, cfg.Database.MaxOpenConns)
 	if err != nil {
 		slog.Error("failed to open database", "err", err)
 		os.Exit(1)
