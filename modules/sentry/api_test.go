@@ -2,6 +2,7 @@ package sentry
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -528,5 +529,63 @@ func TestAPIEmptyDatabase(t *testing.T) {
 				t.Fatalf("status = %d, want 200 for %s", w.Code, ep)
 			}
 		})
+	}
+}
+
+// pagedField fetches the given URL, which has a query already, page by page, one row each, and returns the field of every row.
+func pagedField(t *testing.T, mux *http.ServeMux, url, field string, pages int) []string {
+	t.Helper()
+	var got []string
+	for page := 1; page <= pages; page++ {
+		req := httptest.NewRequest("GET", fmt.Sprintf("%s&limit=1&page=%d", url, page), nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		var resp map[string]any
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		for _, row := range resp["data"].([]any) {
+			got = append(got, row.(map[string]any)[field].(string))
+		}
+	}
+	return got
+}
+
+// With a filter SQLite sorts instead of walking the timestamp index backwards, and
+// rows of the same timestamp came in insertion order, so pages could repeat or skip rows.
+func TestAPIMetricsSameTimestampNewestFirst(t *testing.T) {
+	db := setupTestDB(t)
+	mux := http.NewServeMux()
+	registerAPI(mux, db)
+
+	storeMetrics(db, []MetricRecord{
+		{Name: "first", Type: "counter", Value: 1, Timestamp: "1678272501"},
+		{Name: "second", Type: "counter", Value: 1, Timestamp: "1678272501"},
+		{Name: "third", Type: "counter", Value: 1, Timestamp: "1678272501"},
+	})
+
+	got := pagedField(t, mux, "/api/sentry/metrics?type=counter", "name", 3)
+	want := []string{"third", "second", "first"}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("pages = %v, want %v", got, want)
+	}
+}
+
+func TestAPILogsSameTimestampNewestFirst(t *testing.T) {
+	db := setupTestDB(t)
+	mux := http.NewServeMux()
+	registerAPI(mux, db)
+
+	var logs []LogRecord
+	json.Unmarshal([]byte(`[
+		{"trace_id": "trace-abc", "level": "info", "body": "first", "timestamp": 1678272501},
+		{"trace_id": "trace-abc", "level": "info", "body": "second", "timestamp": 1678272501},
+		{"trace_id": "trace-abc", "level": "info", "body": "third", "timestamp": 1678272501}
+	]`), &logs)
+	storeLogs(db, logs)
+
+	got := pagedField(t, mux, "/api/sentry/logs?trace_id=trace-abc", "body", 3)
+	want := []string{"third", "second", "first"}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("pages = %v, want %v", got, want)
 	}
 }

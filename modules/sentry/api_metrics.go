@@ -33,7 +33,7 @@ func handleMetricsList(db *sql.DB) http.HandlerFunc {
 			where = " WHERE " + strings.Join(conditions, " AND ")
 		}
 
-		query += where + " ORDER BY metric_ts DESC LIMIT ? OFFSET ?"
+		query += where + " ORDER BY metric_ts DESC, rowid DESC LIMIT ? OFFSET ?"
 		countQuery += where
 
 		var total int
