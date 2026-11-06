@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -73,7 +74,16 @@ type xResponse struct {
 		Name string `xml:"name,attr"`
 		ID   int    `xml:"id,attr"`
 	} `xml:"context"`
-	Props []xProperty `xml:"property"`
+	Props       []xProperty `xml:"property"`
+	Breakpoints []struct {
+		ID       string `xml:"id,attr"`
+		Type     string `xml:"type,attr"`
+		State    string `xml:"state,attr"`
+		Filename string `xml:"filename,attr"`
+		Lineno   int    `xml:"lineno,attr"`
+		Function string `xml:"function,attr"`
+		HitCount int    `xml:"hit_count,attr"`
+	} `xml:"breakpoint"`
 }
 
 // --- Agent-facing model ------------------------------------------------------
@@ -151,14 +161,28 @@ func (s *Session) call(name, args string, data []byte) (*xResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	return parseResponse(body)
+}
+
+func parseResponse(body []byte) (*xResponse, error) {
 	var r xResponse
 	if err := unmarshalXML(body, &r); err != nil {
 		return nil, fmt.Errorf("cannot parse Xdebug reply: %w", err)
 	}
 	if r.Error != nil {
-		return nil, fmt.Errorf("xdebug error %s: %s", r.Error.Code, strings.TrimSpace(r.Error.Message))
+		return nil, &dbgpError{Code: r.Error.Code, Message: strings.TrimSpace(r.Error.Message)}
 	}
 	return &r, nil
+}
+
+// dbgpError is an error Xdebug answered with (e.g. 300: can not get property).
+type dbgpError struct {
+	Code    string
+	Message string
+}
+
+func (e *dbgpError) Error() string {
+	return "xdebug error " + e.Code + ": " + e.Message
 }
 
 func (s *Session) stack() ([]Frame, error) {
@@ -228,9 +252,28 @@ func textResult(v any) *sdkmcp.CallToolResult {
 }
 
 func registerTools(server *sdkmcp.Server, p *Proxy, allowEval bool) {
+	// run resolves the session, logs the call in its agent log (UI) and
+	// renders the result. Calls that never reach a session are not logged.
+	run := func(sessionID, tool, args string, fn func(s *Session) (any, string, error)) (*sdkmcp.CallToolResult, any, error) {
+		s, err := p.Session(sessionID)
+		if err != nil {
+			return nil, nil, err
+		}
+		args = shortArgs(args)
+		started := time.Now()
+		s.agentStarted(tool, args)
+		out, summary, err := fn(s)
+		if err != nil {
+			s.agentDone(tool, args, started, false, "refused — "+err.Error())
+			return nil, nil, err
+		}
+		s.agentDone(tool, args, started, true, summary)
+		return textResult(out), nil, nil
+	}
+
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "xdebug_sessions",
-		Description: "List live Xdebug debug sessions proxied by Buggregator to the IDE. A session can be inspected only while its status is 'break' (stopped at a breakpoint or after a step in the IDE). All xdebug_* tools are read-only: stepping and continuing stay in the IDE.",
+		Description: "List Xdebug debug sessions proxied by Buggregator to the IDE, including ones closed in the last 10 minutes. A session can be inspected only while its state is 'break' (stopped at a breakpoint or after a step in the IDE). All xdebug_* tools are read-only: stepping and continuing stay in the IDE.",
 	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, _ struct{}) (*sdkmcp.CallToolResult, any, error) {
 		infos := []Info{}
 		for _, s := range p.Sessions() {
@@ -243,57 +286,52 @@ func registerTools(server *sdkmcp.Server, p *Proxy, allowEval bool) {
 		Name:        "xdebug_location",
 		Description: "Current file and line of a paused Xdebug session, the function it is in, and the source lines around it.",
 	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in sessionInput) (*sdkmcp.CallToolResult, any, error) {
-		s, err := p.Session(in.SessionID)
-		if err != nil {
-			return nil, nil, err
-		}
-		frames, err := s.stack()
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(frames) == 0 {
-			return nil, nil, fmt.Errorf("xdebug returned an empty stack")
-		}
-		top := frames[0]
-		out := map[string]any{"session_id": s.ID, "file": top.File, "line": top.Line, "where": top.Where}
-		if src, err := s.sourceLines(top.File, top.Line-5, top.Line+5); err == nil {
-			out["source"] = src
-		}
-		return textResult(out), nil, nil
+		return run(in.SessionID, "xdebug_location", "", func(s *Session) (any, string, error) {
+			frames, err := s.stack()
+			if err != nil {
+				return nil, "", err
+			}
+			if len(frames) == 0 {
+				return nil, "", fmt.Errorf("xdebug returned an empty stack")
+			}
+			top := frames[0]
+			out := map[string]any{"session_id": s.ID, "file": top.File, "line": top.Line, "where": top.Where}
+			if src, err := s.sourceLines(top.File, top.Line-5, top.Line+5); err == nil {
+				out["source"] = src
+			}
+			return out, fmt.Sprintf("%s:%d", baseName(top.File), top.Line), nil
+		})
 	})
 
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "xdebug_stack",
 		Description: "Call stack of a paused Xdebug session: one frame per level, 0 is the current one.",
 	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in sessionInput) (*sdkmcp.CallToolResult, any, error) {
-		s, err := p.Session(in.SessionID)
-		if err != nil {
-			return nil, nil, err
-		}
-		frames, err := s.stack()
-		if err != nil {
-			return nil, nil, err
-		}
-		return textResult(frames), nil, nil
+		return run(in.SessionID, "xdebug_stack", "", func(s *Session) (any, string, error) {
+			frames, err := s.stack()
+			if err != nil {
+				return nil, "", err
+			}
+			return frames, plural(len(frames), "frame"), nil
+		})
 	})
 
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "xdebug_variables",
 		Description: "Variables of a stack frame in a paused Xdebug session (locals by default). Arrays and objects show their first level; use xdebug_property with the 'fullname' to go deeper.",
 	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in variablesInput) (*sdkmcp.CallToolResult, any, error) {
-		s, err := p.Session(in.SessionID)
-		if err != nil {
-			return nil, nil, err
-		}
-		r, err := s.call("context_get", fmt.Sprintf("-d %d -c %d", in.Depth, in.ContextID), nil)
-		if err != nil {
-			return nil, nil, err
-		}
-		vars := []Var{}
-		for _, pr := range r.Props {
-			vars = append(vars, toVar(pr))
-		}
-		return textResult(vars), nil, nil
+		args := fmt.Sprintf("-d %d -c %d", in.Depth, in.ContextID)
+		return run(in.SessionID, "xdebug_variables", args, func(s *Session) (any, string, error) {
+			r, err := s.call("context_get", args, nil)
+			if err != nil {
+				return nil, "", err
+			}
+			vars := []Var{}
+			for _, pr := range r.Props {
+				vars = append(vars, toVar(pr))
+			}
+			return vars, plural(len(vars), "variable"), nil
+		})
 	})
 
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
@@ -303,19 +341,18 @@ func registerTools(server *sdkmcp.Server, p *Proxy, allowEval bool) {
 		if strings.TrimSpace(in.Name) == "" {
 			return nil, nil, fmt.Errorf("name is required")
 		}
-		s, err := p.Session(in.SessionID)
-		if err != nil {
-			return nil, nil, err
-		}
-		args := fmt.Sprintf("-d %d -c %d -m %d -p %d -n %s", in.Depth, in.ContextID, maxPropertyData, in.Page, quoteArg(in.Name))
-		r, err := s.call("property_get", args, nil)
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(r.Props) == 0 {
-			return nil, nil, fmt.Errorf("property %s not found", in.Name)
-		}
-		return textResult(toVar(r.Props[0])), nil, nil
+		return run(in.SessionID, "xdebug_property", in.Name, func(s *Session) (any, string, error) {
+			args := fmt.Sprintf("-d %d -c %d -m %d -p %d -n %s", in.Depth, in.ContextID, maxPropertyData, in.Page, quoteArg(in.Name))
+			r, err := s.call("property_get", args, nil)
+			if err != nil {
+				return nil, "", err
+			}
+			if len(r.Props) == 0 {
+				return nil, "", fmt.Errorf("property %s not found", in.Name)
+			}
+			v := toVar(r.Props[0])
+			return v, varSummary(v), nil
+		})
 	})
 
 	if !allowEval {
@@ -328,17 +365,52 @@ func registerTools(server *sdkmcp.Server, p *Proxy, allowEval bool) {
 		if strings.TrimSpace(in.Expression) == "" {
 			return nil, nil, fmt.Errorf("expression is required")
 		}
-		s, err := p.Session(in.SessionID)
-		if err != nil {
-			return nil, nil, err
-		}
-		r, err := s.call("eval", "", []byte(in.Expression))
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(r.Props) == 0 {
-			return textResult(map[string]any{"type": "null"}), nil, nil
-		}
-		return textResult(toVar(r.Props[0])), nil, nil
+		return run(in.SessionID, "xdebug_eval", in.Expression, func(s *Session) (any, string, error) {
+			v, err := s.eval(in.Expression)
+			if err != nil {
+				return nil, "", err
+			}
+			return v, varSummary(v), nil
+		})
 	})
+}
+
+// eval evaluates an expression; an empty reply is null.
+func (s *Session) eval(expr string) (Var, error) {
+	r, err := s.call("eval", "", []byte(expr))
+	if err != nil {
+		return Var{}, err
+	}
+	if len(r.Props) == 0 {
+		return Var{Type: "null"}, nil
+	}
+	return toVar(r.Props[0]), nil
+}
+
+func plural(n int, word string) string {
+	if n == 1 {
+		return "1 " + word
+	}
+	return fmt.Sprintf("%d %ss", n, word)
+}
+
+// varSummary is a short line for the agent log: "string(17)", "array(3)", "User".
+func varSummary(v Var) string {
+	switch {
+	case v.Class != "":
+		return v.Class
+	case v.NumChildren > 0 || v.Type == "array":
+		return fmt.Sprintf("%s(%d)", v.Type, v.NumChildren)
+	case v.Value != nil && len(*v.Value) <= 40:
+		return v.Type + " " + *v.Value
+	default:
+		return v.Type
+	}
+}
+
+func baseName(file string) string {
+	if i := strings.LastIndexByte(file, '/'); i >= 0 {
+		return file[i+1:]
+	}
+	return file
 }

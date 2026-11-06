@@ -20,6 +20,7 @@ type Hub struct {
 	rpcHandler      RPCHandler
 	projectProvider ProjectProvider
 	metrics         *metrics.Collector
+	serverChannels  []string // extra channels every client is subscribed to
 }
 
 // RPCHandler processes Centrifugo RPC calls (e.g., "delete:api/event/{id}").
@@ -49,6 +50,12 @@ func (h *Hub) SetRPCHandler(handler RPCHandler) {
 // SetProjectProvider sets the function that returns project keys for auto-subscription.
 func (h *Hub) SetProjectProvider(p ProjectProvider) {
 	h.projectProvider = p
+}
+
+// AddServerChannel subscribes every client to channel on connect
+// (server-side subscription), like the project channels.
+func (h *Hub) AddServerChannel(channel string) {
+	h.serverChannels = append(h.serverChannels, channel)
 }
 
 // SetMetrics sets the metrics collector for the hub.
@@ -147,6 +154,9 @@ func (h *Hub) handleConnect(id uint32) centrifugoReply {
 		for _, key := range h.projectProvider() {
 			subs["events.project."+key] = serverSideSubV{}
 		}
+	}
+	for _, ch := range h.serverChannels {
+		subs[ch] = serverSideSubV{}
 	}
 
 	return centrifugoReply{

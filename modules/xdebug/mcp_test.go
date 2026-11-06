@@ -53,6 +53,8 @@ var cmdNameRe = regexp.MustCompile(`^(\S+)`)
 
 // serveEngine answers agent commands like Xdebug 3 does.
 func serveEngine(t *testing.T, e *fakeEngine, stop <-chan struct{}) {
+	// Runs past the end of the test (cleanup detaches): never fail from here.
+	send := func(xml string) { _, _ = e.conn.Write(encodePacket([]byte(xml))) }
 	for {
 		select {
 		case <-stop:
@@ -70,7 +72,7 @@ func serveEngine(t *testing.T, e *fakeEngine, stop <-chan struct{}) {
 			inner = `<stack where="App\User->email" level="0" type="file" filename="file:///app/src/User.php" lineno="12"></stack>` +
 				`<stack where="{main}" level="1" type="file" filename="file:///app/public/index.php" lineno="5"></stack>`
 		case "source":
-			e.send(response("source", tid, ` encoding="base64"`, b64("line 7\nline 8\nline 9")))
+			send(response("source", tid, ` encoding="base64"`, b64("line 7\nline 8\nline 9")))
 			continue
 		case "context_get":
 			inner = `<property name="$id" fullname="$id" type="int"><![CDATA[42]]></property>` +
@@ -82,7 +84,7 @@ func serveEngine(t *testing.T, e *fakeEngine, stop <-chan struct{}) {
 				`<property name="$none" fullname="$none" type="null"></property>`
 		case "property_get":
 			if !strings.Contains(line, `-n "$user->tags[\"a b\"]"`) && !strings.Contains(line, "-n $user->tags") {
-				e.send(response("property_get", tid, "", `<error code="300"><message><![CDATA[can not get property]]></message></error>`))
+				send(response("property_get", tid, "", `<error code="300"><message><![CDATA[can not get property]]></message></error>`))
 				continue
 			}
 			inner = `<property name="tags" fullname="$user-&gt;tags" type="array" children="1" numchildren="1" page="0" pagesize="32">` +
@@ -96,7 +98,7 @@ func serveEngine(t *testing.T, e *fakeEngine, stop <-chan struct{}) {
 		default:
 			inner = `<error code="4"><message><![CDATA[unimplemented]]></message></error>`
 		}
-		e.send(response(cmdNameRe.FindString(line), tid, "", inner))
+		send(response(cmdNameRe.FindString(line), tid, "", inner))
 	}
 }
 
@@ -116,7 +118,7 @@ func TestMCPTools_ReadPausedSession(t *testing.T) {
 	go serveEngine(t, e, stop)
 
 	out, isErr := callTool(t, cs, "xdebug_sessions", map[string]any{})
-	if isErr || !strings.Contains(out, `"status": "break"`) || !strings.Contains(out, `"idekey": "PHPSTORM"`) {
+	if isErr || !strings.Contains(out, `"state": "break"`) || !strings.Contains(out, `"idekey": "PHPSTORM"`) {
 		t.Fatalf("sessions: %s", out)
 	}
 

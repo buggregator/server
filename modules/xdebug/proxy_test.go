@@ -112,6 +112,7 @@ func newHarness(t *testing.T) *harness {
 	t.Cleanup(func() { ln.Close() })
 	p := NewProxy(ln.Addr().String())
 	p.commandTimeout = 2 * time.Second
+	p.readTarget = false // tests script every engine command; target has its own test
 	return &harness{proxy: p, ideLn: ln}
 }
 
@@ -191,7 +192,7 @@ func TestProxy_IDECommandsKeepTheirTransactionIDs(t *testing.T) {
 	h := newHarness(t)
 	e, d, s := h.connect(t)
 
-	if info := s.Info(); info.IDEKey != "PHPSTORM" || info.FileURI != "file:///app/public/index.php" || info.Status != "starting" {
+	if info := s.Info(); info.IDEKey != "PHPSTORM" || info.EntryFile != "file:///app/public/index.php" || info.State != "starting" {
 		t.Fatalf("init not parsed: %+v", info)
 	}
 
@@ -217,7 +218,7 @@ func TestProxy_IDECommandsKeepTheirTransactionIDs(t *testing.T) {
 	}
 
 	pause(t, e, d, "8")
-	if info := s.Info(); info.Status != "break" || info.File != "file:///app/src/User.php" || info.Line != 12 {
+	if info := s.Info(); info.State != "break" || info.LastFile != "file:///app/src/User.php" || info.LastLine != 12 {
 		t.Fatalf("break not tracked: %+v", info)
 	}
 }
@@ -298,8 +299,12 @@ func TestProxy_NoIDEDetaches(t *testing.T) {
 		t.Fatalf("engine got %q, want detach", got)
 	}
 	<-done
-	if n := len(p.Sessions()); n != 0 {
-		t.Fatalf("%d sessions left", n)
+	ss := p.Sessions()
+	if len(ss) != 1 || !ss[0].Closed() {
+		t.Fatalf("want one tombstone, got %d", len(ss))
+	}
+	if in := ss[0].Info(); in.State != "detached" || in.ClosedReason != ReasonIDEUnreachable {
+		t.Fatalf("tombstone: %+v", in)
 	}
 }
 
@@ -313,12 +318,9 @@ func TestProxy_IDEDisconnectDetaches(t *testing.T) {
 		t.Fatalf("engine got %q, want detach", got)
 	}
 	e.conn.Close()
-	deadline := time.Now().Add(3 * time.Second)
-	for len(h.proxy.Sessions()) > 0 && time.Now().Before(deadline) {
-		time.Sleep(5 * time.Millisecond)
-	}
-	if n := len(h.proxy.Sessions()); n != 0 {
-		t.Fatalf("%d sessions left", n)
+	s := h.proxy.Sessions()[0]
+	if !s.Closed() || s.Info().ClosedReason != ReasonIDEClosed || s.Info().State != "detached" {
+		t.Fatalf("tombstone: %+v", s.Info())
 	}
 }
 
@@ -348,11 +350,14 @@ func TestProxy_SessionsAreIndependent(t *testing.T) {
 	// Session 1 ends; session 2 stays usable.
 	e1.conn.Close()
 	deadline := time.Now().Add(3 * time.Second)
-	for len(h.proxy.Sessions()) != 1 && time.Now().Before(deadline) {
+	for !s1.Closed() && time.Now().Before(deadline) {
 		time.Sleep(5 * time.Millisecond)
 	}
-	if ss := h.proxy.Sessions(); len(ss) != 1 || ss[0] != s2 {
-		t.Fatalf("sessions after close: %d", len(ss))
+	if !s1.Closed() || s2.Closed() || s1.Info().ClosedReason != ReasonEngineClosed {
+		t.Fatalf("after close: s1 %+v, s2 closed=%v", s1.Info(), s2.Closed())
+	}
+	if s, err := h.proxy.Session(""); err != nil || s != s2 {
+		t.Fatalf("tombstone must not count as paused: %v", err)
 	}
 	go func() {
 		got := e2.read()

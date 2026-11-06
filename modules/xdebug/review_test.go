@@ -57,7 +57,7 @@ func TestStatusReplyAfterContinuation(t *testing.T) {
 	e.send(response("run", tidOf(t, runCmd), ` status="break" reason="ok"`,
 		`<xdebug:message filename="file:///app/b.php" lineno="7"></xdebug:message>`))
 	_ = d.read()
-	if !s.Paused() || s.Info().Line != 7 {
+	if !s.Paused() || s.Info().LastLine != 7 {
 		t.Fatalf("not paused after run reply: %+v", s.Info())
 	}
 }
@@ -90,5 +90,22 @@ func TestTwoContinuationsInFlight(t *testing.T) {
 	_ = d.read()
 	if !s.Paused() {
 		t.Fatal("not paused after the last continuation's reply")
+	}
+}
+
+// Real Xdebug 3.4 marks plain replies, even errors, with status="break".
+// They must not wipe the current location (found in a live run).
+func TestPlainBreakReplyKeepsLocation(t *testing.T) {
+	h := newHarness(t)
+	e, d, s := h.connect(t)
+	pause(t, e, d, "1")
+
+	d.send("property_get -i 2 -n $nope")
+	got := e.read()
+	e.send(response("property_get", tidOf(t, got), ` status="break" reason="ok"`,
+		`<error code="300"><message><![CDATA[can not get property]]></message></error>`))
+	_ = d.read()
+	if in := s.Info(); in.LastFile != "file:///app/src/User.php" || in.LastLine != 12 || in.State != "break" {
+		t.Fatalf("location lost: %+v", in)
 	}
 }

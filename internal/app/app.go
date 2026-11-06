@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -110,6 +111,16 @@ func (a *App) Run() {
 
 	// Module API routes that need the same auth as the core API.
 	a.registry.RegisterProtectedRoutes(mux, authMiddleware)
+
+	if !a.cfg.Xdebug.Enabled {
+		// The Xdebug page asks this first; with the module off it shows how to turn it on.
+		mux.Handle("GET /api/xdebug", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"enabled": false, "addr": a.cfg.Xdebug.Addr, "ide_addr": a.cfg.Xdebug.IDEAddr, "allow_eval": a.cfg.Xdebug.AllowEval,
+			})
+		})))
+	}
 
 	// Register attachment API endpoints.
 	httpserver.RegisterAttachmentAPI(mux, a.db, a.attachments)
