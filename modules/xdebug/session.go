@@ -188,8 +188,10 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 			s.conts--
 		}
 		// While a continuation is in flight the engine is running: a late reply
-		// to an earlier command (e.g. status) must not report it paused again.
-		if rt.Status != "" && (s.conts == 0 || (found && p.cont)) {
+		// to an earlier command (e.g. status) or to an earlier continuation must
+		// not report it paused again. conts is already decremented for this
+		// reply, so the last continuation's reply sets the status.
+		if rt.Status != "" && s.conts == 0 {
 			s.status = rt.Status
 			if rt.Status == "break" {
 				s.file, s.line = breakLocation(body)

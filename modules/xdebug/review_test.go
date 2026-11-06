@@ -70,3 +70,25 @@ func TestCommandTID_QuotedDashes(t *testing.T) {
 		t.Fatalf("ok=%v name=%q", ok, name)
 	}
 }
+
+// Two continuations in flight: the first one's reply must not report the
+// session paused while the second is queued (review of #363).
+func TestTwoContinuationsInFlight(t *testing.T) {
+	h := newHarness(t)
+	e, d, s := h.connect(t)
+	pause(t, e, d, "1")
+	d.send("step_over -i 2")
+	first := e.read()
+	d.send("step_over -i 3")
+	second := e.read()
+	e.send(response("step_over", tidOf(t, first), ` status="break" reason="ok"`, ""))
+	_ = d.read()
+	if s.Paused() {
+		t.Fatal("paused while the second step_over is in flight")
+	}
+	e.send(response("step_over", tidOf(t, second), ` status="break" reason="ok"`, ""))
+	_ = d.read()
+	if !s.Paused() {
+		t.Fatal("not paused after the last continuation's reply")
+	}
+}
