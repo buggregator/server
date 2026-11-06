@@ -279,9 +279,10 @@ func TestAPI_ReadsAreCachedPerPause(t *testing.T) {
 func TestAgentLogAndEvents(t *testing.T) {
 	a := newAPIHarness(t, false)
 	e, d, s := a.connect(t)
-	if !a.rec.find("session.created", func(p any) bool { return p.(Info).ID == s.ID && p.(Info).IDEConnected }) {
-		t.Fatalf("no session.created: %v", a.rec.names())
-	}
+	// register() lists the session before it emits the event.
+	waitFor(t, "session.created", func() bool {
+		return a.rec.find("session.created", func(p any) bool { return p.(Info).ID == s.ID && p.(Info).IDEConnected })
+	})
 	pause(t, e, d, "1")
 	if !a.rec.find("session.status", func(p any) bool {
 		m := p.(map[string]any)
