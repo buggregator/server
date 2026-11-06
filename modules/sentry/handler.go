@@ -14,6 +14,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 
 	"github.com/buggregator/go-buggregator/internal/event"
+	httpserver "github.com/buggregator/go-buggregator/internal/server/http"
 )
 
 type handler struct {
@@ -47,8 +48,14 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 	// Sentry SDKs often send gzip or deflate compressed payloads.
 	body = decompress(body, r.Header.Get("Content-Encoding"))
 
-	// Extract project from path: /api/{project}/store
+	// Project: the DSN path (/api/{project}/store), else what the detect step
+	// found (X-Buggregator-Project, userinfo, Basic Auth). The same order the
+	// pipeline uses for the events row, so the structured rows land in the
+	// same project as the event card.
 	project := resolveProject(extractProject(r.URL.Path))
+	if project == "" {
+		project = r.Header.Get(httpserver.HeaderDetectedProject)
+	}
 
 	// Try parsing as plain JSON first (legacy /store format).
 	var parsed map[string]any
