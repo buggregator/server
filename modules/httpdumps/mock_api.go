@@ -106,8 +106,12 @@ func readRule(w http.ResponseWriter, r *http.Request) (MockRule, bool) {
 
 // listMockRequests returns the latest HTTP dumps captured under /mock/, newest
 // first, optionally for one project or one rule.
-func listMockRequests(db *sql.DB, project, ruleID string, limit int) ([]map[string]any, error) {
-	query := `SELECT uuid, payload, timestamp, project FROM events
+// mockRequestsQuery builds the query of listMockRequests. It reads the partial
+// index idx_events_mock_requests (migration 000031) newest first and stops at
+// the limit. INDEXED BY: left alone, the planner picks events_idx_type and
+// sorts every http-dump. The first WHERE terms must stay the index's.
+func mockRequestsQuery(project, ruleID string, limit int) (string, []any) {
+	query := `SELECT uuid, payload, timestamp, project FROM events INDEXED BY idx_events_mock_requests
 		WHERE type = 'http-dump' AND json_type(payload, '$.mock') IS NOT NULL`
 	var args []any
 	if project != "" {
@@ -119,8 +123,11 @@ func listMockRequests(db *sql.DB, project, ruleID string, limit int) ([]map[stri
 		args = append(args, ruleID)
 	}
 	query += ` ORDER BY timestamp DESC LIMIT ?`
-	args = append(args, limit)
+	return query, append(args, limit)
+}
 
+func listMockRequests(db *sql.DB, project, ruleID string, limit int) ([]map[string]any, error) {
+	query, args := mockRequestsQuery(project, ruleID, limit)
 	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, err
