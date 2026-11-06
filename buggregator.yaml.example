@@ -23,8 +23,8 @@ storage:
 
 # UI event lists: how much /api/events and /api/events/preview return
 ui:
-  default_limit: ${UI_DEFAULT_LIMIT:1000}   # Events returned when the request has no limit param
-  max_limit: ${UI_MAX_LIMIT:5000}           # Ceiling for an explicit ?limit=
+  default_limit: ${UI_DEFAULT_LIMIT:}       # Events returned when the request has no limit param. Empty or 0 = unlimited
+  max_limit: ${UI_MAX_LIMIT:5000}           # Ceiling for an explicit ?limit=. 0 = no ceiling
   default_window: ${UI_DEFAULT_WINDOW:}     # Default time window, e.g. "1h", "24h", "7d". Empty = no window
 
 # Prometheus metrics

@@ -351,6 +351,54 @@ func TestAPI_Events_Limits(t *testing.T) {
 			t.Fatalf("got %d events for an ISO from, want 4", n)
 		}
 	})
+
+	t.Run("no default limit returns everything", func(t *testing.T) {
+		mux, s := setupAPILimits(t, serverhttp.ListLimits{MaxLimit: 10})
+		store(t, mux, s, 12, now)
+
+		if n, meta := list(t, mux, ""); n != 12 || meta["limit"] != float64(0) {
+			t.Fatalf("got %d events, meta %v; want all 12", n, meta)
+		}
+	})
+
+	t.Run("pinned old event survives a small cap", func(t *testing.T) {
+		mux, s := setupAPILimits(t, serverhttp.ListLimits{DefaultLimit: 3})
+		store(t, mux, s, 5, now)
+		if err := s.Store(context.Background(), event.Event{
+			UUID: "pinned-old", Type: "sentry", Payload: json.RawMessage(`{}`),
+			Timestamp: now - 30*24*3600, Project: "default", IsPinned: true,
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		r := httptest.NewRequest("GET", "/api/events", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, r)
+		var resp struct {
+			Data []event.Event `json:"data"`
+		}
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatal(err)
+		}
+		if len(resp.Data) != 3 || resp.Data[0].UUID != "pinned-old" {
+			t.Fatalf("got %d events, first %q; want 3 with pinned-old first", len(resp.Data), resp.Data[0].UUID)
+		}
+	})
+
+	t.Run("offset without limit", func(t *testing.T) {
+		mux, s := setupAPILimits(t, serverhttp.ListLimits{})
+		store(t, mux, s, 5, now)
+
+		r := httptest.NewRequest("GET", "/api/events?offset=2", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, body %s; want 200", w.Code, w.Body.String())
+		}
+		if n, _ := list(t, mux, "?offset=2"); n != 3 {
+			t.Fatalf("got %d events, want 3", n)
+		}
+	})
 }
 
 func TestParseWindow(t *testing.T) {

@@ -77,10 +77,16 @@ func (s *SQLiteStore) FindAll(ctx context.Context, opts event.FindOptions) ([]ev
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	query += " ORDER BY timestamp DESC"
+	if opts.PinnedFirst {
+		query += " ORDER BY is_pinned DESC, timestamp DESC"
+	} else {
+		query += " ORDER BY timestamp DESC"
+	}
 
 	if opts.Limit > 0 {
 		query += fmt.Sprintf(" LIMIT %d", opts.Limit)
+	} else if opts.Offset > 0 {
+		query += " LIMIT -1" // SQLite needs a LIMIT before OFFSET; -1 = no limit
 	}
 	if opts.Offset > 0 {
 		query += fmt.Sprintf(" OFFSET %d", opts.Offset)

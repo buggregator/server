@@ -41,9 +41,10 @@ type ListLimits struct {
 func parseListOptions(r *http.Request, lim ListLimits) event.FindOptions {
 	q := r.URL.Query()
 	opts := event.FindOptions{
-		Type:    q.Get("type"),
-		Project: q.Get("project"),
-		Limit:   lim.DefaultLimit,
+		Type:        q.Get("type"),
+		Project:     q.Get("project"),
+		Limit:       lim.DefaultLimit,
+		PinnedFirst: true,
 	}
 
 	if v := q.Get("limit"); v != "" {
