@@ -171,6 +171,9 @@ func main() {
 		registry.Register(httpDumpMod) // catch-all, must be last
 	}
 
+	// Modules that send notices of their own (module.Broadcasting) get the hub.
+	registry.WireBroadcaster(hub)
+
 	// Build event service and inject into TCP modules.
 	eventService := httpserver.NewEventService(store, hub, registry, collector, db)
 	if enabled.IsEnabled("monolog") {

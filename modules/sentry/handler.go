@@ -19,6 +19,30 @@ import (
 
 type handler struct {
 	db *sql.DB
+	// notifyStored, if set, announces the kinds of structured rows an
+	// envelope stored ("log", "metric", "trace").
+	notifyStored func(project string, kinds []string)
+}
+
+// storedKinds collects the kinds of structured rows stored for one request,
+// each once, in the order they came.
+type storedKinds []string
+
+func (k *storedKinds) add(kind string) {
+	for _, existing := range *k {
+		if existing == kind {
+			return
+		}
+	}
+	*k = append(*k, kind)
+}
+
+// announce tells the browser what was stored, when anything was.
+func (h *handler) announce(project string, kinds storedKinds) {
+	if h.db == nil || h.notifyStored == nil || len(kinds) == 0 {
+		return
+	}
+	h.notifyStored(project, kinds)
 }
 
 func (h *handler) Priority() int { return 10 }
@@ -77,6 +101,7 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 		// Transactions are stored in structured tables but should not appear
 		// as empty cards in the global event feed.
 		if isTransaction(parsed) {
+			h.announce(project, storedKinds{"trace"})
 			return nil, nil
 		}
 
@@ -125,6 +150,9 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 		primaryUUID = envHeader.EventID
 	}
 
+	var kinds storedKinds
+	defer func() { h.announce(project, kinds) }()
+
 	for _, item := range items {
 		switch item.Type {
 		case "event":
@@ -141,15 +169,19 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 			// Transactions are stored in structured tables (sentry_transactions, sentry_spans)
 			// but should NOT appear in the global event feed as empty sentry cards.
 			h.handleTransactionItem(item, envHeader.EventID, project)
+			kinds.add("trace")
 
 		case "spans":
 			h.handleSpansItem(item, project)
+			kinds.add("trace")
 
 		case "log":
 			h.handleLogItem(item, project)
+			kinds.add("log")
 
 		case "trace_metric":
 			h.handleMetricItem(item, project)
+			kinds.add("metric")
 
 		case "session", "sessions", "client_report", "metric_buckets", "check_in",
 			"user_report", "attachment", "replay_event", "replay_recording", "statsd":
