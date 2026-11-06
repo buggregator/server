@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 func TestHandler_Priority(t *testing.T) {
@@ -149,6 +151,39 @@ func TestDecompress(t *testing.T) {
 		got := decompress(buf.Bytes(), "")
 		if string(got) != "auto-detected" {
 			t.Errorf("got %q, want %q", got, "auto-detected")
+		}
+	})
+
+	// sentry-php sends Content-Encoding: zstd by default since 4.x. Without zstd
+	// support the body stays compressed, fails to parse as an envelope and the
+	// event is dropped silently — the request still answers 200.
+	t.Run("zstd with header", func(t *testing.T) {
+		var buf bytes.Buffer
+		w, err := zstd.NewWriter(&buf)
+		if err != nil {
+			t.Fatalf("zstd writer: %v", err)
+		}
+		w.Write([]byte("zstd payload"))
+		w.Close()
+
+		got := decompress(buf.Bytes(), "zstd")
+		if string(got) != "zstd payload" {
+			t.Errorf("got %q, want %q", got, "zstd payload")
+		}
+	})
+
+	t.Run("zstd auto-detect by magic bytes", func(t *testing.T) {
+		var buf bytes.Buffer
+		w, err := zstd.NewWriter(&buf)
+		if err != nil {
+			t.Fatalf("zstd writer: %v", err)
+		}
+		w.Write([]byte("zstd auto-detected"))
+		w.Close()
+
+		got := decompress(buf.Bytes(), "")
+		if string(got) != "zstd auto-detected" {
+			t.Errorf("got %q, want %q", got, "zstd auto-detected")
 		}
 	})
 
