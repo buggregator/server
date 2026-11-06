@@ -249,6 +249,24 @@ type LogRecord struct {
 	Attributes     map[string]any    `json:"attributes"`
 }
 
+// MetricEnvelope represents a Sentry "trace_metric" envelope item body.
+type MetricEnvelope struct {
+	Items []MetricRecord `json:"items"`
+}
+
+// MetricRecord represents a single Sentry trace metric: a counter, gauge or
+// distribution value, linked to the trace and span it was recorded in.
+type MetricRecord struct {
+	TraceID    string         `json:"trace_id"`
+	SpanID     string         `json:"span_id"`
+	Name       string         `json:"name"`
+	Type       string         `json:"type"`
+	Value      float64        `json:"value"`
+	Unit       string         `json:"unit"`
+	Timestamp  json.Number    `json:"timestamp"`
+	Attributes map[string]any `json:"attributes"`
+}
+
 // effectiveMessage returns the event message, checking logentry fallback.
 func (e *ErrorEvent) effectiveMessage() string {
 	if e.Message.Text != "" {

@@ -139,6 +139,9 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 		case "log":
 			h.handleLogItem(item)
 
+		case "trace_metric":
+			h.handleMetricItem(item)
+
 		case "session", "sessions", "client_report", "metric_buckets", "check_in",
 			"user_report", "attachment", "replay_event", "replay_recording", "statsd":
 			// Silently discard known non-essential item types.
@@ -154,11 +157,11 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 	}
 
 	// If no primary payload was extracted, fall back to envelope wrapping.
-	// Skip transaction/spans/log items — they are stored in structured tables only.
+	// Skip structured-only item types — they are stored in their own tables.
 	if primaryPayload == nil {
 		primaryType = "sentry"
 		for _, item := range items {
-			if item.Type == "transaction" || item.Type == "spans" || item.Type == "log" {
+			if isStructuredOnlyItem(item.Type) {
 				continue
 			}
 			if json.Valid([]byte(item.Payload)) {
@@ -169,7 +172,7 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 	}
 
 	// If still no payload, the envelope only contained non-feed items
-	// (transactions, spans, logs). Don't create a canonical event.
+	// (transactions, spans, logs, metrics). Don't create a canonical event.
 	if primaryPayload == nil {
 		return nil, nil
 	}
@@ -290,6 +293,39 @@ func (h *handler) handleLogItem(item EnvelopeItem) {
 			slog.Warn("sentry: failed to store logs (array)", "err", err)
 		}
 	}
+}
+
+// handleMetricItem processes a "trace_metric" envelope item.
+func (h *handler) handleMetricItem(item EnvelopeItem) {
+	if h.db == nil {
+		return
+	}
+
+	// Metric items can be {"items": [...]} or a bare array.
+	var envelope MetricEnvelope
+	if err := json.Unmarshal(item.Payload, &envelope); err == nil && len(envelope.Items) > 0 {
+		if err := storeMetrics(h.db, envelope.Items); err != nil {
+			slog.Warn("sentry: failed to store metrics", "err", err)
+		}
+		return
+	}
+
+	var metrics []MetricRecord
+	if err := json.Unmarshal(item.Payload, &metrics); err == nil && len(metrics) > 0 {
+		if err := storeMetrics(h.db, metrics); err != nil {
+			slog.Warn("sentry: failed to store metrics (array)", "err", err)
+		}
+	}
+}
+
+// isStructuredOnlyItem reports whether an envelope item type is stored only in
+// structured tables and must never become a card in the global event feed.
+func isStructuredOnlyItem(itemType string) bool {
+	switch itemType {
+	case "transaction", "spans", "log", "trace_metric":
+		return true
+	}
+	return false
 }
 
 // injectEventID adds "event_id" to a JSON payload that lacks it.

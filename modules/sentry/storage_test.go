@@ -3,6 +3,7 @@ package sentry
 import (
 	"database/sql"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/buggregator/go-buggregator/internal/storage"
@@ -317,6 +318,37 @@ func TestStoreLogs(t *testing.T) {
 	}
 	if level != "info" {
 		t.Errorf("level = %q, want 'info'", level)
+	}
+}
+
+func TestStoreMetrics(t *testing.T) {
+	db := setupTestDB(t)
+
+	metrics := []MetricRecord{
+		{TraceID: "trace-1", SpanID: "span-1", Name: "http.client.duration", Type: "distribution", Value: 12.5, Unit: "millisecond", Timestamp: "1788420877.523564"},
+		{Name: "order.status", Type: "gauge", Value: 3, Attributes: map[string]any{"status": map[string]any{"type": "string", "value": "qa"}}},
+		{Type: "counter", Value: 1}, // no name: dropped
+	}
+
+	if err := storeMetrics(db, metrics); err != nil {
+		t.Fatal(err)
+	}
+
+	var count int
+	db.QueryRow(`SELECT COUNT(*) FROM sentry_metrics`).Scan(&count)
+	if count != 2 {
+		t.Errorf("metric count = %d, want 2", count)
+	}
+
+	var traceID, metricType, unit, metricTS string
+	var value float64
+	db.QueryRow(`SELECT trace_id, type, value, unit, metric_ts FROM sentry_metrics WHERE name = ?`, "http.client.duration").
+		Scan(&traceID, &metricType, &value, &unit, &metricTS)
+	if traceID != "trace-1" || metricType != "distribution" || value != 12.5 || unit != "millisecond" {
+		t.Errorf("got trace_id=%q type=%q value=%v unit=%q", traceID, metricType, value, unit)
+	}
+	if !strings.HasPrefix(metricTS, "2026-09-03T07:34:37.5") {
+		t.Errorf("metric_ts = %q, want 2026-09-03T07:34:37.5…", metricTS)
 	}
 }
 

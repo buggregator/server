@@ -65,6 +65,13 @@ func seedTestData(t *testing.T, mux *http.ServeMux) {
 		{TraceID: "trace-abc", Level: "warning", Body: "Slow query", SeverityNumber: 13},
 		{Level: "error", Body: "Connection refused", SeverityNumber: 17},
 	})
+
+	// Insert metrics.
+	storeMetrics(db, []MetricRecord{
+		{TraceID: "trace-abc", Name: "http.client.duration", Type: "distribution", Value: 12.5, Unit: "millisecond", Timestamp: "1678272501"},
+		{TraceID: "trace-abc", Name: "http.client.duration", Type: "distribution", Value: 40, Unit: "millisecond", Timestamp: "1678272502"},
+		{Name: "order.status", Type: "gauge", Value: 3, Timestamp: "1678272503"},
+	})
 }
 
 func TestAPIExceptionsChronological(t *testing.T) {
@@ -384,6 +391,63 @@ func TestAPILogsFilterByTraceID(t *testing.T) {
 	}
 }
 
+func TestAPIMetricsList(t *testing.T) {
+	mux := http.NewServeMux()
+	seedTestData(t, mux)
+
+	req := httptest.NewRequest("GET", "/api/sentry/metrics", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+
+	var resp map[string]any
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	data := resp["data"].([]any)
+	if len(data) != 3 {
+		t.Fatalf("data length = %d, want 3", len(data))
+	}
+
+	newest := data[0].(map[string]any)
+	if newest["name"] != "order.status" || newest["type"] != "gauge" || newest["value"] != 3.0 {
+		t.Errorf("newest metric = %v, want the order.status gauge", newest)
+	}
+}
+
+func TestAPIMetricsFilter(t *testing.T) {
+	mux := http.NewServeMux()
+	seedTestData(t, mux)
+
+	tests := []struct {
+		query string
+		want  int
+	}{
+		{"name=http.client.duration", 2},
+		{"type=gauge", 1},
+		{"trace_id=trace-abc", 2},
+		{"name=http.client.duration&type=gauge", 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.query, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/api/sentry/metrics?"+tt.query, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			var resp map[string]any
+			json.Unmarshal(w.Body.Bytes(), &resp)
+
+			data := resp["data"].([]any)
+			if len(data) != tt.want {
+				t.Errorf("data length = %d, want %d", len(data), tt.want)
+			}
+		})
+	}
+}
+
 func TestAPIServiceMap(t *testing.T) {
 	mux := http.NewServeMux()
 	seedTestData(t, mux)
@@ -434,6 +498,9 @@ func TestAPICounts(t *testing.T) {
 	}
 	if int(resp["logs"].(float64)) != 3 {
 		t.Errorf("logs = %v, want 3", resp["logs"])
+	}
+	if int(resp["metrics"].(float64)) != 3 {
+		t.Errorf("metrics = %v, want 3", resp["metrics"])
 	}
 }
 

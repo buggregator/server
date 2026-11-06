@@ -13,6 +13,7 @@ func registerAPI(mux *http.ServeMux, db *sql.DB) {
 	mux.HandleFunc("GET /api/sentry/traces", handleTracesList(db))
 	mux.HandleFunc("GET /api/sentry/traces/{traceId}", handleTraceDetail(db))
 	mux.HandleFunc("GET /api/sentry/logs", handleLogsList(db))
+	mux.HandleFunc("GET /api/sentry/metrics", handleMetricsList(db))
 	mux.HandleFunc("GET /api/sentry/service-map", handleServiceMap(db))
 	mux.HandleFunc("GET /api/sentry/counts", handleCounts(db))
 	mux.HandleFunc("DELETE /api/sentry/all", handleClearAll(db))
@@ -30,6 +31,7 @@ func handleClearAll(db *sql.DB) http.HandlerFunc {
 			"sentry_transactions",
 			"sentry_traces",
 			"sentry_logs",
+			"sentry_metrics",
 		}
 		for _, t := range tables {
 			if _, err := db.Exec("DELETE FROM " + t); err != nil {
