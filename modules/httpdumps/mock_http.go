@@ -61,6 +61,9 @@ func (m *mockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			"error": "no mock rule matched " + r.Method + " " + path,
 		})
 		body = append(body, '\n')
+		if r.Method == http.MethodHead {
+			body = nil
+		}
 	} else {
 		for k, v := range rule.Headers {
 			h.Set(k, v)
@@ -71,6 +74,7 @@ func (m *mockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	setMockSecurityHeaders(h)
+	setSniffedContentType(h, status, body)
 
 	sent := mockSent{Status: status, Headers: h, Body: body, DelayMs: delayMs}
 	if rule == nil {
@@ -87,6 +91,21 @@ func (m *mockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(status)
 	w.Write(body)
+}
+
+// setSniffedContentType sets the Content-Type net/http would sniff at write
+// time, so the stored copy of the headers shows it too.
+func setSniffedContentType(h http.Header, status int, body []byte) {
+	if len(body) == 0 || status < 200 || status == http.StatusNoContent || status == http.StatusNotModified {
+		return
+	}
+	if _, ok := h["Content-Type"]; ok {
+		return
+	}
+	if h.Get("Content-Encoding") != "" || h.Get("Transfer-Encoding") != "" {
+		return
+	}
+	h.Set("Content-Type", http.DetectContentType(body))
 }
 
 func setMockSecurityHeaders(h http.Header) {
@@ -107,8 +126,9 @@ type mockSent struct {
 }
 
 // mockInfo is the "mock" field of a captured request: the rule that answered
-// (null ids when none did) and a copy of what was sent, so the request detail
-// stays true after the rule changes. Near lists rules that almost matched an
+// (null ids when none did) and a copy of what was sent (headers except the
+// Date and Content-Length that net/http adds), so the request detail stays
+// true after the rule changes. Near lists rules that almost matched an
 // unmatched request.
 func mockInfo(rule *MockRule, sent mockSent) map[string]any {
 	headers := make(map[string]string, len(sent.Headers))

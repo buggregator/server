@@ -505,3 +505,39 @@ func TestMockServer_Near(t *testing.T) {
 		}
 	}
 }
+
+// The stored headers match the wire, including the Content-Type net/http
+// sniffs for a rule without one. A real server: the recorder does not sniff.
+func TestMockServer_StoredHeadersMatchWire(t *testing.T) {
+	env := newMockEnv(t, nil)
+	env.create(t, `{"path":"/plain","body":"hello"}`)
+	srv := httptest.NewServer(env.mux)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/mock/plain")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	wire := resp.Header.Get("Content-Type")
+	if wire == "" {
+		t.Fatal("client got no Content-Type")
+	}
+	hdr, _ := mockField(t, env.requests(t, "")[0])["headers"].(map[string]any)
+	if hdr["Content-Type"] != wire {
+		t.Errorf("stored Content-Type = %v, wire %q", hdr["Content-Type"], wire)
+	}
+}
+
+// HEAD gets no body, so none is stored, matched or not.
+func TestMockServer_HeadStoresNoBody(t *testing.T) {
+	env := newMockEnv(t, nil)
+	env.create(t, `{"path":"/h","body":"x"}`)
+	env.do(t, "HEAD", "/mock/h", "", nil)
+	env.do(t, "HEAD", "/mock/none", "", nil)
+	for _, ev := range env.requests(t, "") {
+		if info := mockField(t, ev); info["body"] != "" || info["body_size"] != float64(0) {
+			t.Errorf("HEAD stored body %q size %v", info["body"], info["body_size"])
+		}
+	}
+}
