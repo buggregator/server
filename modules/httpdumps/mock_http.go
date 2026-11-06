@@ -50,37 +50,62 @@ func (m *mockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	project := mockProject(r)
 	rule := m.rules.match(r.Method, path, project)
 
-	m.store(r, project, rule)
-
 	// Mock bodies are user content served from the UI's origin: run them in an
 	// opaque origin, whatever headers the rule sets.
 	h := w.Header()
+	status, delayMs := http.StatusNotFound, 0
+	var body []byte
 	if rule == nil {
 		h.Set("Content-Type", "application/json")
-		setMockSecurityHeaders(h)
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
+		body, _ = json.Marshal(map[string]string{
 			"error": "no mock rule matched " + r.Method + " " + path,
 		})
-		return
+		body = append(body, '\n')
+		if r.Method == http.MethodHead {
+			body = nil
+		}
+	} else {
+		for k, v := range rule.Headers {
+			h.Set(k, v)
+		}
+		status, delayMs = rule.Status, rule.DelayMs
+		if r.Method != http.MethodHead {
+			body = []byte(rule.Body)
+		}
 	}
+	setMockSecurityHeaders(h)
+	setSniffedContentType(h, status, body)
 
-	if rule.DelayMs > 0 {
+	sent := mockSent{Status: status, Headers: h, Body: body, DelayMs: delayMs}
+	if rule == nil {
+		sent.Near = m.rules.near(r.Method, path, project)
+	}
+	m.store(r, project, rule, sent)
+
+	if delayMs > 0 {
 		select {
-		case <-time.After(time.Duration(rule.DelayMs) * time.Millisecond):
+		case <-time.After(time.Duration(delayMs) * time.Millisecond):
 		case <-r.Context().Done():
 			return
 		}
 	}
+	w.WriteHeader(status)
+	w.Write(body)
+}
 
-	for k, v := range rule.Headers {
-		h.Set(k, v)
+// setSniffedContentType sets the Content-Type net/http would sniff at write
+// time, so the stored copy of the headers shows it too.
+func setSniffedContentType(h http.Header, status int, body []byte) {
+	if len(body) == 0 || status < 200 || status == http.StatusNoContent || status == http.StatusNotModified {
+		return
 	}
-	setMockSecurityHeaders(h)
-	w.WriteHeader(rule.Status)
-	if r.Method != http.MethodHead {
-		w.Write([]byte(rule.Body))
+	if _, ok := h["Content-Type"]; ok {
+		return
 	}
+	if h.Get("Content-Encoding") != "" || h.Get("Transfer-Encoding") != "" {
+		return
+	}
+	h.Set("Content-Type", http.DetectContentType(body))
 }
 
 func setMockSecurityHeaders(h http.Header) {
@@ -88,9 +113,58 @@ func setMockSecurityHeaders(h http.Header) {
 	h.Set("X-Content-Type-Options", "nosniff")
 }
 
-// store captures the request as an HTTP dump with a "mock" field: the rule
-// that answered, or null.
-func (m *mockServer) store(r *http.Request, project string, rule *MockRule) {
+// MaxMockSentBody caps the response body kept with a captured mock request.
+const MaxMockSentBody = 64 << 10 // 64 KB
+
+// mockSent is the response the mock server sent for one request.
+type mockSent struct {
+	Status  int
+	Headers http.Header
+	Body    []byte
+	DelayMs int
+	Near    []MockNear
+}
+
+// mockInfo is the "mock" field of a captured request: the rule that answered
+// (null ids when none did) and a copy of what was sent (headers except the
+// Date and Content-Length that net/http adds), so the request detail stays
+// true after the rule changes. Near lists rules that almost matched an
+// unmatched request.
+func mockInfo(rule *MockRule, sent mockSent) map[string]any {
+	headers := make(map[string]string, len(sent.Headers))
+	for k, v := range sent.Headers {
+		headers[k] = strings.Join(v, ", ")
+	}
+	body := sent.Body
+	truncated := len(body) > MaxMockSentBody
+	if truncated {
+		body = body[:MaxMockSentBody]
+	}
+	info := map[string]any{
+		"matched":        rule != nil,
+		"rule_id":        nil,
+		"rule_name":      nil,
+		"status":         sent.Status,
+		"headers":        headers,
+		"body":           string(body),
+		"body_size":      len(sent.Body),
+		"body_truncated": truncated,
+		"delay_ms":       sent.DelayMs,
+	}
+	if rule != nil {
+		info["rule_id"], info["rule_name"] = rule.ID, rule.Name
+	} else {
+		near := sent.Near
+		if near == nil {
+			near = []MockNear{}
+		}
+		info["near"] = near
+	}
+	return info
+}
+
+// store captures the request as an HTTP dump with a "mock" field (see mockInfo).
+func (m *mockServer) store(r *http.Request, project string, rule *MockRule, sent mockSent) {
 	if m.events == nil {
 		return
 	}
@@ -105,11 +179,7 @@ func (m *mockServer) store(r *http.Request, project string, rule *MockRule) {
 		slog.Warn("mock: failed to capture request", "err", err)
 		return
 	}
-	var info any // null when no rule matched
-	if rule != nil {
-		info = map[string]any{"rule_id": rule.ID, "rule_name": rule.Name, "status": rule.Status}
-	}
-	payload["mock"] = info
+	payload["mock"] = mockInfo(rule, sent)
 	inc.Payload, _ = json.Marshal(payload)
 	inc.Project = project
 
