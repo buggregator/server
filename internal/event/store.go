@@ -24,6 +24,8 @@ type DeleteOptions struct {
 	Type    string
 	Project string
 	UUIDs   []string
+	// KeepPinned leaves pinned events in place.
+	KeepPinned bool
 }
 
 // Store persists and retrieves events.

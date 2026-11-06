@@ -183,6 +183,10 @@ func (s *SQLiteStore) Delete(ctx context.Context, uuid string) error {
 }
 
 func (s *SQLiteStore) DeleteAll(ctx context.Context, opts event.DeleteOptions) error {
+	keep := ""
+	if opts.KeepPinned {
+		keep = " AND is_pinned = 0"
+	}
 	if len(opts.UUIDs) > 0 {
 		placeholders := make([]string, len(opts.UUIDs))
 		args := make([]any, len(opts.UUIDs))
@@ -191,7 +195,7 @@ func (s *SQLiteStore) DeleteAll(ctx context.Context, opts event.DeleteOptions) e
 			args[i] = u
 		}
 		_, err := s.db.ExecContext(ctx,
-			`DELETE FROM events WHERE uuid IN (`+strings.Join(placeholders, ",")+`)`, args...)
+			`DELETE FROM events WHERE uuid IN (`+strings.Join(placeholders, ",")+`)`+keep, args...)
 		return err
 	}
 
@@ -206,6 +210,9 @@ func (s *SQLiteStore) DeleteAll(ctx context.Context, opts event.DeleteOptions) e
 	if opts.Project != "" {
 		conditions = append(conditions, "project = ?")
 		args = append(args, opts.Project)
+	}
+	if opts.KeepPinned {
+		conditions = append(conditions, "is_pinned = 0")
 	}
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")

@@ -394,3 +394,48 @@ func TestOpenPooled_InMemoryUsesOneConnection(t *testing.T) {
 		})
 	}
 }
+
+// Clear with pinned events used to send the ids of the loaded unpinned events
+// (at most 500); the server now deletes every match except the pinned ones.
+func TestSQLiteStore_DeleteAll_KeepPinned(t *testing.T) {
+	db := setupTestDB(t)
+	store := storage.NewSQLiteStore(db)
+	ctx := context.Background()
+
+	for i := 0; i < 600; i++ {
+		store.Store(ctx, makeEvent("s"+strconv.Itoa(i), "sentry", "a"))
+	}
+	store.Store(ctx, makeEvent("other-project", "sentry", "b"))
+	store.Store(ctx, makeEvent("other-type", "ray", "a"))
+	store.Pin(ctx, "s7")
+	store.Pin(ctx, "s599")
+
+	if err := store.DeleteAll(ctx, event.DeleteOptions{Type: "sentry", Project: "a", KeepPinned: true}); err != nil {
+		t.Fatal(err)
+	}
+	all, _ := store.FindAll(ctx, event.FindOptions{Limit: 1000})
+	got := map[string]bool{}
+	for _, ev := range all {
+		got[ev.UUID] = true
+	}
+	want := []string{"s7", "s599", "other-project", "other-type"}
+	if len(got) != len(want) {
+		t.Errorf("left %d events %v, want %v", len(got), got, want)
+	}
+	for _, u := range want {
+		if !got[u] {
+			t.Errorf("%s was deleted", u)
+		}
+	}
+
+	// keep_pinned with ids keeps a pinned id too.
+	if err := store.DeleteAll(ctx, event.DeleteOptions{UUIDs: []string{"s7", "other-type"}, KeepPinned: true}); err != nil {
+		t.Fatal(err)
+	}
+	if ev, _ := store.FindByUUID(ctx, "s7"); ev == nil {
+		t.Error("pinned s7 deleted by id with keep_pinned")
+	}
+	if ev, _ := store.FindByUUID(ctx, "other-type"); ev != nil {
+		t.Error("unpinned other-type kept")
+	}
+}

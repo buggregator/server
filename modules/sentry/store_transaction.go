@@ -12,7 +12,8 @@ import (
 
 // storeTransaction stores a parsed transaction with its spans, upserting the
 // trace registry entry. Returns the transaction's generated UUID.
-func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (string, error) {
+func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage, project string) (string, error) {
+	project = projectKey(project)
 	dbTx, err := db.Begin()
 	if err != nil {
 		return "", err
@@ -74,8 +75,8 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 
 	_, err = dbTx.Exec(
 		`INSERT INTO sentry_transactions
-			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload, project_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		txnID,
 		txn.EventID,
 		traceID,
@@ -89,6 +90,7 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 		nullIfEmpty(txn.Release),
 		measurements,
 		string(payload),
+		project,
 	)
 	if err != nil {
 		return "", fmt.Errorf("insert sentry_transactions: %w", err)
@@ -99,8 +101,8 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 	if len(txn.Spans) > 0 {
 		stmt, err := dbTx.Prepare(
 			`INSERT INTO sentry_spans
-				(id, span_id, transaction_id, trace_id, parent_span_id, op, description, status, start_ts, end_ts, duration_ms, service_name, peer_address, peer_type, is_error, attributes)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				(id, span_id, transaction_id, trace_id, parent_span_id, op, description, status, start_ts, end_ts, duration_ms, service_name, peer_address, peer_type, is_error, attributes, project_id)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		)
 		if err != nil {
 			return "", fmt.Errorf("prepare sentry_spans: %w", err)
@@ -145,6 +147,7 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 				nullIfEmpty(peerType),
 				isError,
 				attrs,
+				project,
 			)
 			if err != nil {
 				return "", fmt.Errorf("insert sentry_spans: %w", err)
@@ -168,7 +171,8 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 
 // storeSpansV2 stores standalone span items (Sentry Span v2 format),
 // upserting the trace registry entry.
-func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK) error {
+func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK, project string) error {
+	project = projectKey(project)
 	if len(spans) == 0 {
 		return nil
 	}
@@ -187,8 +191,8 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK) error {
 
 	stmt, err := dbTx.Prepare(
 		`INSERT INTO sentry_spans
-			(id, span_id, transaction_id, trace_id, parent_span_id, op, description, status, start_ts, end_ts, duration_ms, service_name, peer_address, peer_type, is_error, attributes)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, span_id, transaction_id, trace_id, parent_span_id, op, description, status, start_ts, end_ts, duration_ms, service_name, peer_address, peer_type, is_error, attributes, project_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 	)
 	if err != nil {
 		return fmt.Errorf("prepare sentry_spans: %w", err)
@@ -246,6 +250,7 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK) error {
 				nullIfEmpty(peerType),
 				isError,
 				attrs,
+				project,
 			)
 			if err != nil {
 				return fmt.Errorf("insert sentry_spans: %w", err)
