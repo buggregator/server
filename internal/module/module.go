@@ -54,6 +54,13 @@ type HTTPIngestionHandler interface {
 	Handle(r *http.Request) (*event.Incoming, error)
 }
 
+// ProtectedRoutesRegistrar is an optional Module add-on for API routes that
+// must sit behind the API's auth middleware. It is called after the
+// middleware is built, unlike RegisterRoutes.
+type ProtectedRoutesRegistrar interface {
+	RegisterProtectedRoutes(mux *http.ServeMux, protect func(http.Handler) http.Handler)
+}
+
 // BaseModule provides no-op defaults for optional Module methods.
 type BaseModule struct{}
 

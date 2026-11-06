@@ -51,6 +51,7 @@ type Config struct {
 	Modules  ModulesConfig   `yaml:"modules"`
 	Webhooks []WebhookDef    `yaml:"webhooks"`
 	Projects []ProjectDef    `yaml:"projects"`
+	Mocks    []MockDef       `yaml:"mocks"`
 	Version  string          `yaml:"-"`
 
 	// Shortcuts.
@@ -72,6 +73,19 @@ type MCPConfig struct {
 }
 
 // WebhookDef defines a webhook from config.
+// MockDef is a read-only mock rule from the config file (see #332): requests
+// to /mock<path> get this response.
+type MockDef struct {
+	Name    string            `yaml:"name"`
+	Method  string            `yaml:"method"` // GET, POST, … or ANY (default)
+	Path    string            `yaml:"path"`   // /users/me, /users/{id}, /files/*
+	Status  int               `yaml:"status"` // default 200
+	Headers map[string]string `yaml:"headers"`
+	Body    string            `yaml:"body"`
+	Delay   string            `yaml:"delay"`   // e.g. "150ms", at most 30s
+	Project string            `yaml:"project"` // empty = every project
+}
+
 type WebhookDef struct {
 	Event     string            `yaml:"event"`      // Event type to match ("sentry", "ray", "*" for all).
 	URL       string            `yaml:"url"`        // Target URL.
@@ -267,6 +281,9 @@ func LoadConfig() Config {
 
 	// Projects from config file.
 	cfg.Projects = fileCfg.Projects
+
+	// Mock rules from config file (read-only in the UI).
+	cfg.Mocks = fileCfg.Mocks
 
 	// Set shortcuts.
 	cfg.HTTPAddr = cfg.Server.Addr
