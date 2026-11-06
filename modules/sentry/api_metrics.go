@@ -8,7 +8,8 @@ import (
 )
 
 // handleMetricsList lists stored trace metrics, newest first.
-// Filters: name, type (counter, gauge, distribution), trace_id.
+// Filters: name, type (counter, gauge, distribution), trace_id, and search -
+// a part of the name, case-insensitive for ASCII as LIKE is.
 func handleMetricsList(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		limit, offset := pagination(r, 100)
@@ -26,6 +27,10 @@ func handleMetricsList(db *sql.DB) http.HandlerFunc {
 				conditions = append(conditions, filter+" = ?")
 				args = append(args, v)
 			}
+		}
+		if v := q.Get("search"); v != "" {
+			conditions = append(conditions, `name LIKE ? ESCAPE '\'`)
+			args = append(args, "%"+likeEscaper.Replace(v)+"%")
 		}
 
 		where := ""
@@ -87,3 +92,6 @@ func handleMetricsList(db *sql.DB) http.HandlerFunc {
 		apiJSON(w, listResponse(data, total, currentPage(offset, limit), limit))
 	}
 }
+
+// likeEscaper escapes the wildcards of a LIKE pattern whose ESCAPE is a backslash.
+var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)

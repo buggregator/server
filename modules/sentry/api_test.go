@@ -430,6 +430,11 @@ func TestAPIMetricsFilter(t *testing.T) {
 		{"type=gauge", 1},
 		{"trace_id=trace-abc", 2},
 		{"name=http.client.duration&type=gauge", 0},
+		{"search=client", 2},
+		{"search=CLIENT.dur", 2},
+		{"search=order", 1},
+		{"search=%25", 0},
+		{"search=http_client", 0},
 	}
 
 	for _, tt := range tests {
@@ -587,5 +592,36 @@ func TestAPILogsSameTimestampNewestFirst(t *testing.T) {
 	want := []string{"third", "second", "first"}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Errorf("pages = %v, want %v", got, want)
+	}
+}
+
+func TestAPILogsFilterByLevels(t *testing.T) {
+	mux := http.NewServeMux()
+	seedTestData(t, mux)
+
+	tests := []struct {
+		query string
+		want  int
+	}{
+		{"level=info", 1},
+		{"level=warning,error", 2},
+		{"level=warn,warning", 1},
+		{"level=fatal", 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.query, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/api/sentry/logs?"+tt.query, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			var resp map[string]any
+			json.Unmarshal(w.Body.Bytes(), &resp)
+
+			data := resp["data"].([]any)
+			if len(data) != tt.want {
+				t.Errorf("data length = %d, want %d", len(data), tt.want)
+			}
+		})
 	}
 }
