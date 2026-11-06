@@ -13,6 +13,11 @@ import (
 // storeErrorEvent stores a parsed error event with its exceptions and breadcrumbs
 // in a single DB transaction.
 func storeErrorEvent(db *sql.DB, ev *ErrorEvent, payload json.RawMessage, projectID string) (string, error) {
+	// Same key as the main events table: a standard DSN (/api/1/...) carries
+	// no project name, and the event is stored under "default" there.
+	if projectID == "" {
+		projectID = "default"
+	}
 	tx, err := db.Begin()
 	if err != nil {
 		return "", err

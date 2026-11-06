@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -719,5 +720,85 @@ func TestAPICountsFollowFilters(t *testing.T) {
 	}
 	if got := counts("?from=2030-01-01")["exceptions"]; int(got.(float64)) != 0 {
 		t.Errorf("exceptions in a future window = %v, want 0", got)
+	}
+}
+
+// A standard DSN (/api/1/...) carries no project name: the main events table
+// stores the event under "default", and the sentry tables must use the same
+// key, or ?project=default (what the UI sends) finds nothing.
+func TestAPIStandardDSNProjectIsDefault(t *testing.T) {
+	db := setupTestDB(t)
+	mux := http.NewServeMux()
+	registerAPI(mux, db)
+	h := &handler{db: db}
+
+	// A row stored before the fix, with no project.
+	if _, err := db.Exec(`INSERT INTO sentry_error_events (id, event_id, project_id, level, fingerprint, payload)
+		VALUES ('old-row', 'old-1', NULL, 'error', 'fp-old', '{}')`); err != nil {
+		t.Fatal(err)
+	}
+	sqlBytes, err := migrations.ReadFile("migrations/2024_01_01_000028_default_project_for_sentry_errors.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(string(sqlBytes)); err != nil {
+		t.Fatal(err)
+	}
+
+	// A new event after the migration: stored under "default" by the code.
+	r := httptest.NewRequest("POST", "/api/1/store", strings.NewReader(
+		`{"event_id":"dsn-1","level":"error","exception":{"values":[{"type":"RuntimeException","value":"boom"}]}}`))
+	if _, err := h.Handle(r); err != nil {
+		t.Fatal(err)
+	}
+
+	get := func(url string) map[string]any {
+		t.Helper()
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("GET", url, nil))
+		var resp map[string]any
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		return resp
+	}
+
+	if got := get("/api/sentry/counts?project=default")["exceptions"]; got != float64(2) {
+		t.Errorf("counts exceptions for project=default = %v, want 2", got)
+	}
+	data, _ := get("/api/sentry/exceptions?project=default")["data"].([]any)
+	if len(data) != 2 {
+		t.Errorf("exceptions for project=default = %d, want 2", len(data))
+	}
+}
+
+// The metrics tab counter and the metrics list take the same period.
+func TestAPIMetricsWindowMatchesCount(t *testing.T) {
+	db := setupTestDB(t)
+	mux := http.NewServeMux()
+	registerAPI(mux, db)
+
+	storeMetrics(db, []MetricRecord{
+		{Name: "old", Type: "counter", Value: 1, Timestamp: "1678272501"},   // 2023
+		{Name: "new-1", Type: "counter", Value: 1, Timestamp: "1893456000"}, // 2030
+		{Name: "new-2", Type: "counter", Value: 1, Timestamp: "1893456001"},
+	})
+
+	get := func(url string) map[string]any {
+		t.Helper()
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("GET", url, nil))
+		var resp map[string]any
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		return resp
+	}
+
+	for _, q := range []string{"from=2029-01-01", "to=2024-01-01", "from=2029-01-01&to=2030-01-01T00:00:00Z"} {
+		count := get("/api/sentry/counts?" + q)["metrics"]
+		data, _ := get("/api/sentry/metrics?" + q)["data"].([]any)
+		if count != float64(len(data)) {
+			t.Errorf("%s: counts metrics = %v, list = %d", q, count, len(data))
+		}
+	}
+	if data, _ := get("/api/sentry/metrics?from=2029-01-01")["data"].([]any); len(data) != 2 {
+		t.Errorf("metrics from 2029 = %d, want 2", len(data))
 	}
 }
