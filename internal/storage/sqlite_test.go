@@ -325,3 +325,72 @@ func TestOpenPooled_SingleConnection(t *testing.T) {
 		db.Close()
 	}
 }
+
+// In-memory databases share one cache between connections, and shared-cache
+// mode uses table locks that busy_timeout does not cover: a pool fails with
+// "database table is locked" under concurrent writes. OpenPooled must keep
+// in-memory DSNs on one connection, whatever pool size is asked for.
+func TestOpenPooled_InMemoryUsesOneConnection(t *testing.T) {
+	for _, dsn := range []string{":memory:", "file::memory:?cache=shared", "file:mem?mode=memory&cache=shared"} {
+		t.Run(dsn, func(t *testing.T) {
+			db, err := storage.OpenPooled(dsn, 4)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+
+			if got := db.Stats().MaxOpenConnections; got != 1 {
+				t.Errorf("MaxOpenConnections = %d, want 1", got)
+			}
+
+			if _, err := db.Exec(`CREATE TABLE events (
+				uuid TEXT PRIMARY KEY, type TEXT NOT NULL, payload TEXT NOT NULL,
+				timestamp TEXT NOT NULL, project TEXT, is_pinned INTEGER NOT NULL DEFAULT 0
+			)`); err != nil {
+				t.Fatal(err)
+			}
+			store := storage.NewSQLiteStore(db)
+			ctx := context.Background()
+
+			const workers, perWorker = 8, 50
+			errs := make(chan error, workers)
+			var wg sync.WaitGroup
+			for w := 0; w < workers; w++ {
+				wg.Add(1)
+				go func(w int) {
+					defer wg.Done()
+					for i := 0; i < perWorker; i++ {
+						uuid := "w" + strconv.Itoa(w) + "-" + strconv.Itoa(i)
+						tx, err := db.Begin()
+						if err != nil {
+							errs <- err
+							return
+						}
+						if _, err := tx.Exec(`INSERT INTO events (uuid, type, payload, timestamp) VALUES (?, 'tx', '{}', '0')`, "tx-"+uuid); err != nil {
+							tx.Rollback()
+							errs <- err
+							return
+						}
+						if err := tx.Commit(); err != nil {
+							errs <- err
+							return
+						}
+						if err := store.Store(ctx, makeEvent(uuid, "sentry", "default")); err != nil {
+							errs <- err
+							return
+						}
+						if _, err := store.FindAll(ctx, event.FindOptions{Project: "default", Limit: 10}); err != nil {
+							errs <- err
+							return
+						}
+					}
+				}(w)
+			}
+			wg.Wait()
+			close(errs)
+			for err := range errs {
+				t.Fatalf("concurrent access failed: %v", err)
+			}
+		})
+	}
+}

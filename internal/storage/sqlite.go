@@ -40,6 +40,14 @@ func OpenPooled(dsn string, maxOpen int) (*sql.DB, error) {
 	if maxOpen < 1 {
 		maxOpen = 1
 	}
+	// An in-memory database lives in a cache shared by all connections, and
+	// shared-cache mode uses table locks that busy_timeout does not cover: a
+	// pool fails with "database table is locked" (SQLITE_LOCKED_SHAREDCACHE)
+	// under concurrent writes. Keep it on one connection.
+	if maxOpen > 1 && isInMemoryDSN(dsn) {
+		slog.Info("storage: in-memory database, connection pool reduced to 1")
+		maxOpen = 1
+	}
 	if maxOpen > 1 {
 		add := func(param, msg string) {
 			sep := "?"
@@ -81,6 +89,12 @@ func OpenPooled(dsn string, maxOpen int) (*sql.DB, error) {
 	db.SetMaxOpenConns(maxOpen)
 	db.SetMaxIdleConns(maxOpen)
 	return db, nil
+}
+
+// isInMemoryDSN reports whether dsn names an in-memory database:
+// ":memory:", "file::memory:…" or a URI with mode=memory.
+func isInMemoryDSN(dsn string) bool {
+	return strings.Contains(dsn, ":memory:") || strings.Contains(dsn, "mode=memory")
 }
 
 func NewSQLiteStore(db *sql.DB) *SQLiteStore {
