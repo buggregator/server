@@ -34,6 +34,12 @@ type ProjectProvider func() []string
 type client struct {
 	conn *websocket.Conn
 	ctx  context.Context
+
+	// mu guards the server-side subscriptions below and orders the connect
+	// reply before any push that depends on it.
+	mu        sync.Mutex
+	connected bool            // the connect reply was sent
+	subs      map[string]bool // server-side channels the client knows
 }
 
 func NewHub() *Hub {
@@ -126,10 +132,31 @@ func (h *Hub) handleClientMessage(c *client, data []byte) {
 			continue
 		}
 
+		if cmd.Connect != nil {
+			h.connectClient(c, cmd.ID)
+			continue
+		}
 		reply := h.processCommand(cmd)
 		replyBytes, _ := json.Marshal(reply)
 		c.conn.Write(c.ctx, websocket.MessageText, replyBytes)
 	}
+}
+
+// connectClient answers a connect command and remembers the server-side
+// channels it gave, so Broadcast can subscribe the client to channels that
+// appear later (a project created after the page opened).
+func (h *Hub) connectClient(c *client, id uint32) {
+	reply := h.handleConnect(id)
+	replyBytes, _ := json.Marshal(reply)
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.subs = make(map[string]bool, len(reply.Connect.Subs))
+	for ch := range reply.Connect.Subs {
+		c.subs[ch] = true
+	}
+	c.conn.Write(c.ctx, websocket.MessageText, replyBytes)
+	c.connected = true
 }
 
 // processCommand handles a single Centrifugo protocol command.
@@ -234,14 +261,26 @@ func (h *Hub) Broadcast(channel, eventName string, payload any) {
 	}
 
 	msg, _ := json.Marshal(push)
+	// Server-side subscribe push: centrifuge-js drops publications of a
+	// channel it was never subscribed to, and server-side channels are given
+	// only at connect.
+	subMsg, _ := json.Marshal(centrifugoPush{Push: &pushData{Channel: channel, Subscribe: &subscribePush{}}})
 
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
 	for c := range h.clients {
+		c.mu.Lock()
+		if c.connected && !c.subs[channel] {
+			c.subs[channel] = true
+			if err := c.conn.Write(c.ctx, websocket.MessageText, subMsg); err != nil {
+				slog.Debug("websocket write error", "err", err)
+			}
+		}
 		if err := c.conn.Write(c.ctx, websocket.MessageText, msg); err != nil {
 			slog.Debug("websocket write error", "err", err)
 		}
+		c.mu.Unlock()
 	}
 
 	if h.metrics != nil {
@@ -313,8 +352,15 @@ type centrifugoPush struct {
 }
 
 type pushData struct {
-	Channel string       `json:"channel"`
-	Pub     *publication `json:"pub,omitempty"`
+	Channel   string         `json:"channel"`
+	Pub       *publication   `json:"pub,omitempty"`
+	Subscribe *subscribePush `json:"subscribe,omitempty"`
+}
+
+// subscribePush tells the client it is now subscribed to the push's channel
+// (a server-side subscription made after connect).
+type subscribePush struct {
+	Recoverable bool `json:"recoverable,omitempty"`
 }
 
 type publication struct {
