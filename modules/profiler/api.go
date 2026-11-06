@@ -221,6 +221,23 @@ func handleCallGraph(db *sql.DB) http.HandlerFunc {
 
 // --- Flame Chart ---
 
+// Hard limits for the flame chart tree. The tree already has at most one node
+// per edge, these only guard against a pathological profile.
+const (
+	maxFlameNodes = 50000
+	maxFlameDepth = 512
+)
+
+type flameNode struct {
+	Name     string         `json:"name"`
+	Start    float64        `json:"start"`
+	Duration float64        `json:"duration"`
+	Type     string         `json:"type"`
+	Children []*flameNode   `json:"children"`
+	Cost     map[string]any `json:"cost"`
+	Color    string         `json:"color"`
+}
+
 func handleFlameChart(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		uuid := r.PathValue("uuid")
@@ -236,83 +253,99 @@ func handleFlameChart(db *sql.DB) http.HandlerFunc {
 		}
 
 		peaks, _, _ := LoadPeaks(db, uuid)
-		peakVal := float64(peakMetricValue(peaks, metric))
-		divisor := metricDivisor(metric)
+		writeJSON(w, buildFlameChart(edges, metric, float64(peakMetricValue(peaks, metric))))
+	}
+}
 
-		// Build tree.
-		type flameNode struct {
-			Name     string       `json:"name"`
-			Start    float64      `json:"start"`
-			Duration float64      `json:"duration"`
-			Type     string       `json:"type"`
-			Children []*flameNode `json:"children"`
-			Cost     map[string]any `json:"cost"`
-			Color    string       `json:"color"`
+// buildFlameChart turns caller→callee edges into a flame chart tree.
+//
+// XHProf only records caller→callee pairs, not full call stacks, so a function
+// reached from many callers would be copied with its whole subtree once per
+// path — exponential on real profiles (#356). Instead each function is
+// expanded once, under the edge that reaches it at the smallest depth; its
+// other call sites are shown as leaves. Every edge becomes at most one node.
+func buildFlameChart(edges []EdgeRow, metric string, peakVal float64) []*flameNode {
+	divisor := metricDivisor(metric)
+
+	childrenMap := make(map[string][]int) // caller → edge indexes
+	var roots []int
+	for i := range edges {
+		if edges[i].Caller == nil {
+			roots = append(roots, i)
+		} else {
+			childrenMap[*edges[i].Caller] = append(childrenMap[*edges[i].Caller], i)
+		}
+	}
+
+	// BFS: the first edge that reaches a callee is the one that expands it.
+	expandedBy := make(map[string]int)
+	queue := make([]int, 0, len(edges))
+	for _, i := range roots {
+		if _, ok := expandedBy[edges[i].Callee]; !ok {
+			expandedBy[edges[i].Callee] = i
+			queue = append(queue, i)
+		}
+	}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		for _, i := range childrenMap[edges[cur].Callee] {
+			if _, ok := expandedBy[edges[i].Callee]; !ok {
+				expandedBy[edges[i].Callee] = i
+				queue = append(queue, i)
+			}
+		}
+	}
+
+	count := 0
+	var buildNode func(i int, start float64, depth int) *flameNode
+	buildNode = func(i int, start float64, depth int) *flameNode {
+		count++
+		e := &edges[i]
+		val := float64(GetEdgeMetricValue(e, metric))
+		pct := 0.0
+		if peakVal > 0 {
+			pct = val / peakVal * 100
 		}
 
-		nodesByCallee := make(map[string]*EdgeRow)
-		childrenMap := make(map[string][]EdgeRow) // parent callee → children
-		var roots []EdgeRow
-
-		for _, e := range edges {
-			if _, ok := nodesByCallee[e.Callee]; !ok {
-				nodesByCallee[e.Callee] = &e
-			}
-			if e.Caller == nil {
-				roots = append(roots, e)
-			} else {
-				childrenMap[*e.Caller] = append(childrenMap[*e.Caller], e)
-			}
+		node := &flameNode{
+			Name:     e.Callee,
+			Start:    start,
+			Duration: val / divisor,
+			Type:     "task",
+			Children: []*flameNode{},
+			Cost: map[string]any{
+				"cpu": e.Cost.CPU, "wt": e.Cost.WallTime, "mu": e.Cost.Memory, "pmu": e.Cost.PeakMem, "ct": e.Cost.Calls,
+			},
+			Color: flameColor(pct),
 		}
 
-		visited := make(map[string]bool)
-		var buildNode func(e EdgeRow, start float64) *flameNode
-		buildNode = func(e EdgeRow, start float64) *flameNode {
-			val := float64(GetEdgeMetricValue(&e, metric))
-			duration := val / divisor
-			pct := 0.0
-			if peakVal > 0 {
-				pct = val / peakVal * 100
-			}
-
-			node := &flameNode{
-				Name:     e.Callee,
-				Start:    start,
-				Duration: duration,
-				Type:     "task",
-				Cost: map[string]any{
-					"cpu": e.Cost.CPU, "wt": e.Cost.WallTime, "mu": e.Cost.Memory, "pmu": e.Cost.PeakMem, "ct": e.Cost.Calls,
-				},
-				Color: flameColor(pct),
-			}
-
-			if !visited[e.Callee] {
-				visited[e.Callee] = true
-				childStart := start
-				for _, child := range childrenMap[e.Callee] {
-					childNode := buildNode(child, childStart)
-					node.Children = append(node.Children, childNode)
-					childStart += childNode.Duration
-				}
-				visited[e.Callee] = false
-			}
-			if node.Children == nil {
-				node.Children = []*flameNode{}
-			}
-
+		if expandedBy[e.Callee] != i || depth >= maxFlameDepth {
 			return node
 		}
-
-		result := make([]*flameNode, 0, len(roots))
-		start := 0.0
-		for _, root := range roots {
-			node := buildNode(root, start)
-			result = append(result, node)
-			start += node.Duration
+		childStart := start
+		for _, c := range childrenMap[e.Callee] {
+			if count >= maxFlameNodes {
+				break
+			}
+			child := buildNode(c, childStart, depth+1)
+			node.Children = append(node.Children, child)
+			childStart += child.Duration
 		}
-
-		writeJSON(w, result)
+		return node
 	}
+
+	result := make([]*flameNode, 0, len(roots))
+	start := 0.0
+	for _, i := range roots {
+		if count >= maxFlameNodes {
+			break
+		}
+		node := buildNode(i, start, 0)
+		result = append(result, node)
+		start += node.Duration
+	}
+	return result
 }
 
 // --- Helpers ---
