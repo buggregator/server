@@ -148,7 +148,7 @@ func (s *Session) stateLocked() string {
 
 // statusEvent is the payload of session.status. Caller holds mu.
 func (s *Session) statusEventLocked() map[string]any {
-	return map[string]any{"id": s.ID, "state": s.stateLocked(), "file": s.file, "line": s.line, "kind": s.kind, "target": s.target}
+	return map[string]any{"id": s.ID, "state": s.stateLocked(), "file": s.file, "line": s.line, "kind": s.kind, "target": s.target, "pause_seq": s.pauseSeq}
 }
 
 func (s *Session) emit(event string, payload any) {
@@ -278,7 +278,7 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 		var ev map[string]any
 		resolve := false
 		if rt.Status != "" && s.conts == 0 {
-			prev := s.status
+			prev, prevFile, prevLine := s.status, s.file, s.line
 			s.status = rt.Status
 			if rt.Status == "break" {
 				// Xdebug also puts status="break" on plain replies (even errors);
@@ -292,7 +292,9 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 					resolve = !s.targetDone
 				}
 			}
-			if prev != s.status || rt.Status == "break" {
+			// A read or eval reply during a pause repeats status="break": no
+			// event for it, or a client that re-reads on break loops.
+			if prev != s.status || s.file != prevFile || s.line != prevLine {
 				ev = s.statusEventLocked()
 			}
 		}
