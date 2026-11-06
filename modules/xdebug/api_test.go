@@ -79,6 +79,8 @@ func (c *countingEngine) count(prefix string) int {
 }
 
 func (c *countingEngine) serve(t *testing.T, e *fakeEngine) {
+	// Runs past the end of the test (cleanup detaches): never fail from here.
+	send := func(xml string) { _, _ = e.conn.Write(encodePacket([]byte(xml))) }
 	for {
 		line, err := readCommand(e.r)
 		if err != nil {
@@ -90,27 +92,27 @@ func (c *countingEngine) serve(t *testing.T, e *fakeEngine) {
 		name := cmdNameRe.FindString(line)
 		tid := tidRe.FindStringSubmatch(line)[1]
 		if inner, ok := c.extra[name]; ok {
-			e.send(response(name, tid, "", inner))
+			send(response(name, tid, "", inner))
 			continue
 		}
 		switch name {
 		case "stack_get":
-			e.send(response(name, tid, "", `<stack where="App\Http\Kernel->handle" level="0" type="file" filename="file:///app/src/Kernel.php" lineno="40"></stack>`+
+			send(response(name, tid, "", `<stack where="App\Http\Kernel->handle" level="0" type="file" filename="file:///app/src/Kernel.php" lineno="40"></stack>`+
 				`<stack where="Illuminate\Pipeline->then" level="1" type="file" filename="file:///app/vendor/laravel/Pipeline.php" lineno="9"></stack>`))
 		case "context_names":
-			e.send(response(name, tid, "", `<context name="Locals" id="0"></context><context name="Superglobals" id="1"></context><context name="User defined constants" id="2"></context>`))
+			send(response(name, tid, "", `<context name="Locals" id="0"></context><context name="Superglobals" id="1"></context><context name="User defined constants" id="2"></context>`))
 		case "context_get":
-			e.send(response(name, tid, "", `<property name="$id" fullname="$id" type="int"><![CDATA[42]]></property>`))
+			send(response(name, tid, "", `<property name="$id" fullname="$id" type="int"><![CDATA[42]]></property>`))
 		case "property_get":
-			e.send(response(name, tid, "", `<property name="$id" fullname="$id" type="int"><![CDATA[42]]></property>`))
+			send(response(name, tid, "", `<property name="$id" fullname="$id" type="int"><![CDATA[42]]></property>`))
 		case "source":
-			e.send(response(name, tid, ` encoding="base64"`, b64("<?php\r\n$a = 1;\n")))
+			send(response(name, tid, ` encoding="base64"`, b64("<?php\r\n$a = 1;\n")))
 		case "breakpoint_list":
-			e.send(response(name, tid, "", `<breakpoint type="line" filename="file:///app/src/Kernel.php" lineno="40" state="enabled" hit_count="2" hit_value="0" id="170001"></breakpoint>`))
+			send(response(name, tid, "", `<breakpoint type="line" filename="file:///app/src/Kernel.php" lineno="40" state="enabled" hit_count="2" hit_value="0" id="170001"></breakpoint>`))
 		case "eval":
-			e.send(response(name, tid, "", `<property type="int"><![CDATA[7]]></property>`))
+			send(response(name, tid, "", `<property type="int"><![CDATA[7]]></property>`))
 		default:
-			e.send(response(name, tid, "", `<error code="4"><message><![CDATA[unimplemented]]></message></error>`))
+			send(response(name, tid, "", `<error code="4"><message><![CDATA[unimplemented]]></message></error>`))
 		}
 	}
 }
@@ -175,7 +177,7 @@ func TestAPI_ReadsWhilePaused(t *testing.T) {
 	if code, body := a.do(t, "GET", base+"/variables?frame=1&context=0", ""); code != 200 || !strings.Contains(body, `"value":"42"`) {
 		t.Fatalf("variables: %d %s", code, body)
 	}
-	if !strings.Contains(strings.Join(eng.seen, "|"), "context_get -i ") {
+	if eng.count("context_get -i ") != 1 {
 		t.Fatal("context_get not sent")
 	}
 	if code, body := a.do(t, "GET", base+"/property?name=$id&page=2", ""); code != 200 || !strings.Contains(body, `"fullname":"$id"`) {
