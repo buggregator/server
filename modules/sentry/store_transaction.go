@@ -55,9 +55,9 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 
 	// Insert transaction.
 	txnID := event.GenerateUUID()
-	startTS := parseTimestamp(txn.StartTime)
-	endTS := parseTimestamp(txn.Timestamp)
-	durationMS := computeDurationMS(txn.StartTime, txn.Timestamp)
+	startTS := parseTimestamp(txn.StartTime.Number())
+	endTS := parseTimestamp(txn.Timestamp.Number())
+	durationMS := computeDurationMS(txn.StartTime.Number(), txn.Timestamp.Number())
 
 	op := txn.Op
 	status := txn.Status
@@ -111,9 +111,9 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 			spanUUID := event.GenerateUUID()
 			peerType, peerAddress := classifySpan(span)
 			serviceName := extractServiceName(span, txn.SDK)
-			sStartTS := parseTimestamp(span.StartTimestamp)
-			sEndTS := parseTimestamp(span.Timestamp)
-			sDuration := computeDurationMS(span.StartTimestamp, span.Timestamp)
+			sStartTS := parseTimestamp(span.StartTimestamp.Number())
+			sEndTS := parseTimestamp(span.Timestamp.Number())
+			sDuration := computeDurationMS(span.StartTimestamp.Number(), span.Timestamp.Number())
 
 			isError := 0
 			if span.Status == "internal_error" || span.Status == "unknown_error" {
@@ -213,9 +213,9 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK) error {
 			spanUUID := event.GenerateUUID()
 			peerType, peerAddress := classifySpan(span)
 			serviceName := extractServiceName(span, sdk)
-			sStartTS := parseTimestamp(span.StartTimestamp)
-			sEndTS := parseTimestamp(span.Timestamp)
-			sDuration := computeDurationMS(span.StartTimestamp, span.Timestamp)
+			sStartTS := parseTimestamp(span.StartTimestamp.Number())
+			sEndTS := parseTimestamp(span.Timestamp.Number())
+			sDuration := computeDurationMS(span.StartTimestamp.Number(), span.Timestamp.Number())
 
 			isError := 0
 			if span.Status == "internal_error" || span.Status == "unknown_error" {
