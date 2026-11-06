@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -83,6 +84,15 @@ type StorageConfig struct {
 type DatabaseConfig struct {
 	Driver string `yaml:"driver"`
 	DSN    string `yaml:"dsn"`
+
+	// MaxOpenConns is the size of the SQLite connection pool (default 4).
+	//
+	// With a single connection ingestion and UI queries share one queue: a heavy
+	// list slows down writes, and writes slow down the list. In WAL mode readers
+	// disturb neither each other nor the writer, so a pool is safe; the writer is
+	// still serialized by SQLite itself, and busy_timeout in the DSN makes a
+	// competing write wait instead of failing.
+	MaxOpenConns int `yaml:"max_open_conns"`
 }
 
 type TCPConfig struct {
@@ -177,6 +187,13 @@ func LoadConfig() Config {
 	cfg.Server.Addr = coalesce(cfg.Server.Addr, os.Getenv("HTTP_ADDR"), fileCfg.Server.Addr, ":8000")
 	cfg.Database.DSN = coalesce(cfg.Database.DSN, os.Getenv("DATABASE_DSN"), fileCfg.Database.DSN, ":memory:")
 	cfg.Database.Driver = coalesce(fileCfg.Database.Driver, "sqlite")
+	cfg.Database.MaxOpenConns = 4
+	if v := fileCfg.Database.MaxOpenConns; v > 0 {
+		cfg.Database.MaxOpenConns = v
+	}
+	if v, err := strconv.Atoi(strings.TrimSpace(os.Getenv("DATABASE_MAX_OPEN_CONNS"))); err == nil && v > 0 {
+		cfg.Database.MaxOpenConns = v
+	}
 	cfg.TCP.SMTP.Addr = coalesce(cfg.TCP.SMTP.Addr, os.Getenv("SMTP_ADDR"), fileCfg.TCP.SMTP.Addr, ":1025")
 	cfg.TCP.Monolog.Addr = coalesce(cfg.TCP.Monolog.Addr, os.Getenv("MONOLOG_ADDR"), fileCfg.TCP.Monolog.Addr, ":9913")
 	cfg.TCP.VarDumper.Addr = coalesce(cfg.TCP.VarDumper.Addr, os.Getenv("VAR_DUMPER_ADDR"), fileCfg.TCP.VarDumper.Addr, ":9912")

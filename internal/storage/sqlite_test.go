@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"path/filepath"
+	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/buggregator/go-buggregator/internal/event"
@@ -243,5 +246,151 @@ func TestSQLiteStore_Pin_Unpin(t *testing.T) {
 	found, _ = store.FindByUUID(ctx, "pin-1")
 	if found.IsPinned {
 		t.Error("expected IsPinned to be false")
+	}
+}
+
+// A pool of connections must not turn concurrent writes into SQLITE_BUSY. Two
+// things make that work and both are added to the DSN by OpenPooled: a
+// busy_timeout, so a competing write waits, and _txlock=immediate, so a
+// transaction takes the write lock upfront instead of failing on the upgrade
+// (a deferred transaction that starts as a reader gets SQLITE_BUSY immediately,
+// without waiting out the timeout).
+func TestOpenPooled_ConcurrentWritesAndReads(t *testing.T) {
+	dsn := "file:" + filepath.Join(t.TempDir(), "pool.db") + "?_pragma=journal_mode(WAL)"
+	db, err := storage.OpenPooled(dsn, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	if _, err := db.Exec(`CREATE TABLE events (
+		uuid TEXT PRIMARY KEY, type TEXT NOT NULL, payload TEXT NOT NULL,
+		timestamp TEXT NOT NULL, project TEXT, is_pinned INTEGER NOT NULL DEFAULT 0
+	)`); err != nil {
+		t.Fatal(err)
+	}
+
+	store := storage.NewSQLiteStore(db)
+	ctx := context.Background()
+
+	const writers, perWriter = 4, 25
+	errs := make(chan error, writers*perWriter)
+	var wg sync.WaitGroup
+
+	for w := 0; w < writers; w++ {
+		wg.Add(1)
+		go func(w int) {
+			defer wg.Done()
+			for i := 0; i < perWriter; i++ {
+				uuid := "w" + strconv.Itoa(w) + "-" + strconv.Itoa(i)
+				if err := store.Store(ctx, makeEvent(uuid, "sentry", "default")); err != nil {
+					errs <- err
+					return
+				}
+				// A reader running against the same pool while writes are in flight.
+				if _, err := store.FindAll(ctx, event.FindOptions{Project: "default", Limit: 10}); err != nil {
+					errs <- err
+					return
+				}
+			}
+		}(w)
+	}
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Fatalf("concurrent access failed: %v", err)
+	}
+
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM events`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != writers*perWriter {
+		t.Fatalf("stored %d events, want %d", count, writers*perWriter)
+	}
+}
+
+// A caller that asks for one connection (or a nonsensical number) keeps the
+// historical behaviour and an untouched DSN.
+func TestOpenPooled_SingleConnection(t *testing.T) {
+	for _, maxOpen := range []int{0, 1} {
+		db, err := storage.OpenPooled(":memory:", maxOpen)
+		if err != nil {
+			t.Fatalf("maxOpen=%d: %v", maxOpen, err)
+		}
+		if got := db.Stats().MaxOpenConnections; got != 1 {
+			t.Errorf("maxOpen=%d: MaxOpenConnections = %d, want 1", maxOpen, got)
+		}
+		db.Close()
+	}
+}
+
+// In-memory databases share one cache between connections, and shared-cache
+// mode uses table locks that busy_timeout does not cover: a pool fails with
+// "database table is locked" under concurrent writes. OpenPooled must keep
+// in-memory DSNs on one connection, whatever pool size is asked for.
+func TestOpenPooled_InMemoryUsesOneConnection(t *testing.T) {
+	for _, dsn := range []string{":memory:", "file::memory:?cache=shared", "file:mem?mode=memory&cache=shared"} {
+		t.Run(dsn, func(t *testing.T) {
+			db, err := storage.OpenPooled(dsn, 4)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+
+			if got := db.Stats().MaxOpenConnections; got != 1 {
+				t.Errorf("MaxOpenConnections = %d, want 1", got)
+			}
+
+			if _, err := db.Exec(`CREATE TABLE events (
+				uuid TEXT PRIMARY KEY, type TEXT NOT NULL, payload TEXT NOT NULL,
+				timestamp TEXT NOT NULL, project TEXT, is_pinned INTEGER NOT NULL DEFAULT 0
+			)`); err != nil {
+				t.Fatal(err)
+			}
+			store := storage.NewSQLiteStore(db)
+			ctx := context.Background()
+
+			const workers, perWorker = 8, 50
+			errs := make(chan error, workers)
+			var wg sync.WaitGroup
+			for w := 0; w < workers; w++ {
+				wg.Add(1)
+				go func(w int) {
+					defer wg.Done()
+					for i := 0; i < perWorker; i++ {
+						uuid := "w" + strconv.Itoa(w) + "-" + strconv.Itoa(i)
+						tx, err := db.Begin()
+						if err != nil {
+							errs <- err
+							return
+						}
+						if _, err := tx.Exec(`INSERT INTO events (uuid, type, payload, timestamp) VALUES (?, 'tx', '{}', '0')`, "tx-"+uuid); err != nil {
+							tx.Rollback()
+							errs <- err
+							return
+						}
+						if err := tx.Commit(); err != nil {
+							errs <- err
+							return
+						}
+						if err := store.Store(ctx, makeEvent(uuid, "sentry", "default")); err != nil {
+							errs <- err
+							return
+						}
+						if _, err := store.FindAll(ctx, event.FindOptions{Project: "default", Limit: 10}); err != nil {
+							errs <- err
+							return
+						}
+					}
+				}(w)
+			}
+			wg.Wait()
+			close(errs)
+			for err := range errs {
+				t.Fatalf("concurrent access failed: %v", err)
+			}
+		})
 	}
 }
