@@ -153,3 +153,31 @@ func TestConfig_String(t *testing.T) {
 		t.Error("String() should not be empty")
 	}
 }
+
+// 0 is a real limit value (unlimited) from any source; only empty or
+// unreadable values fall through to the next source.
+func TestResolveLimit(t *testing.T) {
+	zero, ten := 0, 10
+	tests := []struct {
+		name   string
+		file   *int
+		values []string
+		want   int
+	}{
+		{"nothing set", nil, []string{"", ""}, 1000},
+		{"flag 0", &ten, []string{"0", "5"}, 0},
+		{"env 0", &ten, []string{"", "0"}, 0},
+		{"file 0", &zero, []string{"", ""}, 0},
+		{"env over file", &ten, []string{"", "7"}, 7},
+		{"flag over env", nil, []string{"3", "7"}, 3},
+		{"unreadable env", &ten, []string{"", "lots"}, 10},
+		{"negative env", nil, []string{"", "-1"}, 1000},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := *resolveLimit(1000, tt.file, tt.values...); got != tt.want {
+				t.Errorf("resolveLimit = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
