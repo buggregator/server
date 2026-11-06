@@ -1,6 +1,7 @@
 package app
 
 import (
+	"os"
 	"testing"
 )
 
@@ -151,5 +152,28 @@ func TestConfig_String(t *testing.T) {
 	s := cfg.String()
 	if s == "" {
 		t.Error("String() should not be empty")
+	}
+}
+
+func TestConfig_MocksFromYAML(t *testing.T) {
+	path := t.TempDir() + "/buggregator.yaml"
+	os.WriteFile(path, []byte(`
+mocks:
+  - method: GET
+    path: /users/{id}
+    status: 200
+    headers: { Content-Type: application/json }
+    body: '{"id": 1}'
+    delay: 150ms
+    project: shop
+`), 0o600)
+	cfg := loadConfigFile(path)
+	if len(cfg.Mocks) != 1 {
+		t.Fatalf("mocks = %+v", cfg.Mocks)
+	}
+	m := cfg.Mocks[0]
+	if m.Method != "GET" || m.Path != "/users/{id}" || m.Status != 200 || m.Headers["Content-Type"] != "application/json" ||
+		m.Body != `{"id": 1}` || m.Delay != "150ms" || m.Project != "shop" {
+		t.Errorf("mock = %+v", m)
 	}
 }

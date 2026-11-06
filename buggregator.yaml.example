@@ -82,6 +82,20 @@ modules:
 #   - event: smtp                         # Fire only on SMTP events
 #     url: https://my-app.example.com/email-hook
 
+# Mock server — requests to http://<host>:8000/mock<path> get the response of
+# the first matching rule and are captured as HTTP dumps. Rules defined here are
+# read-only in the UI and come before the rules made in the UI.
+# Path forms: /users/me (exact), /users/{id} (one segment), /files/* (the rest).
+# Unmatched requests get 404 with a JSON error and are still captured.
+# mocks:
+#   - method: GET                  # GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS or ANY (default)
+#     path: /users/{id}
+#     status: 200                  # default 200
+#     headers: { Content-Type: application/json }
+#     body: '{"id": 1, "name": "Jane"}'
+#     delay: 150ms                 # optional, at most 30s
+#     project: default             # optional; empty = every project
+
 # Pre-defined projects. The "default" project always exists.
 # Additional projects can be defined here.
 # projects:

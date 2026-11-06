@@ -98,6 +98,16 @@ func (r *Registry) Previews() *event.PreviewRegistry {
 	return r.previews
 }
 
+// RegisterProtectedRoutes lets modules that implement ProtectedRoutesRegistrar
+// add their API routes behind protect.
+func (r *Registry) RegisterProtectedRoutes(mux *http.ServeMux, protect func(http.Handler) http.Handler) {
+	for _, m := range r.modules {
+		if p, ok := m.(ProtectedRoutesRegistrar); ok {
+			p.RegisterProtectedRoutes(mux, protect)
+		}
+	}
+}
+
 // NotifyEventStored calls OnEventStored on all modules.
 func (r *Registry) NotifyEventStored(ev event.Event) {
 	for _, m := range r.modules {

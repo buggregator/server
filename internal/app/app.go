@@ -107,6 +107,9 @@ func (a *App) Run() {
 	// Register core API routes (settings endpoint is public, others go through auth middleware).
 	httpserver.RegisterAPI(mux, store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes(), authSettings, authMiddleware)
 
+	// Module API routes that need the same auth as the core API.
+	a.registry.RegisterProtectedRoutes(mux, authMiddleware)
+
 	// Register attachment API endpoints.
 	httpserver.RegisterAttachmentAPI(mux, a.db, a.attachments)
 

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/buggregator/go-buggregator/internal/app"
 	mcpserver "github.com/buggregator/go-buggregator/internal/mcp"
@@ -150,8 +151,11 @@ func main() {
 		slog.Info("webhooks registered", "count", len(whConfigs))
 	}
 
+	var httpDumpMod *httpdumps.Module
 	if enabled.IsEnabled("http-dump") {
-		registry.Register(httpdumps.New(attachments, db)) // catch-all, must be last
+		httpDumpMod = httpdumps.New(attachments, db)
+		httpDumpMod.SetMockRules(mockRules(cfg.Mocks))
+		registry.Register(httpDumpMod) // catch-all, must be last
 	}
 
 	// Build event service and inject into TCP modules.
@@ -166,7 +170,31 @@ func main() {
 		vardumperMod.SetEventService(eventService)
 	}
 	proxyMod.SetEventService(eventService)
+	if httpDumpMod != nil {
+		httpDumpMod.SetEventService(eventService)
+	}
 
 	application := app.New(cfg, db, registry, hub, store, attachments, collector)
 	application.Run()
+}
+
+// mockRules converts the mocks section of buggregator.yaml. A delay that is
+// not a duration is logged and dropped; the rest is validated by the module.
+func mockRules(defs []app.MockDef) []httpdumps.MockRule {
+	rules := make([]httpdumps.MockRule, 0, len(defs))
+	for _, d := range defs {
+		r := httpdumps.MockRule{
+			Name: d.Name, Method: d.Method, Path: d.Path, Status: d.Status,
+			Headers: d.Headers, Body: d.Body, Project: d.Project,
+		}
+		if d.Delay != "" {
+			if delay, err := time.ParseDuration(d.Delay); err == nil {
+				r.DelayMs = int(delay / time.Millisecond)
+			} else {
+				slog.Warn("mock: delay is not a duration, ignored", "path", d.Path, "delay", d.Delay)
+			}
+		}
+		rules = append(rules, r)
+	}
+	return rules
 }
