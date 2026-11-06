@@ -541,3 +541,85 @@ func TestMockServer_HeadStoresNoBody(t *testing.T) {
 		}
 	}
 }
+
+// A rule's cookie stays inside /mock/: it cannot set or shadow a cookie of the
+// Buggregator UI.
+func TestMockServer_SetCookieScoped(t *testing.T) {
+	env := newMockEnv(t, nil)
+	env.create(t, `{"path":"/login","headers":{"Set-Cookie":"sid=1; Path=/; Domain=example.com; HttpOnly"}}`)
+	env.create(t, `{"path":"/nopath","headers":{"set-cookie":"a=b"}}`)
+	env.create(t, `{"path":"/bad","headers":{"Set-Cookie":"=; ;"}}`)
+
+	tests := []struct{ path, want string }{
+		{"/mock/login", "sid=1; Path=/mock/; HttpOnly"},
+		{"/mock/nopath", "a=b; Path=/mock/"},
+		{"/mock/bad", ""},
+	}
+	for _, tt := range tests {
+		w := env.do(t, "GET", tt.path, "", nil)
+		if got := strings.Join(w.Header().Values("Set-Cookie"), " | "); got != tt.want {
+			t.Errorf("%s: Set-Cookie %q, want %q", tt.path, got, tt.want)
+		}
+	}
+}
+
+// With CORS on, preflights under /mock/ reach the mock server: an OPTIONS rule
+// answers them; without one the preflight still gets 204 with CORS headers.
+// Other paths keep the middleware's own 204.
+func TestMockServer_CORSPreflight(t *testing.T) {
+	env := newMockEnv(t, nil)
+	env.create(t, `{"method":"OPTIONS","path":"/cors","status":200,"headers":{"Access-Control-Allow-Headers":"X-Custom"},"body":"rule"}`)
+	h := serverhttp.CORSMiddleware(env.mux, []string{"*"}, "/mock/")
+
+	preflight := func(path string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest("OPTIONS", path, nil)
+		r.Header.Set("Origin", "http://app.test")
+		r.Header.Set("Access-Control-Request-Method", "POST")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w
+	}
+
+	w := preflight("/mock/cors")
+	if w.Code != 200 || w.Body.String() != "rule" || w.Header().Get("Access-Control-Allow-Headers") != "X-Custom" {
+		t.Errorf("rule preflight: %d %q headers %v", w.Code, w.Body.String(), w.Header())
+	}
+	w = preflight("/mock/none")
+	if w.Code != http.StatusNoContent || w.Header().Get("Access-Control-Allow-Origin") != "*" {
+		t.Errorf("unmatched preflight: %d ACAO %q", w.Code, w.Header().Get("Access-Control-Allow-Origin"))
+	}
+	if got := len(env.requests(t, "")); got != 2 {
+		t.Errorf("captured %d preflights, want 2", got)
+	}
+	if w = preflight("/api/events"); w.Code != http.StatusNoContent || len(env.pipeline) != 0 {
+		t.Errorf("API preflight: %d, pipeline %v", w.Code, env.pipeline)
+	}
+
+	// A plain OPTIONS without a rule is still a 404 from the mock server.
+	if w := env.do(t, "OPTIONS", "/mock/none", "", nil); w.Code != http.StatusNotFound {
+		t.Errorf("plain OPTIONS: %d, want 404", w.Code)
+	}
+}
+
+// /api/mocks/requests reads the partial index, not every http-dump payload.
+func TestListMockRequests_UsesIndex(t *testing.T) {
+	env := newMockEnv(t, nil)
+	for _, tt := range []struct{ project, rule string }{{"", ""}, {"shop", ""}, {"", "r1"}} {
+		query, args := mockRequestsQuery(tt.project, tt.rule, 10)
+		rows, err := env.mod.db.Query("EXPLAIN QUERY PLAN "+query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var plan []string
+		for rows.Next() {
+			var id, parent, notused int
+			var detail string
+			rows.Scan(&id, &parent, &notused, &detail)
+			plan = append(plan, detail)
+		}
+		rows.Close()
+		if p := strings.Join(plan, "; "); !strings.Contains(p, "idx_events_mock_requests") {
+			t.Errorf("project %q rule %q: plan %q does not use idx_events_mock_requests", tt.project, tt.rule, p)
+		}
+	}
+}
