@@ -18,6 +18,7 @@ import (
 
 	"github.com/buggregator/go-buggregator/internal/event"
 	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/emersion/go-sasl"
 	gosmtp "github.com/emersion/go-smtp"
 	"golang.org/x/text/encoding/ianaindex"
 )
@@ -79,17 +80,67 @@ type session struct {
 	project string // extracted from SMTP AUTH username
 }
 
-func (s *session) AuthPlain(username, password string) error {
-	if username != "" {
-		// Support "project@host" or plain "project" as the mailbox identifier.
-		if idx := strings.Index(username, "@"); idx > 0 {
-			s.project = username[:idx]
-		} else {
-			s.project = username
-		}
-	}
-	return nil
+// AuthMechanisms implements gosmtp.AuthSession. go-smtp v0.24 only offers
+// AUTH through this interface; the username selects the project (#343).
+func (s *session) AuthMechanisms() []string {
+	return []string{sasl.Plain, sasl.Login}
 }
+
+// Auth implements gosmtp.AuthSession. Any credentials are accepted.
+func (s *session) Auth(mech string) (sasl.Server, error) {
+	switch mech {
+	case sasl.Plain:
+		return sasl.NewPlainServer(func(identity, username, password string) error {
+			s.setProject(username)
+			return nil
+		}), nil
+	case sasl.Login:
+		return &loginServer{auth: func(username, password string) error {
+			s.setProject(username)
+			return nil
+		}}, nil
+	}
+	return nil, gosmtp.ErrAuthUnknownMechanism
+}
+
+// setProject takes the project key from an AUTH username:
+// "project@host" or plain "project".
+func (s *session) setProject(username string) {
+	if idx := strings.Index(username, "@"); idx > 0 {
+		username = username[:idx]
+	}
+	s.project = username
+}
+
+// loginServer is a server side of the LOGIN mechanism, which go-sasl only
+// implements for clients.
+type loginServer struct {
+	auth     func(username, password string) error
+	username string
+	step     int
+}
+
+func (l *loginServer) Next(response []byte) (challenge []byte, done bool, err error) {
+	switch l.step {
+	case 0:
+		l.step++
+		if len(response) == 0 { // no initial response
+			return []byte("Username:"), false, nil
+		}
+		l.username = string(response)
+		l.step++
+		return []byte("Password:"), false, nil
+	case 1:
+		l.username = string(response)
+		l.step++
+		return []byte("Password:"), false, nil
+	case 2:
+		l.step++
+		return nil, true, l.auth(l.username, string(response))
+	}
+	return nil, true, sasl.ErrUnexpectedClientResponse
+}
+
 func (s *session) Mail(from string, opts *gosmtp.MailOptions) error {
 	s.from = from
 	return nil
@@ -159,7 +210,8 @@ func (s *session) Data(r io.Reader) error {
 	return nil
 }
 
-func (s *session) Reset()        { s.from = ""; s.to = nil; s.project = "" }
+// Reset runs after every message; AUTH is per connection, so the project stays.
+func (s *session) Reset()        { s.from = ""; s.to = nil }
 func (s *session) Logout() error { return nil }
 
 // EmailAddress represents an email address.
