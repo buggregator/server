@@ -22,9 +22,16 @@ func handleLogsList(db *sql.DB) http.HandlerFunc {
 		var conditions []string
 		var args []any
 
-		if v := q.Get("level"); v != "" {
-			conditions = append(conditions, "l.level = ?")
-			args = append(args, v)
+		// One level or several, comma-separated: "warn,warning".
+		var levels []any
+		for _, level := range strings.Split(q.Get("level"), ",") {
+			if level = strings.TrimSpace(level); level != "" {
+				levels = append(levels, level)
+			}
+		}
+		if len(levels) > 0 {
+			conditions = append(conditions, "l.level IN (?"+strings.Repeat(", ?", len(levels)-1)+")")
+			args = append(args, levels...)
 		}
 		if v := q.Get("trace_id"); v != "" {
 			conditions = append(conditions, "l.trace_id = ?")
@@ -36,7 +43,7 @@ func handleLogsList(db *sql.DB) http.HandlerFunc {
 			where = " WHERE " + strings.Join(conditions, " AND ")
 		}
 
-		query += where + " ORDER BY l.log_ts DESC LIMIT ? OFFSET ?"
+		query += where + " ORDER BY l.log_ts DESC, l.rowid DESC LIMIT ? OFFSET ?"
 		countQuery += where
 
 		var total int

@@ -132,15 +132,17 @@ func labelForNode(address, opType string) string {
 
 func handleCounts(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var exceptions, traces, logs int
+		var exceptions, traces, logs, metrics int
 		db.QueryRow(`SELECT COUNT(*) FROM sentry_error_events`).Scan(&exceptions)
 		db.QueryRow(`SELECT COUNT(*) FROM sentry_traces`).Scan(&traces)
 		db.QueryRow(`SELECT COUNT(*) FROM sentry_logs`).Scan(&logs)
+		db.QueryRow(`SELECT COUNT(*) FROM sentry_metrics`).Scan(&metrics)
 
 		apiJSON(w, map[string]any{
 			"exceptions": exceptions,
 			"traces":     traces,
 			"logs":       logs,
+			"metrics":    metrics,
 		})
 	}
 }

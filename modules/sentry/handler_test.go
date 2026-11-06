@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 func TestHandler_Priority(t *testing.T) {
@@ -152,6 +154,39 @@ func TestDecompress(t *testing.T) {
 		}
 	})
 
+	// sentry-php sends Content-Encoding: zstd by default since 4.x. Without zstd
+	// support the body stays compressed, fails to parse as an envelope and the
+	// event is dropped silently — the request still answers 200.
+	t.Run("zstd with header", func(t *testing.T) {
+		var buf bytes.Buffer
+		w, err := zstd.NewWriter(&buf)
+		if err != nil {
+			t.Fatalf("zstd writer: %v", err)
+		}
+		w.Write([]byte("zstd payload"))
+		w.Close()
+
+		got := decompress(buf.Bytes(), "zstd")
+		if string(got) != "zstd payload" {
+			t.Errorf("got %q, want %q", got, "zstd payload")
+		}
+	})
+
+	t.Run("zstd auto-detect by magic bytes", func(t *testing.T) {
+		var buf bytes.Buffer
+		w, err := zstd.NewWriter(&buf)
+		if err != nil {
+			t.Fatalf("zstd writer: %v", err)
+		}
+		w.Write([]byte("zstd auto-detected"))
+		w.Close()
+
+		got := decompress(buf.Bytes(), "")
+		if string(got) != "zstd auto-detected" {
+			t.Errorf("got %q, want %q", got, "zstd auto-detected")
+		}
+	})
+
 	t.Run("empty data", func(t *testing.T) {
 		got := decompress([]byte{}, "gzip")
 		if len(got) != 0 {
@@ -258,6 +293,45 @@ not valid json`)
 		// but there's nothing to store in the canonical events table.
 		if inc != nil {
 			t.Errorf("expected nil incoming for invalid payload, got %+v", inc)
+		}
+	})
+}
+
+// traceMetricEnvelope is a "trace_metric" envelope as the Sentry PHP SDK 4.x sends it.
+const traceMetricEnvelope = `{"event_id":"metric-envelope","sent_at":"2026-10-16T10:00:00Z"}
+{"type":"trace_metric","item_count":2,"content_type":"application/vnd.sentry.items.trace-metric+json"}
+{"items":[{"timestamp":1788420877.523564,"trace_id":"53c16245360049e1a0cd3041dede1ec7","span_id":"9ada5f708f96d465","name":"order.status","value":3,"unit":null,"type":"gauge","attributes":{"status":{"type":"string","value":"qa"}}},{"timestamp":1788420877.6,"trace_id":"53c16245360049e1a0cd3041dede1ec7","span_id":"9ada5f708f96d465","name":"http.client.duration","value":12.5,"unit":"millisecond","type":"distribution","attributes":{"server.address":{"type":"string","value":"api"}}}]}
+`
+
+func TestHandleEnvelope_TraceMetrics(t *testing.T) {
+	t.Run("stored, not turned into a feed event", func(t *testing.T) {
+		db := setupTestDB(t)
+		h := &handler{db: db}
+
+		inc, err := h.handleEnvelope([]byte(traceMetricEnvelope), "proj")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if inc != nil {
+			t.Errorf("expected no feed event for a metrics-only envelope, got %+v", inc)
+		}
+
+		var count int
+		db.QueryRow(`SELECT COUNT(*) FROM sentry_metrics`).Scan(&count)
+		if count != 2 {
+			t.Errorf("metric count = %d, want 2", count)
+		}
+	})
+
+	t.Run("dropped without a database", func(t *testing.T) {
+		h := &handler{}
+
+		inc, err := h.handleEnvelope([]byte(traceMetricEnvelope), "proj")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if inc != nil {
+			t.Errorf("expected no feed event for a metrics-only envelope, got %+v", inc)
 		}
 	})
 }

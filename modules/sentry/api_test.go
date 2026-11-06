@@ -2,6 +2,7 @@ package sentry
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -64,6 +65,13 @@ func seedTestData(t *testing.T, mux *http.ServeMux) {
 		{TraceID: "trace-abc", Level: "info", Body: "Request started", SeverityNumber: 9},
 		{TraceID: "trace-abc", Level: "warning", Body: "Slow query", SeverityNumber: 13},
 		{Level: "error", Body: "Connection refused", SeverityNumber: 17},
+	})
+
+	// Insert metrics.
+	storeMetrics(db, []MetricRecord{
+		{TraceID: "trace-abc", Name: "http.client.duration", Type: "distribution", Value: 12.5, Unit: "millisecond", Timestamp: "1678272501"},
+		{TraceID: "trace-abc", Name: "http.client.duration", Type: "distribution", Value: 40, Unit: "millisecond", Timestamp: "1678272502"},
+		{Name: "order.status", Type: "gauge", Value: 3, Timestamp: "1678272503"},
 	})
 }
 
@@ -384,6 +392,68 @@ func TestAPILogsFilterByTraceID(t *testing.T) {
 	}
 }
 
+func TestAPIMetricsList(t *testing.T) {
+	mux := http.NewServeMux()
+	seedTestData(t, mux)
+
+	req := httptest.NewRequest("GET", "/api/sentry/metrics", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+
+	var resp map[string]any
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	data := resp["data"].([]any)
+	if len(data) != 3 {
+		t.Fatalf("data length = %d, want 3", len(data))
+	}
+
+	newest := data[0].(map[string]any)
+	if newest["name"] != "order.status" || newest["type"] != "gauge" || newest["value"] != 3.0 {
+		t.Errorf("newest metric = %v, want the order.status gauge", newest)
+	}
+}
+
+func TestAPIMetricsFilter(t *testing.T) {
+	mux := http.NewServeMux()
+	seedTestData(t, mux)
+
+	tests := []struct {
+		query string
+		want  int
+	}{
+		{"name=http.client.duration", 2},
+		{"type=gauge", 1},
+		{"trace_id=trace-abc", 2},
+		{"name=http.client.duration&type=gauge", 0},
+		{"search=client", 2},
+		{"search=CLIENT.dur", 2},
+		{"search=order", 1},
+		{"search=%25", 0},
+		{"search=http_client", 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.query, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/api/sentry/metrics?"+tt.query, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			var resp map[string]any
+			json.Unmarshal(w.Body.Bytes(), &resp)
+
+			data := resp["data"].([]any)
+			if len(data) != tt.want {
+				t.Errorf("data length = %d, want %d", len(data), tt.want)
+			}
+		})
+	}
+}
+
 func TestAPIServiceMap(t *testing.T) {
 	mux := http.NewServeMux()
 	seedTestData(t, mux)
@@ -435,6 +505,9 @@ func TestAPICounts(t *testing.T) {
 	if int(resp["logs"].(float64)) != 3 {
 		t.Errorf("logs = %v, want 3", resp["logs"])
 	}
+	if int(resp["metrics"].(float64)) != 3 {
+		t.Errorf("metrics = %v, want 3", resp["metrics"])
+	}
 }
 
 func TestAPIEmptyDatabase(t *testing.T) {
@@ -459,6 +532,99 @@ func TestAPIEmptyDatabase(t *testing.T) {
 
 			if w.Code != 200 {
 				t.Fatalf("status = %d, want 200 for %s", w.Code, ep)
+			}
+		})
+	}
+}
+
+// pagedField fetches the given URL, which has a query already, page by page, one row each, and returns the field of every row.
+func pagedField(t *testing.T, mux *http.ServeMux, url, field string, pages int) []string {
+	t.Helper()
+	var got []string
+	for page := 1; page <= pages; page++ {
+		req := httptest.NewRequest("GET", fmt.Sprintf("%s&limit=1&page=%d", url, page), nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		var resp map[string]any
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		for _, row := range resp["data"].([]any) {
+			got = append(got, row.(map[string]any)[field].(string))
+		}
+	}
+	return got
+}
+
+// With a filter SQLite sorts instead of walking the timestamp index backwards, and
+// rows of the same timestamp came in insertion order, so pages could repeat or skip rows.
+func TestAPIMetricsSameTimestampNewestFirst(t *testing.T) {
+	db := setupTestDB(t)
+	mux := http.NewServeMux()
+	registerAPI(mux, db)
+
+	storeMetrics(db, []MetricRecord{
+		{Name: "first", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: "1678272501"},
+		{Name: "second", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: "1678272501"},
+		{Name: "third", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: "1678272501"},
+	})
+
+	// trace_id makes SQLite use its index and sort; without the rowid
+	// tie-breaker the rows come back in insertion order.
+	got := pagedField(t, mux, "/api/sentry/metrics?trace_id=trace-abc", "name", 3)
+	want := []string{"third", "second", "first"}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("pages = %v, want %v", got, want)
+	}
+}
+
+func TestAPILogsSameTimestampNewestFirst(t *testing.T) {
+	db := setupTestDB(t)
+	mux := http.NewServeMux()
+	registerAPI(mux, db)
+
+	var logs []LogRecord
+	json.Unmarshal([]byte(`[
+		{"trace_id": "trace-abc", "level": "info", "body": "first", "timestamp": 1678272501},
+		{"trace_id": "trace-abc", "level": "info", "body": "second", "timestamp": 1678272501},
+		{"trace_id": "trace-abc", "level": "info", "body": "third", "timestamp": 1678272501}
+	]`), &logs)
+	storeLogs(db, logs)
+
+	got := pagedField(t, mux, "/api/sentry/logs?trace_id=trace-abc", "body", 3)
+	want := []string{"third", "second", "first"}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("pages = %v, want %v", got, want)
+	}
+}
+
+func TestAPILogsFilterByLevels(t *testing.T) {
+	mux := http.NewServeMux()
+	seedTestData(t, mux)
+
+	tests := []struct {
+		query string
+		want  int
+	}{
+		{"level=info", 1},
+		{"level=warning,error", 2},
+		{"level=warn,warning", 1},
+		{"level=warn,%20warning", 1},
+		{"level=info,,%20", 1},
+		{"level=fatal", 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.query, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/api/sentry/logs?"+tt.query, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			var resp map[string]any
+			json.Unmarshal(w.Body.Bytes(), &resp)
+
+			data := resp["data"].([]any)
+			if len(data) != tt.want {
+				t.Errorf("data length = %d, want %d", len(data), tt.want)
 			}
 		})
 	}
