@@ -19,12 +19,14 @@ type Proxy struct {
 	initTimeout    time.Duration
 	commandTimeout time.Duration
 
-	tombstoneTTL time.Duration
-	readTarget   bool // read $_SERVER at the first break for the session title
+	tombstoneTTL  time.Duration
+	maxTombstones int  // newest tombstones kept; older ones are dropped
+	readTarget    bool // read $_SERVER at the first break for the session title
 
 	mu       sync.Mutex
 	nextID   int
 	sessions map[string]*Session // live sessions and tombstones
+	tombs    []string            // tombstone ids, oldest first
 
 	// notify receives session.* and agent.* events for the UI; must not block.
 	notify func(event string, payload any)
@@ -37,6 +39,7 @@ func NewProxy(ideAddr string) *Proxy {
 		initTimeout:    10 * time.Second,
 		commandTimeout: 10 * time.Second,
 		tombstoneTTL:   10 * time.Minute,
+		maxTombstones:  50,
 		readTarget:     true,
 		sessions:       map[string]*Session{},
 	}
@@ -62,15 +65,34 @@ func (p *Proxy) register(s *Session) {
 	p.emit("session.created", s.Info())
 }
 
-// bury keeps a closed session as a tombstone until the TTL ends or it is dismissed.
+// bury keeps a closed session as a tombstone until the TTL ends or it is
+// dismissed. Only the newest maxTombstones are kept: with
+// start_with_request=yes and no IDE every request leaves one.
 func (p *Proxy) bury(s *Session) {
+	p.mu.Lock()
+	p.tombs = append(p.tombs, s.ID)
+	for len(p.tombs) > p.maxTombstones {
+		p.forgetLocked(p.tombs[0])
+	}
+	p.mu.Unlock()
 	time.AfterFunc(p.tombstoneTTL, func() {
 		p.mu.Lock()
 		if p.sessions[s.ID] == s {
-			delete(p.sessions, s.ID)
+			p.forgetLocked(s.ID)
 		}
 		p.mu.Unlock()
 	})
+}
+
+// forgetLocked drops a tombstone. Caller holds p.mu.
+func (p *Proxy) forgetLocked(id string) {
+	delete(p.sessions, id)
+	for i, t := range p.tombs {
+		if t == id {
+			p.tombs = append(p.tombs[:i], p.tombs[i+1:]...)
+			break
+		}
+	}
 }
 
 // Dismiss removes a tombstone. A live session is never touched.
@@ -84,7 +106,7 @@ func (p *Proxy) Dismiss(id string) error {
 	if !s.Closed() {
 		return errSessionLive
 	}
-	delete(p.sessions, id)
+	p.forgetLocked(id)
 	return nil
 }
 

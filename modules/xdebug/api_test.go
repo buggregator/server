@@ -137,7 +137,19 @@ func newAPIHarness(t *testing.T, allowEval bool) *apiHarness {
 
 func (a *apiHarness) do(t *testing.T, method, path, body string) (int, string) {
 	t.Helper()
+	ctype := ""
+	if body != "" {
+		ctype = "application/json"
+	}
+	return a.doType(t, method, path, ctype, body)
+}
+
+func (a *apiHarness) doType(t *testing.T, method, path, ctype, body string) (int, string) {
+	t.Helper()
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	if ctype != "" {
+		req.Header.Set("Content-Type", ctype)
+	}
 	rr := httptest.NewRecorder()
 	a.mux.ServeHTTP(rr, req)
 	return rr.Code, rr.Body.String()
@@ -238,6 +250,27 @@ func TestAPI_EvalWhenAllowed(t *testing.T) {
 	}
 	if code, _ := a.do(t, "POST", base+"/eval", `{}`); code != 400 {
 		t.Fatalf("empty eval: %d", code)
+	}
+}
+
+func TestAPI_EvalRefusesNonJSONContentType(t *testing.T) {
+	a := newAPIHarness(t, true)
+	e, d, s := a.connect(t)
+	pause(t, e, d, "1")
+	eng := &countingEngine{}
+	go eng.serve(t, e)
+
+	path := "/api/xdebug/sessions/" + s.ID + "/eval"
+	for _, ctype := range []string{"", "text/plain", "application/x-www-form-urlencoded", "multipart/form-data; boundary=x"} {
+		if code, body := a.doType(t, "POST", path, ctype, `{"expression":"3+4"}`); code != 415 || !strings.Contains(body, `"code":"unsupported_media_type"`) {
+			t.Fatalf("Content-Type %q: %d %s", ctype, code, body)
+		}
+	}
+	if n := eng.count("eval "); n != 0 {
+		t.Fatalf("eval reached the engine %d times, want 0", n)
+	}
+	if code, body := a.doType(t, "POST", path, "application/json; charset=utf-8", `{"expression":"3+4"}`); code != 200 || !strings.Contains(body, `"value":"7"`) {
+		t.Fatalf("json eval: %d %s", code, body)
 	}
 }
 
@@ -365,6 +398,33 @@ func TestTombstoneExpires(t *testing.T) {
 	e.conn.Close()
 	waitFor(t, "close", s.Closed)
 	waitFor(t, "tombstone expiry", func() bool { return len(h.proxy.Sessions()) == 0 })
+}
+
+func TestTombstonesAreCapped(t *testing.T) {
+	h := newHarness(t)
+	h.proxy.maxTombstones = 2
+	var ids []string
+	for i := 0; i < 3; i++ {
+		e, _, s := h.connect(t)
+		e.conn.Close()
+		waitFor(t, "close", s.Closed)
+		ids = append(ids, s.ID)
+	}
+	waitFor(t, "oldest tombstone dropped", func() bool { return len(h.proxy.Sessions()) == 2 })
+	for _, info := range h.proxy.Sessions() {
+		if info.ID == ids[0] {
+			t.Fatalf("oldest tombstone %s still kept", ids[0])
+		}
+	}
+	if err := h.proxy.Dismiss(ids[1]); err != nil {
+		t.Fatalf("dismiss: %v", err)
+	}
+	h.proxy.mu.Lock()
+	n := len(h.proxy.tombs)
+	h.proxy.mu.Unlock()
+	if n != 1 {
+		t.Fatalf("tombs = %d after dismiss, want 1", n)
+	}
 }
 
 func TestTargetIsReadAtFirstBreak(t *testing.T) {

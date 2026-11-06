@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"mime"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
 // HTTP API for the Xdebug page. Read-only: every DBGp read goes through the
-// session's command queue and allow-list, tagged origin "ui" (not in the
-// agent log) and cached per pause.
+// session's command queue and allow-list; UI reads are not written to the
+// agent log and are cached per pause.
 
 type apiError struct {
 	Code  string `json:"code"`
@@ -280,6 +281,12 @@ func (m *Module) handleBreakpoints(w http.ResponseWriter, r *http.Request, s *Se
 func (m *Module) handleEval(w http.ResponseWriter, r *http.Request, s *Session) {
 	if !m.cfg.AllowEval {
 		writeErr(w, http.StatusForbidden, "eval_disabled", errors.New("eval is off (xdebug.allow_eval)"))
+		return
+	}
+	// Only application/json: a cross-site form or text/plain POST needs no
+	// CORS preflight, so it must not reach eval when auth is off.
+	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
+		writeErr(w, http.StatusUnsupportedMediaType, "unsupported_media_type", errors.New("Content-Type must be application/json"))
 		return
 	}
 	var body struct {
