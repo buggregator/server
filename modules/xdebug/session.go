@@ -21,6 +21,7 @@ var (
 	errCommandTimeout = errors.New("timed out waiting for Xdebug")
 	errNoSession      = errors.New("no such xdebug session")
 	errSessionLive    = errors.New("session is live: only a closed session can be dismissed")
+	errIDEAttached    = errors.New("an IDE drives this session: step and continue in the IDE")
 )
 
 // continuations resume the script: after one is sent the engine is running.
@@ -39,9 +40,16 @@ type pending struct {
 	ideTID string      // origin IDE: the IDE's own transaction id
 	reply  chan []byte // origin agent
 	cont   bool        // a continuation: its reply carries the engine's new status
+	own    bool        // sent by Buggregator itself (standalone driver): the reply goes nowhere
 }
 
-// Session is one Xdebug connection proxied to the IDE.
+// Who drives a session: the IDE (relay) or Buggregator (standalone).
+const (
+	DriverIDE  = "ide"
+	DriverHere = "here"
+)
+
+// Session is one Xdebug connection, relayed to the IDE or driven here.
 type Session struct {
 	ID        string
 	IDEKey    string
@@ -79,6 +87,17 @@ type Session struct {
 	agentCalls   int
 	agentLog     []AgentCall // ring, newest last
 	notify       func(event string, payload any)
+
+	driver       string // DriverIDE or DriverHere, fixed before the session is registered
+	lastContBy   string // "ui" or "agent": who sent the last continuation here
+	lastContName string // the agent's name when lastContBy is "agent"
+	detaching    bool   // Buggregator sent detach: the script runs on without a debugger
+	idleReason   bool   // the detach came from the idle guard
+
+	idleTimeout  time.Duration // standalone: release a paused session after this long without a command; 0 = never
+	idleDeadline time.Time     // zero unless paused here
+	idleSent     time.Time     // deadline last announced in session.idle
+	idleTimer    *time.Timer
 }
 
 // Close reasons of a session (tombstone).
@@ -87,6 +106,8 @@ const (
 	ReasonIDEClosed      = "ide_closed"
 	ReasonEngineClosed   = "engine_closed"
 	ReasonStopped        = "stopped"
+	ReasonDetached       = "detached"      // released from the UI or by an agent: the script ran on
+	ReasonIdleDetached   = "idle_detached" // paused with no command for idle_timeout: released
 )
 
 const agentLogSize = 200
@@ -109,6 +130,11 @@ type Info struct {
 	AgentCalls   int        `json:"agent_calls"`
 	ClosedReason string     `json:"closed_reason,omitempty"`
 	ClosedAt     *time.Time `json:"closed_at,omitempty"`
+
+	Driver             string     `json:"driver"`                            // ide or here
+	LastContinuationBy *string    `json:"last_continuation_by"`              // ui, agent or null
+	LastContinuationAg string     `json:"last_continuation_agent,omitempty"` // the agent's name
+	IdleDeadline       *time.Time `json:"idle_deadline"`                     // when a paused session here is released; null otherwise
 }
 
 func (s *Session) Info() Info {
@@ -122,7 +148,8 @@ func (s *Session) infoLocked() Info {
 		ID: s.ID, IDEKey: s.IDEKey, State: s.stateLocked(), Kind: s.kind, Target: s.target,
 		EntryFile: s.FileURI, Language: s.Language, Engine: s.Engine, IDEConnected: s.ideConnected,
 		LastFile: s.file, LastLine: s.line, StartedAt: s.StartedAt, AgentCalls: s.agentCalls,
-		ClosedReason: s.closeReason,
+		ClosedReason: s.closeReason, Driver: s.driver, LastContinuationBy: s.lastContByLocked(),
+		LastContinuationAg: s.lastContName, IdleDeadline: s.idleDeadlineLocked(),
 	}
 	if !s.pausedAt.IsZero() {
 		t := s.pausedAt
@@ -138,7 +165,8 @@ func (s *Session) infoLocked() Info {
 // stateLocked is the state shown to clients. Caller holds mu.
 func (s *Session) stateLocked() string {
 	if s.closed {
-		if s.closeReason == ReasonIDEUnreachable || s.closeReason == ReasonIDEClosed {
+		switch s.closeReason {
+		case ReasonIDEUnreachable, ReasonIDEClosed, ReasonDetached, ReasonIdleDetached:
 			return "detached"
 		}
 		return "stopped"
@@ -148,7 +176,11 @@ func (s *Session) stateLocked() string {
 
 // statusEvent is the payload of session.status. Caller holds mu.
 func (s *Session) statusEventLocked() map[string]any {
-	return map[string]any{"id": s.ID, "state": s.stateLocked(), "file": s.file, "line": s.line, "kind": s.kind, "target": s.target, "pause_seq": s.pauseSeq}
+	return map[string]any{
+		"id": s.ID, "state": s.stateLocked(), "file": s.file, "line": s.line, "kind": s.kind, "target": s.target, "pause_seq": s.pauseSeq,
+		"driver": s.driver, "last_continuation_by": s.lastContByLocked(), "last_continuation_agent": s.lastContName,
+		"idle_deadline": s.idleDeadlineLocked(),
+	}
 }
 
 func (s *Session) emit(event string, payload any) {
@@ -271,6 +303,7 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 		if found && p.cont {
 			s.conts--
 		}
+		prevStatus := s.status
 		// While a continuation is in flight the engine is running: a late reply
 		// to an earlier command (e.g. status) or to an earlier continuation must
 		// not report it paused again. conts is already decremented for this
@@ -290,6 +323,7 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 					s.pauseSeq++
 					s.pausedAt = time.Now()
 					resolve = !s.targetDone
+					s.armIdleLocked()
 				}
 			}
 			// A read or eval reply during a pause repeats status="break": no
@@ -305,10 +339,12 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 		if resolve {
 			go s.resolveTarget()
 		}
+		s.afterReply(prevStatus)
 
 		switch {
 		case !found:
 			slog.Debug("xdebug: response for unknown transaction dropped", "session", s.ID, "tid", rt.TransactionID)
+		case p.own:
 		case p.reply != nil:
 			p.reply <- body // buffered; never reaches the IDE
 		default:
@@ -332,6 +368,7 @@ func (s *Session) Command(name, args string, data []byte) ([]byte, error) {
 	}
 	t := time.NewTimer(s.timeout)
 	defer t.Stop()
+	s.touch()
 	select {
 	case s.agentSem <- struct{}{}:
 		defer func() { <-s.agentSem }()
@@ -406,8 +443,12 @@ func (s *Session) writeEngineLocked(line string) error {
 	return err
 }
 
-// writeIDE is called only from forwardEngine, the IDE connection's single writer.
+// writeIDE is called only from forwardEngine, the IDE connection's single
+// writer. A session driven here has no IDE: the packet is dropped.
 func (s *Session) writeIDE(body []byte) error {
+	if s.ide == nil {
+		return nil
+	}
 	_, err := s.ide.Write(encodePacket(body))
 	return err
 }
@@ -432,9 +473,15 @@ func (s *Session) close(reason string) {
 		s.mu.Unlock()
 		return
 	}
-	if reason == ReasonEngineClosed && (s.status == "stopping" || s.status == "stopped") {
+	switch {
+	case reason == ReasonEngineClosed && s.idleReason:
+		reason = ReasonIdleDetached
+	case reason == ReasonEngineClosed && s.detaching:
+		reason = ReasonDetached
+	case reason == ReasonEngineClosed && (s.status == "stopping" || s.status == "stopped"):
 		reason = ReasonStopped
 	}
+	s.stopIdleLocked()
 	s.closed = true
 	s.closeReason = reason
 	s.closedAt = time.Now()

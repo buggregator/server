@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -82,12 +83,17 @@ type MCPConfig struct {
 func (c MCPConfig) MockWriteOn() bool { return c.MockWrite == nil || *c.MockWrite }
 
 // XdebugConfig controls the Xdebug (DBGp) proxy: Xdebug → Buggregator → IDE,
-// with read-only MCP tools on the same paused session.
+// or Buggregator drives the session itself when there is no IDE.
 type XdebugConfig struct {
-	Enabled   bool   `yaml:"enabled"`    // Enable the proxy (default: false).
-	Addr      string `yaml:"addr"`       // Where Xdebug connects. Default: 127.0.0.1:9003
-	IDEAddr   string `yaml:"ide_addr"`   // Where the IDE listens. Default: 127.0.0.1:9004
-	AllowEval bool   `yaml:"allow_eval"` // Expose the xdebug_eval MCP tool (default: false).
+	Enabled          bool   `yaml:"enabled"`             // Enable the proxy (default: false).
+	Addr             string `yaml:"addr"`                // Where Xdebug connects. Default: 127.0.0.1:9003
+	IDEAddr          string `yaml:"ide_addr"`            // Where the IDE listens. Default: 127.0.0.1:9004
+	AllowEval        bool   `yaml:"allow_eval"`          // Expose the xdebug_eval MCP tool (default: false).
+	Mode             string `yaml:"mode"`                // proxy, auto or standalone. Default: auto
+	PauseOnFirstLine bool   `yaml:"pause_on_first_line"` // A session driven here stops at the first line (default: false).
+	IdleTimeout      string `yaml:"idle_timeout"`        // Release a session paused here after this long without a command. Default: 10m; 0 = never
+
+	IdleTimeoutDur time.Duration `yaml:"-"` // parsed IdleTimeout: 0 = default, <0 = never
 }
 
 // WebhookDef defines a webhook from config.
@@ -282,6 +288,10 @@ func LoadConfig() Config {
 	cfg.Xdebug.Addr = coalesce(os.Getenv("XDEBUG_PROXY_ADDR"), fileCfg.Xdebug.Addr, "127.0.0.1:9003")
 	cfg.Xdebug.IDEAddr = coalesce(os.Getenv("XDEBUG_PROXY_IDE_ADDR"), fileCfg.Xdebug.IDEAddr, "127.0.0.1:9004")
 	cfg.Xdebug.AllowEval = envBool("XDEBUG_PROXY_ALLOW_EVAL", fileCfg.Xdebug.AllowEval)
+	cfg.Xdebug.Mode = coalesce(os.Getenv("XDEBUG_PROXY_MODE"), fileCfg.Xdebug.Mode, "auto")
+	cfg.Xdebug.PauseOnFirstLine = envBool("XDEBUG_PROXY_PAUSE_ON_FIRST_LINE", fileCfg.Xdebug.PauseOnFirstLine)
+	cfg.Xdebug.IdleTimeout = coalesce(os.Getenv("XDEBUG_PROXY_IDLE_TIMEOUT"), fileCfg.Xdebug.IdleTimeout, "10m")
+	cfg.Xdebug.IdleTimeoutDur = parseIdleTimeout(cfg.Xdebug.IdleTimeout)
 
 	// Auth.
 	cfg.Auth.Enabled = fileCfg.Auth.Enabled || os.Getenv("AUTH_ENABLED") == "true"
@@ -332,6 +342,22 @@ func LoadConfig() Config {
 	cfg.ProxyAddr = cfg.TCP.Proxy.Addr
 
 	return cfg
+}
+
+// parseIdleTimeout reads xdebug.idle_timeout: a Go duration ("10m", "90s");
+// "0" switches the guard off. A bad value keeps the default.
+func parseIdleTimeout(v string) time.Duration {
+	d, err := time.ParseDuration(strings.TrimSpace(v))
+	switch {
+	case strings.TrimSpace(v) == "0":
+		return -1
+	case err != nil:
+		slog.Warn("xdebug.idle_timeout is not a duration, using 10m", "value", v)
+		return 0
+	case d <= 0:
+		return -1
+	}
+	return d
 }
 
 // envBool returns the env var as a bool when it is set ("true"/"false"),

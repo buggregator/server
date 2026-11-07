@@ -1,12 +1,14 @@
 // Package xdebug proxies Xdebug (DBGp) sessions to the IDE and lets an MCP
 // agent and the web UI read the same paused session: stack, variables,
-// properties, eval. Read-only: nothing here steps, continues or changes
-// breakpoints.
+// properties, eval. With no IDE (mode auto or standalone) Buggregator drives
+// the session itself: the UI steps, continues, stops or releases it. While an
+// IDE is attached, the IDE drives and Buggregator only reads.
 package xdebug
 
 import (
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/buggregator/go-buggregator/internal/module"
 	"github.com/buggregator/go-buggregator/internal/server/tcp"
@@ -21,6 +23,10 @@ type Config struct {
 	Addr      string // where Xdebug connects (xdebug.client_host:client_port)
 	IDEAddr   string // where the IDE listens for debug connections
 	AllowEval bool   // expose eval to MCP clients and the UI
+
+	Mode             string        // proxy, auto or standalone; empty = auto
+	PauseOnFirstLine bool          // a session driven here stops at the first line
+	IdleTimeout      time.Duration // release a session paused here after this long without a command; 0 = 10 min, <0 = never
 }
 
 // Broadcaster publishes an event on a WebSocket channel (the ws.Hub).
@@ -41,7 +47,21 @@ type wsEvent struct {
 }
 
 func New(cfg Config) *Module {
-	return &Module{cfg: cfg, proxy: NewProxy(cfg.IDEAddr)}
+	if cfg.Mode == "" {
+		cfg.Mode = ModeAuto
+	}
+	p := NewProxy(cfg.IDEAddr)
+	if err := p.SetSettings(Settings{Mode: cfg.Mode, PauseOnFirstLine: cfg.PauseOnFirstLine}); err != nil {
+		slog.Warn("xdebug: unknown mode, using auto", "mode", cfg.Mode)
+		_ = p.SetSettings(Settings{Mode: ModeAuto, PauseOnFirstLine: cfg.PauseOnFirstLine})
+	}
+	switch {
+	case cfg.IdleTimeout < 0:
+		p.idleTimeout = 0
+	case cfg.IdleTimeout > 0:
+		p.idleTimeout = cfg.IdleTimeout
+	}
+	return &Module{cfg: cfg, proxy: p}
 }
 
 // SetBroadcaster sends session.* and agent.* events to the WebSocket hub.
