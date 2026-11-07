@@ -71,6 +71,7 @@ tcp:
 #   socket_path: ${MCP_SOCKET_PATH:/tmp/buggregator-mcp.sock} # For transport=socket
 #   addr: ${MCP_ADDR::8001}                                 # For transport=http (all interfaces)
 #   auth_token: ${MCP_AUTH_TOKEN:}                          # Bearer token for transport=http. Empty = no auth
+#   mock_write: ${MCP_MOCK_WRITE:true}                       # mock_rule_create/update/delete/from_request; false = read and preview only
 
 # Xdebug proxy: PHP/Xdebug -> Buggregator -> IDE, plus MCP tools (xdebug_sessions,
 # xdebug_location, xdebug_stack, xdebug_variables, xdebug_property, xdebug_eval) on

@@ -71,7 +71,13 @@ type MCPConfig struct {
 	SocketPath string `yaml:"socket_path"` // Unix socket path (for transport=socket). Default: /tmp/buggregator-mcp.sock
 	Addr       string `yaml:"addr"`        // HTTP listen address (for transport=http). Default: :8001
 	AuthToken  string `yaml:"auth_token"`  // Bearer token for HTTP transport auth. Empty = no auth.
+	// MockWrite exposes the MCP tools that create, change and delete mock
+	// rules (default: true; false leaves the read and preview tools).
+	MockWrite *bool `yaml:"mock_write"`
 }
+
+// MockWriteOn reports whether the MCP mock write tools are on (default true).
+func (c MCPConfig) MockWriteOn() bool { return c.MockWrite == nil || *c.MockWrite }
 
 // XdebugConfig controls the Xdebug (DBGp) proxy: Xdebug → Buggregator → IDE,
 // with read-only MCP tools on the same paused session.
@@ -258,6 +264,8 @@ func LoadConfig() Config {
 	cfg.MCP.SocketPath = coalesce(os.Getenv("MCP_SOCKET_PATH"), fileCfg.MCP.SocketPath, "/tmp/buggregator-mcp.sock")
 	cfg.MCP.Addr = coalesce(os.Getenv("MCP_ADDR"), fileCfg.MCP.Addr, ":8001")
 	cfg.MCP.AuthToken = coalesce(os.Getenv("MCP_AUTH_TOKEN"), fileCfg.MCP.AuthToken)
+	mockWrite := envBool("MCP_MOCK_WRITE", fileCfg.MCP.MockWriteOn())
+	cfg.MCP.MockWrite = &mockWrite
 
 	// Xdebug proxy.
 	cfg.Xdebug.Enabled = envBool("XDEBUG_PROXY_ENABLED", fileCfg.Xdebug.Enabled)

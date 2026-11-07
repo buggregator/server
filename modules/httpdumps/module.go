@@ -17,10 +17,12 @@ type Module struct {
 	db          *sql.DB
 	mocks       *mockStore
 	events      EventStorer
+	// mcpMockWrite exposes the MCP write tools (mcp.mock_write, default on).
+	mcpMockWrite bool
 }
 
 func New(attachments *storage.AttachmentStore, db *sql.DB) *Module {
-	return &Module{attachments: attachments, db: db, mocks: newMockStore(db)}
+	return &Module{attachments: attachments, db: db, mocks: newMockStore(db), mcpMockWrite: true}
 }
 
 // SetEventService gives the mock server the service that stores captured requests.
