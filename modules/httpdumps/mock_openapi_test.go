@@ -1,6 +1,7 @@
 package httpdumps
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -129,7 +130,7 @@ func renderFor(t *testing.T, r MockRule, path string) string {
 
 func TestOpenAPI_Build(t *testing.T) {
 	res := importSpec(t, petSpec, OpenAPIImport{Project: "shop"})
-	if res.Group != "openapi:Shop API" || res.Title != "Shop API" || len(res.Rules) != 5 {
+	if res.Group != "openapi:shop:Shop API" || res.Title != "Shop API" || len(res.Rules) != 5 {
 		t.Fatalf("result: %s %s %d rules, skipped %+v", res.Group, res.Title, len(res.Rules), res.Skipped)
 	}
 	if len(res.Skipped) != 1 || res.Skipped[0].Path != "/v1/files/{name}.json" {
@@ -274,7 +275,7 @@ func TestOpenAPI_API(t *testing.T) {
 	env := newMockEnv(t, nil)
 	post := func(body any) (int, map[string]any) {
 		b, _ := json.Marshal(body)
-		w := env.do(t, "POST", "/api/mocks/import/openapi", string(b), nil)
+		w := env.do(t, "POST", "/api/mocks/import/openapi", string(b), map[string]string{"Content-Type": "application/json"})
 		var out map[string]any
 		json.Unmarshal(w.Body.Bytes(), &out)
 		return w.Code, out
@@ -290,11 +291,11 @@ func TestOpenAPI_API(t *testing.T) {
 
 	env.create(t, `{"path":"/own"}`)
 	code, out := post(map[string]any{"spec": petSpec, "project": "shop"})
-	if code != 200 || out["group"] != "openapi:Shop API" || len(out["rules"].([]any)) != 5 || len(out["skipped"].([]any)) != 1 {
+	if code != 200 || out["group"] != "openapi:shop:Shop API" || len(out["rules"].([]any)) != 5 || len(out["skipped"].([]any)) != 1 {
 		t.Fatalf("import: %d %v", code, out)
 	}
 	first := out["rules"].([]any)[0].(map[string]any)
-	if first["source"] != "api" || first["group"] != "openapi:Shop API" {
+	if first["source"] != "api" || first["group"] != "openapi:shop:Shop API" {
 		t.Errorf("rule = %v", first)
 	}
 	w := env.do(t, "GET", "/mock/v1/users/5", "", map[string]string{"X-Buggregator-Project": "shop"})
@@ -310,7 +311,7 @@ func TestOpenAPI_API(t *testing.T) {
 	if w := env.do(t, "PUT", "/api/mocks/"+id, `{"path":"/v1/users/{id}","method":"GET","body":"x"}`, nil); w.Code == 200 {
 		t.Errorf("PUT of a replaced rule: %d", w.Code) // the first import's rules are gone
 	}
-	w = env.do(t, "DELETE", "/api/mocks/groups/openapi:Shop%20API", "", nil)
+	w = env.do(t, "DELETE", "/api/mocks/groups/openapi:shop:Shop%20API", "", nil)
 	if !strings.Contains(w.Body.String(), `"deleted":5`) || count() != 1 {
 		t.Errorf("delete group: %s, %d rules", w.Body.String(), count())
 	}
@@ -376,7 +377,7 @@ func TestOpenAPI_ConfigFile(t *testing.T) {
 	}
 	env := newMockEnv(t, res.Rules)
 	r := ruleBy(t, env.mod.mocks.list(), "GET", "/v1/users/{id}")
-	if !r.ReadOnly || r.Source != "config" || r.Group != "openapi:Shop API" {
+	if !r.ReadOnly || r.Source != "config" || r.Group != "openapi:shop:Shop API" {
 		t.Errorf("config rule = %+v", r)
 	}
 	if w := env.do(t, "GET", "/mock/v1/users/3", "", map[string]string{"X-Buggregator-Project": "shop"}); !strings.Contains(w.Body.String(), `"id": 3`) {
@@ -541,5 +542,93 @@ func TestOpenAPI_ImportBudget(t *testing.T) {
 		if len(res.Rules)+len(res.Skipped) != 2000 {
 			t.Errorf("%s: %d rules + %d skipped", name, len(res.Rules), len(res.Skipped))
 		}
+	}
+}
+
+// The same spec imported for two projects keeps both projects' rules (#4531).
+func TestOpenAPI_GroupPerProject(t *testing.T) {
+	env := newMockEnv(t, nil)
+	for _, project := range []string{"a", "b", "a"} {
+		if _, err := importOpenAPI(context.Background(), env.mod.mocks, OpenAPIImport{Spec: petSpec, Project: project}, "api"); err != nil {
+			t.Fatalf("import for %s: %v", project, err)
+		}
+	}
+	groups := map[string]int{}
+	for _, r := range env.mod.mocks.list() {
+		groups[r.Group+"|"+r.Project]++
+	}
+	if len(groups) != 2 || groups["openapi:a:Shop API|a"] != 5 || groups["openapi:b:Shop API|b"] != 5 {
+		t.Errorf("groups = %v", groups)
+	}
+}
+
+// The import route takes JSON only: a cross-site text/plain or form POST
+// gets 415 before any URL is fetched (#4531).
+func TestOpenAPI_ImportNeedsJSON(t *testing.T) {
+	env := newMockEnv(t, nil)
+	fetched := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fetched = true
+		w.Write([]byte(petSpec))
+	}))
+	defer srv.Close()
+	body := `{"url":"` + srv.URL + `"}`
+	for _, ct := range []string{"", "text/plain", "application/x-www-form-urlencoded", "multipart/form-data; boundary=x"} {
+		if w := env.do(t, "POST", "/api/mocks/import/openapi", body, map[string]string{"Content-Type": ct}); w.Code != http.StatusUnsupportedMediaType {
+			t.Errorf("%q: %d %s", ct, w.Code, w.Body.String())
+		}
+	}
+	if fetched || len(env.mod.mocks.list()) != 0 {
+		t.Fatal("a non-JSON request fetched the spec")
+	}
+	if w := env.do(t, "POST", "/api/mocks/import/openapi", body, map[string]string{"Content-Type": "application/json; charset=utf-8"}); w.Code != 200 || !fetched {
+		t.Errorf("json: %d %s", w.Code, w.Body.String())
+	}
+}
+
+// A title that is not a string never ends up dumped in the group (#4531).
+func TestOpenAPI_NonStringTitle(t *testing.T) {
+	for _, title := range []string{"{a: 1, b: [1, 2]}", "[x, y]", "42", "''"} {
+		spec := strings.Replace(petSpec, "title: Shop API", "title: "+title, 1)
+		res := importSpec(t, spec, OpenAPIImport{})
+		if res.Title != "spec" || res.Group != "openapi:spec" {
+			t.Errorf("title %s: %q %q", title, res.Title, res.Group)
+		}
+	}
+}
+
+// A generated rule that fails to render (nested arrays over MaxMockRepeat)
+// is skipped at import with the reason (#4531).
+func TestOpenAPI_TestRenderAtImport(t *testing.T) {
+	spec := `openapi: 3.0.3
+info: {title: Deep}
+paths:
+  /deep:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/L1"}
+  /ok:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {type: object, properties: {id: {type: integer}}}
+components:
+  schemas:
+    L1: {type: array, minItems: 20, items: {$ref: "#/components/schemas/L2"}}
+    L2: {type: array, minItems: 20, items: {$ref: "#/components/schemas/L3"}}
+    L3: {type: array, minItems: 20, items: {$ref: "#/components/schemas/L4"}}
+    L4: {type: array, minItems: 20, items: {type: integer}}
+`
+	res := importSpec(t, spec, OpenAPIImport{BasePath: new(string)})
+	if len(res.Rules) != 1 || res.Rules[0].Path != "/ok" {
+		t.Fatalf("rules = %+v", res.Rules)
+	}
+	if len(res.Skipped) != 1 || res.Skipped[0].Path != "/deep" || !strings.Contains(res.Skipped[0].Reason, "response template fails") {
+		t.Errorf("skipped = %+v", res.Skipped)
 	}
 }

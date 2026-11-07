@@ -104,7 +104,7 @@ type XdebugConfig struct {
 type MockOpenAPIDef struct {
 	File     string  `yaml:"file"`      // path to the spec, YAML or JSON
 	Project  string  `yaml:"project"`   // empty = every project
-	Group    string  `yaml:"group"`     // default openapi:<info.title>
+	Group    string  `yaml:"group"`     // default openapi:<info.title>, openapi:<project>:<info.title> with a project
 	BasePath *string `yaml:"base_path"` // default the path of servers[0].url; "" = none
 }
 
@@ -292,6 +292,10 @@ func LoadConfig() Config {
 	allowControl := envBool("XDEBUG_PROXY_ALLOW_CONTROL", fileCfg.Xdebug.AllowControl == nil || *fileCfg.Xdebug.AllowControl)
 	cfg.Xdebug.AllowControl = &allowControl
 	cfg.Xdebug.Mode = coalesce(os.Getenv("XDEBUG_PROXY_MODE"), fileCfg.Xdebug.Mode, "auto")
+	if m := cfg.Xdebug.Mode; m != "proxy" && m != "auto" && m != "standalone" {
+		slog.Warn("xdebug.mode must be proxy, auto or standalone, using auto", "value", m)
+		cfg.Xdebug.Mode = "auto"
+	}
 	cfg.Xdebug.PauseOnFirstLine = envBool("XDEBUG_PROXY_PAUSE_ON_FIRST_LINE", fileCfg.Xdebug.PauseOnFirstLine)
 	cfg.Xdebug.IdleTimeout = coalesce(os.Getenv("XDEBUG_PROXY_IDLE_TIMEOUT"), fileCfg.Xdebug.IdleTimeout, "10m")
 	cfg.Xdebug.IdleTimeoutDur = parseIdleTimeout(cfg.Xdebug.IdleTimeout)

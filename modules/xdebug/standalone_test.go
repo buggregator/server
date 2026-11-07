@@ -3,8 +3,10 @@ package xdebug
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -255,5 +257,130 @@ func TestNew_ModeDefaults(t *testing.T) {
 		if st := m.proxy.Settings(); st.Mode != c.mode || m.proxy.idleTimeout != c.idle {
 			t.Errorf("%+v: mode %s idle %v", c.cfg, st.Mode, m.proxy.idleTimeout)
 		}
+	}
+}
+
+// Two continuations racing on one pause (double click, two tabs, the idle
+// guard): exactly one reaches the engine.
+func TestStandalone_ConcurrentContinuesSendOne(t *testing.T) {
+	for i := 0; i < 20; i++ {
+		a := newHereHarness(t, ModeAuto)
+		e, s, first := startHere(t, a.proxy)
+		breakAt(t, e, first, "run", 12)
+		waitFor(t, "break", s.Paused)
+
+		s.writeMu.Lock() // as if a UI read were being written: both callers queue here
+		errs := make(chan error, 3)
+		go func() { errs <- s.Continue("step_over", ByUI, "") }()
+		go func() { errs <- s.Continue("detach", ByUI, "") }()
+		go func() {
+			s.mu.Lock()
+			s.idleDeadline = time.Now().Add(-time.Second)
+			s.mu.Unlock()
+			s.idleFire()
+			errs <- nil
+		}()
+		time.Sleep(20 * time.Millisecond)
+		s.writeMu.Unlock()
+		var ok, refused int
+		for j := 0; j < 3; j++ {
+			switch err := <-errs; {
+			case err == nil:
+				ok++
+			case errors.Is(err, errNotPaused):
+				refused++
+			default:
+				t.Fatal(err)
+			}
+		}
+		got := e.read()
+		_ = e.conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		if extra, err := readCommand(e.r); err == nil {
+			t.Fatalf("engine got two continuations: %q then %q", got, extra)
+		}
+		s.mu.Lock()
+		conts, detaching, idle, by := s.conts, s.detaching, s.idleReason, s.lastContBy
+		s.mu.Unlock()
+		if conts != 1 {
+			t.Fatalf("conts %d after %q", conts, got)
+		}
+		// Flags match what was sent.
+		switch {
+		case strings.HasPrefix(got, "step_over"):
+			if detaching || idle || by != ByUI {
+				t.Fatalf("step_over sent, flags detaching=%v idle=%v by=%q", detaching, idle, by)
+			}
+		case strings.HasPrefix(got, "detach") && idle:
+			if !detaching || by != "" {
+				t.Fatalf("idle detach, flags detaching=%v by=%q", detaching, by)
+			}
+		case strings.HasPrefix(got, "detach"):
+			if !detaching || by != ByUI {
+				t.Fatalf("ui detach, flags by=%q", by)
+			}
+		default:
+			t.Fatalf("engine got %q", got)
+		}
+		if ok+refused != 3 || refused < 1 {
+			t.Fatalf("ok=%d refused=%d", ok, refused)
+		}
+	}
+}
+
+// The stop that ends a script must not flip the status back to running.
+func TestStandalone_ScriptEndNoStatusFlicker(t *testing.T) {
+	a := newHereHarness(t, ModeAuto)
+	e, s, first := startHere(t, a.proxy)
+	e.send(response("run", tidOf(t, first), ` status="stopping" reason="ok"`, ""))
+	stop := e.read()
+	e.send(response("stop", tidOf(t, stop), ` status="stopped" reason="ok"`, ""))
+	e.conn.Close()
+	waitFor(t, "close", s.Closed)
+	var states []string
+	a.rec.mu.Lock()
+	for _, ev := range a.rec.events {
+		if ev.name == "session.status" {
+			states = append(states, ev.payload.(map[string]any)["state"].(string))
+		}
+	}
+	a.rec.mu.Unlock()
+	if got := strings.Join(states, ","); got != "running,stopping,stopped" {
+		t.Fatalf("status events: %s", got)
+	}
+}
+
+func TestAPI_SettingsRejectsUnknownAndEmpty(t *testing.T) {
+	a := newAPIHarness(t, false)
+	for _, body := range []string{`{"idle_timeout":"1s"}`, `{}`, `null`} {
+		if code, _ := a.do(t, "PUT", "/api/xdebug/settings", body); code != http.StatusBadRequest {
+			t.Errorf("%s: %d", body, code)
+		}
+	}
+}
+
+// With the default cors_origins ["*"] the JSON check alone lets another
+// site's page call the writes; browsers mark such calls cross-site.
+func TestAPI_WritesRefuseCrossSite(t *testing.T) {
+	a := newAPIHarness(t, true)
+	for _, r := range []struct{ method, path string }{
+		{"PUT", "/api/xdebug/settings"},
+		{"POST", "/api/xdebug/sessions/1/run"},
+	} {
+		req := httptest.NewRequest(r.method, r.path, strings.NewReader(`{"mode":"proxy"}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Sec-Fetch-Site", "cross-site")
+		rr := httptest.NewRecorder()
+		a.mux.ServeHTTP(rr, req)
+		if r.method == "PUT" && rr.Code != http.StatusForbidden {
+			t.Errorf("%s %s: %d", r.method, r.path, rr.Code)
+		}
+	}
+	req := httptest.NewRequest("PUT", "/api/xdebug/settings", strings.NewReader(`{"mode":"proxy"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Sec-Fetch-Site", "same-site")
+	rr := httptest.NewRecorder()
+	a.mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("same-site: %d %s", rr.Code, rr.Body)
 	}
 }

@@ -250,7 +250,7 @@ func registerMockTools(server *sdkmcp.Server, rules *mockStore, requests mockReq
 
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "mock_template_helpers",
-		Description: "Reference for mock response templates: every helper with usage and an example, and the fake data generators for fake \"name\" args… with their parameters (filter by category or search; ~250 in all).",
+		Description: "Reference for mock response templates: every helper with usage and an example, and the fake data generators for fake \"name\" args… with their parameters (filter by category or search).",
 	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in mockHelpersInput) (*sdkmcp.CallToolResult, any, error) {
 		fakes := []MockFake{}
 		cats := map[string]bool{}
@@ -395,7 +395,7 @@ type mockImportInput struct {
 	Spec     string  `json:"spec,omitempty" jsonschema:"The spec text, YAML or JSON"`
 	URL      string  `json:"url,omitempty" jsonschema:"Or where to download the spec (http/https)"`
 	Project  string  `json:"project,omitempty" jsonschema:"Project of the rules; empty = every project"`
-	Group    string  `json:"group,omitempty" jsonschema:"Group name; default openapi:<info.title>"`
+	Group    string  `json:"group,omitempty" jsonschema:"Group name; default openapi:<info.title>, or openapi:<project>:<info.title> with a project"`
 	BasePath *string `json:"base_path,omitempty" jsonschema:"Prefix for every path; default the path of servers[0].url, empty string = none"`
 }
 
