@@ -233,8 +233,17 @@ jobs:
         with:
           path: artifacts
 
+      # checksums.txt is what scripts/install.sh and install.ps1 verify against.
+      - name: Checksums
+        run: |
+          mkdir -p dist
+          cp artifacts/*/buggregator-* dist/
+          cd dist
+          sha256sum buggregator-* > checksums.txt
+          cat checksums.txt
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*/buggregator-*
+          files: dist/*
           generate_release_notes: true
