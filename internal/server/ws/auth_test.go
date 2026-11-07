@@ -22,9 +22,9 @@ func authHub(t *testing.T) (*Hub, string) {
 	}
 	h := NewHub()
 	h.SetProjectProvider(func() []string { return []string{"default"} })
-	h.SetTokenValidator(func(tok string) bool {
-		_, err := tokens.Validate(tok)
-		return err == nil
+	h.SetTokenValidator(func(tok string) (time.Time, bool) {
+		exp, err := tokens.ExpiresAt(tok)
+		return exp, err == nil
 	})
 	return h, token
 }
@@ -119,5 +119,68 @@ func TestMuxRPCHandler_ProtectedRoute(t *testing.T) {
 		if res["code"] != tc.want {
 			t.Errorf("%s: code = %v, want %v", tc.name, res["code"], tc.want)
 		}
+	}
+}
+
+// With auth on, a socket that never sends connect is closed after the
+// connect timeout.
+func TestHub_AuthOn_ConnectDeadline(t *testing.T) {
+	h, _ := authHub(t)
+	h.connectTimeout = 100 * time.Millisecond
+	c := dialHub(t, h)
+
+	if code := c.closedWith(); code != websocket.StatusPolicyViolation {
+		t.Errorf("close status = %v, want 1008 after the connect timeout", code)
+	}
+}
+
+// A connected socket passes the deadline untouched.
+func TestHub_AuthOn_ConnectedSocketOutlivesDeadline(t *testing.T) {
+	h, token := authHub(t)
+	h.connectTimeout = 100 * time.Millisecond
+	c := dialHub(t, h)
+	waitClients(t, h, 1)
+
+	c.send(`{"id":1,"connect":{"token":"` + token + `"}}`)
+	if reply := c.next(); reply["connect"] == nil {
+		t.Fatalf("connect reply = %v", reply)
+	}
+	time.Sleep(300 * time.Millisecond)
+	h.Broadcast("events.project.default", "event.received", map[string]any{"n": 1})
+	if m := c.next(); pushOf(m)["pub"] == nil {
+		t.Fatalf("frame after deadline = %v, want the publication", m)
+	}
+}
+
+// With auth on, the socket is closed with 3500 when its token expires.
+func TestHub_AuthOn_TokenExpiryCloses(t *testing.T) {
+	h := NewHub()
+	h.SetTokenValidator(func(tok string) (time.Time, bool) {
+		return time.Now().Add(200 * time.Millisecond), tok == "short"
+	})
+	c := dialHub(t, h)
+	waitClients(t, h, 1)
+
+	c.send(`{"id":1,"connect":{"token":"short"}}`)
+	if reply := c.next(); reply["connect"] == nil {
+		t.Fatalf("connect reply = %v", reply)
+	}
+	if code := c.closedWith(); code != websocket.StatusCode(3500) {
+		t.Errorf("close status = %v, want 3500 at token expiry", code)
+	}
+}
+
+// With auth off there is no deadline: a socket without connect still gets
+// broadcasts, as before.
+func TestHub_AuthOff_NoConnectDeadline(t *testing.T) {
+	h := NewHub()
+	h.connectTimeout = 50 * time.Millisecond
+	c := dialHub(t, h)
+	waitClients(t, h, 1)
+
+	time.Sleep(200 * time.Millisecond)
+	h.Broadcast("events.project.default", "event.received", nil)
+	if m := c.next(); pushOf(m)["pub"] == nil {
+		t.Fatalf("frame = %v, want the publication", m)
 	}
 }

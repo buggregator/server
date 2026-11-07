@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/buggregator/go-buggregator/internal/auth"
 	"github.com/buggregator/go-buggregator/internal/event"
@@ -82,9 +83,9 @@ func (a *App) Run() {
 
 		tokens := auth.NewTokenStore(a.cfg.Auth.JWTSecret)
 		authMiddleware = auth.Middleware(tokens, true)
-		a.hub.SetTokenValidator(func(token string) bool {
-			_, err := tokens.Validate(token)
-			return err == nil
+		a.hub.SetTokenValidator(func(token string) (time.Time, bool) {
+			exp, err := tokens.ExpiresAt(token)
+			return exp, err == nil
 		})
 		authSettings.LoginURL = auth.LoginURL()
 

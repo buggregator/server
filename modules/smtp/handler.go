@@ -5,11 +5,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"mime"
 	"mime/multipart"
 	"mime/quotedprintable"
+	"net"
 	"net/mail"
 	"strings"
 	"time"
@@ -44,9 +46,15 @@ func newSMTPServer(addr string, es EventStorer, att *storage.AttachmentStore, db
 	return &smtpServer{server: s, eventService: es, attachments: att, db: db}
 }
 
+// Start binds the port before it returns, so a busy or bad address fails
+// startup like the other TCP servers; serving runs in the background.
 func (s *smtpServer) Start(ctx context.Context) error {
+	ln, err := net.Listen("tcp", s.server.Addr)
+	if err != nil {
+		return fmt.Errorf("smtp: listen on %s: %w", s.server.Addr, err)
+	}
 	go func() {
-		if err := s.server.ListenAndServe(); err != nil {
+		if err := s.server.Serve(ln); err != nil && err != gosmtp.ErrServerClosed {
 			slog.Error("SMTP server error", "err", err)
 		}
 	}()
