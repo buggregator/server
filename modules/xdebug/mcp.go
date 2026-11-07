@@ -251,10 +251,14 @@ func textResult(v any) *sdkmcp.CallToolResult {
 	return &sdkmcp.CallToolResult{Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: strings.TrimRight(buf.String(), "\n")}}}
 }
 
-func registerTools(server *sdkmcp.Server, p *Proxy, allowEval bool) {
+// runFunc resolves a session, logs the call in its agent log (UI) and renders
+// the result.
+type runFunc func(sessionID, tool, args string, fn func(s *Session) (any, string, error)) (*sdkmcp.CallToolResult, any, error)
+
+func registerTools(server *sdkmcp.Server, p *Proxy, allowEval, allowControl bool) {
 	// run resolves the session, logs the call in its agent log (UI) and
 	// renders the result. Calls that never reach a session are not logged.
-	run := func(sessionID, tool, args string, fn func(s *Session) (any, string, error)) (*sdkmcp.CallToolResult, any, error) {
+	var run runFunc = func(sessionID, tool, args string, fn func(s *Session) (any, string, error)) (*sdkmcp.CallToolResult, any, error) {
 		s, err := p.Session(sessionID)
 		if err != nil {
 			return nil, nil, err
@@ -273,7 +277,7 @@ func registerTools(server *sdkmcp.Server, p *Proxy, allowEval bool) {
 
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "xdebug_sessions",
-		Description: "List Xdebug debug sessions proxied by Buggregator to the IDE, including ones closed in the last 10 minutes. A session can be inspected only while its state is 'break' (stopped at a breakpoint or after a step in the IDE). The xdebug_* tools never step or continue (that stays in the IDE) and only read the session, except xdebug_eval: it runs a PHP expression in the paused request and exists only when xdebug.allow_eval is true.",
+		Description: "List Xdebug debug sessions, including ones closed in the last 10 minutes. driver 'ide': an IDE drives the session and the xdebug_* tools only read it. driver 'here': no IDE, Buggregator drives it, and xdebug_step / xdebug_continue / xdebug_stop control it (when xdebug.allow_control is on). A session can be read only while its state is 'break'. xdebug_eval runs a PHP expression in the paused request and exists only when xdebug.allow_eval is true.",
 	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, _ struct{}) (*sdkmcp.CallToolResult, any, error) {
 		infos := []Info{}
 		for _, s := range p.Sessions() {
@@ -355,6 +359,9 @@ func registerTools(server *sdkmcp.Server, p *Proxy, allowEval bool) {
 		})
 	})
 
+	if allowControl {
+		registerControlTools(server, p, run)
+	}
 	if !allowEval {
 		return
 	}

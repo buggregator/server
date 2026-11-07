@@ -133,6 +133,8 @@ func main() {
 			IDEAddr:   cfg.Xdebug.IDEAddr,
 			AllowEval: cfg.Xdebug.AllowEval,
 
+			AllowControl: cfg.Xdebug.AllowControlOn(),
+
 			Mode:             cfg.Xdebug.Mode,
 			PauseOnFirstLine: cfg.Xdebug.PauseOnFirstLine,
 			IdleTimeout:      cfg.Xdebug.IdleTimeoutDur,

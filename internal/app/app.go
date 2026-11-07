@@ -125,7 +125,7 @@ func (a *App) Run() {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"enabled": false, "addr": a.cfg.Xdebug.Addr, "ide_addr": a.cfg.Xdebug.IDEAddr, "allow_eval": a.cfg.Xdebug.AllowEval,
-				"mode": a.cfg.Xdebug.Mode,
+				"mode": a.cfg.Xdebug.Mode, "allow_control": a.cfg.Xdebug.AllowControlOn(),
 			})
 		})))
 	}

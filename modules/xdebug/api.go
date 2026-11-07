@@ -133,6 +133,7 @@ func (m *Module) handleSettings(w http.ResponseWriter, r *http.Request) {
 func (m *Module) handleStatus(w http.ResponseWriter, r *http.Request) {
 	out := map[string]any{
 		"enabled": true, "addr": m.cfg.Addr, "ide_addr": m.cfg.IDEAddr, "allow_eval": m.cfg.AllowEval,
+		"allow_control": m.cfg.AllowControl,
 	}
 	for k, v := range m.settingsView() {
 		out[k] = v

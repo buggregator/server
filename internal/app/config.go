@@ -89,6 +89,7 @@ type XdebugConfig struct {
 	Addr             string `yaml:"addr"`                // Where Xdebug connects. Default: 127.0.0.1:9003
 	IDEAddr          string `yaml:"ide_addr"`            // Where the IDE listens. Default: 127.0.0.1:9004
 	AllowEval        bool   `yaml:"allow_eval"`          // Expose the xdebug_eval MCP tool (default: false).
+	AllowControl     *bool  `yaml:"allow_control"`       // Expose the MCP control tools: step, continue, stop, wait (default: true).
 	Mode             string `yaml:"mode"`                // proxy, auto or standalone. Default: auto
 	PauseOnFirstLine bool   `yaml:"pause_on_first_line"` // A session driven here stops at the first line (default: false).
 	IdleTimeout      string `yaml:"idle_timeout"`        // Release a session paused here after this long without a command. Default: 10m; 0 = never
@@ -288,6 +289,8 @@ func LoadConfig() Config {
 	cfg.Xdebug.Addr = coalesce(os.Getenv("XDEBUG_PROXY_ADDR"), fileCfg.Xdebug.Addr, "127.0.0.1:9003")
 	cfg.Xdebug.IDEAddr = coalesce(os.Getenv("XDEBUG_PROXY_IDE_ADDR"), fileCfg.Xdebug.IDEAddr, "127.0.0.1:9004")
 	cfg.Xdebug.AllowEval = envBool("XDEBUG_PROXY_ALLOW_EVAL", fileCfg.Xdebug.AllowEval)
+	allowControl := envBool("XDEBUG_PROXY_ALLOW_CONTROL", fileCfg.Xdebug.AllowControl == nil || *fileCfg.Xdebug.AllowControl)
+	cfg.Xdebug.AllowControl = &allowControl
 	cfg.Xdebug.Mode = coalesce(os.Getenv("XDEBUG_PROXY_MODE"), fileCfg.Xdebug.Mode, "auto")
 	cfg.Xdebug.PauseOnFirstLine = envBool("XDEBUG_PROXY_PAUSE_ON_FIRST_LINE", fileCfg.Xdebug.PauseOnFirstLine)
 	cfg.Xdebug.IdleTimeout = coalesce(os.Getenv("XDEBUG_PROXY_IDLE_TIMEOUT"), fileCfg.Xdebug.IdleTimeout, "10m")
@@ -359,6 +362,9 @@ func parseIdleTimeout(v string) time.Duration {
 	}
 	return d
 }
+
+// AllowControlOn reports whether the MCP control tools are on (default true).
+func (c XdebugConfig) AllowControlOn() bool { return c.AllowControl == nil || *c.AllowControl }
 
 // envBool returns the env var as a bool when it is set ("true"/"false"),
 // otherwise def. Unlike "file || env", the env can also switch a setting off.

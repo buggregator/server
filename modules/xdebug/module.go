@@ -23,6 +23,8 @@ type Config struct {
 	Addr      string // where Xdebug connects (xdebug.client_host:client_port)
 	IDEAddr   string // where the IDE listens for debug connections
 	AllowEval bool   // expose eval to MCP clients and the UI
+	// AllowControl exposes the MCP control tools (step, continue, stop, wait).
+	AllowControl bool
 
 	Mode             string        // proxy, auto or standalone; empty = auto
 	PauseOnFirstLine bool          // a session driven here stops at the first line
@@ -95,10 +97,10 @@ func (m *Module) RegisterProtectedRoutes(mux *http.ServeMux, auth func(http.Hand
 	m.registerAPI(mux, auth)
 }
 
-// RegisterMCPTools adds the xdebug_* tools to the MCP server (read-only, plus
-// xdebug_eval when allow_eval is on).
+// RegisterMCPTools adds the xdebug_* tools to the MCP server: reads, the
+// control tools when allow_control is on, xdebug_eval when allow_eval is on.
 func (m *Module) RegisterMCPTools(server *sdkmcp.Server) {
-	registerTools(server, m.proxy, m.cfg.AllowEval)
+	registerTools(server, m.proxy, m.cfg.AllowEval, m.cfg.AllowControl)
 }
 
 var _ module.ProtectedRoutesRegistrar = (*Module)(nil)

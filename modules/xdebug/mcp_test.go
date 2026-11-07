@@ -14,8 +14,13 @@ import (
 
 func connectTools(t *testing.T, p *Proxy, allowEval bool) *sdkmcp.ClientSession {
 	t.Helper()
+	return connectToolsWith(t, p, allowEval, false)
+}
+
+func connectToolsWith(t *testing.T, p *Proxy, allowEval, allowControl bool) *sdkmcp.ClientSession {
+	t.Helper()
 	server := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "test", Version: "1"}, nil)
-	registerTools(server, p, allowEval)
+	registerTools(server, p, allowEval, allowControl)
 	ct, st := sdkmcp.NewInMemoryTransports()
 	ctx := context.Background()
 	ss, err := server.Connect(ctx, st, nil)
@@ -182,6 +187,11 @@ func TestMCPTools_EvalOffByDefault(t *testing.T) {
 	}
 	if names["xdebug_eval"] {
 		t.Error("xdebug_eval registered with allow_eval off")
+	}
+	for _, off := range []string{"xdebug_step", "xdebug_continue", "xdebug_stop", "xdebug_wait"} {
+		if names[off] {
+			t.Errorf("%s registered with allow_control off", off)
+		}
 	}
 	if out, isErr := callTool(t, cs, "xdebug_sessions", map[string]any{}); isErr || strings.TrimSpace(out) != "[]" {
 		t.Fatalf("empty sessions: %s", out)
