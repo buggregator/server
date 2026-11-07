@@ -76,6 +76,8 @@ tcp:
 # Xdebug proxy: PHP/Xdebug -> Buggregator -> IDE, plus MCP tools (xdebug_sessions,
 # xdebug_location, xdebug_stack, xdebug_variables, xdebug_property, xdebug_eval) on
 # the same paused session; xdebug_eval runs PHP code, only with allow_eval.
+# With allow_control an agent also drives a session that has no IDE
+# (xdebug_step, xdebug_continue, xdebug_stop) and waits for a pause (xdebug_wait).
 # Off by default. MCP tools need mcp.enabled.
 # mode: proxy — relay to the IDE; no IDE = the script runs on without a debugger.
 #       auto — relay when the IDE answers, else Buggregator drives the session
@@ -88,6 +90,7 @@ tcp:
 #   addr: ${XDEBUG_PROXY_ADDR:127.0.0.1:9003}         # Where Xdebug connects
 #   ide_addr: ${XDEBUG_PROXY_IDE_ADDR:127.0.0.1:9004} # Where the IDE listens
 #   allow_eval: ${XDEBUG_PROXY_ALLOW_EVAL:false}      # Let MCP clients evaluate PHP expressions
+#   allow_control: ${XDEBUG_PROXY_ALLOW_CONTROL:true} # MCP step/continue/stop/wait; false = read only
 #   mode: ${XDEBUG_PROXY_MODE:auto}                   # proxy, auto or standalone
 #   pause_on_first_line: ${XDEBUG_PROXY_PAUSE_ON_FIRST_LINE:false} # With no IDE: stop at the first line
 #   idle_timeout: ${XDEBUG_PROXY_IDLE_TIMEOUT:10m}    # With no IDE: release a session paused this long (a Go duration: 90s, 10m); 0 = never
