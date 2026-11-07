@@ -156,6 +156,17 @@ func TestConfig_String(t *testing.T) {
 	}
 }
 
+func TestConfig_MCPMockWrite(t *testing.T) {
+	if !(MCPConfig{}).MockWriteOn() {
+		t.Error("mock_write is off by default")
+	}
+	path := t.TempDir() + "/buggregator.yaml"
+	os.WriteFile(path, []byte("mcp:\n  mock_write: false\n"), 0o600)
+	if loadConfigFile(path).MCP.MockWriteOn() {
+		t.Error("mock_write: false is on")
+	}
+}
+
 func TestConfig_MocksFromYAML(t *testing.T) {
 	path := t.TempDir() + "/buggregator.yaml"
 	os.WriteFile(path, []byte(`

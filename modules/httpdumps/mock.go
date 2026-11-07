@@ -23,6 +23,10 @@ const (
 	MockPrefix   = "/mock"
 	MaxMockBody  = 1 << 20 // 1 MB
 	MaxMockDelay = 30000   // ms
+	// MaxMockRulesPerProject caps the stored rules of one project (rules for
+	// every project count as one more project), so a client in a loop cannot
+	// fill the database.
+	MaxMockRulesPerProject = 500
 )
 
 var mockMethods = map[string]bool{
@@ -31,7 +35,8 @@ var mockMethods = map[string]bool{
 }
 
 // MockRule is one mock response. Rules from buggregator.yaml have Source
-// "config" and are read-only; rules made through the API have Source "api".
+// "config" and are read-only; stored rules have Source "api" (UI, REST) or
+// "mcp" (made by an agent through MCP).
 type MockRule struct {
 	ID      string            `json:"id"`
 	Project string            `json:"project"` // empty = every project
@@ -228,7 +233,7 @@ func (s *mockStore) reload() error {
 		return nil
 	}
 	rows, err := s.db.Query(`SELECT id, COALESCE(project, ''), name, method, path, status, headers, body,
-		delay_ms, template, seed, enabled, position, created_at, updated_at FROM mock_rules ORDER BY position, created_at`)
+		delay_ms, template, seed, enabled, position, source, created_at, updated_at FROM mock_rules ORDER BY position, created_at`)
 	if err != nil {
 		return err
 	}
@@ -240,12 +245,11 @@ func (s *mockStore) reload() error {
 		var headers string
 		var enabled, tmpl int
 		if err := rows.Scan(&r.ID, &r.Project, &r.Name, &r.Method, &r.Path, &r.Status, &headers, &r.Body,
-			&r.DelayMs, &tmpl, &r.Seed, &enabled, &r.Position, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			&r.DelayMs, &tmpl, &r.Seed, &enabled, &r.Position, &r.Source, &r.CreatedAt, &r.UpdatedAt); err != nil {
 			return err
 		}
 		r.Enabled = enabled == 1
 		r.Template = tmpl == 1
-		r.Source = "api"
 		json.Unmarshal([]byte(headers), &r.Headers)
 		if r.Headers == nil {
 			r.Headers = map[string]string{}
@@ -341,13 +345,21 @@ func (s *mockStore) near(method, path, project string) []MockNear {
 	return out
 }
 
-func (s *mockStore) create(r MockRule) (MockRule, error) {
+// create stores a new rule; source is "api" or "mcp".
+func (s *mockStore) create(r MockRule, source string) (MockRule, error) {
 	if err := r.Normalize(); err != nil {
 		return MockRule{}, err
 	}
+	var n int
+	if err := s.db.QueryRow(`SELECT COUNT(*) FROM mock_rules WHERE COALESCE(project, '') = ?`, r.Project).Scan(&n); err != nil {
+		return MockRule{}, err
+	}
+	if n >= MaxMockRulesPerProject {
+		return MockRule{}, ValidationError{"project": fmt.Sprintf("at most %d rules per project; delete unused ones first", MaxMockRulesPerProject)}
+	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	r.ID = event.GenerateUUID()
-	r.Source = "api"
+	r.Source = source
 	r.ReadOnly = false
 	r.CreatedAt, r.UpdatedAt = now, now
 
@@ -355,11 +367,11 @@ func (s *mockStore) create(r MockRule) (MockRule, error) {
 	// cannot get the same one.
 	headers, _ := json.Marshal(r.Headers)
 	if _, err := s.db.Exec(`INSERT INTO mock_rules
-		(id, project, name, method, path, status, headers, body, delay_ms, template, seed, enabled, position, created_at, updated_at)
+		(id, project, name, method, path, status, headers, body, delay_ms, template, seed, enabled, position, source, created_at, updated_at)
 		VALUES (?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-			(SELECT COALESCE(MAX(position), -1) + 1 FROM mock_rules), ?, ?)`,
+			(SELECT COALESCE(MAX(position), -1) + 1 FROM mock_rules), ?, ?, ?)`,
 		r.ID, r.Project, r.Name, r.Method, r.Path, r.Status, string(headers), r.Body, r.DelayMs,
-		boolInt(r.Template), r.Seed, boolInt(r.Enabled), r.CreatedAt, r.UpdatedAt); err != nil {
+		boolInt(r.Template), r.Seed, boolInt(r.Enabled), r.Source, r.CreatedAt, r.UpdatedAt); err != nil {
 		return MockRule{}, err
 	}
 	s.db.QueryRow(`SELECT position FROM mock_rules WHERE id = ?`, r.ID).Scan(&r.Position)
@@ -378,7 +390,7 @@ func (s *mockStore) update(id string, r MockRule) (MockRule, error) {
 	if err := r.Normalize(); err != nil {
 		return MockRule{}, err
 	}
-	r.ID, r.Source, r.Position, r.CreatedAt = id, "api", old.Position, old.CreatedAt
+	r.ID, r.Source, r.Position, r.CreatedAt = id, old.Source, old.Position, old.CreatedAt
 	r.ReadOnly = false
 	r.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 
@@ -451,6 +463,27 @@ func (s *mockStore) reorder(ids []string) error {
 	}
 	s.refresh()
 	return nil
+}
+
+// move puts a stored rule at index pos among the stored rules (clamped).
+func (s *mockStore) move(id string, pos int) error {
+	s.mu.RLock()
+	ids := make([]string, 0, len(s.stored))
+	found := false
+	for _, r := range s.stored {
+		if r.ID == id {
+			found = true
+			continue
+		}
+		ids = append(ids, r.ID)
+	}
+	s.mu.RUnlock()
+	if !found {
+		return fmt.Errorf("%w: %s", errMockNotFound, id)
+	}
+	pos = min(max(pos, 0), len(ids))
+	ids = append(ids[:pos], append([]string{id}, ids[pos:]...)...)
+	return s.reorder(ids)
 }
 
 func boolInt(b bool) int {

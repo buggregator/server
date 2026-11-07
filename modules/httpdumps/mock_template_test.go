@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 )
 
 func renderBody(t *testing.T, rule MockRule, req *mockRequest) (string, error) {
@@ -49,6 +50,10 @@ func TestMockTemplate_Helpers(t *testing.T) {
 		{`[{{ range $i := repeat 3 }}{{ if $i }},{{ end }}{{ add $i 1 }}{{ end }}]`, `[1,2,3]`},
 		{`{{ json "O'Neil \"Jr\" <b>" }}`, `"O'Neil \"Jr\" <b>"`},
 		{`{{ upper "abc" }}{{ lower "DEF" }}`, `ABCdef`},
+		{`{{ range $i := repeat (int (query "page")) }}{{ $i }}{{ end }}`, `012`},
+		{`{{ add (int (body "n")) 1 }}`, `2`},
+		{`{{ if gt (int (body "items.0.id")) 5 }}big{{ end }}`, `big`},
+		{`{{ int (body "ok") }}{{ int (query "none") }}{{ int "4.9" }}`, `104`},
 	}
 	rulePath := "/users/{id}/files/*"
 	for _, tt := range tests {
@@ -107,6 +112,8 @@ func TestMockTemplate_Fake(t *testing.T) {
 		`{{ pick }}`,
 		`{{ now "a" "b" }}`,
 		`{{ repeat -1 }}`,
+		`{{ int "abc" }}`,
+		`{{ int (queryAll "x") }}`,
 	}
 	for _, src := range errs {
 		if _, err := renderBody(t, MockRule{Path: "/", Body: src, Template: true}, &mockRequest{}); err == nil {
@@ -214,6 +221,36 @@ func TestMockTemplate_Bounded(t *testing.T) {
 	src = `{{ range body "" }}{{ range body "" }}{{ end }}{{ end }}`
 	if _, err := renderBody(t, MockRule{Path: "/", Body: src, Template: true}, &mockRequest{Body: []byte(items)}); err == nil {
 		t.Error("nested range over body is not bounded")
+	}
+}
+
+// Big templates stay bounded too: loop items cost their body's steps, and
+// helper output counts even when it is not written.
+func TestMockTemplate_WorkBudget(t *testing.T) {
+	big := &mockRequest{Body: []byte(strings.Repeat("x", 100<<10))}
+	step := strings.Repeat(`{{ $x := add 1 2 }}`, 200)
+	cases := map[string]string{
+		`{{ range repeat 10000 }}` + step + `{{ end }}`:                                                              "steps",
+		`{{ range repeat 10000 }}{{ $x := fake "loremipsumparagraph" 20 20 50 " " }}{{ end }}`:                       "bytes",
+		`{{ range repeat 1000 }}{{ $x := print bodyRaw }}{{ end }}`:                                                  "bytes",
+		`{{ range repeat 1000 }}{{ $x := bodyRaw | json }}{{ end }}`:                                                 "bytes",
+		`{{ range repeat 1000 }}{{ $x := upper bodyRaw }}{{ $y := html bodyRaw }}{{ end }}`:                          "bytes",
+		`{{ range repeat 100 }}{{ range repeat 100 }}` + strings.Repeat(`{{ $x := 1 }}`, 150) + `{{ end }}{{ end }}`: "steps",
+	}
+	for src, want := range cases {
+		start := time.Now()
+		_, err := renderBody(t, MockRule{Path: "/", Body: src, Template: true}, big)
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%.60s…: %v, want a %s error", src, err, want)
+		}
+		if d := time.Since(start); d > 5*time.Second {
+			t.Errorf("%.60s…: took %v", src, d)
+		}
+	}
+	// Ordinary loops fit.
+	ok := `[{{ range $i := repeat 5000 }}{{ if $i }},{{ end }}{"id": {{ $i }}, "name": {{ fake "firstname" | json }}}{{ end }}]`
+	if out, err := renderBody(t, MockRule{Path: "/", Body: ok, Template: true}, &mockRequest{}); err != nil || !json.Valid([]byte(out)) {
+		t.Errorf("5000 items: %v", err)
 	}
 }
 
@@ -404,8 +441,13 @@ func TestMockHelpers_ExamplesRun(t *testing.T) {
 			t.Errorf("example of %s: %v", h.Name, err)
 		}
 	}
-	if len(funcs) != len(MockHelpers)+len(rangeFuncs)-1 { // range twins, repeat is its own
-
-		t.Errorf("%d helpers defined, %d documented", len(funcs), len(MockHelpers))
+	documented := map[string]bool{}
+	for _, h := range MockHelpers {
+		documented[h.Name] = true
+	}
+	for name := range funcs {
+		if !documented[name] && !hiddenFuncs[name] {
+			t.Errorf("helper %s is defined but not documented", name)
+		}
 	}
 }

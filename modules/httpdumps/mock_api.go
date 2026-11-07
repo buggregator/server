@@ -24,7 +24,7 @@ func registerMockAPI(mux *http.ServeMux, rules *mockStore, db *sql.DB, protect f
 		if !ok {
 			return
 		}
-		rule, err := rules.create(in.MockRule)
+		rule, err := rules.create(in.MockRule, "api")
 		if err != nil {
 			mockError(w, err)
 			return

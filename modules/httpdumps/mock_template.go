@@ -27,6 +27,12 @@ const (
 	// queryAll or body), so nested loops stay bounded even when they write
 	// nothing. Other loops and recursion are refused at parse time.
 	MaxMockRepeat = 10000
+	// MaxMockWork caps the steps of one render: each loop item costs the
+	// number of steps (actions, commands, text) in the loop's body.
+	MaxMockWork = 1_000_000
+	// MaxMockGenerated caps the bytes helpers make in one render (fake, json,
+	// print…), written out or not.
+	MaxMockGenerated = 4 << 20
 	// maxFakeCount caps count-like fake parameters (words, length, count…).
 	maxFakeCount = 1000
 	// maxMockRequestBody is how much of the request body `body` and `bodyRaw` read.
@@ -66,10 +72,12 @@ var MockHelpers = []MockHelper{
 		`{"name": {{ fake "name" | json }}, "age": {{ fake "number" 18 90 }}}`, `{"name": "Lavina Kuhn", "age": 37}`},
 	{"pick", "data", `pick a b c…`, `One of the arguments at random.`,
 		`{"status": {{ pick "paid" "pending" "failed" | json }}}`, `{"status": "pending"}`},
-	{"repeat", "data", `repeat n`, `A list 0…n-1 for range: repeats a block n times. Inside, $i is the index. range works only over repeat, queryAll and body; all loop items in one response add up to at most 10000. define, template and block are not supported.`,
+	{"repeat", "data", `repeat n`, `A list 0…n-1 for range: repeats a block n times. Inside, $i is the index. range works only over repeat, queryAll and body; all loop items in one response add up to at most 10000, and items × the steps in the loop body to at most 1000000. Helpers may make at most 4 MB per response. define, template and block are not supported.`,
 		`[{{ range $i := repeat 3 }}{{ if $i }},{{ end }}{"n": {{ add $i 1 }}}{{ end }}]`, `[{"n": 1},{"n": 2},{"n": 3}]`},
-	{"add", "data", `add a b`, `Sum of two integers.`,
+	{"add", "data", `add a b`, `Sum of two integers (use int on request values first).`,
 		`{{ add 2 3 }}`, `5`},
+	{"int", "data", `int value`, `A request value as an integer: a string ("42", "4.9" → 4), a JSON number from body, a bool (1/0); missing or "" → 0; other text is an error. Request values are strings and body numbers are decimals, so convert them before repeat, add or comparing with a whole number.`,
+		`{{ range $i := repeat (int (query "limit" | default "2")) }}{{ $i }}{{ end }} {{ if gt (int (body "qty")) 10 }}bulk{{ end }}`, `?limit=3 → 012; body {"qty": 12} → bulk`},
 	{"now", "data", `now ["layout"]`, `Current time, UTC. Default RFC 3339; a Go time layout (e.g. "2006-01-02") or "unix" for seconds.`,
 		`{"created_at": {{ now | json }}, "ts": {{ now "unix" }}}`, `{"created_at": "2026-11-07T10:00:00Z", "ts": 1794045600}`},
 
@@ -180,9 +188,40 @@ func mockPathParams(pattern, path string) map[string]string {
 
 // renderState is one render: the request, the faker and the repeat budget.
 type renderState struct {
-	req     *mockRequest
-	faker   *gofakeit.Faker
-	repeats int
+	req       *mockRequest
+	faker     *gofakeit.Faker
+	repeats   int
+	work      int
+	generated int
+	rawBody   *string
+}
+
+// hiddenFuncs are bound in every template but not documented helpers: the
+// range twins (see rangeFuncs) and builtins replaced to count their output.
+var hiddenFuncs = map[string]bool{
+	"rangeRepeat": true, "rangeQueryAll": true, "rangeBody": true,
+	"print": true, "printf": true, "println": true, "html": true, "js": true, "urlquery": true,
+}
+
+// gen counts helper output against MaxMockGenerated.
+func (s *renderState) gen(v string) (string, error) {
+	s.generated += len(v)
+	if s.generated > MaxMockGenerated {
+		return "", fmt.Errorf("helpers made more than %d bytes in one response", MaxMockGenerated)
+	}
+	return v, nil
+}
+
+// loop charges n loop items of a body of w steps.
+func (s *renderState) loop(w, n int) error {
+	if err := s.charge(n); err != nil {
+		return err
+	}
+	s.work += w * n
+	if s.work > MaxMockWork {
+		return fmt.Errorf("template does more than %d steps in one response (fewer or smaller loops)", MaxMockWork)
+	}
+	return nil
 }
 
 func (s *renderState) funcs() template.FuncMap {
@@ -197,22 +236,34 @@ func (s *renderState) funcs() template.FuncMap {
 		},
 		"header": func(name string) string { return s.req.Header.Get(name) },
 		"body":   s.body,
-		// Range twins (see rangeFuncs): not documented helpers, a range uses them.
-		"rangeQueryAll": func(name string) ([]string, error) {
-			v := s.req.Query[name]
-			return v, s.charge(len(v))
+		// Range twins (see rangeFuncs): w is the loop body's step count.
+		"rangeRepeat": func(w, n int) ([]int, error) {
+			if err := s.loop(w, max(n, 0)); err != nil {
+				return nil, err
+			}
+			return s.repeat(n)
 		},
-		"rangeBody": func(path string) (any, error) {
+		"rangeQueryAll": func(w int, name string) ([]string, error) {
+			v := s.req.Query[name]
+			return v, s.loop(w, len(v))
+		},
+		"rangeBody": func(w int, path string) (any, error) {
 			v := s.body(path)
 			switch x := v.(type) {
 			case []any:
-				return v, s.charge(len(x))
+				return v, s.loop(w, len(x))
 			case map[string]any:
-				return v, s.charge(len(x))
+				return v, s.loop(w, len(x))
 			}
 			return v, nil
 		},
-		"bodyRaw":     func() string { return string(s.req.Body) },
+		"bodyRaw": func() string {
+			if s.rawBody == nil {
+				raw := string(s.req.Body)
+				s.rawBody = &raw
+			}
+			return *s.rawBody
+		},
 		"method":      func() string { return s.req.Method },
 		"requestPath": func() string { return s.req.Path },
 		"fake":        s.fake,
@@ -222,9 +273,15 @@ func (s *renderState) funcs() template.FuncMap {
 			}
 			return opts[s.faker.IntN(len(opts))], nil
 		},
-		"repeat": s.repeat,
-		"add":    func(a, b int) int { return a + b },
-		"now":    mockNow,
+		"repeat": func(n int) ([]int, error) {
+			if err := s.charge(max(n, 0)); err != nil {
+				return nil, err
+			}
+			return s.repeat(n)
+		},
+		"add": func(a, b int) int { return a + b },
+		"int": mockInt,
+		"now": mockNow,
 		"json": func(v any) (string, error) {
 			var buf bytes.Buffer
 			enc := json.NewEncoder(&buf)
@@ -232,7 +289,7 @@ func (s *renderState) funcs() template.FuncMap {
 			if err := enc.Encode(v); err != nil {
 				return "", err
 			}
-			return strings.TrimSuffix(buf.String(), "\n"), nil
+			return s.gen(strings.TrimSuffix(buf.String(), "\n"))
 		},
 		"default": func(fallback, v any) any {
 			if v == nil || v == "" {
@@ -240,9 +297,47 @@ func (s *renderState) funcs() template.FuncMap {
 			}
 			return v
 		},
-		"upper": strings.ToUpper,
-		"lower": strings.ToLower,
+		"upper": func(v string) (string, error) { return s.gen(strings.ToUpper(v)) },
+		"lower": func(v string) (string, error) { return s.gen(strings.ToLower(v)) },
+
+		"print":    func(a ...any) (string, error) { return s.gen(fmt.Sprint(a...)) },
+		"printf":   func(f string, a ...any) (string, error) { return s.gen(fmt.Sprintf(f, a...)) },
+		"println":  func(a ...any) (string, error) { return s.gen(fmt.Sprintln(a...)) },
+		"html":     func(a ...any) (string, error) { return s.gen(template.HTMLEscaper(a...)) },
+		"js":       func(a ...any) (string, error) { return s.gen(template.JSEscaper(a...)) },
+		"urlquery": func(a ...any) (string, error) { return s.gen(template.URLQueryEscaper(a...)) },
 	}
+}
+
+func mockInt(v any) (int, error) {
+	switch x := v.(type) {
+	case nil:
+		return 0, nil
+	case int:
+		return x, nil
+	case int64:
+		return int(x), nil
+	case float64:
+		return int(x), nil
+	case bool:
+		if x {
+			return 1, nil
+		}
+		return 0, nil
+	case string:
+		x = strings.TrimSpace(x)
+		if x == "" {
+			return 0, nil
+		}
+		if n, err := strconv.Atoi(x); err == nil {
+			return n, nil
+		}
+		if f, err := strconv.ParseFloat(x, 64); err == nil {
+			return int(f), nil
+		}
+		return 0, fmt.Errorf("int: %q is not a number", x)
+	}
+	return 0, fmt.Errorf("int: cannot convert %T", v)
 }
 
 func mockNow(layout ...string) (any, error) {
@@ -262,9 +357,6 @@ func mockNow(layout ...string) (any, error) {
 func (s *renderState) repeat(n int) ([]int, error) {
 	if n < 0 {
 		return nil, errors.New("repeat count must not be negative")
-	}
-	if err := s.charge(n); err != nil {
-		return nil, err
 	}
 	out := make([]int, n)
 	for i := range out {
@@ -345,7 +437,16 @@ func (s *renderState) fake(name string, args ...any) (any, error) {
 			}
 		}
 	}
-	return info.Generate(s.faker, params, info)
+	v, err := info.Generate(s.faker, params, info)
+	if err != nil {
+		return nil, err
+	}
+	if str, ok := v.(string); ok {
+		_, err = s.gen(str)
+	} else {
+		_, err = s.gen(fmt.Sprint(v))
+	}
+	return v, err
 }
 
 func isCountParam(field string) bool {
@@ -370,7 +471,7 @@ func (b *limitedBuffer) Write(p []byte) (int, error) {
 
 // rangeFuncs are the helpers a range may iterate over, each mapped to an
 // internal twin that charges the list's length to the repeat budget.
-var rangeFuncs = map[string]string{"repeat": "repeat", "queryAll": "rangeQueryAll", "body": "rangeBody"}
+var rangeFuncs = map[string]string{"repeat": "rangeRepeat", "queryAll": "rangeQueryAll", "body": "rangeBody"}
 
 // parseMockTemplate parses a template source and checks that its run is
 // bounded: no define/template/block (recursion), and range only over repeat,
@@ -422,10 +523,38 @@ func checkMockNode(n parse.Node) error {
 		if ident == nil || rangeFuncs[ident.Ident] == "" {
 			return errors.New(`range works only over repeat, queryAll or body, e.g. {{ range $i := repeat 3 }}`)
 		}
+		// Rewrite `range f args` to `range rangeF w args`: each item costs w steps.
+		w := max(1, mockSteps(n.List)+mockSteps(n.ElseList))
 		ident.Ident = rangeFuncs[ident.Ident]
+		weight := &parse.NumberNode{NodeType: parse.NodeNumber, Pos: ident.Pos, IsInt: true, Int64: int64(w), Text: strconv.Itoa(w)}
+		args := append([]parse.Node{ident, weight}, cmds[0].Args[1:]...)
+		cmds[0].Args = args
 		return checkMockBranch(&n.BranchNode)
 	}
 	return nil
+}
+
+// mockSteps counts the steps of a list: one per node and per command; a
+// nested range counts its own head only (its items are charged when it runs).
+func mockSteps(l *parse.ListNode) int {
+	if l == nil {
+		return 0
+	}
+	n := 0
+	for _, node := range l.Nodes {
+		n++
+		switch x := node.(type) {
+		case *parse.ActionNode:
+			n += len(x.Pipe.Cmds)
+		case *parse.IfNode:
+			n += len(x.Pipe.Cmds) + mockSteps(x.List) + mockSteps(x.ElseList)
+		case *parse.WithNode:
+			n += len(x.Pipe.Cmds) + mockSteps(x.List) + mockSteps(x.ElseList)
+		case *parse.RangeNode:
+			n += len(x.Pipe.Cmds)
+		}
+	}
+	return n
 }
 
 func checkMockBranch(b *parse.BranchNode) error {

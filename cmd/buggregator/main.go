@@ -168,6 +168,7 @@ func main() {
 	if enabled.IsEnabled("http-dump") {
 		httpDumpMod = httpdumps.New(attachments, db)
 		httpDumpMod.SetMockRules(mockRules(cfg.Mocks))
+		httpDumpMod.SetMCPMockWrite(cfg.MCP.MockWriteOn())
 		registry.Register(httpDumpMod) // catch-all, must be last
 	}
 
