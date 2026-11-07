@@ -125,7 +125,7 @@ func TestBreakpoints_SentAtStartWithState(t *testing.T) {
 	waitFor(t, "break", s.Paused)
 
 	sets := be.commands("breakpoint_set")
-	if len(sets) != 2 || !strings.Contains(sets[0], "-t line -f file:///app/src/User.php -n 20") || !strings.Contains(sets[1], `-t exception -x "\\Throwable"`) {
+	if len(sets) != 2 || !strings.Contains(sets[0], "-t line -f file:///app/src/User.php -n 20") || !strings.Contains(sets[1], `-t exception -x Throwable`) {
 		t.Fatalf("breakpoint_set: %q", sets)
 	}
 	// Breakpoints go out before the script runs.
@@ -147,7 +147,7 @@ func TestBreakpoints_SentAtStartWithState(t *testing.T) {
 	for _, want := range []string{
 		`"id":` + itoa(int(line.ID)) + `,"type":"line","file":"file:///app/src/User.php","line":20,"enabled":true,"source":"ui"`,
 		`"state":"resolved","resolved_line":21,"hit_count":2`,
-		`"id":` + itoa(int(exc.ID)) + `,"type":"exception","exception":"\\Throwable"`,
+		`"id":` + itoa(int(exc.ID)) + `,"type":"exception","exception":"Throwable"`,
 		`"id":` + itoa(int(off.ID)) + `,"type":"line","file":"file:///app/src/Off.php","line":3,"enabled":false`,
 		`"state":"disabled"`,
 		`"id":` + itoa(int(cond.ID)),
@@ -246,7 +246,7 @@ func TestBreakpoints_API(t *testing.T) {
 	if code, body := a.do(t, "POST", "/api/xdebug/breakpoints", `{"exception":"\\RuntimeException"}`); code != http.StatusCreated || !strings.Contains(body, `"type":"exception"`) {
 		t.Fatalf("exception: %d %s", code, body)
 	}
-	if code, body := a.do(t, "GET", "/api/xdebug/breakpoints", ""); code != http.StatusOK || !strings.Contains(body, `"exception":"\\RuntimeException"`) {
+	if code, body := a.do(t, "GET", "/api/xdebug/breakpoints", ""); code != http.StatusOK || !strings.Contains(body, `"exception":"RuntimeException"`) {
 		t.Fatalf("list: %d %s", code, body)
 	}
 	if code, _ := a.do(t, "PATCH", "/api/xdebug/breakpoints/99", `{"enabled":false}`); code != http.StatusNotFound {
@@ -536,5 +536,27 @@ func TestBreakpoints_ListResolves(t *testing.T) {
 	bps := s.SessionBreakpoints(a.proxy.bps.List())
 	if len(bps) != 1 || bps[0].State != BPResolved || bps[0].ResolvedLine != 21 {
 		t.Fatalf("%+v", bps)
+	}
+}
+
+// Xdebug matches an exception breakpoint by the class name as PHP holds it:
+// "\RuntimeException" is accepted by the engine and never fires.
+func TestBreakpoints_ExceptionLeadingBackslash(t *testing.T) {
+	for in, want := range map[string]string{
+		`\RuntimeException`:     `RuntimeException`,
+		` \App\Errors\Payment `: `App\Errors\Payment`,
+		`RuntimeException`:      `RuntimeException`,
+		`*`:                     `*`,
+	} {
+		b := SavedBreakpoint{Exception: in}
+		if err := b.normalize(); err != nil || b.Type != BPException || b.Exception != want {
+			t.Errorf("%q: got %q type %q err %v, want %q", in, b.Exception, b.Type, err, want)
+		}
+		if cmd := breakpointSetCmd(b); !strings.HasSuffix(cmd, " -x "+quoteArg(want)) {
+			t.Errorf("%q: command %q", in, cmd)
+		}
+	}
+	if b := (SavedBreakpoint{Exception: `\`}); b.normalize() == nil {
+		t.Error(`a lone \ must be rejected`)
 	}
 }
