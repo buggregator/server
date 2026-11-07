@@ -82,6 +82,10 @@ func (a *App) Run() {
 
 		tokens := auth.NewTokenStore(a.cfg.Auth.JWTSecret)
 		authMiddleware = auth.Middleware(tokens, true)
+		a.hub.SetTokenValidator(func(token string) bool {
+			_, err := tokens.Validate(token)
+			return err == nil
+		})
 		authSettings.LoginURL = auth.LoginURL()
 
 		oauth, err := auth.NewOAuthClient(
