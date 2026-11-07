@@ -2,6 +2,8 @@ package vardumper
 
 import (
 	"bufio"
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -38,7 +40,7 @@ func StartPHPProcess() (*PHPProcess, error) {
 		return nil, fmt.Errorf("create temp file: %w", err)
 	}
 
-	if _, err := tmpFile.Write(phpBinary); err != nil {
+	if err := writeParser(tmpFile, phpBinary); err != nil {
 		tmpFile.Close()
 		os.Remove(tmpFile.Name())
 		return nil, fmt.Errorf("write PHP binary: %w", err)
@@ -111,4 +113,22 @@ func (p *PHPProcess) Parse(base64Payload string) (*ParseResult, error) {
 func (p *PHPProcess) Stop() {
 	p.stdin.Close()
 	_ = p.cmd.Wait()
+}
+
+// writeParser writes the embedded parser to w. Release builds embed it gzipped
+// (the macOS PHP runtime is not packed and would double the binary); plain
+// bytes from local builds are written as they are.
+func writeParser(w io.Writer, data []byte) error {
+	if len(data) < 2 || data[0] != 0x1f || data[1] != 0x8b {
+		_, err := w.Write(data)
+		return err
+	}
+	zr, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(w, zr); err != nil {
+		return err
+	}
+	return zr.Close()
 }
