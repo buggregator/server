@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 )
 
 // registerMockAPI adds the rule CRUD and the mock request list. protect wraps
@@ -22,7 +24,7 @@ func registerMockAPI(mux *http.ServeMux, rules *mockStore, db *sql.DB, protect f
 		if !ok {
 			return
 		}
-		rule, err := rules.create(in)
+		rule, err := rules.create(in.MockRule)
 		if err != nil {
 			mockError(w, err)
 			return
@@ -58,6 +60,24 @@ func registerMockAPI(mux *http.ServeMux, rules *mockStore, db *sql.DB, protect f
 		mockJSON(w, http.StatusOK, map[string]any{"data": rules.list()})
 	})
 
+	route("GET /api/mocks/helpers", func(w http.ResponseWriter, r *http.Request) {
+		mockJSON(w, http.StatusOK, map[string]any{"helpers": MockHelpers, "fake": MockFakes()})
+	})
+
+	route("POST /api/mocks/preview", func(w http.ResponseWriter, r *http.Request) {
+		var in mockPreviewInput
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 3*MaxMockBody)).Decode(&in); err != nil {
+			mockJSON(w, http.StatusBadRequest, map[string]any{"message": "invalid JSON body", "code": 400})
+			return
+		}
+		out, err := previewMock(in)
+		if err != nil {
+			mockError(w, err)
+			return
+		}
+		mockJSON(w, http.StatusOK, out)
+	})
+
 	route("GET /api/mocks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		rule, err := rules.get(r.PathValue("id"))
 		if err != nil {
@@ -72,7 +92,18 @@ func registerMockAPI(mux *http.ServeMux, rules *mockStore, db *sql.DB, protect f
 		if !ok {
 			return
 		}
-		rule, err := rules.update(r.PathValue("id"), in)
+		// A client that does not know template/seed (an older UI) keeps them.
+		if !in.hasTemplate || !in.hasSeed {
+			if old, err := rules.get(r.PathValue("id")); err == nil {
+				if !in.hasTemplate {
+					in.Template = old.Template
+				}
+				if !in.hasSeed {
+					in.Seed = old.Seed
+				}
+			}
+		}
+		rule, err := rules.update(r.PathValue("id"), in.MockRule)
 		if err != nil {
 			mockError(w, err)
 			return
@@ -89,19 +120,90 @@ func registerMockAPI(mux *http.ServeMux, rules *mockStore, db *sql.DB, protect f
 	})
 }
 
+// ruleInput is a decoded rule and which optional keys the body had.
+type ruleInput struct {
+	MockRule
+	hasTemplate, hasSeed bool
+}
+
 // readRule decodes a rule from the body. "enabled" defaults to true when absent.
-func readRule(w http.ResponseWriter, r *http.Request) (MockRule, bool) {
+func readRule(w http.ResponseWriter, r *http.Request) (ruleInput, bool) {
 	var in struct {
 		MockRule
-		Enabled *bool `json:"enabled"`
+		Enabled  *bool  `json:"enabled"`
+		Template *bool  `json:"template"`
+		Seed     *int64 `json:"seed"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 2*MaxMockBody)).Decode(&in); err != nil {
 		mockJSON(w, http.StatusBadRequest, map[string]any{"message": "invalid JSON body", "code": 400})
-		return MockRule{}, false
+		return ruleInput{}, false
 	}
-	rule := in.MockRule
-	rule.Enabled = in.Enabled == nil || *in.Enabled
-	return rule, true
+	out := ruleInput{MockRule: in.MockRule, hasTemplate: in.Template != nil, hasSeed: in.Seed != nil}
+	out.Enabled = in.Enabled == nil || *in.Enabled
+	if in.Template != nil {
+		out.Template = *in.Template
+	}
+	if in.Seed != nil {
+		out.Seed = *in.Seed
+	}
+	return out, true
+}
+
+// mockPreviewInput is the body of POST /api/mocks/preview: a rule (not saved)
+// and a sample request. Path may carry a query string.
+type mockPreviewInput struct {
+	Rule    MockRule `json:"rule"`
+	Request struct {
+		Method  string            `json:"method"`
+		Path    string            `json:"path"`
+		Headers map[string]string `json:"headers"`
+		Body    string            `json:"body"`
+	} `json:"request"`
+}
+
+// previewMock renders a rule for a sample request, the way the mock server
+// would answer it. A template error is returned in "error", not as a failure.
+func previewMock(in mockPreviewInput) (map[string]any, error) {
+	rule := in.Rule
+	if err := rule.Normalize(); err != nil {
+		return nil, err
+	}
+	method := strings.ToUpper(strings.TrimSpace(in.Request.Method))
+	if method == "" {
+		method = http.MethodGet
+		if rule.Method != "ANY" {
+			method = rule.Method
+		}
+	}
+	u, err := url.Parse(in.Request.Path)
+	if err != nil || !strings.HasPrefix(u.Path, "/") {
+		return nil, ValidationError{"request.path": "must be a path starting with /, e.g. /users/42?page=2"}
+	}
+	path := strings.TrimPrefix(u.Path, MockPrefix)
+	if path == "" {
+		path = "/"
+	}
+	header := http.Header{}
+	for k, v := range in.Request.Headers {
+		header.Set(k, v)
+	}
+
+	out := map[string]any{
+		"matched": (rule.Method == "ANY" || rule.Method == method) && matchMockPath(rule.Path, path),
+		"status":  rule.Status, "headers": rule.Headers, "body": rule.Body, "error": nil,
+	}
+	if rule.Template {
+		req := &mockRequest{Method: method, Path: path, Params: mockPathParams(rule.Path, path),
+			Query: u.Query(), Header: header, Body: []byte(in.Request.Body)}
+		rendered, err := renderMockRule(&rule, req)
+		if err != nil {
+			out["status"], out["headers"], out["body"] = http.StatusInternalServerError, map[string]string{}, ""
+			out["error"] = "mock template: " + err.Error()
+		} else {
+			out["headers"], out["body"] = rendered.Headers, string(rendered.Body)
+		}
+	}
+	return out, nil
 }
 
 // listMockRequests returns the latest HTTP dumps captured under /mock/, newest

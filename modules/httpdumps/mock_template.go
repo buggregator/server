@@ -310,6 +310,15 @@ func (s *renderState) fake(name string, args ...any) (any, error) {
 			}
 			params.Add(p.Field, v)
 		}
+		// gofakeit fills a missing parameter from its default only without a
+		// params map, and never splits a list default ("[a,b]"): do both here.
+		for _, p := range info.Params[min(len(args), len(info.Params)):] {
+			if strings.HasPrefix(p.Default, "[") && strings.HasSuffix(p.Default, "]") {
+				for _, d := range strings.Split(p.Default[1:len(p.Default)-1], ",") {
+					params.Add(p.Field, d)
+				}
+			}
+		}
 	}
 	return info.Generate(s.faker, params, info)
 }
