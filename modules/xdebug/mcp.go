@@ -273,7 +273,7 @@ func registerTools(server *sdkmcp.Server, p *Proxy, allowEval bool) {
 
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "xdebug_sessions",
-		Description: "List Xdebug debug sessions proxied by Buggregator to the IDE, including ones closed in the last 10 minutes. A session can be inspected only while its state is 'break' (stopped at a breakpoint or after a step in the IDE). All xdebug_* tools are read-only: stepping and continuing stay in the IDE.",
+		Description: "List Xdebug debug sessions proxied by Buggregator to the IDE, including ones closed in the last 10 minutes. A session can be inspected only while its state is 'break' (stopped at a breakpoint or after a step in the IDE). The xdebug_* tools never step or continue (that stays in the IDE) and only read the session, except xdebug_eval: it runs a PHP expression in the paused request and exists only when xdebug.allow_eval is true.",
 	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, _ struct{}) (*sdkmcp.CallToolResult, any, error) {
 		infos := []Info{}
 		for _, s := range p.Sessions() {

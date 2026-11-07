@@ -33,21 +33,25 @@ var mockMethods = map[string]bool{
 // MockRule is one mock response. Rules from buggregator.yaml have Source
 // "config" and are read-only; rules made through the API have Source "api".
 type MockRule struct {
-	ID        string            `json:"id"`
-	Project   string            `json:"project"` // empty = every project
-	Name      string            `json:"name"`
-	Method    string            `json:"method"` // GET, POST, … or ANY
-	Path      string            `json:"path"`   // /users/me, /users/{id}, /files/*
-	Status    int               `json:"status"`
-	Headers   map[string]string `json:"headers"`
-	Body      string            `json:"body"`
-	DelayMs   int               `json:"delay_ms"`
-	Enabled   bool              `json:"enabled"`
-	Position  int               `json:"position"`
-	Source    string            `json:"source"`
-	ReadOnly  bool              `json:"read_only"`
-	CreatedAt string            `json:"created_at,omitempty"`
-	UpdatedAt string            `json:"updated_at,omitempty"`
+	ID      string            `json:"id"`
+	Project string            `json:"project"` // empty = every project
+	Name    string            `json:"name"`
+	Method  string            `json:"method"` // GET, POST, … or ANY
+	Path    string            `json:"path"`   // /users/me, /users/{id}, /files/*
+	Status  int               `json:"status"`
+	Headers map[string]string `json:"headers"`
+	Body    string            `json:"body"`
+	DelayMs int               `json:"delay_ms"`
+	// Template makes Body and header values Go templates (mock_template.go).
+	Template bool `json:"template"`
+	// Seed, when not 0, makes a template's fake data the same on every request.
+	Seed      int64  `json:"seed"`
+	Enabled   bool   `json:"enabled"`
+	Position  int    `json:"position"`
+	Source    string `json:"source"`
+	ReadOnly  bool   `json:"read_only"`
+	CreatedAt string `json:"created_at,omitempty"`
+	UpdatedAt string `json:"updated_at,omitempty"`
 }
 
 // ValidationError lists invalid fields of a rule: field → message.
@@ -105,6 +109,17 @@ func (r *MockRule) Normalize() error {
 	}
 	r.Project = strings.TrimSpace(r.Project)
 	r.Name = strings.TrimSpace(r.Name)
+
+	if r.Template {
+		if _, err := parseMockTemplate("body", r.Body, nil); err != nil {
+			errs["body"] = "template: " + err.Error()
+		}
+		for k, v := range r.Headers {
+			if _, err := parseMockTemplate("header "+k, v, nil); err != nil {
+				errs["headers"] = fmt.Sprintf("template of header %s: %v", k, err)
+			}
+		}
+	}
 
 	if len(errs) > 0 {
 		return errs
@@ -213,7 +228,7 @@ func (s *mockStore) reload() error {
 		return nil
 	}
 	rows, err := s.db.Query(`SELECT id, COALESCE(project, ''), name, method, path, status, headers, body,
-		delay_ms, enabled, position, created_at, updated_at FROM mock_rules ORDER BY position, created_at`)
+		delay_ms, template, seed, enabled, position, created_at, updated_at FROM mock_rules ORDER BY position, created_at`)
 	if err != nil {
 		return err
 	}
@@ -223,12 +238,13 @@ func (s *mockStore) reload() error {
 	for rows.Next() {
 		var r MockRule
 		var headers string
-		var enabled int
+		var enabled, tmpl int
 		if err := rows.Scan(&r.ID, &r.Project, &r.Name, &r.Method, &r.Path, &r.Status, &headers, &r.Body,
-			&r.DelayMs, &enabled, &r.Position, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			&r.DelayMs, &tmpl, &r.Seed, &enabled, &r.Position, &r.CreatedAt, &r.UpdatedAt); err != nil {
 			return err
 		}
 		r.Enabled = enabled == 1
+		r.Template = tmpl == 1
 		r.Source = "api"
 		json.Unmarshal([]byte(headers), &r.Headers)
 		if r.Headers == nil {
@@ -339,11 +355,11 @@ func (s *mockStore) create(r MockRule) (MockRule, error) {
 	// cannot get the same one.
 	headers, _ := json.Marshal(r.Headers)
 	if _, err := s.db.Exec(`INSERT INTO mock_rules
-		(id, project, name, method, path, status, headers, body, delay_ms, enabled, position, created_at, updated_at)
-		VALUES (?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?,
+		(id, project, name, method, path, status, headers, body, delay_ms, template, seed, enabled, position, created_at, updated_at)
+		VALUES (?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
 			(SELECT COALESCE(MAX(position), -1) + 1 FROM mock_rules), ?, ?)`,
-		r.ID, r.Project, r.Name, r.Method, r.Path, r.Status, string(headers), r.Body, r.DelayMs, boolInt(r.Enabled),
-		r.CreatedAt, r.UpdatedAt); err != nil {
+		r.ID, r.Project, r.Name, r.Method, r.Path, r.Status, string(headers), r.Body, r.DelayMs,
+		boolInt(r.Template), r.Seed, boolInt(r.Enabled), r.CreatedAt, r.UpdatedAt); err != nil {
 		return MockRule{}, err
 	}
 	s.db.QueryRow(`SELECT position FROM mock_rules WHERE id = ?`, r.ID).Scan(&r.Position)
@@ -368,9 +384,9 @@ func (s *mockStore) update(id string, r MockRule) (MockRule, error) {
 
 	headers, _ := json.Marshal(r.Headers)
 	if _, err := s.db.Exec(`UPDATE mock_rules SET project = NULLIF(?, ''), name = ?, method = ?, path = ?, status = ?,
-		headers = ?, body = ?, delay_ms = ?, enabled = ?, updated_at = ? WHERE id = ?`,
-		r.Project, r.Name, r.Method, r.Path, r.Status, string(headers), r.Body, r.DelayMs, boolInt(r.Enabled),
-		r.UpdatedAt, id); err != nil {
+		headers = ?, body = ?, delay_ms = ?, template = ?, seed = ?, enabled = ?, updated_at = ? WHERE id = ?`,
+		r.Project, r.Name, r.Method, r.Path, r.Status, string(headers), r.Body, r.DelayMs,
+		boolInt(r.Template), r.Seed, boolInt(r.Enabled), r.UpdatedAt, id); err != nil {
 		return MockRule{}, err
 	}
 	s.refresh()
