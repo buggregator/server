@@ -75,7 +75,8 @@ func (m *Module) RegisterProtectedRoutes(mux *http.ServeMux, auth func(http.Hand
 	m.registerAPI(mux, auth)
 }
 
-// RegisterMCPTools adds the read-only xdebug_* tools to the MCP server.
+// RegisterMCPTools adds the xdebug_* tools to the MCP server (read-only, plus
+// xdebug_eval when allow_eval is on).
 func (m *Module) RegisterMCPTools(server *sdkmcp.Server) {
 	registerTools(server, m.proxy, m.cfg.AllowEval)
 }
