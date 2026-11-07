@@ -366,6 +366,11 @@ func applyFilter(events []event.Event, f MessageFilter) []event.Event {
 
 // matchesFilter returns true if ev satisfies all criteria in f.
 func matchesFilter(ev event.Event, f MessageFilter) bool {
+	// Stored mail is already filtered by project in the query; new mail for
+	// /wait comes here unfiltered.
+	if f.Project != "" && ev.Project != f.Project {
+		return false
+	}
 	if f.Since > 0 && ev.Timestamp < f.Since {
 		return false
 	}

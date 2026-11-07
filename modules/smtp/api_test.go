@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -572,6 +573,63 @@ func TestSMTPAPI_Wait(t *testing.T) {
 			t.Error("timed out waiting for result")
 		}
 	})
+}
+
+// A wait on project A ignores new mail for project B and returns the mail
+// for A that comes after it.
+func TestSMTPAPI_WaitNewMailOfOtherProjectIgnored(t *testing.T) {
+	mux, store, mod := setupAPITest(t)
+	cursor := tsNow()
+
+	resultCh := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		url := fmt.Sprintf("/api/smtp/messages/wait?project=shop&timeout=5s&since=%.6f", cursor)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("GET", url, nil))
+		resultCh <- w
+	}()
+	waitWaiters(t, mod, 1)
+
+	deliver := func(uuid, project string) {
+		ev := event.Event{
+			UUID:      uuid,
+			Type:      "smtp",
+			Payload:   mustMarshalJSON(ParsedEmail{Subject: "to " + project}),
+			Timestamp: tsNow(),
+			Project:   project,
+		}
+		store.Store(context.Background(), ev)
+		mod.OnEventStored(ev)
+	}
+	deliver("mail-billing", "billing")
+	deliver("mail-shop", "shop")
+
+	select {
+	case w := <-resultCh:
+		if w.Code != 200 {
+			t.Fatalf("status = %d, want 200", w.Code)
+		}
+		if body := w.Body.String(); !strings.Contains(body, "mail-shop") || strings.Contains(body, "mail-billing") {
+			t.Errorf("wait on project shop returned %s, want mail-shop", body)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for result")
+	}
+}
+
+// waitWaiters waits until the module has n long-poll waiters.
+func waitWaiters(t *testing.T, mod *Module, n int) {
+	t.Helper()
+	for i := 0; i < 200; i++ {
+		mod.mu.Lock()
+		got := len(mod.waiters)
+		mod.mu.Unlock()
+		if got == n {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("module has no %d waiters", n)
 }
 
 // TestParseTimestamp verifies timestamp parsing from various formats.
