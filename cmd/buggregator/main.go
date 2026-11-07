@@ -50,6 +50,10 @@ func main() {
 	cfg := app.LoadConfig()
 	cfg.Version = version
 
+	if limit, source := app.ApplyMemoryLimit(); limit > 0 {
+		slog.Info("go memory limit", "mib", limit>>20, "source", source)
+	}
+
 	db, err := storage.OpenPooled(cfg.DatabaseDSN, cfg.Database.MaxOpenConns)
 	if err != nil {
 		slog.Error("failed to open database", "err", err)
