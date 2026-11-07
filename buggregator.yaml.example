@@ -59,6 +59,19 @@ tcp:
   var-dumper:
     addr: ${VAR_DUMPER_ADDR::9912}
 
+# MCP server: lets AI agents (Claude Code, Codex, Cursor...) read events, Sentry
+# errors, dumps and profiles. Off by default.
+# transport: socket — a Unix socket on this machine; the agent starts `buggregator mcp`
+# as its MCP command, which connects to the socket. No auth: keep the socket local.
+# transport: http — remote access on addr; set auth_token, or anyone who can reach
+# the port can use the tools.
+# mcp:
+#   enabled: ${MCP_ENABLED:false}
+#   transport: ${MCP_TRANSPORT:socket}                      # socket or http
+#   socket_path: ${MCP_SOCKET_PATH:/tmp/buggregator-mcp.sock} # For transport=socket
+#   addr: ${MCP_ADDR::8001}                                 # For transport=http (all interfaces)
+#   auth_token: ${MCP_AUTH_TOKEN:}                          # Bearer token for transport=http. Empty = no auth
+
 # Xdebug proxy: PHP/Xdebug -> Buggregator -> IDE, plus read-only MCP tools
 # (xdebug_sessions, xdebug_location, xdebug_stack, xdebug_variables, xdebug_property,
 # xdebug_eval) on the same paused session. Off by default. MCP tools need mcp.enabled.
