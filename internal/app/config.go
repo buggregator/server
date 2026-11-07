@@ -40,20 +40,20 @@ type UIConfig struct {
 
 // Config holds application configuration.
 type Config struct {
-	Server   ServerConfig    `yaml:"server"`
-	Database DatabaseConfig  `yaml:"database"`
-	Storage  StorageConfig   `yaml:"storage"`
-	TCP      TCPConfig       `yaml:"tcp"`
-	Metrics  MetricsConfig   `yaml:"metrics"`
-	MCP      MCPConfig       `yaml:"mcp"`
-	Xdebug   XdebugConfig    `yaml:"xdebug"`
-	Auth     AuthConfig      `yaml:"auth"`
-	UI       UIConfig        `yaml:"ui"`
-	Modules  ModulesConfig   `yaml:"modules"`
-	Webhooks []WebhookDef    `yaml:"webhooks"`
-	Projects []ProjectDef    `yaml:"projects"`
-	Mocks    []MockDef       `yaml:"mocks"`
-	Version  string          `yaml:"-"`
+	Server   ServerConfig   `yaml:"server"`
+	Database DatabaseConfig `yaml:"database"`
+	Storage  StorageConfig  `yaml:"storage"`
+	TCP      TCPConfig      `yaml:"tcp"`
+	Metrics  MetricsConfig  `yaml:"metrics"`
+	MCP      MCPConfig      `yaml:"mcp"`
+	Xdebug   XdebugConfig   `yaml:"xdebug"`
+	Auth     AuthConfig     `yaml:"auth"`
+	UI       UIConfig       `yaml:"ui"`
+	Modules  ModulesConfig  `yaml:"modules"`
+	Webhooks []WebhookDef   `yaml:"webhooks"`
+	Projects []ProjectDef   `yaml:"projects"`
+	Mocks    []MockDef      `yaml:"mocks"`
+	Version  string         `yaml:"-"`
 
 	// Shortcuts.
 	HTTPAddr      string `yaml:"-"`
@@ -94,6 +94,9 @@ type MockDef struct {
 	Body    string            `yaml:"body"`
 	Delay   string            `yaml:"delay"`   // e.g. "150ms", at most 30s
 	Project string            `yaml:"project"` // empty = every project
+	// Template makes body and header values Go templates (request values, fake data).
+	Template bool  `yaml:"template"`
+	Seed     int64 `yaml:"seed"` // not 0: the same fake data on every request
 }
 
 type WebhookDef struct {
