@@ -34,6 +34,10 @@ const (
 	// maxGenNodes caps the schema nodes one body visits: depth alone does not
 	// bound a wide schema whose properties refer back to it.
 	maxGenNodes = 10000
+	// maxImportNodes and maxImportBytes cap the work of one whole import:
+	// many operations may refer to the same heavy schema or example.
+	maxImportNodes = 200000
+	maxImportBytes = 32 << 20
 )
 
 // OpenAPIImport is what to import and how.
@@ -236,6 +240,16 @@ func buildOpenAPIRules(spec []byte, in OpenAPIImport) (OpenAPIResult, error) {
 			if op == nil {
 				continue
 			}
+			// Past the import budget or the rule cap, the rest is skipped
+			// without building anything.
+			if g.importOver {
+				res.Skipped = append(res.Skipped, OpenAPISkip{Method: strings.ToUpper(method), Path: base + p, Reason: errImportTooLarge.Error()})
+				continue
+			}
+			if len(res.Rules) >= MaxMockRulesPerProject {
+				res.Skipped = append(res.Skipped, OpenAPISkip{Method: strings.ToUpper(method), Path: base + p, Reason: fmt.Sprintf("over %d rules", MaxMockRulesPerProject)})
+				continue
+			}
 			rule, err := g.rule(base+p, strings.ToUpper(method), op, in.Project)
 			if err == nil {
 				err = rule.Normalize()
@@ -277,7 +291,12 @@ type schemaGen struct {
 	// Past either, every value is "null" and the operation is skipped.
 	nodes, bytes int
 	over         bool
+	// Budget of the whole import, across operations.
+	allNodes, allBytes int
+	importOver         bool
 }
+
+var errImportTooLarge = fmt.Errorf("import too large: the spec's bodies exceed %d schema nodes or %d MB in all", maxImportNodes, maxImportBytes>>20)
 
 var errSchemaTooLarge = fmt.Errorf("schema too large to build a body (over %d nodes or 1 MB); add an example to the spec", maxGenNodes)
 
@@ -285,7 +304,12 @@ var errSchemaTooLarge = fmt.Errorf("schema too large to build a body (over %d no
 func (g *schemaGen) spend(nodes, bytes int) bool {
 	g.nodes += nodes
 	g.bytes += bytes
-	if g.nodes > maxGenNodes || g.bytes > MaxMockBody {
+	g.allNodes += nodes
+	g.allBytes += bytes
+	if g.allNodes > maxImportNodes || g.allBytes > maxImportBytes {
+		g.importOver = true
+	}
+	if g.importOver || g.nodes > maxGenNodes || g.bytes > MaxMockBody {
 		g.over = true
 	}
 	return !g.over
@@ -342,6 +366,7 @@ func (g *schemaGen) resolve(v any) any {
 
 func (g *schemaGen) rule(path, method string, op *omap, project string) (MockRule, error) {
 	rule := MockRule{Method: method, Path: path, Project: project, Enabled: true, Headers: map[string]string{}}
+	g.nodes, g.bytes, g.over = 0, 0, false // per body; the import totals go on
 	rule.Name = method + " " + path
 	if id, _ := op.get("operationId").(string); id != "" {
 		rule.Name = id
@@ -384,6 +409,9 @@ func (g *schemaGen) rule(path, method string, op *omap, project string) (MockRul
 		if err != nil {
 			return rule, err
 		}
+		if !g.spend(0, len(body)) && g.importOver {
+			return rule, errImportTooLarge
+		}
 		rule.Body = body
 		return rule, nil
 	}
@@ -394,13 +422,18 @@ func (g *schemaGen) rule(path, method string, op *omap, project string) (MockRul
 	if so, _ := schema.(*omap); so != nil {
 		if ex, ok := so.m["example"]; ok {
 			body, err := exampleBody(ex, isJSON)
+			if err == nil && !g.spend(0, len(body)) && g.importOver {
+				return rule, errImportTooLarge
+			}
 			rule.Body = body
 			return rule, err
 		}
 	}
 	if isJSON {
-		g.nodes, g.bytes, g.over = 0, 0, false
 		rule.Body = g.value(schema, "", "", false, 0)
+		if g.importOver {
+			return rule, errImportTooLarge
+		}
 		if g.over {
 			return rule, errSchemaTooLarge
 		}
@@ -754,8 +787,10 @@ func enumTemplate(enum []any, indent string) string {
 	return fmt.Sprintf(`{{ pick %s }}`, strings.Join(args, " "))
 }
 
+var nameSeparators = strings.NewReplacer("_", "", "-", "", " ", "")
+
 func normName(s string) string {
-	return strings.ToLower(strings.NewReplacer("_", "", "-", "", " ", "").Replace(s))
+	return strings.ToLower(nameSeparators.Replace(s))
 }
 
 func intOf(v any) int {

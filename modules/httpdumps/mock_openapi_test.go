@@ -489,3 +489,57 @@ func TestOpenAPI_SpecTextIsNotTemplate(t *testing.T) {
 		t.Errorf("Content-Type = %q", ct)
 	}
 }
+
+// Many operations sharing one heavy schema or example stay bounded as a
+// whole import, and no more than MaxMockRulesPerProject rules are built.
+func TestOpenAPI_ImportBudget(t *testing.T) {
+	var tProps, sProps []string
+	for i := 0; i < 100; i++ {
+		tProps = append(tProps, `"t`+strconv.Itoa(i)+`": {"type": "string"}`)
+	}
+	for i := 0; i < 90; i++ {
+		sProps = append(sProps, `"s`+strconv.Itoa(i)+`": {"$ref": "#/components/schemas/T"}`)
+	}
+	paths := func(n int) string {
+		out := make([]string, n)
+		for i := range out {
+			out[i] = `"/p` + strconv.Itoa(i) + `": {"$ref": "#/components/pathItems/P"}`
+		}
+		return strings.Join(out, ", ")
+	}
+	spec := func(schemaS string, n int) string {
+		return `{"openapi": "3.1.0", "info": {"title": "T"}, "paths": {` + paths(n) + `}, "components": {` +
+			`"pathItems": {"P": {"get": {"responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/S"}}}}}}}}, ` +
+			`"schemas": {"T": {"type": "object", "properties": {` + strings.Join(tProps, ", ") + `}}, "S": ` + schemaS + `}}}`
+	}
+	bigExample := `{"type": "object", "example": {"x": "` + strings.Repeat("a", 900<<10) + `"}}`
+	cases := map[string]string{
+		"template": spec(`{"type": "object", "properties": {`+strings.Join(sProps, ", ")+`}}`, 2000),
+		"example":  spec(bigExample, 2000),
+		"cheap":    spec(`{"type": "string", "example": "x"}`, 2000),
+	}
+	for name, sp := range cases {
+		var before, after runtime.MemStats
+		runtime.GC()
+		runtime.ReadMemStats(&before)
+		start := time.Now()
+		res, err := buildOpenAPIRules([]byte(sp), OpenAPIImport{})
+		d := time.Since(start)
+		runtime.ReadMemStats(&after)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		alloc := (after.TotalAlloc - before.TotalAlloc) >> 20
+		kept := 0
+		for _, r := range res.Rules {
+			kept += len(r.Body)
+		}
+		t.Logf("%s: %v, %d MB allocated, %d rules, %d MB of bodies, %d skipped", name, d, alloc, len(res.Rules), kept>>20, len(res.Skipped))
+		if d > 3*time.Second || alloc > 512 || kept > maxImportBytes+MaxMockBody || len(res.Rules) > MaxMockRulesPerProject {
+			t.Errorf("%s: not bounded", name)
+		}
+		if len(res.Rules)+len(res.Skipped) != 2000 {
+			t.Errorf("%s: %d rules + %d skipped", name, len(res.Rules), len(res.Skipped))
+		}
+	}
+}

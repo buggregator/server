@@ -321,6 +321,7 @@ func LoadConfig() Config {
 
 	// Mock rules from config file (read-only in the UI).
 	cfg.Mocks = fileCfg.Mocks
+	cfg.MocksOpenAPI = fileCfg.MocksOpenAPI
 
 	// Set shortcuts.
 	cfg.HTTPAddr = cfg.Server.Addr
