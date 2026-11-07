@@ -31,6 +31,10 @@ type Proxy struct {
 	sessions map[string]*Session // live sessions and tombstones
 	tombs    []string            // tombstone ids, oldest first
 
+	bps       *bpStore
+	files     seenFiles
+	allowEval bool // conditions are sent only with allow_eval
+
 	// notify receives session.* and agent.* events for the UI; must not block.
 	notify func(event string, payload any)
 }
@@ -45,6 +49,7 @@ func NewProxy(ideAddr string) *Proxy {
 		maxTombstones:  50,
 		readTarget:     true,
 		sessions:       map[string]*Session{},
+		bps:            &bpStore{},
 		settings:       Settings{Mode: ModeProxy},
 		idleTimeout:    10 * time.Minute,
 	}
@@ -89,6 +94,8 @@ func (p *Proxy) emit(event string, payload any) {
 // register adds a session and announces it.
 func (p *Proxy) register(s *Session) {
 	s.notify = p.notify
+	s.seen = p.files.see
+	s.bpSource = func() ([]SavedBreakpoint, bool) { return p.bps.List(), p.allowEval }
 	p.mu.Lock()
 	p.sessions[s.ID] = s
 	p.mu.Unlock()
@@ -278,4 +285,58 @@ func quietEOF(err error) error {
 		return nil
 	}
 	return err
+}
+
+// BreakpointsChanged tells the UI and sends the saved breakpoints to every
+// live session driven here (at once when paused, else at its next pause).
+func (p *Proxy) BreakpointsChanged() {
+	list := p.bps.List()
+	p.emit("breakpoints.changed", list)
+	for _, s := range p.Sessions() {
+		if s.Closed() || s.Info().Driver != DriverHere {
+			continue
+		}
+		go s.syncBreakpoints(list, p.allowEval)
+	}
+}
+
+// Files returns file URIs seen in pauses and stacks plus the files of saved
+// breakpoints, matching q.
+func (p *Proxy) Files(q string, limit int) []string {
+	var extra []string
+	for _, b := range p.bps.List() {
+		extra = append(extra, b.File)
+	}
+	return p.files.find(q, limit, extra)
+}
+
+// checkCondition: a condition is PHP code the engine evaluates, so it is
+// accepted only with allow_eval.
+func (p *Proxy) checkCondition(bp SavedBreakpoint) error {
+	if bp.Condition != "" && !p.allowEval {
+		return errBPCondition
+	}
+	return nil
+}
+
+// AddBreakpoint saves a breakpoint and sends it to the sessions driven here.
+func (p *Proxy) AddBreakpoint(bp SavedBreakpoint) (SavedBreakpoint, error) {
+	if err := p.checkCondition(bp); err != nil {
+		return bp, err
+	}
+	bp, err := p.bps.Add(bp)
+	if err != nil {
+		return bp, err
+	}
+	p.BreakpointsChanged()
+	return bp, nil
+}
+
+// RemoveBreakpoint deletes a breakpoint everywhere.
+func (p *Proxy) RemoveBreakpoint(id int64) error {
+	if err := p.bps.Delete(id); err != nil {
+		return err
+	}
+	p.BreakpointsChanged()
+	return nil
 }

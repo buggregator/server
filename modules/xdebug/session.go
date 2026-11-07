@@ -98,6 +98,13 @@ type Session struct {
 	idleDeadline time.Time     // zero unless paused here
 	idleSent     time.Time     // deadline last announced in session.idle
 	idleTimer    *time.Timer
+
+	bpSyncMu sync.Mutex           // one breakpoint sync at a time
+	bps      map[int64]*sessionBP // saved breakpoint id → as sent here
+	bpDirty  bool                 // breakpoints changed while running: sync at the next pause
+	// bpSource gives the saved breakpoints and allow_eval (set by the proxy).
+	bpSource func() ([]SavedBreakpoint, bool)
+	seen     func(uri string) // remembers files for GET /api/xdebug/files
 }
 
 // Close reasons of a session (tombstone).
@@ -289,6 +296,9 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 			}
 			continue
 		}
+		if rt.Name == "notify" {
+			s.onNotify(body)
+		}
 		if rt.Name != "response" || rt.TransactionID == "" {
 			// init, stream, notify: the IDE's.
 			if err := s.writeIDE(body); err != nil {
@@ -309,7 +319,7 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 		// not report it paused again. conts is already decremented for this
 		// reply, so the last continuation's reply sets the status.
 		var ev map[string]any
-		resolve := false
+		resolve, sync := false, false
 		if rt.Status != "" && s.conts == 0 {
 			prev, prevFile, prevLine := s.status, s.file, s.line
 			s.status = rt.Status
@@ -323,6 +333,7 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 					s.pauseSeq++
 					s.pausedAt = time.Now()
 					resolve = !s.targetDone
+					sync = s.bpDirty && s.driver == DriverHere
 					s.armIdleLocked()
 				}
 			}
@@ -338,6 +349,12 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 		}
 		if resolve {
 			go s.resolveTarget()
+		}
+		if ev != nil && s.seen != nil {
+			s.seen(s.Info().LastFile)
+		}
+		if sync && s.bpSource != nil {
+			go func() { list, eval := s.bpSource(); s.syncBreakpoints(list, eval) }()
 		}
 		s.afterReply(prevStatus)
 

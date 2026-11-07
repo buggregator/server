@@ -188,7 +188,10 @@ func TestMCPTools_EvalOffByDefault(t *testing.T) {
 	if names["xdebug_eval"] {
 		t.Error("xdebug_eval registered with allow_eval off")
 	}
-	for _, off := range []string{"xdebug_step", "xdebug_continue", "xdebug_stop", "xdebug_wait"} {
+	if !names["xdebug_breakpoints"] {
+		t.Error("xdebug_breakpoints (read) missing with allow_control off")
+	}
+	for _, off := range []string{"xdebug_step", "xdebug_continue", "xdebug_stop", "xdebug_wait", "xdebug_breakpoint_set", "xdebug_breakpoint_remove"} {
 		if names[off] {
 			t.Errorf("%s registered with allow_control off", off)
 		}

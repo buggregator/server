@@ -2,6 +2,7 @@ package xdebug
 
 import (
 	"bufio"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -59,6 +60,10 @@ func (s *Session) driveHere(er *bufio.Reader, pauseOnFirstLine bool) error {
 			return <-engineDone
 		}
 	}
+	if s.bpSource != nil {
+		list, eval := s.bpSource()
+		s.syncBreakpoints(list, eval)
+	}
 	first := "run"
 	if pauseOnFirstLine {
 		first = "step_into"
@@ -68,6 +73,61 @@ func (s *Session) driveHere(er *bufio.Reader, pauseOnFirstLine bool) error {
 	}
 	return <-engineDone
 }
+
+// canSendLocked: the engine reads commands now (at the start or paused, no
+// continuation in flight). Caller holds mu.
+func (s *Session) canSendLocked() bool {
+	return !s.closed && s.conts == 0 && (s.status == "break" || s.status == "starting")
+}
+
+// ownCallReply sends a command of Buggregator's own (breakpoints) and waits
+// for its reply. Refused unless the engine reads commands now.
+func (s *Session) ownCallReply(cmd string) ([]byte, error) {
+	reply := make(chan []byte, 1)
+	s.writeMu.Lock()
+	s.mu.Lock()
+	if !s.canSendLocked() {
+		s.mu.Unlock()
+		s.writeMu.Unlock()
+		return nil, errNotPaused
+	}
+	tid := s.allocTID()
+	s.pending[tid] = pending{reply: reply}
+	s.mu.Unlock()
+	name, rest, _ := strings.Cut(cmd, " ")
+	line := name + " -i " + strconv.Itoa(tid)
+	if rest != "" {
+		line += " " + rest
+	}
+	err := s.writeEngineLocked(line)
+	s.writeMu.Unlock()
+	if err != nil {
+		s.forget(tid)
+		return nil, err
+	}
+	t := time.NewTimer(s.timeout)
+	defer t.Stop()
+	select {
+	case body, ok := <-reply:
+		if !ok {
+			return nil, errSessionClosed
+		}
+		if _, err := parseResponse(body); err != nil {
+			return nil, err
+		}
+		return body, nil
+	case <-t.C:
+		s.forget(tid)
+		return nil, errCommandTimeout
+	}
+}
+
+func (s *Session) ownCall(cmd string) error {
+	_, err := s.ownCallReply(cmd)
+	return err
+}
+
+func b64Arg(v string) string { return base64.StdEncoding.EncodeToString([]byte(v)) }
 
 // errSkip from a sendOwn precondition: nothing to send, not an error.
 var errSkip = errors.New("skip")

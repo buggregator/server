@@ -192,6 +192,9 @@ func (s *Session) stack() ([]Frame, error) {
 	}
 	frames := make([]Frame, 0, len(r.Stack))
 	for _, f := range r.Stack {
+		if s.seen != nil {
+			s.seen(f.Filename)
+		}
 		frames = append(frames, Frame{Level: f.Level, Where: f.Where, File: f.Filename, Line: f.Lineno, Type: f.Type})
 	}
 	return frames, nil
@@ -362,6 +365,7 @@ func registerTools(server *sdkmcp.Server, p *Proxy, allowEval, allowControl bool
 	if allowControl {
 		registerControlTools(server, p, run)
 	}
+	registerBreakpointTools(server, p, allowControl)
 	if !allowEval {
 		return
 	}

@@ -52,6 +52,11 @@ func (m *Module) registerAPI(mux *http.ServeMux, wrap func(http.Handler) http.Ha
 	h("POST /api/xdebug/sessions/{id}/eval", m.withSession(m.handleEval))
 	h("GET /api/xdebug/sessions/{id}/agent-log", m.withSession(m.handleAgentLog))
 	h("PUT /api/xdebug/settings", m.handleSettings)
+	h("GET /api/xdebug/breakpoints", m.handleBPList)
+	h("POST /api/xdebug/breakpoints", m.handleBPCreate)
+	h("PATCH /api/xdebug/breakpoints/{bp}", m.handleBPUpdate)
+	h("DELETE /api/xdebug/breakpoints/{bp}", m.handleBPDelete)
+	h("GET /api/xdebug/files", m.handleFiles)
 	for route, cmd := range controlRoutes {
 		h("POST /api/xdebug/sessions/{id}/"+route, m.withSession(m.handleControl(cmd)))
 	}
@@ -217,6 +222,7 @@ func (m *Module) handleStack(w http.ResponseWriter, r *http.Request, s *Session)
 	}
 	frames := []StackFrame{}
 	for _, f := range resp.Stack {
+		m.proxy.files.see(f.Filename)
 		frames = append(frames, StackFrame{
 			Frame:  Frame{Level: f.Level, Where: f.Where, File: f.Filename, Line: f.Lineno, Type: f.Type},
 			Vendor: strings.Contains(f.Filename, "/vendor/"),
@@ -359,7 +365,13 @@ type Breakpoint struct {
 	HitCount int    `json:"hit_count"`
 }
 
+// handleBreakpoints: a session driven here lists the saved breakpoints with
+// their state in it; a session an IDE drives lists what the IDE set.
 func (m *Module) handleBreakpoints(w http.ResponseWriter, r *http.Request, s *Session) {
+	if s.Info().Driver == DriverHere {
+		writeJSON(w, http.StatusOK, s.SessionBreakpoints(m.proxy.bps.List()))
+		return
+	}
 	resp, err := s.readResponse("breakpoint_list", "")
 	if err != nil {
 		readFailed(w, s, err)
@@ -411,4 +423,146 @@ func intParam(w http.ResponseWriter, r *http.Request, name string) (int, bool) {
 		return 0, false
 	}
 	return n, true
+}
+
+// --- Saved breakpoints ---------------------------------------------------------
+
+// bpBody is the body of POST and PATCH /api/xdebug/breakpoints; a field left
+// out of a PATCH keeps its value.
+type bpBody struct {
+	Type      *string `json:"type"`
+	File      *string `json:"file"`
+	Line      *int    `json:"line"`
+	Exception *string `json:"exception"`
+	Condition *string `json:"condition"`
+	Enabled   *bool   `json:"enabled"`
+}
+
+func (b bpBody) apply(bp *SavedBreakpoint) {
+	if b.Type != nil {
+		bp.Type = *b.Type
+	}
+	if b.File != nil {
+		bp.File = *b.File
+	}
+	if b.Line != nil {
+		bp.Line = *b.Line
+	}
+	if b.Exception != nil {
+		bp.Exception = *b.Exception
+	}
+	if b.Condition != nil {
+		bp.Condition = strings.TrimSpace(*b.Condition)
+	}
+	if b.Enabled != nil {
+		bp.Enabled = *b.Enabled
+	}
+}
+
+func readBPBody(w http.ResponseWriter, r *http.Request) (bpBody, bool) {
+	var b bpBody
+	if !jsonOnly(w, r) {
+		return b, false
+	}
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&b); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", errors.New(`body must be {"type", "file", "line", "exception", "condition", "enabled"}`))
+		return b, false
+	}
+	return b, true
+}
+
+// bpFailed maps a breakpoint store error to a status.
+func bpFailed(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, errBPNotFound):
+		writeErr(w, http.StatusNotFound, "not_found", err)
+	case errors.Is(err, errBPCondition):
+		writeErr(w, http.StatusForbidden, "eval_disabled", err)
+	default:
+		writeErr(w, http.StatusBadRequest, "bad_request", err)
+	}
+}
+
+func (m *Module) handleBPList(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, m.proxy.bps.List())
+}
+
+func (m *Module) handleBPCreate(w http.ResponseWriter, r *http.Request) {
+	body, ok := readBPBody(w, r)
+	if !ok {
+		return
+	}
+	bp := SavedBreakpoint{Enabled: true, Source: "ui"}
+	body.apply(&bp)
+	bp, err := m.proxy.AddBreakpoint(bp)
+	if err != nil {
+		bpFailed(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, bp)
+}
+
+func bpID(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	id, err := strconv.ParseInt(r.PathValue("bp"), 10, 64)
+	if err != nil || id < 1 {
+		writeErr(w, http.StatusNotFound, "not_found", errBPNotFound)
+		return 0, false
+	}
+	return id, true
+}
+
+func (m *Module) handleBPUpdate(w http.ResponseWriter, r *http.Request) {
+	id, ok := bpID(w, r)
+	if !ok {
+		return
+	}
+	body, ok := readBPBody(w, r)
+	if !ok {
+		return
+	}
+	bp, err := m.proxy.bps.Update(id, func(bp *SavedBreakpoint) error {
+		body.apply(bp)
+		if body.Condition != nil {
+			return m.proxy.checkCondition(*bp)
+		}
+		return nil
+	})
+	if err != nil {
+		bpFailed(w, err)
+		return
+	}
+	m.proxy.BreakpointsChanged()
+	writeJSON(w, http.StatusOK, bp)
+}
+
+func (m *Module) handleBPDelete(w http.ResponseWriter, r *http.Request) {
+	id, ok := bpID(w, r)
+	if !ok {
+		return
+	}
+	if r.Header.Get("Sec-Fetch-Site") == "cross-site" {
+		writeErr(w, http.StatusForbidden, "cross_site", errors.New("cross-site requests cannot change breakpoints"))
+		return
+	}
+	if err := m.proxy.RemoveBreakpoint(id); err != nil {
+		bpFailed(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleFiles offers files for a new breakpoint: seen in pauses and stacks
+// (live sessions and tombstones) and of saved breakpoints.
+func (m *Module) handleFiles(w http.ResponseWriter, r *http.Request) {
+	limit := 20
+	if v, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && v > 0 && v <= 200 {
+		limit = v
+	}
+	files := m.proxy.Files(r.URL.Query().Get("q"), limit)
+	if files == nil {
+		files = []string{}
+	}
+	writeJSON(w, http.StatusOK, files)
 }
