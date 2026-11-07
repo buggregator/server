@@ -2,6 +2,7 @@ package event
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 )
 
@@ -28,6 +29,13 @@ type Incoming struct {
 	// stored payload and returns the merged one.
 	Merge func(stored json.RawMessage) (json.RawMessage, error)
 }
+
+// ErrNotFound: the event is not stored (e.g. deleted meanwhile).
+var ErrNotFound = errors.New("event not found")
+
+// ErrMergeLimit: a Merge refuses a follow-up because the stored event is
+// full; the follow-up is dropped.
+var ErrMergeLimit = errors.New("event is full")
 
 // Preview is the compact representation sent to the UI list and WebSocket.
 type Preview struct {
