@@ -254,6 +254,30 @@ func TestMockTemplate_WorkBudget(t *testing.T) {
 	}
 }
 
+// What the budgets do not price (comparing two 1 MB strings) stops at the
+// render deadline.
+func TestMockTemplate_Deadline(t *testing.T) {
+	old := MaxMockRenderTime
+	MaxMockRenderTime = 100 * time.Millisecond
+	t.Cleanup(func() { MaxMockRenderTime = old })
+
+	big := &mockRequest{Body: []byte(strings.Repeat("x", 1<<20))}
+	src := `{{ range repeat 10000 }}` + strings.Repeat(`{{ if eq (slice bodyRaw 1) (slice bodyRaw 0 (add (len bodyRaw) -1)) }}{{ end }}`, 10) + `{{ end }}`
+	start := time.Now()
+	_, err := renderBody(t, MockRule{Path: "/", Body: src, Template: true}, big)
+	if err == nil || !strings.Contains(err.Error(), "longer than") {
+		t.Errorf("err = %v", err)
+	}
+	if d := time.Since(start); d > 2*time.Second {
+		t.Errorf("took %v", d)
+	}
+	// Nested loops stop too.
+	src = `{{ range repeat 100 }}{{ range repeat 99 }}{{ if eq (slice bodyRaw 1) (slice bodyRaw 0 (add (len bodyRaw) -1)) }}{{ end }}{{ end }}{{ end }}`
+	if _, err := renderBody(t, MockRule{Path: "/", Body: src, Template: true}, big); err == nil {
+		t.Error("nested: no error")
+	}
+}
+
 func TestMockTemplate_Seed(t *testing.T) {
 	src := `{{ fake "name" }} {{ fake "number" 1 1000000 }} {{ pick "a" "b" "c" "d" "e" "f" }}`
 	render := func(seed int64) string {

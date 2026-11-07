@@ -167,6 +167,16 @@ func TestConfig_MCPMockWrite(t *testing.T) {
 	}
 }
 
+func TestConfig_MocksOpenAPIFromYAML(t *testing.T) {
+	path := t.TempDir() + "/buggregator.yaml"
+	os.WriteFile(path, []byte("mocks_openapi:\n  - file: ./api.yaml\n    project: shop\n    group: shop-api\n    base_path: \"\"\n  - file: ./b.json\n"), 0o600)
+	defs := loadConfigFile(path).MocksOpenAPI
+	if len(defs) != 2 || defs[0].File != "./api.yaml" || defs[0].Project != "shop" || defs[0].Group != "shop-api" ||
+		defs[0].BasePath == nil || *defs[0].BasePath != "" || defs[1].BasePath != nil {
+		t.Errorf("defs = %+v", defs)
+	}
+}
+
 func TestConfig_MocksFromYAML(t *testing.T) {
 	path := t.TempDir() + "/buggregator.yaml"
 	os.WriteFile(path, []byte(`

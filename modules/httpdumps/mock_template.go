@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"iter"
 	"net/http"
 	"net/url"
 	"sort"
@@ -194,6 +195,52 @@ type renderState struct {
 	work      int
 	generated int
 	rawBody   *string
+	// deadline ends loops and helpers of a slow render (zero = none);
+	// timedOut records that it did.
+	deadline time.Time
+	timedOut bool
+}
+
+// MaxMockRenderTime bounds one render: what the step and byte budgets do not
+// price (e.g. comparing two 1 MB strings) still stops in time.
+var MaxMockRenderTime = 2 * time.Second
+
+var errMockSlow = fmt.Errorf("template took longer than %v", MaxMockRenderTime)
+
+func (s *renderState) late() bool {
+	if !s.deadline.IsZero() && time.Now().After(s.deadline) {
+		s.timedOut = true
+	}
+	return s.timedOut
+}
+
+// items iterates keys/values for a range, the way a slice or map would with
+// decls range variables, and ends early past the deadline.
+func (s *renderState) items(decls int, keys, vals []any) any {
+	if decls > 1 {
+		return iter.Seq2[any, any](func(yield func(any, any) bool) {
+			for i := range vals {
+				if s.late() || !yield(keys[i], vals[i]) {
+					return
+				}
+			}
+		})
+	}
+	return iter.Seq[any](func(yield func(any) bool) {
+		for i := range vals {
+			if s.late() || !yield(vals[i]) {
+				return
+			}
+		}
+	})
+}
+
+func indexed[T any](list []T) (keys, vals []any) {
+	keys, vals = make([]any, len(list)), make([]any, len(list))
+	for i, v := range list {
+		keys[i], vals[i] = i, v
+	}
+	return keys, vals
 }
 
 // hiddenFuncs are bound in every template but not documented helpers: the
@@ -205,6 +252,9 @@ var hiddenFuncs = map[string]bool{
 
 // gen counts helper output against MaxMockGenerated.
 func (s *renderState) gen(v string) (string, error) {
+	if s.late() {
+		return "", errMockSlow
+	}
 	s.generated += len(v)
 	if s.generated > MaxMockGenerated {
 		return "", fmt.Errorf("helpers made more than %d bytes in one response", MaxMockGenerated)
@@ -236,26 +286,54 @@ func (s *renderState) funcs() template.FuncMap {
 		},
 		"header": func(name string) string { return s.req.Header.Get(name) },
 		"body":   s.body,
-		// Range twins (see rangeFuncs): w is the loop body's step count.
-		"rangeRepeat": func(w, n int) ([]int, error) {
+		// Range twins (see rangeFuncs): w is the loop body's step count,
+		// decls the number of range variables.
+		"rangeRepeat": func(w, decls, n int) (any, error) {
 			if err := s.loop(w, max(n, 0)); err != nil {
 				return nil, err
 			}
-			return s.repeat(n)
-		},
-		"rangeQueryAll": func(w int, name string) ([]string, error) {
-			v := s.req.Query[name]
-			return v, s.loop(w, len(v))
-		},
-		"rangeBody": func(w int, path string) (any, error) {
-			v := s.body(path)
-			switch x := v.(type) {
-			case []any:
-				return v, s.loop(w, len(x))
-			case map[string]any:
-				return v, s.loop(w, len(x))
+			list, err := s.repeat(n)
+			if err != nil {
+				return nil, err
 			}
-			return v, nil
+			k, v := indexed(list)
+			return s.items(decls, k, v), nil
+		},
+		"rangeQueryAll": func(w, decls int, name string) (any, error) {
+			list := s.req.Query[name]
+			if err := s.loop(w, len(list)); err != nil {
+				return nil, err
+			}
+			k, v := indexed(list)
+			return s.items(decls, k, v), nil
+		},
+		"rangeBody": func(w, decls int, path string) (any, error) {
+			switch x := s.body(path).(type) {
+			case []any:
+				if err := s.loop(w, len(x)); err != nil {
+					return nil, err
+				}
+				k, v := indexed(x)
+				return s.items(decls, k, v), nil
+			case map[string]any:
+				if err := s.loop(w, len(x)); err != nil {
+					return nil, err
+				}
+				names := make([]string, 0, len(x))
+				for name := range x {
+					names = append(names, name)
+				}
+				sort.Strings(names) // as range over a map
+				k, v := make([]any, len(names)), make([]any, len(names))
+				for i, name := range names {
+					k[i], v[i] = name, x[name]
+				}
+				return s.items(decls, k, v), nil
+			case nil:
+				return s.items(decls, nil, nil), nil
+			default:
+				return x, nil // range reports it cannot iterate
+			}
 		},
 		"bodyRaw": func() string {
 			if s.rawBody == nil {
@@ -523,11 +601,14 @@ func checkMockNode(n parse.Node) error {
 		if ident == nil || rangeFuncs[ident.Ident] == "" {
 			return errors.New(`range works only over repeat, queryAll or body, e.g. {{ range $i := repeat 3 }}`)
 		}
-		// Rewrite `range f args` to `range rangeF w args`: each item costs w steps.
+		// Rewrite `range f args` to `range rangeF w decls args`: each item
+		// costs w steps.
 		w := max(1, mockSteps(n.List)+mockSteps(n.ElseList))
 		ident.Ident = rangeFuncs[ident.Ident]
-		weight := &parse.NumberNode{NodeType: parse.NodeNumber, Pos: ident.Pos, IsInt: true, Int64: int64(w), Text: strconv.Itoa(w)}
-		args := append([]parse.Node{ident, weight}, cmds[0].Args[1:]...)
+		num := func(v int) parse.Node {
+			return &parse.NumberNode{NodeType: parse.NodeNumber, Pos: ident.Pos, IsInt: true, Int64: int64(v), Text: strconv.Itoa(v)}
+		}
+		args := append([]parse.Node{ident, num(w), num(len(n.Pipe.Decl))}, cmds[0].Args[1:]...)
 		cmds[0].Args = args
 		return checkMockBranch(&n.BranchNode)
 	}
@@ -576,7 +657,7 @@ type mockRendered struct {
 // renderMockRule runs the body and header templates of a rule for a request.
 // With a seed the fake data is the same on every request.
 func renderMockRule(rule *MockRule, req *mockRequest) (mockRendered, error) {
-	st := &renderState{req: req, faker: gofakeit.New(uint64(rule.Seed))}
+	st := &renderState{req: req, faker: gofakeit.New(uint64(rule.Seed)), deadline: time.Now().Add(MaxMockRenderTime)}
 	funcs := st.funcs()
 	exec := func(name, src string) ([]byte, error) {
 		t, err := parseMockTemplate(name, src, funcs)
@@ -586,6 +667,9 @@ func renderMockRule(rule *MockRule, req *mockRequest) (mockRendered, error) {
 		buf := &limitedBuffer{max: MaxMockBody}
 		if err := t.Execute(buf, nil); err != nil {
 			return nil, err
+		}
+		if st.timedOut {
+			return nil, errMockSlow
 		}
 		return buf.Bytes(), nil
 	}
