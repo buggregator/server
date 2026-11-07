@@ -56,7 +56,10 @@ type Config struct {
 	Mocks    []MockDef      `yaml:"mocks"`
 	// MocksOpenAPI are OpenAPI specs turned into read-only mock rules at start.
 	MocksOpenAPI []MockOpenAPIDef `yaml:"mocks_openapi"`
-	Version      string           `yaml:"-"`
+	// UpdateCheck asks GitHub for the latest release so the UI can say a new
+	// version is out.
+	UpdateCheck UpdateCheckConfig `yaml:"update_check"`
+	Version     string            `yaml:"-"`
 
 	// Shortcuts.
 	HTTPAddr      string `yaml:"-"`
@@ -129,6 +132,17 @@ type WebhookDef struct {
 	VerifySSL *bool             `yaml:"verify_ssl"` // Verify SSL certificates (default: false).
 	Retry     *bool             `yaml:"retry"`      // Retry on failure (default: true).
 }
+
+// UpdateCheckConfig controls the new-version check (GitHub releases/latest).
+type UpdateCheckConfig struct {
+	Enabled  *bool  `yaml:"enabled"`  // default true; false = no network call at all
+	Interval string `yaml:"interval"` // Go duration between checks, default 12h, at least 1h
+
+	IntervalDur time.Duration `yaml:"-"`
+}
+
+// On reports whether the check runs (default true).
+func (c UpdateCheckConfig) On() bool { return c.Enabled == nil || *c.Enabled }
 
 // MetricsConfig controls Prometheus metrics.
 type MetricsConfig struct {
@@ -274,6 +288,16 @@ func LoadConfig() Config {
 	// Metrics.
 	cfg.Metrics.Enabled = fileCfg.Metrics.Enabled || os.Getenv("METRICS_ENABLED") == "true"
 	cfg.Metrics.Addr = coalesce(os.Getenv("METRICS_ADDR"), fileCfg.Metrics.Addr)
+
+	// New-version check.
+	updateCheck := envBool("UPDATE_CHECK_ENABLED", fileCfg.UpdateCheck.Enabled == nil || *fileCfg.UpdateCheck.Enabled)
+	cfg.UpdateCheck.Enabled = &updateCheck
+	cfg.UpdateCheck.Interval = coalesce(os.Getenv("UPDATE_CHECK_INTERVAL"), fileCfg.UpdateCheck.Interval, "12h")
+	if d, err := time.ParseDuration(strings.TrimSpace(cfg.UpdateCheck.Interval)); err == nil && d > 0 {
+		cfg.UpdateCheck.IntervalDur = d
+	} else {
+		slog.Warn("update_check.interval is not a positive duration, using 12h", "value", cfg.UpdateCheck.Interval)
+	}
 
 	// MCP.
 	cfg.MCP.Enabled = fileCfg.MCP.Enabled || os.Getenv("MCP_ENABLED") == "true"

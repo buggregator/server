@@ -25,6 +25,7 @@ import (
 	"github.com/buggregator/go-buggregator/internal/server/tcp"
 	"github.com/buggregator/go-buggregator/internal/server/ws"
 	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/go-buggregator/internal/updates"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -113,8 +114,17 @@ func (a *App) Run() {
 		authMiddleware = func(next http.Handler) http.Handler { return next }
 	}
 
+	// New-version check: GitHub releases/latest, result in /api/settings.
+	// Off = no network call; a dev build never checks.
+	var updateStatus func() any
+	if a.cfg.UpdateCheck.On() {
+		checker := updates.New(a.cfg.Version, a.cfg.UpdateCheck.IntervalDur)
+		go checker.Run(ctx)
+		updateStatus = func() any { return checker.Status() }
+	}
+
 	// Register core API routes (settings endpoint is public, others go through auth middleware).
-	httpserver.RegisterAPI(mux, store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes(), authSettings, authMiddleware, a.listLimits())
+	httpserver.RegisterAPI(mux, store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes(), authSettings, authMiddleware, a.listLimits(), updateStatus)
 
 	// Module API routes that need the same auth as the core API.
 	a.registry.RegisterProtectedRoutes(mux, authMiddleware)

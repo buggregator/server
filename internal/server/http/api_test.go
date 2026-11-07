@@ -25,6 +25,11 @@ func setupAPI(t *testing.T) (*http.ServeMux, *storage.SQLiteStore) {
 
 func setupAPILimits(t *testing.T, limits serverhttp.ListLimits) (*http.ServeMux, *storage.SQLiteStore) {
 	t.Helper()
+	return setupAPIWith(t, limits, nil)
+}
+
+func setupAPIWith(t *testing.T, limits serverhttp.ListLimits, updateStatus func() any) (*http.ServeMux, *storage.SQLiteStore) {
+	t.Helper()
 	db, err := storage.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -51,7 +56,7 @@ func setupAPILimits(t *testing.T, limits serverhttp.ListLimits) (*http.ServeMux,
 
 	mux := http.NewServeMux()
 	noopMiddleware := func(next http.Handler) http.Handler { return next }
-	serverhttp.RegisterAPI(mux, store, event.NewPreviewRegistry(), es, "test-version", db, []string{"sentry", "ray"}, serverhttp.AuthSettings{}, noopMiddleware, limits)
+	serverhttp.RegisterAPI(mux, store, event.NewPreviewRegistry(), es, "test-version", db, []string{"sentry", "ray"}, serverhttp.AuthSettings{}, noopMiddleware, limits, updateStatus)
 
 	return mux, store
 }
@@ -88,6 +93,34 @@ func TestAPI_Settings(t *testing.T) {
 	events, ok := resp["events"].([]any)
 	if !ok || len(events) != 2 {
 		t.Errorf("events = %v", resp["events"])
+	}
+}
+
+// /api/settings carries the new-version check: null when it is off.
+func TestAPI_SettingsUpdate(t *testing.T) {
+	get := func(mux *http.ServeMux) map[string]any {
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("GET", "/api/settings", nil))
+		var resp map[string]any
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatal(err)
+		}
+		return resp
+	}
+
+	off, _ := setupAPI(t)
+	if resp := get(off); resp["update"] != nil {
+		t.Errorf("check off: update = %v", resp["update"])
+	} else if _, ok := resp["update"]; !ok {
+		t.Error("check off: no update field")
+	}
+
+	on, _ := setupAPIWith(t, serverhttp.ListLimits{}, func() any {
+		return map[string]any{"current": "2.7.0", "latest": "2.8.0", "url": "https://github.com/buggregator/server/releases/tag/v2.8.0", "available": true}
+	})
+	u, ok := get(on)["update"].(map[string]any)
+	if !ok || u["latest"] != "2.8.0" || u["available"] != true || u["current"] != "2.7.0" {
+		t.Errorf("check on: update = %v", u)
 	}
 }
 

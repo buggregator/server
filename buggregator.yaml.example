@@ -29,6 +29,12 @@ ui:
   max_limit: ${UI_MAX_LIMIT:5000}           # Ceiling for an explicit ?limit=. 0 = no ceiling
   default_window: ${UI_DEFAULT_WINDOW:}     # Default time window, e.g. "1h", "24h", "7d". Empty = no window
 
+# New-version check: asks GitHub (api.github.com, releases/latest) for the newest
+# server release; the UI shows a notice when it is newer. Off = no network call.
+update_check:
+  enabled: ${UPDATE_CHECK_ENABLED:true}
+  interval: ${UPDATE_CHECK_INTERVAL:12h}  # Go duration, at least 1h
+
 # Prometheus metrics
 metrics:
   enabled: ${METRICS_ENABLED:false}       # Set to true to expose Prometheus metrics
