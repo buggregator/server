@@ -294,6 +294,10 @@ func LoadConfig() Config {
 	cfg.UpdateCheck.Enabled = &updateCheck
 	cfg.UpdateCheck.Interval = coalesce(os.Getenv("UPDATE_CHECK_INTERVAL"), fileCfg.UpdateCheck.Interval, "12h")
 	if d, err := time.ParseDuration(strings.TrimSpace(cfg.UpdateCheck.Interval)); err == nil && d > 0 {
+		if d < time.Hour {
+			slog.Warn("update_check.interval is below 1h, using 1h", "value", cfg.UpdateCheck.Interval)
+			d = time.Hour
+		}
 		cfg.UpdateCheck.IntervalDur = d
 	} else {
 		slog.Warn("update_check.interval is not a positive duration, using 12h", "value", cfg.UpdateCheck.Interval)
