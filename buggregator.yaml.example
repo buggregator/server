@@ -126,6 +126,12 @@ modules:
 #     body: '{"id": 1, "name": "Jane"}'
 #     delay: 150ms                 # optional, at most 30s
 #     project: default             # optional; empty = every project
+#   - method: GET                  # a dynamic response: request values and fake data
+#     path: /orders/{id}
+#     template: true               # body and header values are Go templates
+#     seed: 42                     # optional; not 0 = the same fake data on every request
+#     headers: { Content-Type: application/json }
+#     body: '{"id": {{ path "id" }}, "customer": {{ fake "name" | json }}, "total": {{ fake "price" 5 500 }}}'
 
 # Pre-defined projects. The "default" project always exists.
 # Additional projects can be defined here.
