@@ -2,6 +2,7 @@ package app
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -166,15 +167,22 @@ mocks:
     body: '{"id": 1}'
     delay: 150ms
     project: shop
+  - path: /orders/{id}
+    template: true
+    seed: 42
+    body: '[{{ range $i := repeat 2 }}{{ if $i }},{{ end }}{{ fake "name" | json }}{{ end }}]'
 `), 0o600)
 	cfg := loadConfigFile(path)
-	if len(cfg.Mocks) != 1 {
+	if len(cfg.Mocks) != 2 {
 		t.Fatalf("mocks = %+v", cfg.Mocks)
 	}
 	m := cfg.Mocks[0]
 	if m.Method != "GET" || m.Path != "/users/{id}" || m.Status != 200 || m.Headers["Content-Type"] != "application/json" ||
 		m.Body != `{"id": 1}` || m.Delay != "150ms" || m.Project != "shop" {
 		t.Errorf("mock = %+v", m)
+	}
+	if m := cfg.Mocks[1]; !m.Template || m.Seed != 42 || !strings.Contains(m.Body, `{{ range $i := repeat 2 }}`) {
+		t.Errorf("template mock = %+v", m)
 	}
 }
 
