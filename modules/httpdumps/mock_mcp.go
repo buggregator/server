@@ -395,7 +395,7 @@ type mockImportInput struct {
 	Spec     string  `json:"spec,omitempty" jsonschema:"The spec text, YAML or JSON"`
 	URL      string  `json:"url,omitempty" jsonschema:"Or where to download the spec (http/https)"`
 	Project  string  `json:"project,omitempty" jsonschema:"Project of the rules; empty = every project"`
-	Group    string  `json:"group,omitempty" jsonschema:"Group name; default openapi:<info.title>"`
+	Group    string  `json:"group,omitempty" jsonschema:"Group name; default openapi:<info.title>, or openapi:<project>:<info.title> with a project"`
 	BasePath *string `json:"base_path,omitempty" jsonschema:"Prefix for every path; default the path of servers[0].url, empty string = none"`
 }
 
