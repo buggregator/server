@@ -140,7 +140,7 @@ modules:
 # mocks_openapi:
 #   - file: ./openapi.yaml
 #     project: shop                # optional; empty = every project
-#     group: shop-api              # optional; default openapi:<info.title>
+#     group: shop-api              # optional; default openapi:<project>:<info.title>
 #     base_path: ""                # optional; "" = no prefix
 
 # Pre-defined projects. The "default" project always exists.

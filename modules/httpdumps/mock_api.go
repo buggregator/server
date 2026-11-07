@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"mime"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -79,6 +80,12 @@ func registerMockAPI(mux *http.ServeMux, rules *mockStore, db *sql.DB, protect f
 	})
 
 	route("POST /api/mocks/import/openapi", func(w http.ResponseWriter, r *http.Request) {
+		// JSON only: a cross-site form or text/plain POST (no preflight) must
+		// not make the server download URLs.
+		if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
+			mockJSON(w, http.StatusUnsupportedMediaType, map[string]any{"message": "Content-Type must be application/json", "code": 415})
+			return
+		}
 		var in OpenAPIImport
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, MaxOpenAPISpec+(1<<20))).Decode(&in); err != nil {
 			mockJSON(w, http.StatusBadRequest, map[string]any{"message": "invalid JSON body", "code": 400})
