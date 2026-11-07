@@ -34,7 +34,7 @@ type SavedBreakpoint struct {
 	Type      string    `json:"type"`                // line or exception
 	File      string    `json:"file,omitempty"`      // file:// URI as PHP sees it (line)
 	Line      int       `json:"line,omitempty"`      // line
-	Exception string    `json:"exception,omitempty"` // class name, e.g. \Throwable (exception)
+	Exception string    `json:"exception,omitempty"` // class name as PHP holds it, e.g. Throwable (exception)
 	Condition string    `json:"condition,omitempty"` // PHP expression; sent only with allow_eval
 	Enabled   bool      `json:"enabled"`
 	Source    string    `json:"source"` // ui or mcp
@@ -50,7 +50,9 @@ func (b *SavedBreakpoint) normalize() error {
 		}
 	}
 	b.File = fileURI(strings.TrimSpace(b.File))
-	b.Exception = strings.TrimSpace(b.Exception)
+	// Xdebug matches the class name as PHP holds it, with no leading \;
+	// "\RuntimeException" would be accepted and never fire.
+	b.Exception = strings.TrimPrefix(strings.TrimSpace(b.Exception), `\`)
 	switch b.Type {
 	case BPLine:
 		if b.File == "" || b.Line < 1 {
@@ -62,7 +64,7 @@ func (b *SavedBreakpoint) normalize() error {
 		b.Exception = ""
 	case BPException:
 		if b.Exception == "" {
-			return errors.New("an exception breakpoint needs exception (a class name, e.g. \\Throwable)")
+			return errors.New("an exception breakpoint needs exception (a class name, e.g. Throwable)")
 		}
 		b.File, b.Line = "", 0
 	default:
