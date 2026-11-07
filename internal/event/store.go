@@ -1,6 +1,9 @@
 package event
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+)
 
 // FindOptions configures event listing queries.
 type FindOptions struct {
@@ -35,6 +38,8 @@ type Store interface {
 	FindAll(ctx context.Context, opts FindOptions) ([]Event, error)
 	Delete(ctx context.Context, uuid string) error
 	DeleteAll(ctx context.Context, opts DeleteOptions) error
+	// UpdatePayload replaces the payload of a stored event.
+	UpdatePayload(ctx context.Context, uuid string, payload json.RawMessage) error
 	Pin(ctx context.Context, uuid string) error
 	Unpin(ctx context.Context, uuid string) error
 }

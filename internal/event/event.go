@@ -21,6 +21,12 @@ type Incoming struct {
 	Type    string
 	Payload json.RawMessage
 	Project string
+
+	// Merge, when set, folds this payload into a stored event with the same
+	// UUID and type instead of storing a new one (Ray sends follow-ups such
+	// as trace or color under the uuid of the first payload). It gets the
+	// stored payload and returns the merged one.
+	Merge func(stored json.RawMessage) (json.RawMessage, error)
 }
 
 // Preview is the compact representation sent to the UI list and WebSocket.

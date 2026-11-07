@@ -222,6 +222,11 @@ func (s *SQLiteStore) DeleteAll(ctx context.Context, opts event.DeleteOptions) e
 	return err
 }
 
+func (s *SQLiteStore) UpdatePayload(ctx context.Context, uuid string, payload json.RawMessage) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE events SET payload = ? WHERE uuid = ?`, string(payload), uuid)
+	return err
+}
+
 func (s *SQLiteStore) Pin(ctx context.Context, uuid string) error {
 	_, err := s.db.ExecContext(ctx, `UPDATE events SET is_pinned = 1 WHERE uuid = ?`, uuid)
 	return err

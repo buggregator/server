@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/buggregator/go-buggregator/internal/event"
@@ -84,6 +85,13 @@ func (s *InstrumentedStore) DeleteAll(ctx context.Context, opts event.DeleteOpti
 		// Re-seed gauge after bulk delete since we don't know exactly what was removed.
 		s.collector.EventsStoredTotal.Reset()
 	}
+	return err
+}
+
+func (s *InstrumentedStore) UpdatePayload(ctx context.Context, uuid string, payload json.RawMessage) error {
+	start := time.Now()
+	err := s.inner.UpdatePayload(ctx, uuid, payload)
+	s.collector.StorageQueryDuration.WithLabelValues("update_payload").Observe(time.Since(start).Seconds())
 	return err
 }
 

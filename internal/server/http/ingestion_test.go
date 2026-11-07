@@ -45,6 +45,9 @@ func (s *spyStore) Delete(_ context.Context, _ string) error              { retu
 func (s *spyStore) DeleteAll(_ context.Context, _ event.DeleteOptions) error { return nil }
 func (s *spyStore) Pin(_ context.Context, _ string) error                 { return nil }
 func (s *spyStore) Unpin(_ context.Context, _ string) error               { return nil }
+func (s *spyStore) UpdatePayload(_ context.Context, _ string, _ json.RawMessage) error {
+	return nil
+}
 
 func (s *spyStore) storedEvents() []event.Event {
 	s.mu.Lock()
