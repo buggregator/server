@@ -126,7 +126,7 @@ func (a *App) Run() {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"enabled": false, "addr": a.cfg.Xdebug.Addr, "ide_addr": a.cfg.Xdebug.IDEAddr, "allow_eval": a.cfg.Xdebug.AllowEval,
 				"mode": a.cfg.Xdebug.Mode, "allow_control": a.cfg.Xdebug.AllowControlOn(),
-				"pause_on_first_line": a.cfg.Xdebug.PauseOnFirstLine,
+				"pause_on_first_line":  a.cfg.Xdebug.PauseOnFirstLine,
 				"idle_timeout_seconds": idleSeconds(a.cfg.Xdebug.IdleTimeoutDur),
 			})
 		})))
