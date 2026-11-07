@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -226,6 +228,14 @@ func (a *App) Run() {
 		}
 	}
 
+	// Bind the HTTP port before anything else serves: a busy port must stop
+	// startup (like the TCP ports), not leave a process with no UI.
+	httpLn, err := listenHTTP(a.cfg.HTTPAddr)
+	if err != nil {
+		slog.Error("failed to start HTTP server", "err", err)
+		os.Exit(1)
+	}
+
 	// Start TCP servers.
 	tcpManager := tcp.NewManager(a.registry.TCPServers(), a.metrics)
 	if err := tcpManager.Start(ctx); err != nil {
@@ -249,7 +259,7 @@ func (a *App) Run() {
 	srv := &http.Server{Addr: a.cfg.HTTPAddr, Handler: handler}
 	go func() {
 		slog.Info("HTTP server started", "addr", a.cfg.HTTPAddr)
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		if err := srv.Serve(httpLn); err != http.ErrServerClosed {
 			slog.Error("HTTP server error", "err", err)
 		}
 	}()
@@ -291,4 +301,14 @@ func derefInt(p *int) int {
 		return 0
 	}
 	return *p
+}
+
+// listenHTTP binds the HTTP address. The error names the address and how to
+// change it, since a busy :8000 is the usual first-run problem.
+func listenHTTP(addr string) (net.Listener, error) {
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("http: listen on %s: %w (change it with -http-addr or HTTP_ADDR)", addr, err)
+	}
+	return ln, nil
 }
