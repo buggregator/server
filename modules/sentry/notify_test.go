@@ -137,3 +137,55 @@ func TestModule_SendsStoredNoticeOnTheProjectChannel(t *testing.T) {
 func TestModule_SendsNothingWithoutABroadcaster(t *testing.T) {
 	New().notifyStored("proj", []string{"log"}) // must not panic
 }
+
+// A kind is announced only when its rows were stored: a store that fails, an
+// item that does not parse or holds nothing announces nothing for that kind.
+func TestHandleEnvelope_NoNoticeForFailedStore(t *testing.T) {
+	logItem := `{"type":"log"}
+{"items":[{"timestamp":1788420877.5,"level":"info","body":"hello"}]}
+`
+	metricItem := `{"type":"trace_metric"}
+{"items":[{"timestamp":1788420877.5,"name":"order.status","value":3,"type":"gauge"}]}
+`
+	spansItem := `{"type":"spans"}
+{"items":[{"trace_id":"trace-fail","span_id":"s1","name":"db","start_timestamp":1788420877.0,"end_timestamp":1788420877.5}]}
+`
+	tests := []struct {
+		name  string
+		drop  string // table dropped so its store fails
+		items string
+		want  []string
+	}{
+		{"metrics store fails, logs stored", "sentry_metrics", logItem + metricItem, []string{"log"}},
+		{"logs store fails", "sentry_logs", logItem, nil},
+		{"spans store fails", "sentry_spans", spansItem, nil},
+		{"transaction does not parse", "", "{\"type\":\"transaction\"}\n{not json}\n", nil},
+		{"empty log items", "", "{\"type\":\"log\"}\n{\"items\":[]}\n", nil},
+		{"metric item neither object nor array", "", "{\"type\":\"trace_metric\"}\n\"x\"\n", nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h, notices := recordingHandler(t, true)
+			if tt.drop != "" {
+				if _, err := h.db.Exec("DROP TABLE " + tt.drop); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			if _, err := h.handleEnvelope([]byte(`{"event_id":"notice"}`+"\n"+tt.items), "proj"); err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.want == nil {
+				if len(*notices) != 0 {
+					t.Errorf("notices = %v, want none", *notices)
+				}
+				return
+			}
+			if len(*notices) != 1 || fmt.Sprint((*notices)[0].kinds) != fmt.Sprint(tt.want) {
+				t.Errorf("notices = %v, want one with kinds %v", *notices, tt.want)
+			}
+		})
+	}
+}

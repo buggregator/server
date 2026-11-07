@@ -34,6 +34,12 @@ func NewIngestionPipeline(handlers []module.HTTPIngestionHandler, es *EventServi
 }
 
 func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// The detected headers are the pipeline's own: drop any a client sent, so
+	// only detection below sets them (a client names its project with
+	// X-Buggregator-Project or the DSN).
+	r.Header.Del(HeaderDetectedType)
+	r.Header.Del(HeaderDetectedProject)
+
 	// Detect event type from userinfo/headers/basic-auth.
 	detected := detectEventType(r)
 	if detected != nil {

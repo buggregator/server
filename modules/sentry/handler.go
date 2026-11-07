@@ -168,20 +168,25 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 		case "transaction":
 			// Transactions are stored in structured tables (sentry_transactions, sentry_spans)
 			// but should NOT appear in the global event feed as empty sentry cards.
-			h.handleTransactionItem(item, envHeader.EventID, project)
-			kinds.add("trace")
+			// A kind is announced only when its rows were stored.
+			if h.handleTransactionItem(item, envHeader.EventID, project) {
+				kinds.add("trace")
+			}
 
 		case "spans":
-			h.handleSpansItem(item, project)
-			kinds.add("trace")
+			if h.handleSpansItem(item, project) {
+				kinds.add("trace")
+			}
 
 		case "log":
-			h.handleLogItem(item, project)
-			kinds.add("log")
+			if h.handleLogItem(item, project) {
+				kinds.add("log")
+			}
 
 		case "trace_metric":
-			h.handleMetricItem(item, project)
-			kinds.add("metric")
+			if h.handleMetricItem(item, project) {
+				kinds.add("metric")
+			}
 
 		case "session", "sessions", "client_report", "metric_buckets", "check_in",
 			"user_report", "attachment", "replay_event", "replay_recording", "statsd":
@@ -264,35 +269,36 @@ func (h *handler) handleEventItem(item EnvelopeItem, envelopeEventID string, pro
 
 // handleTransactionItem processes a "transaction" envelope item.
 // envelopeEventID is used as a fallback for SDKs that only include event_id
-// in the envelope header and omit it in the transaction payload.
-func (h *handler) handleTransactionItem(item EnvelopeItem, envelopeEventID, project string) (string, json.RawMessage) {
+// in the envelope header and omit it in the transaction payload. It reports
+// whether the transaction was stored.
+func (h *handler) handleTransactionItem(item EnvelopeItem, envelopeEventID, project string) bool {
 	var txn Transaction
 	if err := json.Unmarshal(item.Payload, &txn); err != nil {
 		slog.Warn("sentry: failed to parse transaction", "err", err)
-		return "", item.Payload
+		return false
 	}
 
-	uuid := txn.EventID
 	payload := item.Payload
-	if uuid == "" && envelopeEventID != "" {
-		uuid = envelopeEventID
+	if txn.EventID == "" && envelopeEventID != "" {
 		txn.EventID = envelopeEventID
 		payload = injectEventID(payload, envelopeEventID)
 	}
 
-	if h.db != nil {
-		if _, err := storeTransaction(h.db, &txn, payload, project); err != nil {
-			slog.Warn("sentry: failed to store structured transaction", "err", err)
-		}
+	if h.db == nil {
+		return false
 	}
-
-	return uuid, payload
+	if _, err := storeTransaction(h.db, &txn, payload, project); err != nil {
+		slog.Warn("sentry: failed to store structured transaction", "err", err)
+		return false
+	}
+	return true
 }
 
-// handleSpansItem processes a "spans" envelope item (Span v2 format).
-func (h *handler) handleSpansItem(item EnvelopeItem, project string) {
+// handleSpansItem processes a "spans" envelope item (Span v2 format). It
+// reports whether any spans were stored.
+func (h *handler) handleSpansItem(item EnvelopeItem, project string) bool {
 	if h.db == nil {
-		return
+		return false
 	}
 
 	// Spans v2 can be either {"items": [...]} or a bare array [...].
@@ -300,8 +306,9 @@ func (h *handler) handleSpansItem(item EnvelopeItem, project string) {
 	if err := json.Unmarshal(item.Payload, &envelope); err == nil && len(envelope.Items) > 0 {
 		if err := storeSpansV2(h.db, envelope.Items, nil, project); err != nil {
 			slog.Warn("sentry: failed to store spans v2", "err", err)
+			return false
 		}
-		return
+		return true
 	}
 
 	// Try as bare array.
@@ -309,68 +316,81 @@ func (h *handler) handleSpansItem(item EnvelopeItem, project string) {
 	if err := json.Unmarshal(item.Payload, &spans); err == nil && len(spans) > 0 {
 		if err := storeSpansV2(h.db, spans, nil, project); err != nil {
 			slog.Warn("sentry: failed to store spans v2 (array)", "err", err)
+			return false
 		}
+		return true
 	}
+	return false
 }
 
-// handleLogItem processes a "log" envelope item.
-func (h *handler) handleLogItem(item EnvelopeItem, project string) {
+// handleLogItem processes a "log" envelope item. It reports whether any logs
+// were stored.
+func (h *handler) handleLogItem(item EnvelopeItem, project string) bool {
 	if h.db == nil {
-		return
+		return false
 	}
 
 	// Log items can be {"items": [...]} or a bare array.
 	var envelope LogEnvelope
 	if err := json.Unmarshal(item.Payload, &envelope); err == nil && envelope.Items != nil {
 		if len(envelope.Items) == 0 {
-			return // {"items": []}: nothing to store, nothing dropped
+			return false // {"items": []}: nothing to store, nothing dropped
 		}
 		if err := storeLogs(h.db, envelope.Items, project); err != nil {
 			slog.Warn("sentry: failed to store logs", "err", err)
+			return false
 		}
-		return
+		return true
 	}
 
 	var logs []LogRecord
 	if err := json.Unmarshal(item.Payload, &logs); err != nil {
 		slog.Debug("sentry: dropped log item, neither {\"items\": [...]} nor an array", "err", err)
-		return
+		return false
 	}
-	if len(logs) > 0 {
-		if err := storeLogs(h.db, logs, project); err != nil {
-			slog.Warn("sentry: failed to store logs (array)", "err", err)
-		}
+	if len(logs) == 0 {
+		return false
 	}
+	if err := storeLogs(h.db, logs, project); err != nil {
+		slog.Warn("sentry: failed to store logs (array)", "err", err)
+		return false
+	}
+	return true
 }
 
-// handleMetricItem processes a "trace_metric" envelope item.
-func (h *handler) handleMetricItem(item EnvelopeItem, project string) {
+// handleMetricItem processes a "trace_metric" envelope item. It reports
+// whether any metrics were stored.
+func (h *handler) handleMetricItem(item EnvelopeItem, project string) bool {
 	if h.db == nil {
-		return
+		return false
 	}
 
 	// Metric items can be {"items": [...]} or a bare array.
 	var envelope MetricEnvelope
 	if err := json.Unmarshal(item.Payload, &envelope); err == nil && envelope.Items != nil {
 		if len(envelope.Items) == 0 {
-			return // {"items": []}: nothing to store, nothing dropped
+			return false // {"items": []}: nothing to store, nothing dropped
 		}
 		if err := storeMetrics(h.db, envelope.Items, project); err != nil {
 			slog.Warn("sentry: failed to store metrics", "err", err)
+			return false
 		}
-		return
+		return true
 	}
 
 	var metrics []MetricRecord
 	if err := json.Unmarshal(item.Payload, &metrics); err != nil {
 		slog.Debug("sentry: dropped metric item, neither {\"items\": [...]} nor an array", "err", err)
-		return
+		return false
 	}
-	if len(metrics) > 0 {
-		if err := storeMetrics(h.db, metrics, project); err != nil {
-			slog.Warn("sentry: failed to store metrics (array)", "err", err)
-		}
+	if len(metrics) == 0 {
+		return false
 	}
+	if err := storeMetrics(h.db, metrics, project); err != nil {
+		slog.Warn("sentry: failed to store metrics (array)", "err", err)
+		return false
+	}
+	return true
 }
 
 // isStructuredOnlyItem reports whether an envelope item type is stored only in
