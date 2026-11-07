@@ -881,3 +881,51 @@ func TestPipeline_SentryRowsFollowEventProject(t *testing.T) {
 		})
 	}
 }
+
+// The detected headers belong to the pipeline: one a client sends is dropped,
+// so it can neither pick the project nor force a handler. The public
+// X-Buggregator-Project still names the project.
+func TestPipeline_ClientDetectedHeadersIgnored(t *testing.T) {
+	pipeline, store, spies := buildPipeline(t)
+
+	post := func(headers map[string]string) {
+		t.Helper()
+		store.reset()
+		resetSpies(spies)
+		r := httptest.NewRequest("POST", "/hook", strings.NewReader(`{"a":1}`))
+		for k, v := range headers {
+			r.Header.Set(k, v)
+		}
+		w := httptest.NewRecorder()
+		pipeline.ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d", w.Code)
+		}
+	}
+	project := func() string {
+		t.Helper()
+		evs := store.storedEvents()
+		if len(evs) != 1 {
+			t.Fatalf("stored %d events, want 1", len(evs))
+		}
+		return evs[0].Project
+	}
+
+	post(map[string]string{serverhttp.HeaderDetectedProject: "forged"})
+	if p := project(); p == "forged" {
+		t.Errorf("client X-Buggregator-Detected-Project picked the project")
+	}
+
+	post(map[string]string{serverhttp.HeaderDetectedType: "sentry"})
+	if findSpy(spies, "sentry").handled {
+		t.Errorf("client X-Buggregator-Detected-Type routed the request to sentry")
+	}
+	if !findSpy(spies, "http-dump").handled {
+		t.Errorf("http-dump did not capture the request")
+	}
+
+	post(map[string]string{"X-Buggregator-Event": "http-dump", "X-Buggregator-Project": "shop", serverhttp.HeaderDetectedProject: "forged"})
+	if p := project(); p != "shop" {
+		t.Errorf("project = %q, want shop from X-Buggregator-Project", p)
+	}
+}
