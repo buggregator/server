@@ -223,8 +223,14 @@ func (s *SQLiteStore) DeleteAll(ctx context.Context, opts event.DeleteOptions) e
 }
 
 func (s *SQLiteStore) UpdatePayload(ctx context.Context, uuid string, payload json.RawMessage) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE events SET payload = ? WHERE uuid = ?`, string(payload), uuid)
-	return err
+	res, err := s.db.ExecContext(ctx, `UPDATE events SET payload = ? WHERE uuid = ?`, string(payload), uuid)
+	if err != nil {
+		return err
+	}
+	if n, err := res.RowsAffected(); err == nil && n == 0 {
+		return event.ErrNotFound
+	}
+	return nil
 }
 
 func (s *SQLiteStore) Pin(ctx context.Context, uuid string) error {
