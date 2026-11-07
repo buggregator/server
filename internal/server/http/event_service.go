@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log/slog"
 	"sync"
 	"time"
@@ -58,8 +59,17 @@ func (s *EventService) HandleIncoming(ctx context.Context, inc *event.Incoming) 
 		if err != nil {
 			return err
 		}
-		if stored != nil && stored.Type == inc.Type {
-			return s.merge(ctx, stored, inc)
+		// Same project too: another project's event is never changed.
+		if stored != nil && stored.Type == inc.Type && stored.Project == inc.Project {
+			err := s.merge(ctx, stored, inc)
+			switch {
+			case errors.Is(err, event.ErrMergeLimit):
+				slog.Warn("event follow-up dropped", "uuid", stored.UUID, "type", stored.Type, "reason", err)
+				return nil
+			case !errors.Is(err, event.ErrNotFound):
+				return err
+			}
+			// Deleted after FindByUUID: the follow-up is stored as a new event.
 		}
 	}
 

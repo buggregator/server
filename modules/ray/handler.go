@@ -2,6 +2,7 @@ package ray
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -48,6 +49,13 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 	}, nil
 }
 
+// A stored Ray event takes at most maxMergedPayloads payloads and
+// maxMergedBytes: every follow-up rewrites and re-broadcasts the whole event.
+const (
+	maxMergedPayloads = 1000
+	maxMergedBytes    = 8 << 20
+)
+
 // appendPayloads merges a follow-up request (same uuid: trace, color, size…)
 // into the stored event: its payloads go after the stored ones, the rest of
 // the stored event stays.
@@ -68,6 +76,9 @@ func appendPayloads(body []byte) func(json.RawMessage) (json.RawMessage, error) 
 			if err := json.Unmarshal(raw, &payloads); err != nil {
 				return nil, err
 			}
+		}
+		if len(payloads)+len(next.Payloads) > maxMergedPayloads || len(stored)+len(body) > maxMergedBytes {
+			return nil, fmt.Errorf("%w: at most %d payloads, %d MB", event.ErrMergeLimit, maxMergedPayloads, maxMergedBytes>>20)
 		}
 		merged, err := json.Marshal(append(payloads, next.Payloads...))
 		if err != nil {
