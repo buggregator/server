@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/buggregator/go-buggregator/internal/metrics"
 	"nhooyr.io/websocket"
@@ -24,10 +25,18 @@ type Hub struct {
 
 	// validToken checks connect.token when API auth is on; nil = auth off.
 	validToken TokenValidator
+	// connectTimeout closes a socket that has not passed connect in time
+	// (auth on only).
+	connectTimeout time.Duration
 }
 
-// TokenValidator reports whether an API auth token is valid.
-type TokenValidator func(token string) bool
+// DefaultConnectTimeout is how long, with auth on, a socket may stay open
+// without a connect that passed.
+const DefaultConnectTimeout = 10 * time.Second
+
+// TokenValidator reports whether an API auth token is valid and when it
+// expires (zero time: never).
+type TokenValidator func(token string) (expires time.Time, ok bool)
 
 // RPCHandler processes Centrifugo RPC calls (e.g., "delete:api/event/{id}").
 type RPCHandler interface {
@@ -46,11 +55,13 @@ type client struct {
 	mu        sync.Mutex
 	connected bool            // the connect reply was sent
 	subs      map[string]bool // server-side channels the client knows
+	expiry    *time.Timer     // closes the socket when its token expires
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		clients: make(map[*client]struct{}),
+		clients:        make(map[*client]struct{}),
+		connectTimeout: DefaultConnectTimeout,
 	}
 }
 
@@ -60,8 +71,9 @@ func (h *Hub) SetRPCHandler(handler RPCHandler) {
 }
 
 // SetTokenValidator turns on auth for the socket: a connect needs a token v
-// accepts, and only connected clients get commands answered and pushes.
-// Call it before serving.
+// accepts, only connected clients get commands answered and pushes, a socket
+// without a passed connect is closed after the connect timeout, and a socket
+// is closed when its token expires. Call it before serving.
 func (h *Hub) SetTokenValidator(v TokenValidator) {
 	h.validToken = v
 }
@@ -103,6 +115,21 @@ func (h *Hub) HandleUpgrade(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := &client{conn: conn, ctx: r.Context()}
+	if h.validToken != nil {
+		deadline := time.AfterFunc(h.connectTimeout, func() {
+			if !c.isConnected() {
+				c.conn.Close(websocket.StatusPolicyViolation, "connect timeout")
+			}
+		})
+		defer deadline.Stop()
+		defer func() {
+			c.mu.Lock()
+			if c.expiry != nil {
+				c.expiry.Stop()
+			}
+			c.mu.Unlock()
+		}()
+	}
 	h.mu.Lock()
 	h.clients[c] = struct{}{}
 	h.mu.Unlock()
@@ -166,18 +193,19 @@ func (h *Hub) handleClientMessage(c *client, data []byte) {
 // appear later (a project created after the page opened). With auth on, a
 // connect without a valid token gets error 109 and the socket is closed with
 // 1008; it returns false then. centrifuge-js reconnects on that close code
-// and, on 109, asks its getToken for a fresh token first.
+// and, on 109, asks its getToken for a fresh token first. A token that
+// expires later closes the socket then with 3500, on which centrifuge-js does
+// not reconnect: the page connects again after a new login.
 func (h *Hub) connectClient(c *client, id uint32, token string) bool {
-	if h.validToken != nil && (token == "" || !h.validToken(token)) {
-		reply, _ := json.Marshal(centrifugoReply{
-			ID:    id,
-			Error: &centrifugoError{Code: 109, Message: "unauthorized"},
-		})
-		c.mu.Lock()
-		c.conn.Write(c.ctx, websocket.MessageText, reply)
-		c.mu.Unlock()
-		c.conn.Close(websocket.StatusPolicyViolation, "unauthorized")
-		return false
+	var expires time.Time
+	if h.validToken != nil {
+		var ok bool
+		if token != "" {
+			expires, ok = h.validToken(token)
+		}
+		if !ok {
+			return h.refuseConnect(c, id)
+		}
 	}
 
 	reply := h.handleConnect(id)
@@ -191,7 +219,28 @@ func (h *Hub) connectClient(c *client, id uint32, token string) bool {
 	}
 	c.conn.Write(c.ctx, websocket.MessageText, replyBytes)
 	c.connected = true
+	if !expires.IsZero() {
+		if c.expiry != nil {
+			c.expiry.Stop()
+		}
+		c.expiry = time.AfterFunc(time.Until(expires), func() {
+			c.conn.Close(websocket.StatusCode(3500), "token expired")
+		})
+	}
 	return true
+}
+
+// refuseConnect answers a connect with error 109 and closes the socket.
+func (h *Hub) refuseConnect(c *client, id uint32) bool {
+	reply, _ := json.Marshal(centrifugoReply{
+		ID:    id,
+		Error: &centrifugoError{Code: 109, Message: "unauthorized"},
+	})
+	c.mu.Lock()
+	c.conn.Write(c.ctx, websocket.MessageText, reply)
+	c.mu.Unlock()
+	c.conn.Close(websocket.StatusPolicyViolation, "unauthorized")
+	return false
 }
 
 func (c *client) isConnected() bool {

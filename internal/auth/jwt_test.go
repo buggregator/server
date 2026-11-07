@@ -2,6 +2,7 @@ package auth
 
 import (
 	"testing"
+	"time"
 )
 
 func TestTokenStore_CreateAndValidate(t *testing.T) {
@@ -61,5 +62,23 @@ func TestTokenStore_ValidateWrongSecret(t *testing.T) {
 	_, err := store2.Validate(token)
 	if err == nil {
 		t.Fatal("Validate() expected error for wrong secret")
+	}
+}
+
+func TestTokenStore_ExpiresAt(t *testing.T) {
+	s := NewTokenStore("secret")
+	tok, err := s.Create(User{Provider: "test", Username: "dev"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp, err := s.ExpiresAt(tok)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := time.Until(exp); d < tokenExpiry-time.Minute || d > tokenExpiry {
+		t.Errorf("expires in %v, want about %v", d, tokenExpiry)
+	}
+	if _, err := s.ExpiresAt("forged"); err == nil {
+		t.Error("forged token: no error")
 	}
 }
