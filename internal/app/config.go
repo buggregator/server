@@ -103,7 +103,7 @@ type XdebugConfig struct {
 type MockOpenAPIDef struct {
 	File     string  `yaml:"file"`      // path to the spec, YAML or JSON
 	Project  string  `yaml:"project"`   // empty = every project
-	Group    string  `yaml:"group"`     // default openapi:<info.title>
+	Group    string  `yaml:"group"`     // default openapi:<info.title>, openapi:<project>:<info.title> with a project
 	BasePath *string `yaml:"base_path"` // default the path of servers[0].url; "" = none
 }
 

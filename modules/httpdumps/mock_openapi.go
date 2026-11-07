@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -38,14 +39,19 @@ const (
 	// many operations may refer to the same heavy schema or example.
 	maxImportNodes = 200000
 	maxImportBytes = 32 << 20
+	// maxImportRenderTime bounds the test renders of one import; each one is
+	// also bounded by MaxMockRenderTime.
+	maxImportRenderTime = 10 * time.Second
 )
+
+var errImportTooSlow = fmt.Errorf("import too slow: test renders took over %v in all", maxImportRenderTime)
 
 // OpenAPIImport is what to import and how.
 type OpenAPIImport struct {
 	Spec    string `json:"spec"`    // the spec text (YAML or JSON)
 	URL     string `json:"url"`     // or where to download it (http/https)
 	Project string `json:"project"` // project of the rules; empty = every project
-	Group   string `json:"group"`   // group name; default "openapi:<title>"
+	Group   string `json:"group"`   // group name; default "openapi:<title>", "openapi:<project>:<title>" with a project
 	// BasePath goes before every path; nil = the path of servers[0].url
 	// ("/v1" from "https://api.example.com/v1"), "" = none.
 	BasePath *string `json:"base_path"`
@@ -223,16 +229,19 @@ func buildOpenAPIRules(spec []byte, in OpenAPIImport) (OpenAPIResult, error) {
 
 	g := &schemaGen{root: root}
 	info, _ := root.get("info").(*omap)
-	res := OpenAPIResult{Title: strings.TrimSpace(fmt.Sprint(info.get("title"))), Rules: []MockRule{}, Skipped: []OpenAPISkip{}}
-	if info.get("title") == nil || res.Title == "" {
+	// Only a string title: any other value would be dumped into the group name.
+	title, _ := info.get("title").(string)
+	res := OpenAPIResult{Title: strings.TrimSpace(title), Rules: []MockRule{}, Skipped: []OpenAPISkip{}}
+	if res.Title == "" {
 		res.Title = "spec"
 	}
 	res.Group = strings.TrimSpace(in.Group)
 	if res.Group == "" {
-		res.Group = "openapi:" + res.Title
+		res.Group = defaultOpenAPIGroup(in.Project, res.Title)
 	}
 	base := openAPIBasePath(root, in.BasePath)
 
+	started, rendered := time.Now(), map[string]error{}
 	for _, p := range paths.keys {
 		item, _ := g.resolve(paths.get(p)).(*omap)
 		for _, method := range openAPIMethods {
@@ -254,6 +263,20 @@ func buildOpenAPIRules(spec []byte, in OpenAPIImport) (OpenAPIResult, error) {
 			if err == nil {
 				err = rule.Normalize()
 			}
+			if err == nil && rule.Template {
+				if time.Since(started) > maxImportRenderTime {
+					res.Skipped = append(res.Skipped, OpenAPISkip{Method: strings.ToUpper(method), Path: base + p, Reason: errImportTooSlow.Error()})
+					continue
+				}
+				// Operations often share one response schema: render each
+				// distinct template once.
+				key := renderKey(&rule)
+				var seen bool
+				if err, seen = rendered[key]; !seen {
+					err = testRenderRule(&rule)
+					rendered[key] = err
+				}
+			}
 			if err != nil {
 				res.Skipped = append(res.Skipped, OpenAPISkip{Method: strings.ToUpper(method), Path: base + p, Reason: err.Error()})
 				continue
@@ -262,6 +285,61 @@ func buildOpenAPIRules(spec []byte, in OpenAPIImport) (OpenAPIResult, error) {
 		}
 	}
 	return res, nil
+}
+
+// defaultOpenAPIGroup names the group of an import without one. The project
+// is part of it: importing the same spec for another project must not replace
+// this project's rules.
+func defaultOpenAPIGroup(project, title string) string {
+	if project == "" {
+		return "openapi:" + title
+	}
+	return "openapi:" + project + ":" + title
+}
+
+// renderKey is what decides a test render's outcome: the templates and the
+// names of the path parameters (every one is "1" in the sample request).
+func renderKey(rule *MockRule) string {
+	var b strings.Builder
+	b.WriteString(rule.Body)
+	keys := make([]string, 0, len(rule.Headers))
+	for k := range rule.Headers {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		b.WriteString("\x00h:" + k + "\x00" + rule.Headers[k])
+	}
+	params := make([]string, 0)
+	for k := range mockPathParams(rule.Path, rule.Path) {
+		params = append(params, k)
+	}
+	sort.Strings(params)
+	b.WriteString("\x00p:" + strings.Join(params, ","))
+	return b.String()
+}
+
+// testRenderRule renders a generated template rule once with a sample request
+// ("1" for every path parameter), so a rule that can never answer (e.g. nested
+// arrays over MaxMockRepeat) is skipped at import, not failed on every call.
+func testRenderRule(rule *MockRule) error {
+	segs := strings.Split(rule.Path, "/")
+	for i, seg := range segs {
+		if strings.HasPrefix(seg, "{") && strings.HasSuffix(seg, "}") {
+			segs[i] = "1"
+		}
+	}
+	path := strings.Join(segs, "/")
+	method := rule.Method
+	if method == "ANY" {
+		method = http.MethodGet
+	}
+	req := &mockRequest{Method: method, Path: path, Params: mockPathParams(rule.Path, path),
+		Query: url.Values{}, Header: http.Header{}}
+	if _, err := renderMockRule(rule, req); err != nil {
+		return fmt.Errorf("response template fails: %v", err)
+	}
+	return nil
 }
 
 func openAPIBasePath(root *omap, override *string) string {
