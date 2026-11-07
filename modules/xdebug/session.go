@@ -102,6 +102,7 @@ type Session struct {
 	bpSyncMu sync.Mutex           // one breakpoint sync at a time
 	bps      map[int64]*sessionBP // saved breakpoint id → as sent here
 	bpDirty  bool                 // breakpoints changed while running: sync at the next pause
+	bpEarly  map[string]int       // engine id → line of a breakpoint_resolved that beat its set reply
 	// bpSource gives the saved breakpoints and allow_eval (set by the proxy).
 	bpSource func() ([]SavedBreakpoint, bool)
 	seen     func(uri string) // remembers files for GET /api/xdebug/files

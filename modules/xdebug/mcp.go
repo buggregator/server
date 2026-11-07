@@ -83,6 +83,7 @@ type xResponse struct {
 		Lineno   int    `xml:"lineno,attr"`
 		Function string `xml:"function,attr"`
 		HitCount int    `xml:"hit_count,attr"`
+		Resolved string `xml:"resolved,attr"`
 	} `xml:"breakpoint"`
 }
 

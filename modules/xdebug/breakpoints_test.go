@@ -20,6 +20,10 @@ type bpEngine struct {
 	hits   map[string]int // engine id → hit_count in breakpoint_list
 	ids    []string       // set breakpoints, in order
 	lines  map[string]int // continuation → break line
+	// notify: send breakpoint_resolved (line notifyLine) "before" or
+	// "after" the breakpoint_set reply, as Xdebug does for a loaded file.
+	notify     string
+	notifyLine int
 }
 
 func (b *bpEngine) commands(prefix string) []string {
@@ -55,7 +59,14 @@ func (b *bpEngine) serve(e *fakeEngine) {
 			id := strconv.Itoa(9000 + b.nextID)
 			b.ids = append(b.ids, id)
 			b.mu.Unlock()
+			n := `<notify xmlns="urn:debugger_protocol_v1" name="breakpoint_resolved"><breakpoint type="line" resolved="resolved" lineno="` + strconv.Itoa(b.notifyLine) + `" state="enabled" id="` + id + `"></breakpoint></notify>`
+			if b.notify == "before" {
+				send(n)
+			}
 			send(response(name, tid, ` id="`+id+`" state="enabled" resolved="unresolved"`, ""))
+			if b.notify == "after" {
+				send(n)
+			}
 		case "breakpoint_remove":
 			send(response(name, tid, "", ""))
 		case "breakpoint_list":
@@ -343,7 +354,7 @@ func TestMCPBreakpointTools(t *testing.T) {
 	be := &bpEngine{lines: map[string]int{"run": 12}}
 	_, s := startBP(t, a.proxy, be)
 	waitFor(t, "break", s.Paused)
-	if out, isErr := callTool(t, cs, "xdebug_breakpoints", map[string]any{"session_id": s.ID}); isErr || !strings.Contains(out, `"state": "unresolved"`) {
+	if out, isErr := callTool(t, cs, "xdebug_breakpoints", map[string]any{"session_id": s.ID}); isErr || !strings.Contains(out, `"state": "resolved"`) {
 		t.Fatalf("list: %s", out)
 	}
 	if out, isErr := callTool(t, cs, "xdebug_breakpoint_remove", map[string]any{"id": 1}); isErr || !strings.Contains(out, `"removed": 1`) {
@@ -486,5 +497,44 @@ func TestBreakpoints_FilePaths(t *testing.T) {
 		if err := b.normalize(); err == nil {
 			t.Errorf("%s accepted", bad)
 		}
+	}
+}
+
+// breakpoint_resolved sent with the breakpoint_set reply (either order) is
+// not lost: state, resolved_line and the WS event follow.
+func TestBreakpoints_ResolvedNotifyWithSetReply(t *testing.T) {
+	for _, order := range []string{"before", "after"} {
+		for i := 0; i < 10; i++ {
+			a := newHereHarness(t, ModeAuto)
+			bp, _ := a.proxy.AddBreakpoint(SavedBreakpoint{File: "/app/src/User.php", Line: 20, Enabled: true})
+			be := &bpEngine{lines: map[string]int{"run": 12}, notify: order, notifyLine: 21}
+			_, s := startBP(t, a.proxy, be)
+			waitFor(t, "break", s.Paused)
+			waitFor(t, order+": breakpoint.resolved", func() bool {
+				return a.rec.find("breakpoint.resolved", func(p any) bool {
+					m := p.(map[string]any)
+					return m["breakpoint_id"] == bp.ID && m["line"] == 21
+				})
+			})
+			s.mu.Lock()
+			cur := *s.bps[bp.ID]
+			s.mu.Unlock()
+			if cur.state != BPResolved || cur.resolvedLine != 21 {
+				t.Fatalf("%s: %+v", order, cur)
+			}
+		}
+	}
+}
+
+// breakpoint_list read while paused also resolves a breakpoint.
+func TestBreakpoints_ListResolves(t *testing.T) {
+	a := newHereHarness(t, ModeAuto)
+	_, _ = a.proxy.AddBreakpoint(SavedBreakpoint{File: "/app/src/User.php", Line: 20, Enabled: true})
+	be := &bpEngine{lines: map[string]int{"run": 12}}
+	_, s := startBP(t, a.proxy, be)
+	waitFor(t, "break", s.Paused)
+	bps := s.SessionBreakpoints(a.proxy.bps.List())
+	if len(bps) != 1 || bps[0].State != BPResolved || bps[0].ResolvedLine != 21 {
+		t.Fatalf("%+v", bps)
 	}
 }

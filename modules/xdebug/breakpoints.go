@@ -347,13 +347,29 @@ func isDBGpError(err error) bool {
 	return errors.As(err, &de)
 }
 
+// setBP records a breakpoint as sent. A breakpoint_resolved notify that came
+// for its engine id before the breakpoint_set reply was handled (Xdebug sends
+// it right with the reply for a loaded file) is applied now.
 func (s *Session) setBP(id int64, b *sessionBP) {
 	s.mu.Lock()
 	if s.bps == nil {
 		s.bps = map[int64]*sessionBP{}
 	}
 	s.bps[id] = b
+	var line int
+	early := false
+	if b.engineID != "" {
+		if r, ok := s.bpEarly[b.engineID]; ok {
+			delete(s.bpEarly, b.engineID)
+			early = true
+			line = r
+			b.state, b.resolvedLine = BPResolved, r
+		}
+	}
 	s.mu.Unlock()
+	if early {
+		s.emit("breakpoint.resolved", map[string]any{"session_id": s.ID, "breakpoint_id": id, "line": line})
+	}
 }
 
 // breakpointSetCmd builds breakpoint_set for a saved breakpoint.
@@ -391,15 +407,26 @@ func (s *Session) onNotify(body []byte) {
 	if err := unmarshalXML(body, &n); err != nil || n.Name != "breakpoint_resolved" || n.BP.ID == "" {
 		return
 	}
+	resolved := n.BP.Resolved == "" || n.BP.Resolved == "resolved"
 	s.mu.Lock()
 	var savedID int64
 	for id, b := range s.bps {
 		if b.engineID == n.BP.ID {
 			savedID = id
-			if n.BP.Resolved == "" || n.BP.Resolved == "resolved" {
+			if resolved {
 				b.state = BPResolved
 			}
 			b.resolvedLine = n.BP.Lineno
+		}
+	}
+	if savedID == 0 && resolved && s.driver == DriverHere {
+		// Not matched yet: the breakpoint_set reply is still on its way to
+		// the sync. Keep it for setBP (few entries: one per set breakpoint).
+		if s.bpEarly == nil {
+			s.bpEarly = map[string]int{}
+		}
+		if len(s.bpEarly) < 1000 {
+			s.bpEarly[n.BP.ID] = n.BP.Lineno
 		}
 	}
 	s.mu.Unlock()
@@ -418,6 +445,9 @@ func (s *Session) SessionBreakpoints(list []SavedBreakpoint) []SessionBreakpoint
 				for _, b := range s.bps {
 					if b.engineID == eb.ID {
 						b.hitCount = eb.HitCount
+						if eb.Resolved == "resolved" && b.state == BPUnresolved {
+							b.state = BPResolved
+						}
 						if eb.Lineno > 0 && b.state == BPResolved {
 							b.resolvedLine = eb.Lineno
 						}
