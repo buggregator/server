@@ -111,11 +111,11 @@ func (r *MockRule) Normalize() error {
 	r.Name = strings.TrimSpace(r.Name)
 
 	if r.Template {
-		if _, err := parseMockTemplate("body", r.Body); err != nil {
+		if _, err := parseMockTemplate("body", r.Body, nil); err != nil {
 			errs["body"] = "template: " + err.Error()
 		}
 		for k, v := range r.Headers {
-			if _, err := parseMockTemplate("header "+k, v); err != nil {
+			if _, err := parseMockTemplate("header "+k, v, nil); err != nil {
 				errs["headers"] = fmt.Sprintf("template of header %s: %v", k, err)
 			}
 		}

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"text/template/parse"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
@@ -22,8 +23,9 @@ import (
 // /api/mocks/helpers endpoint and the docs are built from it.
 
 const (
-	// MaxMockRepeat caps the sum of all repeat counts in one render, so nested
-	// loops stay bounded even when they write nothing.
+	// MaxMockRepeat caps the loop items of one render (repeat, and range over
+	// queryAll or body), so nested loops stay bounded even when they write
+	// nothing. Other loops and recursion are refused at parse time.
 	MaxMockRepeat = 10000
 	// maxFakeCount caps count-like fake parameters (words, length, count…).
 	maxFakeCount = 1000
@@ -64,7 +66,7 @@ var MockHelpers = []MockHelper{
 		`{"name": {{ fake "name" | json }}, "age": {{ fake "number" 18 90 }}}`, `{"name": "Lavina Kuhn", "age": 37}`},
 	{"pick", "data", `pick a b c…`, `One of the arguments at random.`,
 		`{"status": {{ pick "paid" "pending" "failed" | json }}}`, `{"status": "pending"}`},
-	{"repeat", "data", `repeat n`, `A list 0…n-1 for range: repeats a block n times. Inside, $i is the index. All repeats in one response add up to at most 10000.`,
+	{"repeat", "data", `repeat n`, `A list 0…n-1 for range: repeats a block n times. Inside, $i is the index. range works only over repeat, queryAll and body; all loop items in one response add up to at most 10000. define, template and block are not supported.`,
 		`[{{ range $i := repeat 3 }}{{ if $i }},{{ end }}{"n": {{ add $i 1 }}}{{ end }}]`, `[{"n": 1},{"n": 2},{"n": 3}]`},
 	{"add", "data", `add a b`, `Sum of two integers.`,
 		`{{ add 2 3 }}`, `5`},
@@ -193,8 +195,23 @@ func (s *renderState) funcs() template.FuncMap {
 			}
 			return []string{}
 		},
-		"header":      func(name string) string { return s.req.Header.Get(name) },
-		"body":        s.body,
+		"header": func(name string) string { return s.req.Header.Get(name) },
+		"body":   s.body,
+		// Range twins (see rangeFuncs): not documented helpers, a range uses them.
+		"rangeQueryAll": func(name string) ([]string, error) {
+			v := s.req.Query[name]
+			return v, s.charge(len(v))
+		},
+		"rangeBody": func(path string) (any, error) {
+			v := s.body(path)
+			switch x := v.(type) {
+			case []any:
+				return v, s.charge(len(x))
+			case map[string]any:
+				return v, s.charge(len(x))
+			}
+			return v, nil
+		},
 		"bodyRaw":     func() string { return string(s.req.Body) },
 		"method":      func() string { return s.req.Method },
 		"requestPath": func() string { return s.req.Path },
@@ -246,15 +263,23 @@ func (s *renderState) repeat(n int) ([]int, error) {
 	if n < 0 {
 		return nil, errors.New("repeat count must not be negative")
 	}
-	s.repeats += n
-	if s.repeats > MaxMockRepeat {
-		return nil, fmt.Errorf("repeat: more than %d items in one response", MaxMockRepeat)
+	if err := s.charge(n); err != nil {
+		return nil, err
 	}
 	out := make([]int, n)
 	for i := range out {
 		out[i] = i
 	}
 	return out, nil
+}
+
+// charge counts n loop items against MaxMockRepeat.
+func (s *renderState) charge(n int) error {
+	s.repeats += n
+	if s.repeats > MaxMockRepeat {
+		return fmt.Errorf("repeat: more than %d loop items in one response", MaxMockRepeat)
+	}
+	return nil
 }
 
 // body returns the JSON body value at a dot path; nil when missing.
@@ -343,11 +368,74 @@ func (b *limitedBuffer) Write(p []byte) (int, error) {
 	return b.Buffer.Write(p)
 }
 
-// parseMockTemplate checks a template source. The helpers are bound per
-// render, so parsing uses a state with no request.
-func parseMockTemplate(name, src string) (*template.Template, error) {
-	st := &renderState{req: &mockRequest{}}
-	return template.New(name).Option("missingkey=zero").Funcs(st.funcs()).Parse(src)
+// rangeFuncs are the helpers a range may iterate over, each mapped to an
+// internal twin that charges the list's length to the repeat budget.
+var rangeFuncs = map[string]string{"repeat": "repeat", "queryAll": "rangeQueryAll", "body": "rangeBody"}
+
+// parseMockTemplate parses a template source and checks that its run is
+// bounded: no define/template/block (recursion), and range only over repeat,
+// queryAll or body, whose lengths count against MaxMockRepeat. funcs are the
+// helpers to bind; nil binds a state with no request (validation only).
+func parseMockTemplate(name, src string, funcs template.FuncMap) (*template.Template, error) {
+	if funcs == nil {
+		funcs = (&renderState{req: &mockRequest{}}).funcs()
+	}
+	t, err := template.New(name).Option("missingkey=zero").Funcs(funcs).Parse(src)
+	if err != nil {
+		return nil, err
+	}
+	if len(t.Templates()) > 1 {
+		return nil, errors.New("define and block are not supported")
+	}
+	if t.Tree == nil {
+		return t, nil
+	}
+	if err := checkMockNode(t.Tree.Root); err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+func checkMockNode(n parse.Node) error {
+	switch n := n.(type) {
+	case *parse.ListNode:
+		if n == nil {
+			return nil
+		}
+		for _, c := range n.Nodes {
+			if err := checkMockNode(c); err != nil {
+				return err
+			}
+		}
+	case *parse.TemplateNode:
+		return errors.New("template calls are not supported")
+	case *parse.IfNode:
+		return checkMockBranch(&n.BranchNode)
+	case *parse.WithNode:
+		return checkMockBranch(&n.BranchNode)
+	case *parse.RangeNode:
+		cmds := n.Pipe.Cmds
+		var ident *parse.IdentifierNode
+		if len(cmds) == 1 && len(cmds[0].Args) > 0 {
+			ident, _ = cmds[0].Args[0].(*parse.IdentifierNode)
+		}
+		if ident == nil || rangeFuncs[ident.Ident] == "" {
+			return errors.New(`range works only over repeat, queryAll or body, e.g. {{ range $i := repeat 3 }}`)
+		}
+		ident.Ident = rangeFuncs[ident.Ident]
+		return checkMockBranch(&n.BranchNode)
+	}
+	return nil
+}
+
+func checkMockBranch(b *parse.BranchNode) error {
+	if err := checkMockNode(b.List); err != nil {
+		return err
+	}
+	if b.ElseList != nil {
+		return checkMockNode(b.ElseList)
+	}
+	return nil
 }
 
 // mockRendered is a rule's response after its templates ran.
@@ -362,7 +450,7 @@ func renderMockRule(rule *MockRule, req *mockRequest) (mockRendered, error) {
 	st := &renderState{req: req, faker: gofakeit.New(uint64(rule.Seed))}
 	funcs := st.funcs()
 	exec := func(name, src string) ([]byte, error) {
-		t, err := template.New(name).Option("missingkey=zero").Funcs(funcs).Parse(src)
+		t, err := parseMockTemplate(name, src, funcs)
 		if err != nil {
 			return nil, err
 		}

@@ -155,6 +155,68 @@ func TestMockTemplate_Limits(t *testing.T) {
 	}
 }
 
+// A render is bounded: loops other than repeat/queryAll/body and recursion are
+// refused when the rule is saved, and every loop item counts against the budget.
+func TestMockTemplate_Bounded(t *testing.T) {
+	refused := []string{
+		`{{ range 2000 }}{{ range 2000 }}{{ end }}{{ end }}`,
+		`{{ range $i := add 1 2 }}{{ end }}`,
+		`{{ range $x := now "unix" }}{{ end }}`,
+		`{{ if true }}{{ range 5 }}{{ end }}{{ end }}`,
+		`{{ with 1 }}{{ else }}{{ range 5 }}{{ end }}{{ end }}`,
+		`{{ range repeat 2 }}{{ else }}{{ range 5 }}{{ end }}{{ end }}`,
+		`{{ range (repeat 3) }}{{ end }}`,
+		`{{ define "a" }}{{ fake "name" }}{{ end }}{{ template "a" }}`,
+		`{{ template "x" }}`,
+		`{{ block "b" . }}x{{ end }}`,
+	}
+	for _, src := range refused {
+		r := MockRule{Path: "/", Body: src, Template: true}
+		if verr, ok := r.Normalize().(ValidationError); !ok || verr["body"] == "" {
+			t.Errorf("%s: saved", src)
+		}
+		if _, err := renderBody(t, r, &mockRequest{}); err == nil {
+			t.Errorf("%s: rendered", src)
+		}
+	}
+
+	req := func() *mockRequest {
+		return &mockRequest{Query: url.Values{"tag": {"a", "b"}}, Body: []byte(`{"items":[{"id":1},{"id":2}],"obj":{"k":"v"}}`)}
+	}
+	allowed := map[string]string{
+		`{{ range $i := repeat 3 }}{{ $i }}{{ end }}`:                `012`,
+		`{{ range queryAll "tag" }}{{ . }}{{ end }}`:                 `ab`,
+		`{{ range $t := queryAll "none" }}x{{ else }}none{{ end }}`:  `none`,
+		`{{ range body "items" }}{{ .id }}{{ end }}`:                 `12`,
+		`{{ range $k, $v := body "obj" }}{{ $k }}={{ $v }}{{ end }}`: `k=v`,
+		`{{ range body "missing" }}x{{ end }}`:                       ``,
+	}
+	for src, want := range allowed {
+		r := MockRule{Path: "/", Body: src, Template: true}
+		if err := r.Normalize(); err != nil {
+			t.Errorf("%s: %v", src, err)
+		}
+		if got, err := renderBody(t, r, req()); err != nil || got != want {
+			t.Errorf("%s = %q, %v; want %q", src, got, err, want)
+		}
+	}
+
+	// Ranging over the request's lists counts too.
+	tags := url.Values{}
+	for range 200 {
+		tags.Add("tag", "x")
+	}
+	src := `{{ range queryAll "tag" }}{{ range queryAll "tag" }}{{ end }}{{ end }}`
+	if _, err := renderBody(t, MockRule{Path: "/", Body: src, Template: true}, &mockRequest{Query: tags}); err == nil {
+		t.Error("nested range over queryAll is not bounded")
+	}
+	items := "[" + strings.TrimSuffix(strings.Repeat("1,", 200), ",") + "]"
+	src = `{{ range body "" }}{{ range body "" }}{{ end }}{{ end }}`
+	if _, err := renderBody(t, MockRule{Path: "/", Body: src, Template: true}, &mockRequest{Body: []byte(items)}); err == nil {
+		t.Error("nested range over body is not bounded")
+	}
+}
+
 func TestMockTemplate_Seed(t *testing.T) {
 	src := `{{ fake "name" }} {{ fake "number" 1 1000000 }} {{ pick "a" "b" "c" "d" "e" "f" }}`
 	render := func(seed int64) string {
@@ -342,7 +404,8 @@ func TestMockHelpers_ExamplesRun(t *testing.T) {
 			t.Errorf("example of %s: %v", h.Name, err)
 		}
 	}
-	if len(funcs) != len(MockHelpers) {
+	if len(funcs) != len(MockHelpers)+len(rangeFuncs)-1 { // range twins, repeat is its own
+
 		t.Errorf("%d helpers defined, %d documented", len(funcs), len(MockHelpers))
 	}
 }
