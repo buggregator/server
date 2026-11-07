@@ -250,7 +250,7 @@ func registerMockTools(server *sdkmcp.Server, rules *mockStore, requests mockReq
 
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "mock_template_helpers",
-		Description: "Reference for mock response templates: every helper with usage and an example, and the fake data generators for fake \"name\" args… with their parameters (filter by category or search; ~250 in all).",
+		Description: "Reference for mock response templates: every helper with usage and an example, and the fake data generators for fake \"name\" args… with their parameters (filter by category or search).",
 	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in mockHelpersInput) (*sdkmcp.CallToolResult, any, error) {
 		fakes := []MockFake{}
 		cats := map[string]bool{}
