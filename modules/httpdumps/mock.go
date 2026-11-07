@@ -519,6 +519,10 @@ func (s *mockStore) replaceGroup(group, source string, rules []MockRule) ([]Mock
 
 // deleteGroup deletes the stored rules of group and returns how many.
 func (s *mockStore) deleteGroup(group string) (int, error) {
+	// Rules made by hand have group "": an empty name must never match them.
+	if strings.TrimSpace(group) == "" {
+		return 0, ValidationError{"group": "must not be empty"}
+	}
 	res, err := s.db.Exec(`DELETE FROM mock_rules WHERE group_name = ?`, group)
 	if err != nil {
 		return 0, err

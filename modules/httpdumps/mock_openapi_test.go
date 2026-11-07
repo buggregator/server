@@ -5,8 +5,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 const petSpec = `openapi: 3.0.3
@@ -381,5 +384,108 @@ func TestOpenAPI_ConfigFile(t *testing.T) {
 	}
 	if _, err := OpenAPIRulesFromFile(t.TempDir()+"/missing.yaml", OpenAPIImport{}); err == nil {
 		t.Error("missing file: no error")
+	}
+}
+
+// An empty group name never matches the rules made by hand.
+func TestMockStore_DeleteGroupEmpty(t *testing.T) {
+	env := newMockEnv(t, nil)
+	env.create(t, `{"path":"/a"}`)
+	env.create(t, `{"path":"/b"}`)
+	for _, g := range []string{"", "  "} {
+		if _, err := env.mod.mocks.deleteGroup(g); err == nil {
+			t.Errorf("deleteGroup(%q): no error", g)
+		}
+	}
+	cs := connectMockTools(t, env, true)
+	if _, isErr := mockCall(t, cs, "mock_group_delete", map[string]any{"group": ""}, nil); !isErr {
+		t.Error("mock_group_delete with an empty group: no error")
+	}
+	if w := env.do(t, "DELETE", "/api/mocks/groups/%20", "", nil); w.Code != 422 {
+		t.Errorf("REST blank group: %d", w.Code)
+	}
+	if n := len(env.mod.mocks.list()); n != 2 {
+		t.Errorf("%d rules left, want 2", n)
+	}
+}
+
+// A small spec with a wide self-referencing (or chained) schema must not
+// expand exponentially: the operation is skipped, fast and small.
+func TestOpenAPI_WideSchemaBounded(t *testing.T) {
+	props := func(ref string, n int) string {
+		var b strings.Builder
+		for i := 0; i < n; i++ {
+			b.WriteString(`"p` + string(rune('a'+i)) + `": {"$ref": "#/components/schemas/` + ref + `"}, `)
+		}
+		return strings.TrimSuffix(b.String(), ", ")
+	}
+	head := `{"openapi": "3.0.0", "info": {"title": "T"}, "paths": {"/x": {"get": {"responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/S0"}}}}}}}}, "components": {"schemas": {`
+	selfRef := head + `"S0": {"type": "object", "properties": {` + props("S0", 8) + `}}}}}`
+	var chain strings.Builder
+	chain.WriteString(head)
+	for i := 0; i < 12; i++ {
+		if i > 0 {
+			chain.WriteString(", ")
+		}
+		chain.WriteString(`"S` + strconv.Itoa(i) + `": {"type": "object", "properties": {` + props("S"+strconv.Itoa(i+1), 8) + `}}`)
+	}
+	chain.WriteString(`, "S12": {"type": "string"}}}}`)
+	allOf := head + `"S0": {"allOf": [` + strings.TrimSuffix(strings.Repeat(`{"$ref": "#/components/schemas/S0"}, `, 8), ", ") + `], "properties": {"a": {"$ref": "#/components/schemas/S0"}}}}}}`
+
+	for name, spec := range map[string]string{"self": selfRef, "chain": chain.String(), "allOf": allOf} {
+		var before, after runtime.MemStats
+		runtime.GC()
+		runtime.ReadMemStats(&before)
+		start := time.Now()
+		res, err := buildOpenAPIRules([]byte(spec), OpenAPIImport{})
+		d := time.Since(start)
+		runtime.ReadMemStats(&after)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if d > 2*time.Second || after.TotalAlloc-before.TotalAlloc > 200<<20 {
+			t.Errorf("%s: %v, %d MB allocated", name, d, (after.TotalAlloc-before.TotalAlloc)>>20)
+		}
+		if len(res.Rules) == 1 {
+			if len(res.Rules[0].Body) > MaxMockBody {
+				t.Errorf("%s: body %d bytes", name, len(res.Rules[0].Body))
+			}
+		} else if len(res.Skipped) != 1 || !strings.Contains(res.Skipped[0].Reason, "too large") {
+			t.Errorf("%s: rules %d, skipped %+v", name, len(res.Rules), res.Skipped)
+		}
+	}
+}
+
+// Names and media types from the spec stay text, never template code.
+func TestOpenAPI_SpecTextIsNotTemplate(t *testing.T) {
+	spec := `{"openapi": "3.0.0", "info": {"title": "T"}, "paths": {"/x": {"get": {"responses": {"200": {"content": {
+		"application/json{{ header \"X-A\" }}": {"schema": {"type": "object", "properties": {
+			"{{ bodyRaw }}": {"type": "boolean"},
+			"a}}b": {"type": "boolean"},
+			"{{": {"type": "boolean"}
+		}}}}}}}}}}`
+	res := importSpec(t, spec, OpenAPIImport{})
+	if len(res.Rules) != 1 {
+		t.Fatalf("rules %d, skipped %+v", len(res.Rules), res.Skipped)
+	}
+	r := res.Rules[0]
+	out, err := renderMockRule(&r, &mockRequest{Method: "GET", Path: "/x", Header: http.Header{"X-A": {"leak"}}, Body: []byte("SECRET")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(out.Body, &got); err != nil {
+		t.Fatalf("not JSON: %v\n%s", err, out.Body)
+	}
+	for _, k := range []string{"{{ bodyRaw }}", "a}}b", "{{"} {
+		if _, ok := got[k].(bool); !ok {
+			t.Errorf("key %q missing in %v", k, got)
+		}
+	}
+	if strings.Contains(string(out.Body), "SECRET") {
+		t.Error("request body echoed")
+	}
+	if ct := out.Headers["Content-Type"]; ct != `application/json{{ header "X-A" }}` {
+		t.Errorf("Content-Type = %q", ct)
 	}
 }

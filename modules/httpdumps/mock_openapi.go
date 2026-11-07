@@ -31,6 +31,9 @@ const (
 	maxSchemaDepth = 8
 	// maxGenItems caps the items generated for an array.
 	maxGenItems = 20
+	// maxGenNodes caps the schema nodes one body visits: depth alone does not
+	// bound a wide schema whose properties refer back to it.
+	maxGenNodes = 10000
 )
 
 // OpenAPIImport is what to import and how.
@@ -270,6 +273,39 @@ func openAPIBasePath(root *omap, override *string) string {
 type schemaGen struct {
 	root       *omap
 	pathParams []string
+	// Budget of the body being built: nodes visited and bytes written.
+	// Past either, every value is "null" and the operation is skipped.
+	nodes, bytes int
+	over         bool
+}
+
+var errSchemaTooLarge = fmt.Errorf("schema too large to build a body (over %d nodes or 1 MB); add an example to the spec", maxGenNodes)
+
+// spend charges the budget and reports whether there is room left.
+func (g *schemaGen) spend(nodes, bytes int) bool {
+	g.nodes += nodes
+	g.bytes += bytes
+	if g.nodes > maxGenNodes || g.bytes > MaxMockBody {
+		g.over = true
+	}
+	return !g.over
+}
+
+// text charges a written piece to the budget.
+func (g *schemaGen) text(v string) string {
+	if !g.spend(0, len(v)) {
+		return "null"
+	}
+	return v
+}
+
+// templateText keeps text from the spec literal in a template: text with
+// "{{" or "}}" is written through a quoted Go string.
+func templateText(s string) string {
+	if strings.Contains(s, "{{") || strings.Contains(s, "}}") {
+		return fmt.Sprintf(`{{ print %s }}`, strconv.Quote(s))
+	}
+	return s
 }
 
 // resolve follows local $refs ("#/components/schemas/User"); an external or
@@ -363,11 +399,18 @@ func (g *schemaGen) rule(path, method string, op *omap, project string) (MockRul
 		}
 	}
 	if isJSON {
+		g.nodes, g.bytes, g.over = 0, 0, false
 		rule.Body = g.value(schema, "", "", false, 0)
+		if g.over {
+			return rule, errSchemaTooLarge
+		}
 		rule.Template = true
 	} else if typeOf(schema) == "string" {
 		rule.Body = `{{ fake "sentence" }}`
 		rule.Template = true
+	}
+	if ct, ok := rule.Headers["Content-Type"]; ok && rule.Template {
+		rule.Headers["Content-Type"] = templateText(ct)
 	}
 	return rule, nil
 }
@@ -486,6 +529,9 @@ var fakeByFormat = map[string]string{
 // line indent; prop is the field name (for fake data by name); rootField
 // marks a field of the response's root object, which path params fill.
 func (g *schemaGen) value(schema any, indent, prop string, rootField bool, depth int) string {
+	if !g.spend(1, len(indent)) {
+		return "null"
+	}
 	s, _ := g.resolve(schema).(*omap)
 	if s == nil || depth > maxSchemaDepth {
 		return "null"
@@ -508,16 +554,16 @@ func (g *schemaGen) value(schema any, indent, prop string, rootField bool, depth
 		}
 	}
 	if ex, ok := s.m["example"]; ok {
-		return jsonLiteral(ex, indent)
+		return g.text(jsonLiteral(ex, indent))
 	}
 	if exs, _ := s.get("examples").([]any); len(exs) > 0 {
-		return jsonLiteral(exs[0], indent)
+		return g.text(jsonLiteral(exs[0], indent))
 	}
 	if c, ok := s.m["const"]; ok {
-		return jsonLiteral(c, indent)
+		return g.text(jsonLiteral(c, indent))
 	}
 	if enum, _ := s.get("enum").([]any); len(enum) > 0 {
-		return enumTemplate(enum, indent)
+		return g.text(enumTemplate(enum, indent))
 	}
 
 	t := typeOf(s)
@@ -531,8 +577,15 @@ func (g *schemaGen) value(schema any, indent, prop string, rootField bool, depth
 		var b strings.Builder
 		b.WriteString("{\n")
 		for i, k := range props.keys {
+			if g.over {
+				break
+			}
 			key, _ := marshalJSON(k, "")
-			b.WriteString(inner + string(key) + ": ")
+			keyText := templateText(string(key)) // a key is spec text, never template code
+			if !g.spend(0, len(inner)+len(keyText)+4) {
+				break
+			}
+			b.WriteString(inner + keyText + ": ")
 			b.WriteString(g.value(props.get(k), inner, k, depth == 0, depth+1))
 			if i < len(props.keys)-1 {
 				b.WriteString(",")
@@ -634,6 +687,9 @@ func (g *schemaGen) mergeAllOf(s *omap, all []any, depth int) *omap {
 		}
 	}
 	for _, part := range all {
+		if !g.spend(1, 0) {
+			break
+		}
 		ps, _ := g.resolve(part).(*omap)
 		if ps == nil {
 			continue
