@@ -224,7 +224,7 @@ func (s *Session) pausedAtOf() time.Time {
 type bpSetInput struct {
 	File      string `json:"file,omitempty" jsonschema:"File as PHP sees it: an absolute path (/var/www/app/src/User.php) or a file:// URI. Paths on the PHP side, not your local checkout, unless they are the same."`
 	Line      int    `json:"line,omitempty" jsonschema:"Line number (1-based) for a line breakpoint"`
-	Exception string `json:"exception,omitempty" jsonschema:"Exception class for an exception breakpoint instead of file+line, e.g. Throwable or App\\Exceptions\\PaymentFailed (a leading \\ is dropped)"`
+	Exception string `json:"exception,omitempty" jsonschema:"Exception class for an exception breakpoint instead of file+line, e.g. RuntimeException, App\\Exceptions\\PaymentFailed, or * for any; matches the class and its parent classes, not interfaces (Throwable never fires); a leading \\ is dropped"`
 	Condition string `json:"condition,omitempty" jsonschema:"PHP expression; stop only when it is true. Needs xdebug.allow_eval."`
 }
 
