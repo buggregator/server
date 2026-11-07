@@ -21,7 +21,13 @@ type Hub struct {
 	projectProvider ProjectProvider
 	metrics         *metrics.Collector
 	serverChannels  []string // extra channels every client is subscribed to
+
+	// validToken checks connect.token when API auth is on; nil = auth off.
+	validToken TokenValidator
 }
+
+// TokenValidator reports whether an API auth token is valid.
+type TokenValidator func(token string) bool
 
 // RPCHandler processes Centrifugo RPC calls (e.g., "delete:api/event/{id}").
 type RPCHandler interface {
@@ -51,6 +57,13 @@ func NewHub() *Hub {
 // SetRPCHandler sets the handler for Centrifugo RPC calls.
 func (h *Hub) SetRPCHandler(handler RPCHandler) {
 	h.rpcHandler = handler
+}
+
+// SetTokenValidator turns on auth for the socket: a connect needs a token v
+// accepts, and only connected clients get commands answered and pushes.
+// Call it before serving.
+func (h *Hub) SetTokenValidator(v TokenValidator) {
+	h.validToken = v
 }
 
 // SetProjectProvider sets the function that returns project keys for auto-subscription.
@@ -133,7 +146,13 @@ func (h *Hub) handleClientMessage(c *client, data []byte) {
 		}
 
 		if cmd.Connect != nil {
-			h.connectClient(c, cmd.ID)
+			if !h.connectClient(c, cmd.ID, cmd.Connect.Token) {
+				return
+			}
+			continue
+		}
+		if h.validToken != nil && !c.isConnected() {
+			// Auth on: nothing is answered before a connect with a valid token.
 			continue
 		}
 		reply := h.processCommand(cmd)
@@ -144,8 +163,23 @@ func (h *Hub) handleClientMessage(c *client, data []byte) {
 
 // connectClient answers a connect command and remembers the server-side
 // channels it gave, so Broadcast can subscribe the client to channels that
-// appear later (a project created after the page opened).
-func (h *Hub) connectClient(c *client, id uint32) {
+// appear later (a project created after the page opened). With auth on, a
+// connect without a valid token gets error 109 and the socket is closed with
+// 1008; it returns false then. centrifuge-js reconnects on that close code
+// and, on 109, asks its getToken for a fresh token first.
+func (h *Hub) connectClient(c *client, id uint32, token string) bool {
+	if h.validToken != nil && (token == "" || !h.validToken(token)) {
+		reply, _ := json.Marshal(centrifugoReply{
+			ID:    id,
+			Error: &centrifugoError{Code: 109, Message: "unauthorized"},
+		})
+		c.mu.Lock()
+		c.conn.Write(c.ctx, websocket.MessageText, reply)
+		c.mu.Unlock()
+		c.conn.Close(websocket.StatusPolicyViolation, "unauthorized")
+		return false
+	}
+
 	reply := h.handleConnect(id)
 	replyBytes, _ := json.Marshal(reply)
 
@@ -157,6 +191,13 @@ func (h *Hub) connectClient(c *client, id uint32) {
 	}
 	c.conn.Write(c.ctx, websocket.MessageText, replyBytes)
 	c.connected = true
+	return true
+}
+
+func (c *client) isConnected() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.connected
 }
 
 // processCommand handles a single Centrifugo protocol command.
@@ -271,6 +312,11 @@ func (h *Hub) Broadcast(channel, eventName string, payload any) {
 
 	for c := range h.clients {
 		c.mu.Lock()
+		if h.validToken != nil && !c.connected {
+			// Auth on: no data for a socket that has not passed connect.
+			c.mu.Unlock()
+			continue
+		}
 		if c.connected && !c.subs[channel] {
 			c.subs[channel] = true
 			if err := c.conn.Write(c.ctx, websocket.MessageText, subMsg); err != nil {
