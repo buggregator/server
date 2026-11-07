@@ -112,7 +112,7 @@ jobs:
   # var-dump on `runtime.GOOS != "windows"` so the binary still boots — every
   # other module (Sentry, SMTP, Monolog, Ray, Inspector, Profiler, HTTP-dump,
   # SMS) works normally. The embedded vardumper binary is a stub byte so
-  # `go:embed bin/vardumper-parser-windows-amd64.exe` succeeds.
+  # `go:embed bin/vardumper-parser-windows-<arch>.exe` succeeds.
   build-windows:
     runs-on: ubuntu-latest
     strategy:
@@ -120,6 +120,8 @@ jobs:
         include:
           - goos: windows
             goarch: amd64
+          - goos: windows
+            goarch: arm64
     steps:
       - uses: actions/checkout@v4
 
