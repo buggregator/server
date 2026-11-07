@@ -24,6 +24,7 @@ type Module struct {
 	eventService EventStorer
 	attachments  *storage.AttachmentStore
 	db           *sql.DB
+	store        event.Store // set in RegisterRoutes, used by the protected API
 
 	mu      sync.Mutex
 	waiters []*waiter
@@ -57,9 +58,15 @@ func (m *Module) TCPServers() []tcp.ServerConfig {
 	}
 }
 
-// RegisterRoutes registers the SMTP testing API endpoints.
-func (m *Module) RegisterRoutes(mux *http.ServeMux, store event.Store) {
-	registerSMTPAPI(mux, store, m)
+// RegisterRoutes keeps the store for the SMTP testing API; the routes
+// themselves go behind the API auth in RegisterProtectedRoutes.
+func (m *Module) RegisterRoutes(_ *http.ServeMux, store event.Store) {
+	m.store = store
+}
+
+// RegisterProtectedRoutes adds the SMTP testing API behind the API auth.
+func (m *Module) RegisterProtectedRoutes(mux *http.ServeMux, protect func(http.Handler) http.Handler) {
+	registerSMTPAPI(mux, m.store, m, protect)
 }
 
 // OnEventStored notifies any long-poll waiters when a new SMTP event arrives.

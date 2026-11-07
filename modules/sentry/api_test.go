@@ -13,7 +13,7 @@ import (
 func seedTestData(t *testing.T, mux *http.ServeMux) {
 	t.Helper()
 	db := setupTestDB(t)
-	registerAPI(mux, db)
+	registerAPI(mux, db, noAuth)
 
 	// Insert error events.
 	for i, evt := range []struct {
@@ -514,7 +514,7 @@ func TestAPICounts(t *testing.T) {
 func TestAPIEmptyDatabase(t *testing.T) {
 	db := setupTestDB(t)
 	mux := http.NewServeMux()
-	registerAPI(mux, db)
+	registerAPI(mux, db, noAuth)
 
 	endpoints := []string{
 		"/api/sentry/exceptions",
@@ -561,7 +561,7 @@ func pagedField(t *testing.T, mux *http.ServeMux, url, field string, pages int) 
 func TestAPIMetricsSameTimestampNewestFirst(t *testing.T) {
 	db := setupTestDB(t)
 	mux := http.NewServeMux()
-	registerAPI(mux, db)
+	registerAPI(mux, db, noAuth)
 
 	storeMetrics(db, []MetricRecord{
 		{Name: "first", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: "1678272501"},
@@ -581,7 +581,7 @@ func TestAPIMetricsSameTimestampNewestFirst(t *testing.T) {
 func TestAPILogsSameTimestampNewestFirst(t *testing.T) {
 	db := setupTestDB(t)
 	mux := http.NewServeMux()
-	registerAPI(mux, db)
+	registerAPI(mux, db, noAuth)
 
 	var logs []LogRecord
 	json.Unmarshal([]byte(`[
@@ -638,7 +638,7 @@ func TestAPILogsFilterByLevels(t *testing.T) {
 func TestAPIExceptionsFilters(t *testing.T) {
 	db := setupTestDB(t)
 	mux := http.NewServeMux()
-	registerAPI(mux, db)
+	registerAPI(mux, db, noAuth)
 
 	seed := func(eventID, env, project string) {
 		t.Helper()
@@ -729,7 +729,7 @@ func TestAPICountsFollowFilters(t *testing.T) {
 func TestAPIStandardDSNProjectIsDefault(t *testing.T) {
 	db := setupTestDB(t)
 	mux := http.NewServeMux()
-	registerAPI(mux, db)
+	registerAPI(mux, db, noAuth)
 	h := &handler{db: db}
 
 	// A row stored before the fix, with no project.
@@ -774,7 +774,7 @@ func TestAPIStandardDSNProjectIsDefault(t *testing.T) {
 func TestAPIMetricsWindowMatchesCount(t *testing.T) {
 	db := setupTestDB(t)
 	mux := http.NewServeMux()
-	registerAPI(mux, db)
+	registerAPI(mux, db, noAuth)
 
 	storeMetrics(db, []MetricRecord{
 		{Name: "old", Type: "counter", Value: 1, Timestamp: "1678272501"},   // 2023

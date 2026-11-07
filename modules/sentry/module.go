@@ -51,9 +51,11 @@ func (m *Module) OnInit(db *sql.DB) error {
 	return nil
 }
 
-func (m *Module) RegisterRoutes(mux *http.ServeMux, store event.Store) {
+// RegisterProtectedRoutes adds the Sentry UI API behind the API auth. SDK
+// ingestion (envelope/store) goes through the HTTP handler and stays open.
+func (m *Module) RegisterProtectedRoutes(mux *http.ServeMux, protect func(http.Handler) http.Handler) {
 	if m.db != nil {
-		registerAPI(mux, m.db)
+		registerAPI(mux, m.db, protect)
 	}
 }
 

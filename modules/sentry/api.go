@@ -11,16 +11,18 @@ import (
 	httpserver "github.com/buggregator/go-buggregator/internal/server/http"
 )
 
-func registerAPI(mux *http.ServeMux, db *sql.DB) {
-	mux.HandleFunc("GET /api/sentry/exceptions", handleExceptionsList(db))
-	mux.HandleFunc("GET /api/sentry/exceptions/{id}", handleExceptionDetail(db))
-	mux.HandleFunc("GET /api/sentry/traces", handleTracesList(db))
-	mux.HandleFunc("GET /api/sentry/traces/{traceId}", handleTraceDetail(db))
-	mux.HandleFunc("GET /api/sentry/logs", handleLogsList(db))
-	mux.HandleFunc("GET /api/sentry/metrics", handleMetricsList(db))
-	mux.HandleFunc("GET /api/sentry/service-map", handleServiceMap(db))
-	mux.HandleFunc("GET /api/sentry/counts", handleCounts(db))
-	mux.HandleFunc("DELETE /api/sentry/all", handleClearAll(db))
+// registerAPI adds the /api/sentry routes; protect is the API auth middleware.
+func registerAPI(mux *http.ServeMux, db *sql.DB, protect func(http.Handler) http.Handler) {
+	route := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, protect(h)) }
+	route("GET /api/sentry/exceptions", handleExceptionsList(db))
+	route("GET /api/sentry/exceptions/{id}", handleExceptionDetail(db))
+	route("GET /api/sentry/traces", handleTracesList(db))
+	route("GET /api/sentry/traces/{traceId}", handleTraceDetail(db))
+	route("GET /api/sentry/logs", handleLogsList(db))
+	route("GET /api/sentry/metrics", handleMetricsList(db))
+	route("GET /api/sentry/service-map", handleServiceMap(db))
+	route("GET /api/sentry/counts", handleCounts(db))
+	route("DELETE /api/sentry/all", handleClearAll(db))
 }
 
 // handleClearAll deletes Sentry structured data.
