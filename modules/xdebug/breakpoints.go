@@ -34,7 +34,7 @@ type SavedBreakpoint struct {
 	Type      string    `json:"type"`                // line or exception
 	File      string    `json:"file,omitempty"`      // file:// URI as PHP sees it (line)
 	Line      int       `json:"line,omitempty"`      // line
-	Exception string    `json:"exception,omitempty"` // class name as PHP holds it, e.g. Throwable (exception)
+	Exception string    `json:"exception,omitempty"` // class as PHP holds it, e.g. RuntimeException or * (exception); parents match, interfaces do not
 	Condition string    `json:"condition,omitempty"` // PHP expression; sent only with allow_eval
 	Enabled   bool      `json:"enabled"`
 	Source    string    `json:"source"` // ui or mcp
@@ -64,7 +64,7 @@ func (b *SavedBreakpoint) normalize() error {
 		b.Exception = ""
 	case BPException:
 		if b.Exception == "" {
-			return errors.New("an exception breakpoint needs exception (a class name, e.g. Throwable)")
+			return errors.New("an exception breakpoint needs exception (a class name, e.g. RuntimeException, or * for any)")
 		}
 		b.File, b.Line = "", 0
 	default:
