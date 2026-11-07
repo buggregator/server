@@ -372,16 +372,25 @@ func (m *Module) handleBreakpoints(w http.ResponseWriter, r *http.Request, s *Se
 		writeJSON(w, http.StatusOK, s.SessionBreakpoints(m.proxy.bps.List()))
 		return
 	}
-	resp, err := s.readResponse("breakpoint_list", "")
+	out, err := s.ideBreakpoints()
 	if err != nil {
 		readFailed(w, s, err)
 		return
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// ideBreakpoints lists the breakpoints the IDE set (paused sessions only).
+func (s *Session) ideBreakpoints() ([]Breakpoint, error) {
+	resp, err := s.readResponse("breakpoint_list", "")
+	if err != nil {
+		return nil, err
 	}
 	out := []Breakpoint{}
 	for _, b := range resp.Breakpoints {
 		out = append(out, Breakpoint{ID: b.ID, Type: b.Type, State: b.State, File: b.Filename, Line: b.Lineno, Function: b.Function, HitCount: b.HitCount})
 	}
-	writeJSON(w, http.StatusOK, out)
+	return out, nil
 }
 
 func (m *Module) handleEval(w http.ResponseWriter, r *http.Request, s *Session) {

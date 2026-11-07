@@ -56,6 +56,9 @@ func (b *SavedBreakpoint) normalize() error {
 		if b.File == "" || b.Line < 1 {
 			return errors.New("a line breakpoint needs file and line (>= 1)")
 		}
+		if !strings.HasPrefix(b.File, "file://") {
+			return errors.New("file must be an absolute path as PHP sees it (/var/www/x.php, C:\\app\\x.php) or a file:// URI")
+		}
 		b.Exception = ""
 	case BPException:
 		if b.Exception == "" {
@@ -79,13 +82,20 @@ func (b SavedBreakpoint) sig() string {
 	return b.Type + "\x00" + b.File + "\x00" + fmt.Sprint(b.Line) + "\x00" + b.Exception + "\x00" + b.Condition
 }
 
-// fileURI turns an absolute path into the file:// URI Xdebug uses.
+// fileURI turns an absolute path into the file:// URI Xdebug uses:
+// /app/x.php → file:///app/x.php, C:\app\x.php → file:///C:/app/x.php.
+// Anything else is returned as is and refused by normalize.
 func fileURI(f string) string {
-	if strings.HasPrefix(f, "/") {
+	switch {
+	case strings.HasPrefix(f, "/"):
 		return "file://" + f
+	case len(f) > 2 && f[1] == ':' && (f[2] == '\\' || f[2] == '/') && isLetter(f[0]):
+		return "file:///" + f[:2] + strings.ReplaceAll(f[2:], "\\", "/")
 	}
 	return f
 }
+
+func isLetter(c byte) bool { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') }
 
 // bpStore keeps the saved breakpoints, cached in memory; without a database
 // (tests) only in memory.
@@ -237,8 +247,14 @@ type SessionBreakpoint struct {
 // syncBreakpoints sends the saved breakpoints to a session driven here:
 // set the new and changed ones, remove the deleted and disabled ones. Only
 // at the start or while paused (the engine reads commands only then);
-// otherwise it waits for the next pause.
-func (s *Session) syncBreakpoints(list []SavedBreakpoint, allowEval bool) {
+// otherwise it marks the session dirty and the next pause syncs again. It
+// reads the current list after taking bpSyncMu, so a sync that waited for
+// another one never applies an older list. A remove the engine did not take
+// keeps the engine id, so a later sync still removes it.
+func (s *Session) syncBreakpoints() {
+	if s.bpSource == nil {
+		return
+	}
 	s.bpSyncMu.Lock()
 	defer s.bpSyncMu.Unlock()
 	s.mu.Lock()
@@ -253,6 +269,7 @@ func (s *Session) syncBreakpoints(list []SavedBreakpoint, allowEval bool) {
 	}
 	s.bpDirty = false
 	s.mu.Unlock()
+	list, allowEval := s.bpSource()
 
 	want := map[int64]bool{}
 	for _, b := range list {
@@ -262,11 +279,17 @@ func (s *Session) syncBreakpoints(list []SavedBreakpoint, allowEval bool) {
 		s.mu.Unlock()
 		send := b.Enabled && (b.Condition == "" || allowEval)
 		if cur != nil && cur.engineID != "" && (!send || cur.sig != b.sig()) {
-			if s.ownCall("breakpoint_remove -d "+cur.engineID) == nil {
+			if err := s.ownCall("breakpoint_remove -d " + cur.engineID); err != nil && !isDBGpError(err) {
+				// Not removed (the script moved on): keep the engine id; the
+				// next pause tries again. Show it as pending meanwhile.
 				s.mu.Lock()
-				cur.engineID = ""
+				cur.state = BPPending
 				s.mu.Unlock()
+				continue
 			}
+			s.mu.Lock()
+			cur.engineID = ""
+			s.mu.Unlock()
 		}
 		state := ""
 		switch {
@@ -284,12 +307,11 @@ func (s *Session) syncBreakpoints(list []SavedBreakpoint, allowEval bool) {
 		}
 		body, err := s.ownCallReply(breakpointSetCmd(b))
 		if err != nil {
-			s.setBP(b.ID, &sessionBP{sig: b.sig(), state: BPPending})
-			if errors.Is(err, errNotPaused) {
-				s.mu.Lock()
-				s.bpDirty = true // the script moved on: retry at the next pause
-				s.mu.Unlock()
+			st := BPPending
+			if isDBGpError(err) {
+				st = BPUnresolved // Xdebug refused it (e.g. bad file): nothing set
 			}
+			s.setBP(b.ID, &sessionBP{sig: b.sig(), state: st})
 			continue
 		}
 		id, resolved := parseBreakpointSet(body)
@@ -299,21 +321,30 @@ func (s *Session) syncBreakpoints(list []SavedBreakpoint, allowEval bool) {
 		}
 		s.setBP(b.ID, &sessionBP{engineID: id, sig: b.sig(), state: st})
 	}
-	// Deleted breakpoints.
+	// Deleted breakpoints: forget one only after the engine removed it.
 	s.mu.Lock()
-	var gone []string
+	gone := map[int64]string{}
 	for id, cur := range s.bps {
 		if !want[id] {
-			if cur.engineID != "" {
-				gone = append(gone, cur.engineID)
-			}
-			delete(s.bps, id)
+			gone[id] = cur.engineID
 		}
 	}
 	s.mu.Unlock()
-	for _, eid := range gone {
-		_ = s.ownCall("breakpoint_remove -d " + eid)
+	for id, eid := range gone {
+		if eid != "" {
+			if err := s.ownCall("breakpoint_remove -d " + eid); err != nil && !isDBGpError(err) {
+				continue // dirty: retried at the next pause
+			}
+		}
+		s.mu.Lock()
+		delete(s.bps, id)
+		s.mu.Unlock()
 	}
+}
+
+func isDBGpError(err error) bool {
+	var de *dbgpError
+	return errors.As(err, &de)
 }
 
 func (s *Session) setBP(id int64, b *sessionBP) {
@@ -403,6 +434,10 @@ func (s *Session) SessionBreakpoints(list []SavedBreakpoint) []SessionBreakpoint
 		sb := SessionBreakpoint{SavedBreakpoint: b, State: BPPending}
 		if cur := s.bps[b.ID]; cur != nil {
 			sb.State, sb.ResolvedLine, sb.HitCount = cur.state, cur.resolvedLine, cur.hitCount
+			// Changed since the last sync (it waits for a pause): not applied yet.
+			if cur.sig != b.sig() || (cur.state == BPDisabled) != !b.Enabled {
+				sb.State = BPPending
+			}
 		}
 		out = append(out, sb)
 	}

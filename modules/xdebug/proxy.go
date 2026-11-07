@@ -288,15 +288,16 @@ func quietEOF(err error) error {
 }
 
 // BreakpointsChanged tells the UI and sends the saved breakpoints to every
-// live session driven here (at once when paused, else at its next pause).
+// live session driven here before it returns: a paused session has them
+// before the caller can continue it; a running one gets them at its next
+// pause. Each sync reads the current list itself.
 func (p *Proxy) BreakpointsChanged() {
-	list := p.bps.List()
-	p.emit("breakpoints.changed", list)
+	p.emit("breakpoints.changed", p.bps.List())
 	for _, s := range p.Sessions() {
 		if s.Closed() || s.Info().Driver != DriverHere {
 			continue
 		}
-		go s.syncBreakpoints(list, p.allowEval)
+		s.syncBreakpoints()
 	}
 }
 

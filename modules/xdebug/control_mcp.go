@@ -237,7 +237,7 @@ type bpRemoveInput struct {
 func registerBreakpointTools(server *sdkmcp.Server, p *Proxy, control bool) {
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "xdebug_breakpoints",
-		Description: "Breakpoints Buggregator saves and sends to every Xdebug session it drives (no IDE attached; an IDE sets its own). With session_id: each with its state in that session (resolved, unresolved, skipped = has a condition while eval is off, disabled, pending = sent at the next pause), resolved_line and hit_count.",
+		Description: "Breakpoints Buggregator saves and sends to every Xdebug session it drives (no IDE attached; an IDE sets its own). With session_id of a session Buggregator drives: each with its state in that session (resolved, unresolved, skipped = has a condition while eval is off, disabled, pending = sent at the next pause), resolved_line and hit_count.",
 	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in sessionInput) (*sdkmcp.CallToolResult, any, error) {
 		list := p.bps.List()
 		if in.SessionID == "" {
@@ -247,6 +247,14 @@ func registerBreakpointTools(server *sdkmcp.Server, p *Proxy, control bool) {
 		if err != nil {
 			return nil, nil, err
 		}
+		if s.Info().Driver != DriverHere {
+			// An IDE drives it: its breakpoints are the IDE's, not the saved ones.
+			bps, err := s.ideBreakpoints()
+			if err != nil {
+				return nil, nil, err
+			}
+			return textResult(map[string]any{"driver": DriverIDE, "ide_breakpoints": bps}), nil, nil
+		}
 		return textResult(s.SessionBreakpoints(list)), nil, nil
 	})
 	if !control {
@@ -254,7 +262,7 @@ func registerBreakpointTools(server *sdkmcp.Server, p *Proxy, control bool) {
 	}
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "xdebug_breakpoint_set",
-		Description: "Save a breakpoint: file + line, or an exception class. It is sent at once to sessions Buggregator drives that are paused, to running ones at their next pause, and to every new session. Then fire the request and call xdebug_wait.",
+		Description: "Save a breakpoint: file + line, or an exception class. Paused sessions Buggregator drives have it when this returns; running ones get it at their next pause; every new session gets it before its script runs. Then fire the request and call xdebug_wait.",
 	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in bpSetInput) (*sdkmcp.CallToolResult, any, error) {
 		bp, err := p.AddBreakpoint(SavedBreakpoint{File: in.File, Line: in.Line, Exception: in.Exception, Condition: strings.TrimSpace(in.Condition), Enabled: true, Source: "mcp"})
 		if err != nil {

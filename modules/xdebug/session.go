@@ -353,8 +353,8 @@ func (s *Session) forwardEngine(r *bufio.Reader) error {
 		if ev != nil && s.seen != nil {
 			s.seen(s.Info().LastFile)
 		}
-		if sync && s.bpSource != nil {
-			go func() { list, eval := s.bpSource(); s.syncBreakpoints(list, eval) }()
+		if sync {
+			go s.syncBreakpoints()
 		}
 		s.afterReply(prevStatus)
 

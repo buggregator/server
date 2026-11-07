@@ -60,10 +60,7 @@ func (s *Session) driveHere(er *bufio.Reader, pauseOnFirstLine bool) error {
 			return <-engineDone
 		}
 	}
-	if s.bpSource != nil {
-		list, eval := s.bpSource()
-		s.syncBreakpoints(list, eval)
-	}
+	s.syncBreakpoints()
 	first := "run"
 	if pauseOnFirstLine {
 		first = "step_into"
@@ -87,6 +84,7 @@ func (s *Session) ownCallReply(cmd string) ([]byte, error) {
 	s.writeMu.Lock()
 	s.mu.Lock()
 	if !s.canSendLocked() {
+		s.bpDirty = true // only breakpoint syncs call this: retry at the next pause
 		s.mu.Unlock()
 		s.writeMu.Unlock()
 		return nil, errNotPaused
@@ -118,6 +116,9 @@ func (s *Session) ownCallReply(cmd string) ([]byte, error) {
 		return body, nil
 	case <-t.C:
 		s.forget(tid)
+		s.mu.Lock()
+		s.bpDirty = true
+		s.mu.Unlock()
 		return nil, errCommandTimeout
 	}
 }

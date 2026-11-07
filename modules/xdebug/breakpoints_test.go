@@ -354,3 +354,137 @@ func TestMCPBreakpointTools(t *testing.T) {
 		t.Fatalf("after remove: %s", out)
 	}
 }
+
+// pausedWithBPs starts a session driven here, paused at line 12, with the
+// given breakpoints already set in the engine.
+func pausedWithBPs(t *testing.T, a *apiHarness, files ...string) (*fakeEngine, *Session, *bpEngine, []SavedBreakpoint) {
+	t.Helper()
+	var saved []SavedBreakpoint
+	for i, f := range files {
+		b, err := a.proxy.AddBreakpoint(SavedBreakpoint{File: f, Line: 10 + i, Enabled: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		saved = append(saved, b)
+	}
+	be := &bpEngine{lines: map[string]int{"run": 12}}
+	e, s := startBP(t, a.proxy, be)
+	waitFor(t, "break", s.Paused)
+	if n := len(be.commands("breakpoint_set")); n != len(files) {
+		t.Fatalf("set at start: %d", n)
+	}
+	return e, s, be, saved
+}
+
+// Review #401 (1): a remove the engine did not take (the script moved on)
+// must not lose the engine id: the next pause removes it.
+func TestBreakpoints_DisableAndDeleteWhileRunningRemovedAtNextPause(t *testing.T) {
+	a := newHereHarness(t, ModeAuto)
+	e, s, be, saved := pausedWithBPs(t, a, "/app/a.php", "/app/b.php")
+
+	be.mu.Lock()
+	be.lines = map[string]int{} // the step is not answered: the script runs
+	be.mu.Unlock()
+	if err := s.Continue("step_over", ByAgent, "probe"); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "step sent", func() bool { return len(be.commands("step_over")) == 1 })
+
+	if _, err := a.proxy.bps.Update(saved[0].ID, func(b *SavedBreakpoint) error { b.Enabled = false; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	a.proxy.BreakpointsChanged()
+	if err := a.proxy.RemoveBreakpoint(saved[1].ID); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(be.commands("breakpoint_remove")); n != 0 {
+		t.Fatalf("remove sent while running: %d", n)
+	}
+	if bps := s.SessionBreakpoints(a.proxy.bps.List()); len(bps) != 1 || bps[0].State != BPPending {
+		t.Fatalf("while running: %+v", bps)
+	}
+
+	step := be.commands("step_over")[0]
+	e.send(response("step_over", tidOf(t, step), ` status="break" reason="ok"`, `<xdebug:message filename="file:///app/src/User.php" lineno="13"></xdebug:message>`))
+	waitFor(t, "both removed at the pause", func() bool { return len(be.commands("breakpoint_remove")) == 2 })
+	rm := strings.Join(be.commands("breakpoint_remove"), "|")
+	if !strings.Contains(rm, "-d 9001") || !strings.Contains(rm, "-d 9002") {
+		t.Fatalf("removes: %s", rm)
+	}
+	waitFor(t, "disabled", func() bool {
+		bps := s.SessionBreakpoints(a.proxy.bps.List())
+		return len(bps) == 1 && bps[0].State == BPDisabled
+	})
+	s.mu.Lock()
+	left := len(s.bps)
+	s.mu.Unlock()
+	if left != 1 {
+		t.Fatalf("session still tracks %d breakpoints", left)
+	}
+}
+
+// Review #401 (2): a sync that waited for another applies the current
+// list, never an older snapshot.
+func TestBreakpoints_WaitingSyncNeverAppliesOldList(t *testing.T) {
+	a := newHereHarness(t, ModeAuto)
+	_, s, be, _ := pausedWithBPs(t, a)
+
+	s.bpSyncMu.Lock() // a sync in progress
+	added := make(chan SavedBreakpoint, 1)
+	go func() {
+		b, _ := a.proxy.AddBreakpoint(SavedBreakpoint{File: "/app/c.php", Line: 3, Enabled: true})
+		added <- b
+	}()
+	waitFor(t, "saved", func() bool { return len(a.proxy.bps.List()) == 1 })
+	removed := make(chan error, 1)
+	go func() { removed <- a.proxy.RemoveBreakpoint(a.proxy.bps.List()[0].ID) }()
+	waitFor(t, "deleted", func() bool { return len(a.proxy.bps.List()) == 0 })
+	s.bpSyncMu.Unlock()
+	<-added
+	if err := <-removed; err != nil {
+		t.Fatal(err)
+	}
+	if sets, rms := len(be.commands("breakpoint_set")), len(be.commands("breakpoint_remove")); sets != rms {
+		t.Fatalf("engine keeps a deleted breakpoint: %d set, %d removed", sets, rms)
+	}
+}
+
+// Review #401 (3): a breakpoint added to a paused session is in the engine
+// before the caller can continue.
+func TestBreakpoints_AddThenContinueSendsSetFirst(t *testing.T) {
+	a := newHereHarness(t, ModeAuto)
+	_, s, be, _ := pausedWithBPs(t, a)
+	if _, err := a.proxy.AddBreakpoint(SavedBreakpoint{File: "/app/d.php", Line: 4, Enabled: true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Continue("run", ByAgent, "probe"); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "second run", func() bool { return len(be.commands("run")) == 2 })
+	be.mu.Lock()
+	order := strings.Join(be.seen, "|")
+	be.mu.Unlock()
+	if i, j := strings.Index(order, "breakpoint_set"), strings.LastIndex(order, "run -i"); i < 0 || i > j {
+		t.Fatalf("order: %s", order)
+	}
+}
+
+func TestBreakpoints_FilePaths(t *testing.T) {
+	for in, want := range map[string]string{
+		"/var/www/x.php":    "file:///var/www/x.php",
+		`C:\app\src\x.php`:  "file:///C:/app/src/x.php",
+		"c:/app/x.php":      "file:///c:/app/x.php",
+		"file:///srv/x.php": "file:///srv/x.php",
+	} {
+		b := SavedBreakpoint{File: in, Line: 1}
+		if err := b.normalize(); err != nil || b.File != want {
+			t.Errorf("%s: %q %v", in, b.File, err)
+		}
+	}
+	for _, bad := range []string{"src/x.php", "x.php", "./x.php"} {
+		b := SavedBreakpoint{File: bad, Line: 1}
+		if err := b.normalize(); err == nil {
+			t.Errorf("%s accepted", bad)
+		}
+	}
+}
