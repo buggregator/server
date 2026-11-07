@@ -133,7 +133,7 @@ func TestWaitSeconds(t *testing.T) {
 	for _, c := range []struct {
 		n    int
 		want time.Duration
-	}{{0, 30 * time.Second}, {-3, 30 * time.Second}, {5, 5 * time.Second}, {99, 30 * time.Second}} {
+	}{{0, 30 * time.Second}, {-3, 30 * time.Second}, {5, 5 * time.Second}, {99, 30 * time.Second}, {1 << 62, 30 * time.Second}} {
 		if got := waitSeconds(c.n, 30*time.Second, 30*time.Second); got != c.want {
 			t.Errorf("%d: %v", c.n, got)
 		}

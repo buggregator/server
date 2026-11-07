@@ -6,12 +6,14 @@
 package xdebug
 
 import (
+	"database/sql"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/buggregator/go-buggregator/internal/module"
 	"github.com/buggregator/go-buggregator/internal/server/tcp"
+	"github.com/buggregator/go-buggregator/internal/storage"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -57,6 +59,7 @@ func New(cfg Config) *Module {
 		slog.Warn("xdebug: unknown mode, using auto", "mode", cfg.Mode)
 		_ = p.SetSettings(Settings{Mode: ModeAuto, PauseOnFirstLine: cfg.PauseOnFirstLine})
 	}
+	p.allowEval = cfg.AllowEval
 	switch {
 	case cfg.IdleTimeout < 0:
 		p.idleTimeout = 0
@@ -83,6 +86,16 @@ func (m *Module) SetBroadcaster(b Broadcaster) {
 			slog.Warn("xdebug: websocket event dropped, queue full", "event", name)
 		}
 	})
+}
+
+// RegisterMigrations adds the xdebug_breakpoints table.
+func (m *Module) RegisterMigrations(migrator *storage.Migrator) error {
+	return migrator.AddFromFS("xdebug", migrations, "migrations")
+}
+
+// OnInit loads the saved breakpoints.
+func (m *Module) OnInit(db *sql.DB) error {
+	return m.proxy.bps.load(db)
 }
 
 func (m *Module) Name() string { return "Xdebug proxy" }

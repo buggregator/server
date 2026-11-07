@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -47,10 +48,10 @@ func waitSeconds(n int, def, max time.Duration) time.Duration {
 	if n <= 0 {
 		return def
 	}
-	if d := time.Duration(n) * time.Second; d < max {
-		return d
+	if n >= int(max/time.Second) { // clamp first: a huge n overflows Duration
+		return max
 	}
-	return max
+	return time.Duration(n) * time.Second
 }
 
 // agentName is the MCP client's name, shown in the UI as who drives.
@@ -218,4 +219,64 @@ func (s *Session) pausedAtOf() time.Time {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.pausedAt
+}
+
+type bpSetInput struct {
+	File      string `json:"file,omitempty" jsonschema:"File as PHP sees it: an absolute path (/var/www/app/src/User.php) or a file:// URI. Paths on the PHP side, not your local checkout, unless they are the same."`
+	Line      int    `json:"line,omitempty" jsonschema:"Line number (1-based) for a line breakpoint"`
+	Exception string `json:"exception,omitempty" jsonschema:"Exception class for an exception breakpoint instead of file+line, e.g. \\Throwable or \\App\\Exceptions\\PaymentFailed"`
+	Condition string `json:"condition,omitempty" jsonschema:"PHP expression; stop only when it is true. Needs xdebug.allow_eval."`
+}
+
+type bpRemoveInput struct {
+	ID int64 `json:"id" jsonschema:"Breakpoint id from xdebug_breakpoints"`
+}
+
+// registerBreakpointTools: listing is a read (always on); set and remove
+// change what the app does and come with allow_control.
+func registerBreakpointTools(server *sdkmcp.Server, p *Proxy, control bool) {
+	sdkmcp.AddTool(server, &sdkmcp.Tool{
+		Name:        "xdebug_breakpoints",
+		Description: "Breakpoints Buggregator saves and sends to every Xdebug session it drives (no IDE attached; an IDE sets its own). With session_id of a session Buggregator drives: each with its state in that session (resolved, unresolved, skipped = has a condition while eval is off, disabled, pending = sent at the next pause), resolved_line and hit_count.",
+	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in sessionInput) (*sdkmcp.CallToolResult, any, error) {
+		list := p.bps.List()
+		if in.SessionID == "" {
+			return textResult(list), nil, nil
+		}
+		s, err := p.Session(in.SessionID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if s.Info().Driver != DriverHere {
+			// An IDE drives it: its breakpoints are the IDE's, not the saved ones.
+			bps, err := s.ideBreakpoints()
+			if err != nil {
+				return nil, nil, err
+			}
+			return textResult(map[string]any{"driver": DriverIDE, "ide_breakpoints": bps}), nil, nil
+		}
+		return textResult(s.SessionBreakpoints(list)), nil, nil
+	})
+	if !control {
+		return
+	}
+	sdkmcp.AddTool(server, &sdkmcp.Tool{
+		Name:        "xdebug_breakpoint_set",
+		Description: "Save a breakpoint: file + line, or an exception class. Paused sessions Buggregator drives have it when this returns; running ones get it at their next pause; every new session gets it before its script runs. Then fire the request and call xdebug_wait.",
+	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in bpSetInput) (*sdkmcp.CallToolResult, any, error) {
+		bp, err := p.AddBreakpoint(SavedBreakpoint{File: in.File, Line: in.Line, Exception: in.Exception, Condition: strings.TrimSpace(in.Condition), Enabled: true, Source: "mcp"})
+		if err != nil {
+			return nil, nil, err
+		}
+		return textResult(bp), nil, nil
+	})
+	sdkmcp.AddTool(server, &sdkmcp.Tool{
+		Name:        "xdebug_breakpoint_remove",
+		Description: "Delete a saved breakpoint by id (see xdebug_breakpoints), also from live sessions Buggregator drives.",
+	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in bpRemoveInput) (*sdkmcp.CallToolResult, any, error) {
+		if err := p.RemoveBreakpoint(in.ID); err != nil {
+			return nil, nil, err
+		}
+		return textResult(map[string]any{"removed": in.ID}), nil, nil
+	})
 }

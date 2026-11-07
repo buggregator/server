@@ -77,7 +77,10 @@ tcp:
 # xdebug_location, xdebug_stack, xdebug_variables, xdebug_property, xdebug_eval) on
 # the same paused session; xdebug_eval runs PHP code, only with allow_eval.
 # With allow_control an agent also drives a session that has no IDE
-# (xdebug_step, xdebug_continue, xdebug_stop) and waits for a pause (xdebug_wait).
+# (xdebug_step, xdebug_continue, xdebug_stop), waits for a pause (xdebug_wait) and
+# sets breakpoints (xdebug_breakpoint_set, xdebug_breakpoint_remove; listing them,
+# xdebug_breakpoints, is always on). Breakpoints are saved in the database and sent
+# to every session Buggregator drives; a condition is PHP code and needs allow_eval.
 # Off by default. MCP tools need mcp.enabled.
 # mode: proxy — relay to the IDE; no IDE = the script runs on without a debugger.
 #       auto — relay when the IDE answers, else Buggregator drives the session
