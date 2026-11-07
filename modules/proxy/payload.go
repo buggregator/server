@@ -10,7 +10,9 @@ import (
 const maxBodySize = 512 * 1024 // 512KB
 
 // buildHTTPDumpEvent creates an http-dump event from a proxied request/response pair.
-// The payload matches the http-dump format with additional "response" and "proxy" fields.
+// The payload matches the http-dump format with additional "response", "proxy"
+// and "scheme" fields. "scheme" ("http" or "https") is the scheme the client
+// used; dumps stored before it was added have none (read them as "http").
 func buildHTTPDumpEvent(req *capturedRequest, resp *capturedResponse, durationMs float64, proxyErr string) *event.Incoming {
 	headers := make(map[string][]string)
 	for k, v := range req.Headers {
@@ -29,6 +31,7 @@ func buildHTTPDumpEvent(req *capturedRequest, resp *capturedResponse, durationMs
 	payload := map[string]any{
 		"received_at": time.Now().Format("2006-01-02 15:04:05"),
 		"host":        req.Host,
+		"scheme":      req.Scheme,
 		"proxy":       true,
 		"duration_ms": durationMs,
 		"request": map[string]any{
