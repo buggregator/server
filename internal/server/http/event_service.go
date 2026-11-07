@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/buggregator/go-buggregator/internal/event"
@@ -48,6 +49,20 @@ func (s *EventService) HandleIncoming(ctx context.Context, inc *event.Incoming) 
 		}
 	}
 
+	// A follow-up of a stored event is merged into it. The lock covers the
+	// first insert too, so a follow-up racing its first payload still merges.
+	if inc.Merge != nil && inc.UUID != "" {
+		mergeMu.Lock()
+		defer mergeMu.Unlock()
+		stored, err := s.store.FindByUUID(ctx, inc.UUID)
+		if err != nil {
+			return err
+		}
+		if stored != nil && stored.Type == inc.Type {
+			return s.merge(ctx, stored, inc)
+		}
+	}
+
 	ev := event.NewEvent(inc)
 
 	start := time.Now()
@@ -74,6 +89,26 @@ func (s *EventService) HandleIncoming(ctx context.Context, inc *event.Incoming) 
 	// Notify modules (e.g., webhooks).
 	s.registry.NotifyEventStored(ev)
 
+	return nil
+}
+
+// mergeMu serializes merges: both EventService instances share one store.
+var mergeMu sync.Mutex
+
+// merge folds inc into the stored event and re-broadcasts it; the UI replaces
+// the event with the same uuid. Modules are not notified again.
+func (s *EventService) merge(ctx context.Context, stored *event.Event, inc *event.Incoming) error {
+	payload, err := inc.Merge(stored.Payload)
+	if err != nil {
+		return err
+	}
+	if err := s.store.UpdatePayload(ctx, stored.UUID, payload); err != nil {
+		return err
+	}
+	stored.Payload = payload
+	slog.Info("event merged", "uuid", stored.UUID, "type", stored.Type, "project", stored.Project)
+	preview := s.registry.Previews().BuildPreview(*stored)
+	s.hub.Broadcast("events.project."+stored.Project, "event.received", preview)
 	return nil
 }
 
