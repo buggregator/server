@@ -63,10 +63,17 @@ var controlRoutes = map[string]string{
 	"stop": "stop", "detach": "detach",
 }
 
-// jsonOnly refuses a write that is not application/json: a cross-site form
-// or text/plain POST needs no CORS preflight, so it must not reach a write
-// when auth is off.
+// jsonOnly guards the xdebug writes (eval, control, settings) when auth is
+// off. A cross-site form or text/plain POST needs no CORS preflight, so the
+// body must be application/json. And the default cors_origins ["*"] answers
+// any preflight, so a request a browser marks Sec-Fetch-Site: cross-site
+// (another site's page) is refused too; same-site (another port of
+// localhost, the dev server) and non-browser clients pass.
 func jsonOnly(w http.ResponseWriter, r *http.Request) bool {
+	if r.Header.Get("Sec-Fetch-Site") == "cross-site" {
+		writeErr(w, http.StatusForbidden, "cross_site", errors.New("cross-site requests cannot change a debug session"))
+		return false
+	}
 	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
 		writeErr(w, http.StatusUnsupportedMediaType, "unsupported_media_type", errors.New("Content-Type must be application/json"))
 		return false
@@ -103,7 +110,8 @@ func (m *Module) settingsView() map[string]any {
 }
 
 // handleSettings changes mode and pause_on_first_line for new sessions; a
-// field left out keeps its value.
+// field left out keeps its value. Settings live in memory: a restart goes
+// back to the config.
 func (m *Module) handleSettings(w http.ResponseWriter, r *http.Request) {
 	if !jsonOnly(w, r) {
 		return
@@ -112,7 +120,9 @@ func (m *Module) handleSettings(w http.ResponseWriter, r *http.Request) {
 		Mode             *string `json:"mode"`
 		PauseOnFirstLine *bool   `json:"pause_on_first_line"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10)).Decode(&body); err != nil {
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&body); err != nil || (body.Mode == nil && body.PauseOnFirstLine == nil) {
 		writeErr(w, http.StatusBadRequest, "bad_request", errors.New(`body must be {"mode": "proxy|auto|standalone", "pause_on_first_line": bool}`))
 		return
 	}

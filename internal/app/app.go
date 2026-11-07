@@ -125,7 +125,8 @@ func (a *App) Run() {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"enabled": false, "addr": a.cfg.Xdebug.Addr, "ide_addr": a.cfg.Xdebug.IDEAddr, "allow_eval": a.cfg.Xdebug.AllowEval,
-				"mode": a.cfg.Xdebug.Mode,
+				"mode": a.cfg.Xdebug.Mode, "pause_on_first_line": a.cfg.Xdebug.PauseOnFirstLine,
+				"idle_timeout_seconds": idleSeconds(a.cfg.Xdebug.IdleTimeoutDur),
 			})
 		})))
 	}
@@ -312,4 +313,16 @@ func listenHTTP(addr string) (net.Listener, error) {
 		return nil, fmt.Errorf("http: listen on %s: %w (change it with -http-addr or HTTP_ADDR)", addr, err)
 	}
 	return ln, nil
+}
+
+// idleSeconds is xdebug idle_timeout_seconds as GET /api/xdebug shows it
+// (0 = the guard is off).
+func idleSeconds(d time.Duration) int {
+	switch {
+	case d < 0:
+		return 0
+	case d == 0:
+		return 600
+	}
+	return int(d / time.Second)
 }

@@ -90,7 +90,7 @@ tcp:
 #   allow_eval: ${XDEBUG_PROXY_ALLOW_EVAL:false}      # Let MCP clients evaluate PHP expressions
 #   mode: ${XDEBUG_PROXY_MODE:auto}                   # proxy, auto or standalone
 #   pause_on_first_line: ${XDEBUG_PROXY_PAUSE_ON_FIRST_LINE:false} # With no IDE: stop at the first line
-#   idle_timeout: ${XDEBUG_PROXY_IDLE_TIMEOUT:10m}    # With no IDE: release a session paused this long; 0 = never
+#   idle_timeout: ${XDEBUG_PROXY_IDLE_TIMEOUT:10m}    # With no IDE: release a session paused this long (a Go duration: 90s, 10m); 0 = never
 
 # Enable/disable modules. All enabled by default.
 # Set to false to disable a module entirely (TCP port won't bind, events ignored).

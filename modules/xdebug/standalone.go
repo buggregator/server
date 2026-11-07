@@ -2,6 +2,7 @@ package xdebug
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -54,7 +55,7 @@ func (s *Session) driveHere(er *bufio.Reader, pauseOnFirstLine bool) error {
 	go func() { engineDone <- s.forwardEngine(er) }()
 
 	for _, f := range standaloneFeatures {
-		if err := s.sendOwn("feature_set -n "+f, false); err != nil {
+		if err := s.sendOwn("feature_set -n "+f, false, nil); err != nil {
 			return <-engineDone
 		}
 	}
@@ -62,15 +63,21 @@ func (s *Session) driveHere(er *bufio.Reader, pauseOnFirstLine bool) error {
 	if pauseOnFirstLine {
 		first = "step_into"
 	}
-	if err := s.sendOwn(first, true); err != nil {
+	if err := s.sendOwn(first, true, nil); err != nil {
 		return <-engineDone
 	}
 	return <-engineDone
 }
 
+// errSkip from a sendOwn precondition: nothing to send, not an error.
+var errSkip = errors.New("skip")
+
 // sendOwn writes a command of Buggregator's own; its reply is dropped (a
-// continuation's reply still sets the status).
-func (s *Session) sendOwn(cmd string, cont bool) error {
+// continuation's reply still sets the status). check runs under mu in the
+// same critical section that counts the continuation and allocates its tid,
+// so two callers can never both pass a "paused" check; it may also set the
+// session's flags. A failed write clears detaching and idleReason again.
+func (s *Session) sendOwn(cmd string, cont bool, check func() error) error {
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 	s.mu.Lock()
@@ -78,13 +85,24 @@ func (s *Session) sendOwn(cmd string, cont bool) error {
 		s.mu.Unlock()
 		return errSessionClosed
 	}
+	if check != nil {
+		if err := check(); err != nil {
+			s.mu.Unlock()
+			if errors.Is(err, errSkip) {
+				return nil
+			}
+			return err
+		}
+	}
 	tid := s.allocTID()
 	s.pending[tid] = pending{own: true, cont: cont}
 	var ev map[string]any
 	if cont {
 		s.conts++
 		s.stopIdleLocked()
-		if s.status != "running" {
+		// From a pause (or the start) the script runs; the stop that ends a
+		// script in "stopping" leaves the status alone (no flicker).
+		if s.status == "break" || s.status == "starting" {
 			s.status = "running"
 			ev = s.statusEventLocked()
 		}
@@ -98,7 +116,13 @@ func (s *Session) sendOwn(cmd string, cont bool) error {
 	if rest != "" {
 		line += " " + rest
 	}
-	return s.writeEngineLocked(line)
+	err := s.writeEngineLocked(line)
+	if err != nil {
+		s.mu.Lock()
+		s.detaching, s.idleReason = false, false
+		s.mu.Unlock()
+	}
+	return err
 }
 
 // Continue sends a continuation (run, step_into, step_over, step_out, stop,
@@ -110,27 +134,20 @@ func (s *Session) Continue(cmd, by, agent string) error {
 	if !controlCommands[cmd] {
 		return fmt.Errorf("command %q is not a continuation", cmd)
 	}
-	s.mu.Lock()
-	switch {
-	case s.closed:
-		s.mu.Unlock()
-		return errSessionClosed
-	case s.driver != DriverHere:
-		s.mu.Unlock()
-		return errIDEAttached
-	case s.status != "break" || s.conts > 0:
-		s.mu.Unlock()
-		return errNotPaused
-	}
-	s.lastContBy, s.lastContName = by, ""
-	if by == ByAgent {
-		s.lastContName = agent
-	}
-	if cmd == "detach" {
-		s.detaching = true
-	}
-	s.mu.Unlock()
-	return s.sendOwn(cmd, true)
+	return s.sendOwn(cmd, true, func() error {
+		switch {
+		case s.driver != DriverHere:
+			return errIDEAttached
+		case s.status != "break" || s.conts > 0:
+			return errNotPaused
+		}
+		s.lastContBy, s.lastContName = by, ""
+		if by == ByAgent {
+			s.lastContName = agent
+		}
+		s.detaching = cmd == "detach"
+		return nil
+	})
 }
 
 // afterReply runs after a reply moved the status (forwardEngine). A script
@@ -138,11 +155,17 @@ func (s *Session) Continue(cmd, by, agent string) error {
 // say stop, so the PHP process can finish.
 func (s *Session) afterReply(prev string) {
 	s.mu.Lock()
-	end := s.driver == DriverHere && s.status == "stopping" && prev != "stopping" && s.conts == 0 && !s.closed
+	end := s.driver == DriverHere && s.status == "stopping" && prev != "stopping"
 	s.mu.Unlock()
-	if end {
-		_ = s.sendOwn("stop", true)
+	if !end {
+		return // cheap path: no writeMu on every reply of a relayed session
 	}
+	_ = s.sendOwn("stop", true, func() error {
+		if s.driver != DriverHere || s.status != "stopping" || s.conts > 0 {
+			return errSkip
+		}
+		return nil
+	})
 }
 
 // lastContByLocked is last_continuation_by for the UI: nil until a
@@ -212,18 +235,19 @@ func (s *Session) touch() {
 // idleFire releases a session left paused for idle_timeout: a paused script
 // holds a PHP-FPM worker, the session lock and open transactions.
 func (s *Session) idleFire() {
-	s.mu.Lock()
-	if s.closed || s.idleDeadline.IsZero() || s.status != "break" || s.conts > 0 {
-		s.mu.Unlock()
-		return
+	released := false
+	_ = s.sendOwn("detach", true, func() error {
+		if s.idleDeadline.IsZero() || s.status != "break" || s.conts > 0 {
+			return errSkip
+		}
+		if left := time.Until(s.idleDeadline); left > 0 {
+			s.idleTimer.Reset(left) // touched since the timer was set
+			return errSkip
+		}
+		s.idleReason, s.detaching, released = true, true, true
+		return nil
+	})
+	if released {
+		slog.Info("xdebug: paused session idle, released it", "session", s.ID, "idle_timeout", s.idleTimeout)
 	}
-	if left := time.Until(s.idleDeadline); left > 0 {
-		s.idleTimer.Reset(left) // touched since the timer was set
-		s.mu.Unlock()
-		return
-	}
-	s.idleReason, s.detaching = true, true
-	s.mu.Unlock()
-	slog.Info("xdebug: paused session idle, releasing it", "session", s.ID, "idle_timeout", s.idleTimeout)
-	_ = s.sendOwn("detach", true)
 }

@@ -289,6 +289,10 @@ func LoadConfig() Config {
 	cfg.Xdebug.IDEAddr = coalesce(os.Getenv("XDEBUG_PROXY_IDE_ADDR"), fileCfg.Xdebug.IDEAddr, "127.0.0.1:9004")
 	cfg.Xdebug.AllowEval = envBool("XDEBUG_PROXY_ALLOW_EVAL", fileCfg.Xdebug.AllowEval)
 	cfg.Xdebug.Mode = coalesce(os.Getenv("XDEBUG_PROXY_MODE"), fileCfg.Xdebug.Mode, "auto")
+	if m := cfg.Xdebug.Mode; m != "proxy" && m != "auto" && m != "standalone" {
+		slog.Warn("xdebug.mode must be proxy, auto or standalone, using auto", "value", m)
+		cfg.Xdebug.Mode = "auto"
+	}
 	cfg.Xdebug.PauseOnFirstLine = envBool("XDEBUG_PROXY_PAUSE_ON_FIRST_LINE", fileCfg.Xdebug.PauseOnFirstLine)
 	cfg.Xdebug.IdleTimeout = coalesce(os.Getenv("XDEBUG_PROXY_IDLE_TIMEOUT"), fileCfg.Xdebug.IdleTimeout, "10m")
 	cfg.Xdebug.IdleTimeoutDur = parseIdleTimeout(cfg.Xdebug.IdleTimeout)

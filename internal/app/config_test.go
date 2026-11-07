@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestModulesConfig_IsEnabled(t *testing.T) {
@@ -252,6 +253,17 @@ func TestEnvBool(t *testing.T) {
 		t.Setenv("BUGGREGATOR_TEST_BOOL", tt.env)
 		if got := envBool("BUGGREGATOR_TEST_BOOL", tt.def); got != tt.want {
 			t.Errorf("env=%q def=%v: got %v", tt.env, tt.def, got)
+		}
+	}
+}
+
+func TestParseIdleTimeout(t *testing.T) {
+	for in, want := range map[string]time.Duration{
+		"10m": 10 * time.Minute, " 90s ": 90 * time.Second, "0": -1, "0s": -1, "-5m": -1,
+		"600": 0, "soon": 0, // not a duration: default
+	} {
+		if got := parseIdleTimeout(in); got != want {
+			t.Errorf("%q: %v, want %v", in, got, want)
 		}
 	}
 }
