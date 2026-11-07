@@ -12,9 +12,11 @@ import (
 	"time"
 )
 
-// Proxy accepts Xdebug connections and forwards each one to the IDE.
+// Proxy accepts Xdebug connections and relays each one to the IDE, or drives
+// it here when there is no IDE (see Settings.Mode).
 type Proxy struct {
 	ideAddr        string
+	idleTimeout    time.Duration // a session paused here is released after this long without a command
 	dialTimeout    time.Duration
 	initTimeout    time.Duration
 	commandTimeout time.Duration
@@ -24,6 +26,7 @@ type Proxy struct {
 	readTarget    bool // read $_SERVER at the first break for the session title
 
 	mu       sync.Mutex
+	settings Settings
 	nextID   int
 	sessions map[string]*Session // live sessions and tombstones
 	tombs    []string            // tombstone ids, oldest first
@@ -42,7 +45,34 @@ func NewProxy(ideAddr string) *Proxy {
 		maxTombstones:  50,
 		readTarget:     true,
 		sessions:       map[string]*Session{},
+		settings:       Settings{Mode: ModeProxy},
+		idleTimeout:    10 * time.Minute,
 	}
+}
+
+// Settings change at runtime (PUT /api/xdebug/settings); they apply to new
+// sessions only.
+type Settings struct {
+	Mode             string `json:"mode"`                // proxy, auto or standalone
+	PauseOnFirstLine bool   `json:"pause_on_first_line"` // a session driven here stops at the first line
+}
+
+// Settings returns the current settings.
+func (p *Proxy) Settings() Settings {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.settings
+}
+
+// SetSettings replaces the settings; the mode must be valid.
+func (p *Proxy) SetSettings(st Settings) error {
+	if !ValidMode(st.Mode) {
+		return fmt.Errorf("mode must be proxy, auto or standalone, got %q", st.Mode)
+	}
+	p.mu.Lock()
+	p.settings = st
+	p.mu.Unlock()
+	return nil
 }
 
 // SetNotify sets the event sink (WebSocket broadcast). Call before serving.
@@ -129,27 +159,40 @@ func (p *Proxy) HandleConnection(engine net.Conn) {
 	p.mu.Unlock()
 	s := newSession(id, engine, initBody, p.commandTimeout)
 	s.targetDone = !p.readTarget
+	st := p.Settings()
 
-	ide, err := net.DialTimeout("tcp", p.ideAddr, p.dialTimeout)
-	if err != nil {
-		slog.Warn("xdebug: IDE is not reachable, detaching so the script runs on", "ide", p.ideAddr, "file", s.FileURI, "err", err)
-		s.detach()
+	var ide net.Conn
+	if st.Mode != ModeStandalone {
+		ide, err = net.DialTimeout("tcp", p.ideAddr, p.dialTimeout)
+		if err == nil {
+			s.ide = ide
+			if err = s.writeIDE(initBody); err != nil {
+				ide.Close()
+				s.ide = nil
+			}
+		}
+		if err != nil && st.Mode == ModeProxy {
+			slog.Warn("xdebug: IDE is not reachable, detaching so the script runs on", "ide", p.ideAddr, "file", s.FileURI, "err", err)
+			s.detach()
+			p.register(s)
+			s.close(ReasonIDEUnreachable)
+			p.bury(s)
+			return
+		}
+	}
+	if s.ide == nil {
+		s.driver = DriverHere
+		s.idleTimeout = p.idleTimeout
 		p.register(s)
-		s.close(ReasonIDEUnreachable)
+		slog.Info("xdebug: session started, driven here (no IDE)", "session", id, "file", s.FileURI, "mode", st.Mode)
+		err := s.driveHere(er, st.PauseOnFirstLine)
+		s.close(ReasonEngineClosed)
+		slog.Info("xdebug: session ended", "session", id, "err", quietEOF(err))
 		p.bury(s)
 		return
 	}
 	defer ide.Close()
-	s.ide = ide
-
-	if err := s.writeIDE(initBody); err != nil {
-		slog.Warn("xdebug: cannot send init to IDE", "err", err)
-		s.detach()
-		p.register(s)
-		s.close(ReasonIDEUnreachable)
-		p.bury(s)
-		return
-	}
+	s.driver = DriverIDE
 
 	s.mu.Lock()
 	s.ideConnected = true
@@ -224,7 +267,7 @@ func (p *Proxy) Session(id string) (*Session, error) {
 	case len(all) == 0:
 		return nil, errors.New("no xdebug sessions: start a PHP request with Xdebug enabled")
 	case len(paused) == 0:
-		return nil, errors.New("no paused xdebug session: stop at a breakpoint in the IDE first")
+		return nil, errors.New("no paused xdebug session: stop at a breakpoint first")
 	default:
 		return nil, errors.New("several sessions are paused: pass session_id (see xdebug_sessions)")
 	}

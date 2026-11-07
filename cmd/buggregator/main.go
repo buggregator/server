@@ -136,6 +136,10 @@ func main() {
 			Addr:      cfg.Xdebug.Addr,
 			IDEAddr:   cfg.Xdebug.IDEAddr,
 			AllowEval: cfg.Xdebug.AllowEval,
+
+			Mode:             cfg.Xdebug.Mode,
+			PauseOnFirstLine: cfg.Xdebug.PauseOnFirstLine,
+			IdleTimeout:      cfg.Xdebug.IdleTimeoutDur,
 		})
 		xdebugMod.SetBroadcaster(hub)
 		hub.AddServerChannel(xdebug.Channel)

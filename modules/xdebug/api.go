@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
-// HTTP API for the Xdebug page. Read-only: every DBGp read goes through the
-// session's command queue and allow-list; UI reads are not written to the
-// agent log and are cached per pause.
+// HTTP API for the Xdebug page. Every DBGp read goes through the session's
+// command queue and allow-list; UI reads are not written to the agent log and
+// are cached per pause. Control routes (run, step, stop, detach) work only on
+// a session driven here, never while an IDE drives it.
 
 type apiError struct {
 	Code  string `json:"code"`
@@ -49,12 +51,103 @@ func (m *Module) registerAPI(mux *http.ServeMux, wrap func(http.Handler) http.Ha
 	h("GET /api/xdebug/sessions/{id}/breakpoints", m.withSession(m.handleBreakpoints))
 	h("POST /api/xdebug/sessions/{id}/eval", m.withSession(m.handleEval))
 	h("GET /api/xdebug/sessions/{id}/agent-log", m.withSession(m.handleAgentLog))
+	h("PUT /api/xdebug/settings", m.handleSettings)
+	for route, cmd := range controlRoutes {
+		h("POST /api/xdebug/sessions/{id}/"+route, m.withSession(m.handleControl(cmd)))
+	}
+}
+
+// controlRoutes maps the control routes to DBGp continuations.
+var controlRoutes = map[string]string{
+	"run": "run", "step-into": "step_into", "step-over": "step_over", "step-out": "step_out",
+	"stop": "stop", "detach": "detach",
+}
+
+// jsonOnly guards the xdebug writes (eval, control, settings) when auth is
+// off. A cross-site form or text/plain POST needs no CORS preflight, so the
+// body must be application/json. And the default cors_origins ["*"] answers
+// any preflight, so a request a browser marks Sec-Fetch-Site: cross-site
+// (another site's page) is refused too; same-site (another port of
+// localhost, the dev server) and non-browser clients pass.
+func jsonOnly(w http.ResponseWriter, r *http.Request) bool {
+	if r.Header.Get("Sec-Fetch-Site") == "cross-site" {
+		writeErr(w, http.StatusForbidden, "cross_site", errors.New("cross-site requests cannot change a debug session"))
+		return false
+	}
+	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
+		writeErr(w, http.StatusUnsupportedMediaType, "unsupported_media_type", errors.New("Content-Type must be application/json"))
+		return false
+	}
+	return true
+}
+
+func (m *Module) handleControl(cmd string) func(http.ResponseWriter, *http.Request, *Session) {
+	return func(w http.ResponseWriter, r *http.Request, s *Session) {
+		if !jsonOnly(w, r) {
+			return
+		}
+		err := s.Continue(cmd, ByUI, "")
+		switch {
+		case err == nil:
+			writeJSON(w, http.StatusOK, s.Info())
+		case errors.Is(err, errIDEAttached):
+			writeJSON(w, http.StatusConflict, apiError{Code: "ide_attached", Error: err.Error(), State: s.Info().State})
+		case errors.Is(err, errNotPaused), errors.Is(err, errSessionClosed):
+			writeJSON(w, http.StatusConflict, apiError{Code: "not_paused", Error: errNotPaused.Error(), State: s.Info().State})
+		default:
+			writeErr(w, http.StatusBadGateway, "xdebug_failed", err)
+		}
+	}
+}
+
+// settingsView is the settings part of GET /api/xdebug and PUT /api/xdebug/settings.
+func (m *Module) settingsView() map[string]any {
+	st := m.proxy.Settings()
+	return map[string]any{
+		"mode": st.Mode, "pause_on_first_line": st.PauseOnFirstLine,
+		"idle_timeout_seconds": int(m.proxy.idleTimeout / time.Second),
+	}
+}
+
+// handleSettings changes mode and pause_on_first_line for new sessions; a
+// field left out keeps its value. Settings live in memory: a restart goes
+// back to the config.
+func (m *Module) handleSettings(w http.ResponseWriter, r *http.Request) {
+	if !jsonOnly(w, r) {
+		return
+	}
+	var body struct {
+		Mode             *string `json:"mode"`
+		PauseOnFirstLine *bool   `json:"pause_on_first_line"`
+	}
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&body); err != nil || (body.Mode == nil && body.PauseOnFirstLine == nil) {
+		writeErr(w, http.StatusBadRequest, "bad_request", errors.New(`body must be {"mode": "proxy|auto|standalone", "pause_on_first_line": bool}`))
+		return
+	}
+	st := m.proxy.Settings()
+	if body.Mode != nil {
+		st.Mode = *body.Mode
+	}
+	if body.PauseOnFirstLine != nil {
+		st.PauseOnFirstLine = *body.PauseOnFirstLine
+	}
+	if err := m.proxy.SetSettings(st); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, m.settingsView())
 }
 
 func (m *Module) handleStatus(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{
+	out := map[string]any{
 		"enabled": true, "addr": m.cfg.Addr, "ide_addr": m.cfg.IDEAddr, "allow_eval": m.cfg.AllowEval,
-	})
+	}
+	for k, v := range m.settingsView() {
+		out[k] = v
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (m *Module) handleSessions(w http.ResponseWriter, r *http.Request) {
@@ -283,10 +376,7 @@ func (m *Module) handleEval(w http.ResponseWriter, r *http.Request, s *Session) 
 		writeErr(w, http.StatusForbidden, "eval_disabled", errors.New("eval is off (xdebug.allow_eval)"))
 		return
 	}
-	// Only application/json: a cross-site form or text/plain POST needs no
-	// CORS preflight, so it must not reach eval when auth is off.
-	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
-		writeErr(w, http.StatusUnsupportedMediaType, "unsupported_media_type", errors.New("Content-Type must be application/json"))
+	if !jsonOnly(w, r) {
 		return
 	}
 	var body struct {
