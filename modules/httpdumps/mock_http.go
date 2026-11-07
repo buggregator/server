@@ -1,9 +1,11 @@
 package httpdumps
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -55,6 +57,7 @@ func (m *mockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h := w.Header()
 	status, delayMs := http.StatusNotFound, 0
 	var body []byte
+	var templateErr string
 	if rule == nil && isPreflight(r) {
 		// No OPTIONS rule: answer the CORS preflight as the CORS middleware
 		// would (it set the Access-Control headers when the origin is allowed).
@@ -69,7 +72,19 @@ func (m *mockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			body = nil
 		}
 	} else {
-		for k, v := range rule.Headers {
+		headers, ruleBody := rule.Headers, []byte(rule.Body)
+		if rule.Template {
+			out, err := renderMockRule(rule, mockRequestOf(r, rule, path))
+			if err != nil {
+				templateErr = err.Error()
+				headers = map[string]string{"Content-Type": "application/json"}
+				ruleBody, _ = json.Marshal(map[string]string{"error": "mock template: " + templateErr})
+				ruleBody = append(ruleBody, '\n')
+			} else {
+				headers, ruleBody = out.Headers, out.Body
+			}
+		}
+		for k, v := range headers {
 			if http.CanonicalHeaderKey(k) == "Set-Cookie" {
 				if v = scopeMockCookie(v); v == "" {
 					continue
@@ -78,14 +93,17 @@ func (m *mockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.Set(k, v)
 		}
 		status, delayMs = rule.Status, rule.DelayMs
+		if templateErr != "" {
+			status = http.StatusInternalServerError
+		}
 		if r.Method != http.MethodHead {
-			body = []byte(rule.Body)
+			body = ruleBody
 		}
 	}
 	setMockSecurityHeaders(h)
 	setSniffedContentType(h, status, body)
 
-	sent := mockSent{Status: status, Headers: h, Body: body, DelayMs: delayMs}
+	sent := mockSent{Status: status, Headers: h, Body: body, DelayMs: delayMs, TemplateError: templateErr}
 	if rule == nil {
 		sent.Near = m.rules.near(r.Method, path, project)
 	}
@@ -155,6 +173,8 @@ type mockSent struct {
 	Body    []byte
 	DelayMs int
 	Near    []MockNear
+	// TemplateError is why the rule's template failed; the response is then a 500.
+	TemplateError string
 }
 
 // mockInfo is the "mock" field of a captured request: the rule that answered
@@ -182,6 +202,9 @@ func mockInfo(rule *MockRule, sent mockSent) map[string]any {
 		"body_size":      len(sent.Body),
 		"body_truncated": truncated,
 		"delay_ms":       sent.DelayMs,
+	}
+	if sent.TemplateError != "" {
+		info["template_error"] = sent.TemplateError
 	}
 	if rule != nil {
 		info["rule_id"], info["rule_name"] = rule.ID, rule.Name
@@ -218,4 +241,19 @@ func (m *mockServer) store(r *http.Request, project string, rule *MockRule, sent
 	if err := m.events.HandleIncoming(r.Context(), inc); err != nil {
 		slog.Warn("mock: failed to store request", "err", err)
 	}
+}
+
+// mockRequestOf reads what the template helpers need. The body is read once
+// (first 1 MB) and put back, so the request is still captured whole.
+func mockRequestOf(r *http.Request, rule *MockRule, path string) *mockRequest {
+	req := &mockRequest{
+		Method: r.Method, Path: path, Params: mockPathParams(rule.Path, path),
+		Query: r.URL.Query(), Header: r.Header,
+	}
+	if r.Body != nil {
+		head, _ := io.ReadAll(io.LimitReader(r.Body, maxMockRequestBody))
+		req.Body = head
+		r.Body = io.NopCloser(io.MultiReader(bytes.NewReader(head), r.Body))
+	}
+	return req
 }
