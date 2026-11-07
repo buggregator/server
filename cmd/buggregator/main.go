@@ -18,10 +18,10 @@ import (
 	"github.com/buggregator/go-buggregator/modules/inspector"
 	"github.com/buggregator/go-buggregator/modules/monolog"
 	"github.com/buggregator/go-buggregator/modules/profiler"
+	"github.com/buggregator/go-buggregator/modules/proxy"
 	"github.com/buggregator/go-buggregator/modules/ray"
 	"github.com/buggregator/go-buggregator/modules/sentry"
 	"github.com/buggregator/go-buggregator/modules/sms"
-	"github.com/buggregator/go-buggregator/modules/proxy"
 	smtpmod "github.com/buggregator/go-buggregator/modules/smtp"
 	"github.com/buggregator/go-buggregator/modules/vardumper"
 	"github.com/buggregator/go-buggregator/modules/webhooks"
@@ -167,7 +167,7 @@ func main() {
 	var httpDumpMod *httpdumps.Module
 	if enabled.IsEnabled("http-dump") {
 		httpDumpMod = httpdumps.New(attachments, db)
-		httpDumpMod.SetMockRules(mockRules(cfg.Mocks))
+		httpDumpMod.SetMockRules(append(mockRules(cfg.Mocks), openAPIMockRules(cfg.MocksOpenAPI)...))
 		httpDumpMod.SetMCPMockWrite(cfg.MCP.MockWriteOn())
 		registry.Register(httpDumpMod) // catch-all, must be last
 	}
@@ -193,6 +193,25 @@ func main() {
 
 	application := app.New(cfg, db, registry, hub, store, attachments, collector)
 	application.Run()
+}
+
+// openAPIMockRules reads the specs of the mocks_openapi section. A spec that
+// cannot be read is logged and skipped, so a bad file never stops the server.
+func openAPIMockRules(defs []app.MockOpenAPIDef) []httpdumps.MockRule {
+	var rules []httpdumps.MockRule
+	for _, d := range defs {
+		res, err := httpdumps.OpenAPIRulesFromFile(d.File, httpdumps.OpenAPIImport{Project: d.Project, Group: d.Group, BasePath: d.BasePath})
+		if err != nil {
+			slog.Warn("mock: skipping OpenAPI spec", "file", d.File, "err", err)
+			continue
+		}
+		for _, sk := range res.Skipped {
+			slog.Warn("mock: OpenAPI operation skipped", "file", d.File, "method", sk.Method, "path", sk.Path, "reason", sk.Reason)
+		}
+		slog.Info("mock: OpenAPI spec loaded", "file", d.File, "group", res.Group, "rules", len(res.Rules))
+		rules = append(rules, res.Rules...)
+	}
+	return rules
 }
 
 // mockRules converts the mocks section of buggregator.yaml. A delay that is

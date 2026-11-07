@@ -360,6 +360,47 @@ func registerMockTools(server *sdkmcp.Server, rules *mockStore, requests mockReq
 		}
 		return mockToolResult(r), nil, nil
 	})
+
+	sdkmcp.AddTool(server, &sdkmcp.Tool{
+		Name: "mock_import_openapi",
+		Description: "Import an OpenAPI 3.0/3.1 spec (YAML or JSON; text in spec, or url to download, http/https, at most 5 MB, 10 s): one rule per operation, in one group. " +
+			"Status = the lowest 2xx response; body = the spec's example as is, else a template built from the schema with fake data (edit it afterwards like any rule). " +
+			"Path params: a root field named like a param (or id for the last one) echoes it. Paths get servers[0].url's path in front unless base_path is given (\"\" = none). " +
+			"Re-importing the same group replaces its rules. Local $refs only; oneOf/anyOf take the first option. Returns the rules and the skipped operations with reasons.",
+	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in mockImportInput) (*sdkmcp.CallToolResult, any, error) {
+		res, err := importOpenAPI(ctx, rules, OpenAPIImport(in), "mcp")
+		if err != nil {
+			return nil, nil, err
+		}
+		summary := make([]map[string]any, len(res.Rules))
+		for i, r := range res.Rules {
+			summary[i] = map[string]any{"id": r.ID, "name": r.Name, "method": r.Method, "path": r.Path, "status": r.Status, "template": r.Template}
+		}
+		return mockToolResult(map[string]any{"group": res.Group, "title": res.Title, "rules": summary, "skipped": res.Skipped}), nil, nil
+	})
+
+	sdkmcp.AddTool(server, &sdkmcp.Tool{
+		Name:        "mock_group_delete",
+		Description: "Delete every stored rule of a group (the group of an OpenAPI import, see the group field of mock_rules_list).",
+	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in mockGroupInput) (*sdkmcp.CallToolResult, any, error) {
+		n, err := rules.deleteGroup(in.Group)
+		if err != nil {
+			return nil, nil, err
+		}
+		return mockToolResult(map[string]any{"group": in.Group, "deleted": n}), nil, nil
+	})
+}
+
+type mockImportInput struct {
+	Spec     string  `json:"spec,omitempty" jsonschema:"The spec text, YAML or JSON"`
+	URL      string  `json:"url,omitempty" jsonschema:"Or where to download the spec (http/https)"`
+	Project  string  `json:"project,omitempty" jsonschema:"Project of the rules; empty = every project"`
+	Group    string  `json:"group,omitempty" jsonschema:"Group name; default openapi:<info.title>"`
+	BasePath *string `json:"base_path,omitempty" jsonschema:"Prefix for every path; default the path of servers[0].url, empty string = none"`
+}
+
+type mockGroupInput struct {
+	Group string `json:"group" jsonschema:"Group name, e.g. openapi:Petstore"`
 }
 
 // compactMockRequest keeps what an agent needs of a captured request.

@@ -78,6 +78,29 @@ func registerMockAPI(mux *http.ServeMux, rules *mockStore, db *sql.DB, protect f
 		mockJSON(w, http.StatusOK, out)
 	})
 
+	route("POST /api/mocks/import/openapi", func(w http.ResponseWriter, r *http.Request) {
+		var in OpenAPIImport
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, MaxOpenAPISpec+(1<<20))).Decode(&in); err != nil {
+			mockJSON(w, http.StatusBadRequest, map[string]any{"message": "invalid JSON body", "code": 400})
+			return
+		}
+		res, err := importOpenAPI(r.Context(), rules, in, "api")
+		if err != nil {
+			mockError(w, err)
+			return
+		}
+		mockJSON(w, http.StatusOK, res)
+	})
+
+	route("DELETE /api/mocks/groups/{group}", func(w http.ResponseWriter, r *http.Request) {
+		n, err := rules.deleteGroup(r.PathValue("group"))
+		if err != nil {
+			mockError(w, err)
+			return
+		}
+		mockJSON(w, http.StatusOK, map[string]any{"deleted": n})
+	})
+
 	route("GET /api/mocks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		rule, err := rules.get(r.PathValue("id"))
 		if err != nil {

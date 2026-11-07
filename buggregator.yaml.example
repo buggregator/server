@@ -134,6 +134,15 @@ modules:
 #     headers: { Content-Type: application/json }
 #     body: '{"id": {{ path "id" }}, "customer": {{ fake "name" | json }}, "total": {{ fake "price" 5 500 }}}'
 
+# OpenAPI 3.0/3.1 specs (YAML or JSON) turned into read-only mock rules at start:
+# one rule per operation; the spec's example as the body, else a template with
+# fake data built from the schema. Paths get servers[0].url's path in front.
+# mocks_openapi:
+#   - file: ./openapi.yaml
+#     project: shop                # optional; empty = every project
+#     group: shop-api              # optional; default openapi:<info.title>
+#     base_path: ""                # optional; "" = no prefix
+
 # Pre-defined projects. The "default" project always exists.
 # Additional projects can be defined here.
 # projects:

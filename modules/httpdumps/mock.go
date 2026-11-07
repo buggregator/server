@@ -50,7 +50,9 @@ type MockRule struct {
 	// Template makes Body and header values Go templates (mock_template.go).
 	Template bool `json:"template"`
 	// Seed, when not 0, makes a template's fake data the same on every request.
-	Seed      int64  `json:"seed"`
+	Seed int64 `json:"seed"`
+	// Group names the OpenAPI import that made the rule ("" = none).
+	Group     string `json:"group"`
 	Enabled   bool   `json:"enabled"`
 	Position  int    `json:"position"`
 	Source    string `json:"source"`
@@ -233,7 +235,7 @@ func (s *mockStore) reload() error {
 		return nil
 	}
 	rows, err := s.db.Query(`SELECT id, COALESCE(project, ''), name, method, path, status, headers, body,
-		delay_ms, template, seed, enabled, position, source, created_at, updated_at FROM mock_rules ORDER BY position, created_at`)
+		delay_ms, template, seed, enabled, position, source, group_name, created_at, updated_at FROM mock_rules ORDER BY position, created_at`)
 	if err != nil {
 		return err
 	}
@@ -245,7 +247,7 @@ func (s *mockStore) reload() error {
 		var headers string
 		var enabled, tmpl int
 		if err := rows.Scan(&r.ID, &r.Project, &r.Name, &r.Method, &r.Path, &r.Status, &headers, &r.Body,
-			&r.DelayMs, &tmpl, &r.Seed, &enabled, &r.Position, &r.Source, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			&r.DelayMs, &tmpl, &r.Seed, &enabled, &r.Position, &r.Source, &r.Group, &r.CreatedAt, &r.UpdatedAt); err != nil {
 			return err
 		}
 		r.Enabled = enabled == 1
@@ -350,29 +352,28 @@ func (s *mockStore) create(r MockRule, source string) (MockRule, error) {
 	if err := r.Normalize(); err != nil {
 		return MockRule{}, err
 	}
-	var n int
-	if err := s.db.QueryRow(`SELECT COUNT(*) FROM mock_rules WHERE COALESCE(project, '') = ?`, r.Project).Scan(&n); err != nil {
-		return MockRule{}, err
-	}
-	if n >= MaxMockRulesPerProject {
-		return MockRule{}, ValidationError{"project": fmt.Sprintf("at most %d rules per project; delete unused ones first", MaxMockRulesPerProject)}
-	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	r.ID = event.GenerateUUID()
 	r.Source = source
 	r.ReadOnly = false
 	r.CreatedAt, r.UpdatedAt = now, now
 
-	// The position is taken in the INSERT itself, so two creates at once
-	// cannot get the same one.
+	// The position and the per-project cap are checked in the INSERT itself,
+	// so creates at once can neither share a position nor pass the cap.
 	headers, _ := json.Marshal(r.Headers)
-	if _, err := s.db.Exec(`INSERT INTO mock_rules
-		(id, project, name, method, path, status, headers, body, delay_ms, template, seed, enabled, position, source, created_at, updated_at)
-		VALUES (?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-			(SELECT COALESCE(MAX(position), -1) + 1 FROM mock_rules), ?, ?, ?)`,
+	res, err := s.db.Exec(`INSERT INTO mock_rules
+		(id, project, name, method, path, status, headers, body, delay_ms, template, seed, enabled, position, source, group_name, created_at, updated_at)
+		SELECT ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+			(SELECT COALESCE(MAX(position), -1) + 1 FROM mock_rules), ?, ?, ?, ?
+		WHERE (SELECT COUNT(*) FROM mock_rules WHERE COALESCE(project, '') = ?) < ?`,
 		r.ID, r.Project, r.Name, r.Method, r.Path, r.Status, string(headers), r.Body, r.DelayMs,
-		boolInt(r.Template), r.Seed, boolInt(r.Enabled), r.Source, r.CreatedAt, r.UpdatedAt); err != nil {
+		boolInt(r.Template), r.Seed, boolInt(r.Enabled), r.Source, r.Group, r.CreatedAt, r.UpdatedAt,
+		r.Project, MaxMockRulesPerProject)
+	if err != nil {
 		return MockRule{}, err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return MockRule{}, ValidationError{"project": fmt.Sprintf("at most %d rules per project; delete unused ones first", MaxMockRulesPerProject)}
 	}
 	s.db.QueryRow(`SELECT position FROM mock_rules WHERE id = ?`, r.ID).Scan(&r.Position)
 	s.refresh()
@@ -390,7 +391,7 @@ func (s *mockStore) update(id string, r MockRule) (MockRule, error) {
 	if err := r.Normalize(); err != nil {
 		return MockRule{}, err
 	}
-	r.ID, r.Source, r.Position, r.CreatedAt = id, old.Source, old.Position, old.CreatedAt
+	r.ID, r.Source, r.Position, r.CreatedAt, r.Group = id, old.Source, old.Position, old.CreatedAt, old.Group
 	r.ReadOnly = false
 	r.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 
@@ -463,6 +464,68 @@ func (s *mockStore) reorder(ids []string) error {
 	}
 	s.refresh()
 	return nil
+}
+
+// replaceGroup deletes the stored rules of group and stores rules in its
+// place, in one transaction: a re-import never leaves half a group. The rules
+// must be normalized; they go after the other stored rules.
+func (s *mockStore) replaceGroup(group, source string, rules []MockRule) ([]MockRule, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`DELETE FROM mock_rules WHERE group_name = ?`, group); err != nil {
+		return nil, err
+	}
+	perProject := map[string]int{}
+	for _, r := range rules {
+		perProject[r.Project]++
+	}
+	for project, add := range perProject {
+		var n int
+		if err := tx.QueryRow(`SELECT COUNT(*) FROM mock_rules WHERE COALESCE(project, '') = ?`, project).Scan(&n); err != nil {
+			return nil, err
+		}
+		if n+add > MaxMockRulesPerProject {
+			return nil, ValidationError{"project": fmt.Sprintf("the import adds %d rules, the project has %d; at most %d rules per project", add, n, MaxMockRulesPerProject)}
+		}
+	}
+	var pos int
+	if err := tx.QueryRow(`SELECT COALESCE(MAX(position), -1) + 1 FROM mock_rules`).Scan(&pos); err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	out := make([]MockRule, len(rules))
+	for i, r := range rules {
+		r.ID, r.Source, r.Group, r.Position, r.ReadOnly = event.GenerateUUID(), source, group, pos+i, false
+		r.CreatedAt, r.UpdatedAt = now, now
+		headers, _ := json.Marshal(r.Headers)
+		if _, err := tx.Exec(`INSERT INTO mock_rules
+			(id, project, name, method, path, status, headers, body, delay_ms, template, seed, enabled, position, source, group_name, created_at, updated_at)
+			VALUES (?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			r.ID, r.Project, r.Name, r.Method, r.Path, r.Status, string(headers), r.Body, r.DelayMs,
+			boolInt(r.Template), r.Seed, boolInt(r.Enabled), r.Position, r.Source, r.Group, r.CreatedAt, r.UpdatedAt); err != nil {
+			return nil, err
+		}
+		out[i] = r
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	s.refresh()
+	return out, nil
+}
+
+// deleteGroup deletes the stored rules of group and returns how many.
+func (s *mockStore) deleteGroup(group string) (int, error) {
+	res, err := s.db.Exec(`DELETE FROM mock_rules WHERE group_name = ?`, group)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	s.refresh()
+	return int(n), nil
 }
 
 // move puts a stored rule at index pos among the stored rules (clamped).

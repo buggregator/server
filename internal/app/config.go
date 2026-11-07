@@ -53,7 +53,9 @@ type Config struct {
 	Webhooks []WebhookDef   `yaml:"webhooks"`
 	Projects []ProjectDef   `yaml:"projects"`
 	Mocks    []MockDef      `yaml:"mocks"`
-	Version  string         `yaml:"-"`
+	// MocksOpenAPI are OpenAPI specs turned into read-only mock rules at start.
+	MocksOpenAPI []MockOpenAPIDef `yaml:"mocks_openapi"`
+	Version      string           `yaml:"-"`
 
 	// Shortcuts.
 	HTTPAddr      string `yaml:"-"`
@@ -91,6 +93,14 @@ type XdebugConfig struct {
 // WebhookDef defines a webhook from config.
 // MockDef is a read-only mock rule from the config file (see #332): requests
 // to /mock<path> get this response.
+// MockOpenAPIDef is one OpenAPI spec file of the mocks_openapi section.
+type MockOpenAPIDef struct {
+	File     string  `yaml:"file"`      // path to the spec, YAML or JSON
+	Project  string  `yaml:"project"`   // empty = every project
+	Group    string  `yaml:"group"`     // default openapi:<info.title>
+	BasePath *string `yaml:"base_path"` // default the path of servers[0].url; "" = none
+}
+
 type MockDef struct {
 	Name    string            `yaml:"name"`
 	Method  string            `yaml:"method"` // GET, POST, … or ANY (default)
