@@ -32,6 +32,7 @@ func setupAPITest(t *testing.T) (*http.ServeMux, *storage.SQLiteStore, *Module) 
 
 	mux := http.NewServeMux()
 	mod.RegisterRoutes(mux, store)
+	mod.RegisterProtectedRoutes(mux, func(next http.Handler) http.Handler { return next })
 
 	return mux, store, mod
 }

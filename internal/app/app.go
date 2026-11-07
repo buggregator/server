@@ -123,12 +123,12 @@ func (a *App) Run() {
 	}
 
 	// Register attachment API endpoints.
-	httpserver.RegisterAttachmentAPI(mux, a.db, a.attachments)
+	httpserver.RegisterAttachmentAPI(mux, a.db, a.attachments, authMiddleware)
 
 	// Register metrics endpoints.
 	if a.metrics != nil {
 		// JSON API for the frontend dashboard.
-		mux.HandleFunc("GET /api/metrics", metrics.HandleMetricsJSON())
+		mux.Handle("GET /api/metrics", authMiddleware(metrics.HandleMetricsJSON()))
 
 		// Prometheus endpoint.
 		if a.cfg.Metrics.Addr != "" {

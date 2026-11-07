@@ -9,15 +9,15 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
-	"github.com/buggregator/go-buggregator/internal/event"
 )
 
-func registerAPI(mux *http.ServeMux, db *sql.DB, store event.Store) {
-	mux.HandleFunc("GET /api/profiler/{uuid}/summary", handleSummary(db))
-	mux.HandleFunc("GET /api/profiler/{uuid}/call-graph", handleCallGraph(db))
-	mux.HandleFunc("GET /api/profiler/{uuid}/top", handleTopFunctions(db))
-	mux.HandleFunc("GET /api/profiler/{uuid}/flame-chart", handleFlameChart(db))
+// registerAPI adds the /api/profiler routes; protect is the API auth middleware.
+func registerAPI(mux *http.ServeMux, db *sql.DB, protect func(http.Handler) http.Handler) {
+	route := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, protect(h)) }
+	route("GET /api/profiler/{uuid}/summary", handleSummary(db))
+	route("GET /api/profiler/{uuid}/call-graph", handleCallGraph(db))
+	route("GET /api/profiler/{uuid}/top", handleTopFunctions(db))
+	route("GET /api/profiler/{uuid}/flame-chart", handleFlameChart(db))
 }
 
 // --- Edge loading (delegated to query.go) ---

@@ -29,7 +29,7 @@ func clearTestDB(t *testing.T) (*sql.DB, *http.ServeMux) {
 		t.Fatal(err)
 	}
 	mux := http.NewServeMux()
-	registerAPI(mux, db)
+	registerAPI(mux, db, noAuth)
 	return db, mux
 }
 
@@ -238,3 +238,6 @@ func TestClearSentry_MigrationPutsOldRowsInDefault(t *testing.T) {
 		}
 	}
 }
+
+// noAuth stands in for the API auth middleware with auth off.
+func noAuth(next http.Handler) http.Handler { return next }

@@ -34,8 +34,9 @@ func TestRegisterAttachmentAPI_NoConflictWithSMTPRoutes(t *testing.T) {
 		}
 	}()
 
-	serverhttp.RegisterAttachmentAPI(mux, db, attachments)
+	serverhttp.RegisterAttachmentAPI(mux, db, attachments, func(next http.Handler) http.Handler { return next })
 
 	mod := smtpmod.New(":0", attachments, db)
 	mod.RegisterRoutes(mux, nil)
+	mod.RegisterProtectedRoutes(mux, func(next http.Handler) http.Handler { return next })
 }

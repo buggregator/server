@@ -15,18 +15,23 @@ import (
 // wildcard at position 2, which collides with module routes like
 // `/api/smtp/message/{uuid}/raw` (both 4-segment patterns, neither more
 // specific) and made the server panic at startup.
-func RegisterAttachmentAPI(mux *http.ServeMux, db *sql.DB, store *storage.AttachmentStore) {
+//
+// The list goes through protect (the API auth): the UI fetches it with the
+// token. Download and preview stay open: the UI opens them as plain links,
+// which carry no X-Auth-Token, and each needs both the event and attachment
+// UUIDs, which only the protected API hands out.
+func RegisterAttachmentAPI(mux *http.ServeMux, db *sql.DB, store *storage.AttachmentStore, protect func(http.Handler) http.Handler) {
 	// SMTP attachments.
-	registerAttachmentsForModule(mux, db, store, "/api/smtp/attachments", "smtp_attachments")
+	registerAttachmentsForModule(mux, db, store, protect, "/api/smtp/attachments", "smtp_attachments")
 
 	// HTTP Dump attachments (support both /http-dump/ and /http-dumps/ paths
 	// for backwards compatibility with existing clients).
-	registerAttachmentsForModule(mux, db, store, "/api/http-dump/attachments", "http_dump_attachments")
-	registerAttachmentsForModule(mux, db, store, "/api/http-dumps/attachments", "http_dump_attachments")
+	registerAttachmentsForModule(mux, db, store, protect, "/api/http-dump/attachments", "http_dump_attachments")
+	registerAttachmentsForModule(mux, db, store, protect, "/api/http-dumps/attachments", "http_dump_attachments")
 }
 
-func registerAttachmentsForModule(mux *http.ServeMux, db *sql.DB, store *storage.AttachmentStore, prefix, table string) {
-	mux.HandleFunc("GET "+prefix+"/{uuid}", listAttachments(db, table))
+func registerAttachmentsForModule(mux *http.ServeMux, db *sql.DB, store *storage.AttachmentStore, protect func(http.Handler) http.Handler, prefix, table string) {
+	mux.Handle("GET "+prefix+"/{uuid}", protect(listAttachments(db, table)))
 	mux.HandleFunc("GET "+prefix+"/{eventUuid}/{uuid}", downloadAttachment(db, store, table))
 	mux.HandleFunc("GET "+prefix+"/{eventUuid}/preview/{uuid}", previewAttachment(db, store, table))
 }
