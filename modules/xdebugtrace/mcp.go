@@ -123,7 +123,7 @@ func (m *Module) RegisterMCPTools(server *sdkmcp.Server) {
 
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "xdebug_trace_call",
-		Description: "One call of an Xdebug trace by its offset: function, file and line, arguments, return value, incl and self time, memory change, and its first 50 direct callees (next continues them via xdebug_trace_calls from=next).",
+		Description: "One call of an Xdebug trace by its offset: function, file and line, arguments, return value, incl and self time, memory change, and its first 50 direct callees. A non-null next means more callees: call xdebug_trace_calls with the parent and from given in this answer.",
 	}, func(ctx context.Context, _ *sdkmcp.CallToolRequest, in callInput) (*sdkmcp.CallToolResult, any, error) {
 		if in.Offset < 0 {
 			return nil, nil, errors.New("offset must not be negative")
@@ -135,7 +135,7 @@ func (m *Module) RegisterMCPTools(server *sdkmcp.Server) {
 			return nil, nil, err
 		}
 		return textResult(map[string]any{
-			"call": page.Parent, "callees": page.Nodes, "next": page.Next, "truncated": page.Truncated,
+			"call": page.Parent, "callees": page.Nodes, "parent": in.Offset, "from": page.Next, "truncated": page.Truncated,
 		}), nil, nil
 	})
 }

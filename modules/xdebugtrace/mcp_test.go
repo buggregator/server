@@ -117,6 +117,18 @@ func TestMCPTools(t *testing.T) {
 		t.Errorf("call = %+v", call)
 	}
 
+	// More callees than a page: the answer names parent and from for
+	// xdebug_trace_calls, which then stays inside the call.
+	var handle struct {
+		Callees []Node `json:"callees"`
+		Parent  int64  `json:"parent"`
+		From    *int64 `json:"from"`
+	}
+	callMCP(t, s, "xdebug_trace_call", map[string]any{"uuid": in.UUID, "offset": top.Nodes[0].Offset}, &handle)
+	if handle.Parent != top.Nodes[0].Offset || handle.From != nil || len(handle.Callees) != 1 {
+		t.Errorf("call {main} = %+v", handle)
+	}
+
 	for name, args := range map[string]map[string]any{
 		"xdebug_trace_summary": {"uuid": "nope"},
 		"xdebug_trace_calls":   {"uuid": in.UUID, "parent": 1},
@@ -125,5 +137,30 @@ func TestMCPTools(t *testing.T) {
 		if callMCP(t, s, name, args, nil) {
 			t.Errorf("%s %v: no error", name, args)
 		}
+	}
+}
+
+func TestMCPTools_CallPaging(t *testing.T) {
+	e := newEnv(t, Limits{})
+	in, err := e.upload(t, []byte(bigTrace(60)), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := mcpSession(t, e.mod)
+	var top Page
+	callMCP(t, s, "xdebug_trace_calls", map[string]any{"uuid": in.UUID}, &top)
+	var call struct {
+		Callees []Node `json:"callees"`
+		Parent  int64  `json:"parent"`
+		From    *int64 `json:"from"`
+	}
+	callMCP(t, s, "xdebug_trace_call", map[string]any{"uuid": in.UUID, "offset": top.Nodes[0].Offset}, &call)
+	if len(call.Callees) != 50 || call.From == nil {
+		t.Fatalf("first callees = %d, from %v", len(call.Callees), call.From)
+	}
+	var rest Page
+	callMCP(t, s, "xdebug_trace_calls", map[string]any{"uuid": in.UUID, "parent": call.Parent, "from": *call.From}, &rest)
+	if len(rest.Nodes) != 10 || rest.Next != nil {
+		t.Errorf("rest = %d next %v", len(rest.Nodes), rest.Next)
 	}
 }
