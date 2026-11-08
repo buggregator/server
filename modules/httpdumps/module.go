@@ -43,6 +43,16 @@ func (m *Module) SetMockRules(rules []MockRule) {
 	m.mocks.setConfig(valid)
 }
 
+// OnEventsDeleted removes the attachment rows of deleted events.
+func (m *Module) OnEventsDeleted(uuids []string) {
+	if m.db == nil {
+		return
+	}
+	if err := storage.DeleteAttachmentRows(context.Background(), m.db, "http_dump_attachments", uuids); err != nil {
+		slog.Warn("http-dump: failed to delete attachment rows", "err", err)
+	}
+}
+
 func (m *Module) RegisterMigrations(migrator *storage.Migrator) error {
 	return migrator.AddFromFS("http-dump", migrations, "migrations")
 }
@@ -83,3 +93,5 @@ func (m *Module) HTTPHandler() module.HTTPIngestionHandler {
 func (m *Module) PreviewMapper() event.PreviewMapper {
 	return &previewMapper{}
 }
+
+var _ module.EventDeleteListener = (*Module)(nil)
