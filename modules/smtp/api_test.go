@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/go-buggregator/internal/module"
 	"github.com/buggregator/go-buggregator/internal/storage"
 )
 
@@ -820,4 +821,34 @@ func tsNow() float64 {
 // tsAgo returns a timestamp N seconds before now.
 func tsAgo(d time.Duration) float64 {
 	return float64(time.Now().Add(-d).UnixMicro()) / 1_000_000
+}
+
+func TestSMTP_OnEventsDeleted_RemovesAttachmentRows(t *testing.T) {
+	db, err := storage.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS smtp_attachments (
+		uuid TEXT PRIMARY KEY, event_uuid TEXT NOT NULL, name TEXT NOT NULL, path TEXT NOT NULL,
+		size INTEGER NOT NULL DEFAULT 0, mime TEXT NOT NULL DEFAULT '', content_id TEXT DEFAULT ''
+	)`); err != nil {
+		t.Fatal(err)
+	}
+	db.Exec(`DELETE FROM smtp_attachments`)
+	db.Exec(`INSERT INTO smtp_attachments (uuid, event_uuid, name, path) VALUES
+		('a1', 'gone', 'a.txt', 'gone/a.txt'), ('a2', 'kept', 'b.txt', 'kept/b.txt')`)
+
+	var mod module.EventDeleteListener = New(":1025", nil, db)
+	mod.OnEventsDeleted([]string{"gone"})
+
+	var n int
+	db.QueryRow(`SELECT COUNT(*) FROM smtp_attachments WHERE event_uuid = 'gone'`).Scan(&n)
+	if n != 0 {
+		t.Errorf("rows of deleted event left: %d", n)
+	}
+	db.QueryRow(`SELECT COUNT(*) FROM smtp_attachments WHERE event_uuid = 'kept'`).Scan(&n)
+	if n != 1 {
+		t.Errorf("rows of kept event: %d, want 1", n)
+	}
 }

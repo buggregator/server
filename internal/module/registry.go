@@ -103,6 +103,16 @@ func (r *Registry) Previews() *event.PreviewRegistry {
 	return r.previews
 }
 
+// NotifyEventsDeleted calls OnEventsDeleted on modules that implement
+// EventDeleteListener.
+func (r *Registry) NotifyEventsDeleted(uuids []string) {
+	for _, m := range r.modules {
+		if l, ok := m.(EventDeleteListener); ok {
+			l.OnEventsDeleted(uuids)
+		}
+	}
+}
+
 // RegisterProtectedRoutes lets modules that implement ProtectedRoutesRegistrar
 // add their API routes behind protect.
 func (r *Registry) RegisterProtectedRoutes(mux *http.ServeMux, protect func(http.Handler) http.Handler) {
