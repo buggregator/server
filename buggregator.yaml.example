@@ -35,6 +35,16 @@ update_check:
   enabled: ${UPDATE_CHECK_ENABLED:true}
   interval: ${UPDATE_CHECK_INTERVAL:12h}  # Go duration, at least 1h
 
+# Xdebug function traces (xdebug.trace_format=1), uploaded over HTTP:
+#   curl -H 'X-Buggregator-Event: xdebug-trace' --data-binary @trace.xt.gz http://127.0.0.1:8000/
+# Optional headers: X-Buggregator-Project, X-Buggregator-Trace-Url (the request
+# traced), X-Buggregator-Trace-Name. Files are kept as sent (gzip or not) under
+# storage.path/xdebug-traces in filesystem mode, in a temp dir otherwise.
+xdebug_trace:
+  max_upload: ${XDEBUG_TRACE_MAX_UPLOAD:100MB}  # request body (KB/MB/GB)
+  max_size: ${XDEBUG_TRACE_MAX_SIZE:256MB}      # uncompressed; a longer trace is cut there
+  keep: ${XDEBUG_TRACE_KEEP:20}                 # traces kept; the oldest unpinned go first
+
 # Prometheus metrics
 metrics:
   enabled: ${METRICS_ENABLED:false}       # Set to true to expose Prometheus metrics
@@ -117,6 +127,7 @@ modules:
   sms: true
   http-dump: true
   profiler: true
+  xdebug-trace: true
 
 # Webhooks — send HTTP POST notifications when events are received.
 # Each webhook fires for a specific event type, or "*" for all events.

@@ -22,12 +22,12 @@ type Summary struct {
 	Duration    float64    `json:"duration"`    // seconds, last time seen
 	PeakMemory  int64      `json:"peak_memory"` // highest memory seen on entry/exit
 	Assignments int        `json:"assignments"`
-	Returns     bool       `json:"returns"`   // return values were collected
-	Truncated   bool       `json:"truncated"` // stopped at the size limit, or the trace has no end
-	Main        string     `json:"main"`      // script of {main}
-	Top         []FuncStat `json:"top"`       // by self time
-	Slowest     []Call     `json:"slowest"`   // by inclusive time
-	Index       []Point    `json:"index"`     // every IndexEvery-th call
+	Returns     bool       `json:"returns"`         // return values were collected
+	Truncated   bool       `json:"truncated"`       // stopped at the size limit, or the trace has no end
+	Main        string     `json:"main"`            // script of {main}
+	Top         []FuncStat `json:"top"`             // by self time
+	Slowest     []Call     `json:"slowest"`         // by inclusive time
+	Index       []Point    `json:"index,omitempty"` // every IndexEvery-th call
 }
 
 // FuncStat aggregates one function over the trace.
