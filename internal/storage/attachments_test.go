@@ -127,3 +127,26 @@ func TestAttachmentStore_Filesystem(t *testing.T) {
 		}
 	})
 }
+
+func TestAttachmentStore_DeleteByEvent_IgnoresUnsafeUUID(t *testing.T) {
+	dir := t.TempDir()
+	store := storage.NewAttachmentStore("filesystem", dir)
+	if err := store.Store("ev-1/a.txt", []byte("x")); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, u := range []string{"", ".", "..", "ev-1/..", "../x", `a\b`} {
+		store.DeleteByEvent(u)
+	}
+	if _, err := store.Get("ev-1/a.txt"); err != nil {
+		t.Fatalf("file removed by an unsafe uuid: %v", err)
+	}
+
+	store.DeleteByEvent("ev-1")
+	if _, err := store.Get("ev-1/a.txt"); err == nil {
+		t.Fatal("file kept after DeleteByEvent")
+	}
+	if _, err := os.Stat(dir); err != nil {
+		t.Fatalf("base dir removed: %v", err)
+	}
+}

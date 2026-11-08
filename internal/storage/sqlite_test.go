@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strconv"
 	"sync"
 	"testing"
@@ -437,5 +439,65 @@ func TestSQLiteStore_DeleteAll_KeepPinned(t *testing.T) {
 	}
 	if ev, _ := store.FindByUUID(ctx, "other-type"); ev != nil {
 		t.Error("unpinned other-type kept")
+	}
+}
+
+func TestSQLiteStore_OnDelete(t *testing.T) {
+	db := setupTestDB(t)
+	store := storage.NewSQLiteStore(db)
+	ctx := context.Background()
+
+	var calls [][]string
+	store.OnDelete(func(uuids []string) {
+		calls = append(calls, append([]string(nil), uuids...))
+	})
+	take := func() []string {
+		t.Helper()
+		if len(calls) > 1 {
+			t.Fatalf("hook called %d times, want at most 1", len(calls))
+		}
+		var got []string
+		if len(calls) == 1 {
+			got = calls[0]
+			sort.Strings(got)
+		}
+		calls = nil
+		return got
+	}
+
+	for _, ev := range []event.Event{
+		makeEvent("h1", "sentry", "a"),
+		makeEvent("h2", "sentry", "a"),
+		makeEvent("h3", "sentry", "b"),
+		makeEvent("h4", "ray", "a"),
+		makeEvent("h5", "ray", "a"),
+	} {
+		store.Store(ctx, ev)
+	}
+	store.Pin(ctx, "h5")
+
+	steps := []struct {
+		name string
+		run  func() error
+		want []string
+	}{
+		{"single", func() error { return store.Delete(ctx, "h1") }, []string{"h1"}},
+		{"missing uuid", func() error { return store.Delete(ctx, "nope") }, nil},
+		{"ids keep pinned", func() error {
+			return store.DeleteAll(ctx, event.DeleteOptions{UUIDs: []string{"h4", "h5"}, KeepPinned: true})
+		}, []string{"h4"}},
+		{"type and project", func() error {
+			return store.DeleteAll(ctx, event.DeleteOptions{Type: "sentry", Project: "a"})
+		}, []string{"h2"}},
+		{"all", func() error { return store.DeleteAll(ctx, event.DeleteOptions{}) }, []string{"h3", "h5"}},
+		{"empty table", func() error { return store.DeleteAll(ctx, event.DeleteOptions{}) }, nil},
+	}
+	for _, st := range steps {
+		if err := st.run(); err != nil {
+			t.Fatalf("%s: %v", st.name, err)
+		}
+		if got := take(); !reflect.DeepEqual(got, st.want) {
+			t.Errorf("%s: hook got %v, want %v", st.name, got, st.want)
+		}
 	}
 }

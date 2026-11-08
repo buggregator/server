@@ -61,6 +61,13 @@ type ProtectedRoutesRegistrar interface {
 	RegisterProtectedRoutes(mux *http.ServeMux, protect func(http.Handler) http.Handler)
 }
 
+// EventDeleteListener is an optional Module add-on for modules that keep
+// data outside the events table (files, side tables). It is called after
+// events were removed by a single delete, a clear-all or a batch delete.
+type EventDeleteListener interface {
+	OnEventsDeleted(uuids []string)
+}
+
 // BaseModule provides no-op defaults for optional Module methods.
 type BaseModule struct{}
 
