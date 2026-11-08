@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/buggregator/go-buggregator/modules/vardumper"
 	"github.com/buggregator/go-buggregator/modules/webhooks"
 	"github.com/buggregator/go-buggregator/modules/xdebug"
+	"github.com/buggregator/go-buggregator/modules/xdebugtrace"
 )
 
 // version is set at build time via -ldflags "-X main.version=...".
@@ -116,6 +118,29 @@ func main() {
 	}
 	if enabled.IsEnabled("profiler") {
 		registry.Register(profiler.New())
+	}
+	if enabled.IsEnabled("xdebug-trace") {
+		// Trace files live on disk either way: under storage.path in
+		// filesystem mode, in a temp dir removed at exit in memory mode.
+		// The module is optional: without a dir it stays off, the rest runs.
+		traceDir := filepath.Join(cfg.Storage.Path, "xdebug-traces")
+		if cfg.Storage.Mode != "filesystem" {
+			tmp, err := os.MkdirTemp("", "buggregator-xdebug-traces-")
+			if err != nil {
+				slog.Error("xdebug-trace: cannot create temp dir; module disabled", "err", err)
+				traceDir = ""
+			} else {
+				defer os.RemoveAll(tmp)
+				traceDir = tmp
+			}
+		}
+		if traceDir != "" {
+			registry.Register(xdebugtrace.New(traceDir, xdebugtrace.Limits{
+				MaxUpload: cfg.XdebugTrace.MaxUploadBytes,
+				MaxSize:   cfg.XdebugTrace.MaxSizeBytes,
+				Keep:      cfg.XdebugTrace.Keep,
+			}))
+		}
 	}
 	if enabled.IsEnabled("monolog") {
 		registry.Register(monologMod)

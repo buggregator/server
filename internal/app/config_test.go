@@ -267,3 +267,34 @@ func TestParseIdleTimeout(t *testing.T) {
 		}
 	}
 }
+
+func TestParseSize(t *testing.T) {
+	for in, want := range map[string]int64{
+		"123": 123, "64KB": 64 << 10, "100MB": 100 << 20, "100mb": 100 << 20, " 1 GB ": 1 << 30,
+		"256MiB": 256 << 20, "10M": 10 << 20, "512B": 512,
+	} {
+		if got, err := parseSize(in); err != nil || got != want {
+			t.Errorf("parseSize(%q) = %d, %v; want %d", in, got, err, want)
+		}
+	}
+	for _, in := range []string{"", "0", "-1MB", "MB", "1.5GB", "10TB", "99999999999GB"} {
+		if _, err := parseSize(in); err == nil {
+			t.Errorf("parseSize(%q) accepted", in)
+		}
+	}
+	if got := sizeOr("x", "junk", 7); got != 7 {
+		t.Errorf("sizeOr fallback = %d", got)
+	}
+}
+
+func TestModulesConfig_XdebugTrace(t *testing.T) {
+	if !(ModulesConfig{}).IsEnabled("xdebug-trace") {
+		t.Error("xdebug-trace is off by default")
+	}
+	if modulesFromCSV("sentry").IsEnabled("xdebug-trace") {
+		t.Error("xdebug-trace on although not listed")
+	}
+	if !modulesFromCSV("sentry,xdebug-trace").IsEnabled("xdebug-trace") {
+		t.Error("xdebug-trace off although listed")
+	}
+}

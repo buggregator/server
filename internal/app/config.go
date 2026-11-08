@@ -59,6 +59,8 @@ type Config struct {
 	// UpdateCheck asks GitHub for the latest release so the UI can say a new
 	// version is out.
 	UpdateCheck UpdateCheckConfig `yaml:"update_check"`
+	// XdebugTrace bounds uploaded Xdebug function traces (module xdebug-trace).
+	XdebugTrace XdebugTraceConfig `yaml:"xdebug_trace"`
 	Version     string            `yaml:"-"`
 
 	// Shortcuts.
@@ -133,6 +135,17 @@ type WebhookDef struct {
 	Retry     *bool             `yaml:"retry"`      // Retry on failure (default: true).
 }
 
+// XdebugTraceConfig bounds uploaded Xdebug traces. Sizes take a plain byte
+// count or a KB/MB/GB suffix (1024-based).
+type XdebugTraceConfig struct {
+	MaxUpload string `yaml:"max_upload"` // request body, gzip or not. Default: 100MB
+	MaxSize   string `yaml:"max_size"`   // uncompressed bytes read; a longer trace is cut. Default: 256MB
+	Keep      int    `yaml:"keep"`       // traces kept, the oldest go first. Default: 20
+
+	MaxUploadBytes int64 `yaml:"-"`
+	MaxSizeBytes   int64 `yaml:"-"`
+}
+
 // UpdateCheckConfig controls the new-version check (GitHub releases/latest).
 type UpdateCheckConfig struct {
 	Enabled  *bool  `yaml:"enabled"`  // default true; false = no network call at all
@@ -197,6 +210,8 @@ type ModulesConfig struct {
 	SMS       *bool `yaml:"sms"`
 	HttpDump  *bool `yaml:"http-dump"`
 	Profiler  *bool `yaml:"profiler"`
+	// XdebugTrace is the Xdebug function trace upload (type xdebug-trace).
+	XdebugTrace *bool `yaml:"xdebug-trace"`
 }
 
 // IsEnabled returns true if a module is enabled (default: true).
@@ -221,6 +236,8 @@ func (m ModulesConfig) IsEnabled(moduleType string) bool {
 		val = m.HttpDump
 	case "profiler":
 		val = m.Profiler
+	case "xdebug-trace":
+		val = m.XdebugTrace
 	}
 	if val == nil {
 		return true // enabled by default
@@ -301,6 +318,21 @@ func LoadConfig() Config {
 		cfg.UpdateCheck.IntervalDur = d
 	} else {
 		slog.Warn("update_check.interval is not a positive duration, using 12h", "value", cfg.UpdateCheck.Interval)
+	}
+
+	// Xdebug traces.
+	cfg.XdebugTrace.MaxUpload = coalesce(os.Getenv("XDEBUG_TRACE_MAX_UPLOAD"), fileCfg.XdebugTrace.MaxUpload, "100MB")
+	cfg.XdebugTrace.MaxSize = coalesce(os.Getenv("XDEBUG_TRACE_MAX_SIZE"), fileCfg.XdebugTrace.MaxSize, "256MB")
+	cfg.XdebugTrace.MaxUploadBytes = sizeOr("xdebug_trace.max_upload", cfg.XdebugTrace.MaxUpload, 100<<20)
+	cfg.XdebugTrace.MaxSizeBytes = sizeOr("xdebug_trace.max_size", cfg.XdebugTrace.MaxSize, 256<<20)
+	cfg.XdebugTrace.Keep = fileCfg.XdebugTrace.Keep
+	if v := strings.TrimSpace(os.Getenv("XDEBUG_TRACE_KEEP")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.XdebugTrace.Keep = n
+		}
+	}
+	if cfg.XdebugTrace.Keep <= 0 {
+		cfg.XdebugTrace.Keep = 20
 	}
 
 	// MCP.
@@ -398,6 +430,37 @@ func parseIdleTimeout(v string) time.Duration {
 // AllowControlOn reports whether the MCP control tools are on (default true).
 func (c XdebugConfig) AllowControlOn() bool { return c.AllowControl == nil || *c.AllowControl }
 
+// parseSize reads "123", "64KB", "100MB", "1GB" (1024-based, case does
+// not matter, "B" and "iB" accepted).
+func parseSize(v string) (int64, error) {
+	v = strings.ToUpper(strings.TrimSpace(v))
+	mult := int64(1)
+	for _, u := range []struct {
+		suffix string
+		mult   int64
+	}{{"GIB", 1 << 30}, {"MIB", 1 << 20}, {"KIB", 1 << 10}, {"GB", 1 << 30}, {"MB", 1 << 20}, {"KB", 1 << 10}, {"G", 1 << 30}, {"M", 1 << 20}, {"K", 1 << 10}, {"B", 1}} {
+		if strings.HasSuffix(v, u.suffix) {
+			v, mult = strings.TrimSpace(strings.TrimSuffix(v, u.suffix)), u.mult
+			break
+		}
+	}
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil || n <= 0 || n > (1<<62)/mult {
+		return 0, fmt.Errorf("not a positive size: %q", v)
+	}
+	return n * mult, nil
+}
+
+// sizeOr parses a size setting, logging and using def when it is invalid.
+func sizeOr(name, v string, def int64) int64 {
+	n, err := parseSize(v)
+	if err != nil {
+		slog.Warn(name+" is not a valid size, using the default", "value", v, "default", def)
+		return def
+	}
+	return n
+}
+
 // envBool returns the env var as a bool when it is set ("true"/"false"),
 // otherwise def. Unlike "file || env", the env can also switch a setting off.
 func envBool(name string, def bool) bool {
@@ -429,6 +492,8 @@ func modulesFromCSV(csv string) ModulesConfig {
 		SMS:       boolPtr(enabled["sms"], t, f),
 		HttpDump:  boolPtr(enabled["http-dump"], t, f),
 		Profiler:  boolPtr(enabled["profiler"], t, f),
+
+		XdebugTrace: boolPtr(enabled["xdebug-trace"], t, f),
 	}
 }
 

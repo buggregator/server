@@ -107,6 +107,30 @@ func NewReader(r io.Reader, limit int64) (*Reader, error) {
 // returned last starts.
 func (t *Reader) Offset() int64 { return t.recOff }
 
+// SkipTo moves the reader forward to the uncompressed offset off, which
+// must be the start of a record line (an Offset from an earlier pass). The
+// header is not read again, so the next record is taken as valid.
+func (t *Reader) SkipTo(off int64) error {
+	if off < t.pos {
+		return fmt.Errorf("offset %d is behind the reader (%d)", off, t.pos)
+	}
+	if t.limit > 0 && off > t.limit {
+		return ErrTooLarge
+	}
+	n, err := t.br.Discard(int(off - t.pos))
+	t.pos += int64(n)
+	if errors.Is(err, io.EOF) {
+		return ErrBadOffset // past the end
+	}
+	if err != nil {
+		return err
+	}
+	if t.records == 0 {
+		t.records = 1
+	}
+	return nil
+}
+
 // Next returns the next record, io.EOF at the end.
 func (t *Reader) Next() (Record, error) {
 	for {
