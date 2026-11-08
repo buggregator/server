@@ -125,7 +125,7 @@ func main() {
 		// The module is optional: without a dir it stays off, the rest runs.
 		traceDir := filepath.Join(cfg.Storage.Path, "xdebug-traces")
 		if cfg.Storage.Mode != "filesystem" {
-			tmp, err := os.MkdirTemp("", "buggregator-xdebug-traces-")
+			tmp, err := xdebugtrace.TempDir("")
 			if err != nil {
 				slog.Error("xdebug-trace: cannot create temp dir; module disabled", "err", err)
 				traceDir = ""
