@@ -51,8 +51,8 @@ func TestModulesConfig_EnabledTypes(t *testing.T) {
 	t.Run("all enabled by default", func(t *testing.T) {
 		cfg := ModulesConfig{}
 		types := cfg.EnabledTypes()
-		if len(types) != 9 {
-			t.Errorf("len = %d, want 9", len(types))
+		if len(types) != 10 {
+			t.Errorf("len = %d, want 10", len(types))
 		}
 	})
 
@@ -60,8 +60,8 @@ func TestModulesConfig_EnabledTypes(t *testing.T) {
 		f := false
 		cfg := ModulesConfig{Sentry: &f, SMTP: &f}
 		types := cfg.EnabledTypes()
-		if len(types) != 7 {
-			t.Errorf("len = %d, want 7", len(types))
+		if len(types) != 8 {
+			t.Errorf("len = %d, want 8", len(types))
 		}
 		for _, typ := range types {
 			if typ == "sentry" || typ == "smtp" {
