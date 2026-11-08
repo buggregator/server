@@ -12,7 +12,7 @@ import (
 
 // A trace as Xdebug 3.4 writes it with trace_format=1, collect_return=1 and
 // collect_assignments=1 (layout from src/tracing/trace_computerized.c).
-// To replace with a recorded file once checked on a live Xdebug.
+// Recorded traces: recorded_test.go.
 const sample = "Version: 3.4.5\n" +
 	"File format: 4\n" +
 	"TRACE START [2026-11-08 10:00:00.000001]\n" +
