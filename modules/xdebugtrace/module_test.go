@@ -296,3 +296,20 @@ func TestModule_SweepRemovesOrphans(t *testing.T) {
 		t.Errorf("files after sweep = %v", got)
 	}
 }
+
+func TestModule_SweepDropsEventsWithoutFile(t *testing.T) {
+	e := newEnv(t, Limits{})
+	keep, _ := e.upload(t, []byte(sample), nil)
+	gone, _ := e.upload(t, []byte(sample), nil)
+	os.Remove(filepath.Join(e.dir, gone.UUID+extPlain)) // as after a restart in memory mode
+	e.mod.sweep()
+	if ev, _ := e.store.FindByUUID(context.Background(), gone.UUID); ev != nil {
+		t.Error("event without its file kept")
+	}
+	if ev, _ := e.store.FindByUUID(context.Background(), keep.UUID); ev == nil {
+		t.Error("event with its file deleted")
+	}
+	if got := e.files(t); len(got) != 2 {
+		t.Errorf("files = %v, want the kept trace and its index", got)
+	}
+}

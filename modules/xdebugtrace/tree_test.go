@@ -125,6 +125,12 @@ func TestSearch(t *testing.T) {
 	if got := funcs(all); len(got) != 2 || got[0] != "App\\Db->query" || got[1] != "PDO->query" || all.Next != nil || all.Truncated {
 		t.Fatalf("search = %v", got)
 	}
+	if p := all.Nodes[1].Path; len(p) != 3 || p[0].Func != "{main}" || p[1].Func != "App\\Kernel->handle" || p[2].Func != "App\\Db->query" || p[2].Offset != off["App\\Db->query"] {
+		t.Errorf("PDO->query path = %+v", p)
+	}
+	if p := all.Nodes[0].Path; len(p) != 2 {
+		t.Errorf("Db->query path = %+v", p)
+	}
 	if n := all.Nodes[0]; !n.Done || n.Children != 1 || !near(n.Incl, 0.0072) || !near(n.Self, 0.0002) {
 		t.Errorf("Db->query = %+v", n)
 	}
@@ -140,7 +146,7 @@ func TestSearch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := funcs(next); len(got) != 1 || got[0] != "PDO->query" || next.Next != nil {
+	if got := funcs(next); len(got) != 1 || got[0] != "PDO->query" || next.Next != nil || len(next.Nodes[0].Path) != 3 {
 		t.Errorf("next page = %v", got)
 	}
 
@@ -160,5 +166,44 @@ func TestClip(t *testing.T) {
 		if r == '�' {
 			t.Fatal("clip split a rune")
 		}
+	}
+}
+
+// Xdebug writes the R line after the exit line of the call.
+func TestReturnAfterExit(t *testing.T) {
+	off := entryOffsets(t)
+	s, err := Search(bytes.NewReader([]byte(sample)), 0, "strlen", 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.Nodes) != 1 || s.Nodes[0].Return == nil || *s.Nodes[0].Return != "3" {
+		t.Errorf("search strlen = %+v", s.Nodes)
+	}
+	c, err := Children(bytes.NewReader([]byte(sample)), 0, off["strlen"], -1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Parent == nil || c.Parent.Return == nil || *c.Parent.Return != "3" {
+		t.Errorf("parent strlen = %+v", c.Parent)
+	}
+
+	// A full page waits for the R line of the match it closes last.
+	tr := "Version: 3.4.5\nFile format: 4\nTRACE START [x]\n" +
+		"1\t0\t0\t0.1\t1\t{main}\t1\t\t/a.php\t0\t0\n" +
+		"2\t1\t0\t0.2\t1\tfa\t1\t\t/a.php\t2\t0\n" +
+		"3\t2\t0\t0.3\t1\tfa_inner\t1\t\t/a.php\t3\t0\n" +
+		"3\t2\t1\t0.4\t1\n" +
+		"3\t2\tR\t\t\t'ri'\n" +
+		"2\t1\t1\t0.5\t1\n" +
+		"2\t1\tR\t\t\t'ra'\n" +
+		"2\t3\t0\t0.6\t1\tfb\t1\t\t/a.php\t4\t0\n" +
+		"2\t3\t1\t0.7\t1\n" +
+		"1\t0\t1\t0.8\t1\nTRACE END   [x]\n"
+	p, err := Search(bytes.NewReader([]byte(tr)), 0, "fa", 0, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p.Nodes) != 1 || p.Nodes[0].Func != "fa" || p.Nodes[0].Return == nil || *p.Nodes[0].Return != "'ra'" || p.Next == nil || !p.Nodes[0].Done {
+		t.Errorf("full page = %+v next %v", p.Nodes, p.Next)
 	}
 }

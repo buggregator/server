@@ -31,10 +31,20 @@ type Node struct {
 	Children int      `json:"children"` // direct callees
 	Done     bool     `json:"done"`     // its exit was seen (false when the trace was cut)
 	Offset   int64    `json:"offset"`   // pass as parent= or from=
+	// Path is set on search results: the callers from the top level down
+	// to the direct caller.
+	Path []PathItem `json:"path,omitempty"`
 
 	mem       int64
 	childTime float64
 	childOpen map[int]float64
+}
+
+// PathItem is one caller on a search result's Path.
+type PathItem struct {
+	Nr     int    `json:"nr"`
+	Func   string `json:"func"`
+	Offset int64  `json:"offset"`
 }
 
 // Page is a slice of nodes and where the next one starts.
@@ -155,6 +165,11 @@ func Children(r io.Reader, sizeLimit, parent, from int64, limit int) (*Page, err
 			if rec.Kind == Exit {
 				if page.Parent != nil && rec.Nr == page.Parent.Nr {
 					page.Parent.exit(rec)
+					// Xdebug writes the return value after the exit line.
+					if next, err := tr.Next(); err == nil && next.Kind == Return && next.Nr == page.Parent.Nr {
+						v := clip(next.Value)
+						page.Parent.Return = &v
+					}
 				}
 				break // the parent's exit ends its callees
 			}
@@ -205,7 +220,9 @@ var ErrBadOffset = errors.New("offset is not the start of a call")
 // Search lists calls whose function name or file contains q (case does not
 // matter), in trace order, from the entry at from (0 = the start). Each
 // match gets its time once its exit is read; the scan runs on past the
-// limit only until the matches already taken are closed.
+// limit only until the matches already taken are closed. Each match carries
+// Path, its callers from the top level down, so a viewer can open the tree
+// to it; that is why the scan always starts at the beginning, also for from.
 func Search(r io.Reader, sizeLimit int64, q string, from int64, limit int) (*Page, error) {
 	if limit <= 0 || limit > MaxNodes {
 		limit = MaxNodes
@@ -215,18 +232,27 @@ func Search(r io.Reader, sizeLimit int64, q string, from int64, limit int) (*Pag
 	if err != nil {
 		return nil, err
 	}
-	if from > 0 {
-		if err := tr.SkipTo(from); err != nil {
-			return nil, err
-		}
-	}
 	page := &Page{Nodes: []Node{}}
+	var callers []PathItem     // open calls by level: callers[i] is at level i+1
 	open := map[int]int{}      // nr → index in page.Nodes
 	stack := map[int]float64{} // nr → start of open calls one level below a match
 	childOf := map[int]int{}   // nr of a direct callee → nr of its open matched caller
 	levelOf := map[int]int{}   // nr of an open match → its level
+	// Xdebug writes a return value on the line after the exit: the match
+	// closed last waits one record for it, and a full page ends one later.
+	closedNr, closedAt, finish := -1, -1, false
 	for {
 		rec, err := tr.Next()
+		if err == nil {
+			if rec.Kind == Return && rec.Nr == closedNr {
+				v := clip(rec.Value)
+				page.Nodes[closedAt].Return = &v
+			}
+			closedNr = -1
+			if finish {
+				return page, nil
+			}
+		}
 		if err != nil {
 			if errors.Is(err, ErrTooLarge) || errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 				page.Truncated = !errors.Is(err, io.EOF) || len(open) > 0
@@ -236,6 +262,12 @@ func Search(r io.Reader, sizeLimit int64, q string, from int64, limit int) (*Pag
 		}
 		switch rec.Kind {
 		case Entry:
+			if d := rec.Level - 1; d >= 0 && d <= len(callers) {
+				callers = callers[:d]
+			}
+			self := PathItem{Nr: rec.Nr, Func: rec.Func, Offset: tr.Offset()}
+			path := callers
+			callers = append(callers, self)
 			for nr, lvl := range levelOf {
 				if rec.Level == lvl+1 {
 					page.Nodes[open[nr]].Children++
@@ -243,7 +275,7 @@ func Search(r io.Reader, sizeLimit int64, q string, from int64, limit int) (*Pag
 					childOf[rec.Nr] = nr
 				}
 			}
-			if page.Next != nil {
+			if page.Next != nil || tr.Offset() < from {
 				continue
 			}
 			if !strings.Contains(strings.ToLower(rec.Func), q) && !strings.Contains(strings.ToLower(rec.File), q) {
@@ -257,7 +289,9 @@ func Search(r io.Reader, sizeLimit int64, q string, from int64, limit int) (*Pag
 				}
 				continue
 			}
-			page.Nodes = append(page.Nodes, *newNode(rec, tr.Offset()))
+			n := newNode(rec, tr.Offset())
+			n.Path = append([]PathItem{}, path...)
+			page.Nodes = append(page.Nodes, *n)
 			open[rec.Nr] = len(page.Nodes) - 1
 			levelOf[rec.Nr] = rec.Level
 		case Exit:
@@ -272,9 +306,8 @@ func Search(r io.Reader, sizeLimit int64, q string, from int64, limit int) (*Pag
 				page.Nodes[i].exit(rec)
 				delete(open, rec.Nr)
 				delete(levelOf, rec.Nr)
-				if page.Next != nil && len(open) == 0 {
-					return page, nil
-				}
+				closedNr, closedAt = rec.Nr, i
+				finish = page.Next != nil && len(open) == 0
 			}
 		case Return:
 			if i, ok := open[rec.Nr]; ok {

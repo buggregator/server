@@ -108,14 +108,32 @@ func (m *Module) sweep() {
 		}
 	}
 	rows.Close()
+	hasFile := map[string]bool{}
 	for _, e := range entries {
 		name := e.Name()
-		u, _, _ := strings.Cut(name, ".")
-		if e.IsDir() || known[u] {
+		u, ext, _ := strings.Cut(name, ".")
+		if e.IsDir() {
+			continue
+		}
+		if known[u] {
+			if "."+ext == extPlain || "."+ext == extGzip {
+				hasFile[u] = true
+			}
 			continue
 		}
 		if err := os.Remove(filepath.Join(m.dir, name)); err == nil {
 			slog.Info("xdebug-trace: removed orphan file", "file", name)
+		}
+	}
+	// Events whose file is gone (memory storage with a file database after
+	// a restart) cannot be opened: drop them, and an index left behind.
+	for u := range known {
+		if hasFile[u] {
+			continue
+		}
+		if _, err := m.db.Exec(`DELETE FROM events WHERE uuid = ?`, u); err == nil {
+			os.Remove(filepath.Join(m.dir, u+extIndex))
+			slog.Info("xdebug-trace: removed trace event without its file", "uuid", u)
 		}
 	}
 }
