@@ -29,7 +29,9 @@ func TempDir(base string) (string, error) {
 			if err != nil || pid <= 0 || (pid != self && processAlive(pid)) {
 				continue
 			}
-			// Our own pid here is a leftover of an earlier process.
+			// Our own pid here is a leftover of an earlier process. Two
+			// containers sharing one /tmp volume are both pid 1: give each
+			// its own TMPDIR.
 			if err := os.RemoveAll(filepath.Join(base, name)); err == nil {
 				slog.Info("xdebug-trace: removed stale temp dir", "dir", name)
 			}
