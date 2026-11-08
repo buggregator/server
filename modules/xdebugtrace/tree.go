@@ -52,7 +52,7 @@ type Page struct {
 	Parent    *Node  `json:"parent,omitempty"`
 	Nodes     []Node `json:"nodes"`
 	Next      *int64 `json:"next"`      // offset for from=, nil when there is no more
-	Truncated bool   `json:"truncated"` // the trace ended or hit the size limit inside the scan
+	Truncated bool   `json:"truncated"` // the trace was cut (no TRACE END) or hit the size limit inside the scan
 }
 
 func newNode(r Record, off int64) *Node {
@@ -154,8 +154,9 @@ func Children(r io.Reader, sizeLimit, parent, from int64, limit int) (*Page, err
 		if err != nil {
 			if errors.Is(err, ErrTooLarge) || errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 				// The end of a whole trace is no cut: only the size limit or
-				// a call left without its exit is.
-				page.Truncated = !errors.Is(err, io.EOF) || (page.Parent != nil && !page.Parent.Done) || (cur != nil && !cur.Done)
+				// a call left without its exit is, unless the trace has its
+				// TRACE END (xdebug_stop_trace() leaves its callers open).
+				page.Truncated = !errors.Is(err, io.EOF) || (tr.Header.End == "" && ((page.Parent != nil && !page.Parent.Done) || (cur != nil && !cur.Done)))
 				break
 			}
 			return nil, err
@@ -250,7 +251,7 @@ func Search(r io.Reader, sizeLimit int64, q string, from int64, limit int) (*Pag
 		}
 		if err != nil {
 			if errors.Is(err, ErrTooLarge) || errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
-				page.Truncated = !errors.Is(err, io.EOF) || len(open) > 0
+				page.Truncated = !errors.Is(err, io.EOF) || (tr.Header.End == "" && len(open) > 0)
 				break
 			}
 			return nil, err
