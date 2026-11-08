@@ -16,7 +16,8 @@ import (
 //	GET /api/xdebug-traces/{uuid}/tree?parent=&from=&limit=
 //	                                                 one level of calls: top level with
 //	                                                 no parent, callees of the entry at
-//	                                                 offset parent, or a next page (from)
+//	                                                 offset parent; from=<next> is the
+//	                                                 next page of the same list (same parent)
 //	GET /api/xdebug-traces/{uuid}/search?q=&from=&limit=
 func registerAPI(mux *http.ServeMux, m *Module, protect func(http.Handler) http.Handler) {
 	route := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, protect(h)) }

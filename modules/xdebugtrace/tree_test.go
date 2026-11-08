@@ -82,7 +82,7 @@ func TestChildren(t *testing.T) {
 			if len(first.Nodes) != 2 || first.Next == nil || *first.Next != off["App\\Db->query"] {
 				t.Fatalf("first page = %v next %v", funcs(first), first.Next)
 			}
-			rest, err := Children(open(), 0, -1, *first.Next, 2)
+			rest, err := Children(open(), 0, off["App\\Kernel->handle"], *first.Next, 2)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -205,5 +205,75 @@ func TestReturnAfterExit(t *testing.T) {
 	}
 	if len(p.Nodes) != 1 || p.Nodes[0].Func != "fa" || p.Nodes[0].Return == nil || *p.Nodes[0].Return != "'ra'" || p.Next == nil || !p.Nodes[0].Done {
 		t.Errorf("full page = %+v next %v", p.Nodes, p.Next)
+	}
+}
+
+// midScript is a trace started by xdebug_start_trace() inside a function:
+// the first calls are at level 3, then the untraced callers exit and a
+// call at level 2 follows.
+const midScript = "Version: 3.4.5\nFile format: 4\nTRACE START [x]\n" +
+	"3\t1\t0\t0.1\t100\tone\t1\t\t/a.php\t10\t0\n" +
+	"3\t1\t1\t0.2\t100\n" +
+	"3\t2\t0\t0.3\t100\ttwo\t1\t\t/a.php\t11\t0\n" +
+	"4\t3\t0\t0.4\t100\tstrlen\t0\t\t/a.php\t20\t1\t'ab'\n" +
+	"4\t3\t1\t0.5\t100\n" +
+	"4\t3\tR\t\t\t2\n" +
+	"3\t2\t1\t0.6\t100\n" +
+	"2\t0\t1\t0.7\t100\n" +
+	"2\t4\t0\t0.8\t100\tafter\t1\t\t/a.php\t5\t0\n" +
+	"2\t4\t1\t0.9\t100\n" +
+	"1\t0\t1\t1.0\t100\n" +
+	"\t\t\t1.1\t100\nTRACE END   [x]\n"
+
+func TestMidScriptTrace(t *testing.T) {
+	top, err := Children(bytes.NewReader([]byte(midScript)), 0, -1, -1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := funcs(top); len(got) != 3 || got[0] != "one" || got[1] != "two" || got[2] != "after" || top.Truncated {
+		t.Fatalf("top = %v truncated=%v", got, top.Truncated)
+	}
+	if two := top.Nodes[1]; two.Children != 1 || !two.Done || !near(two.Incl, 0.3) || !near(two.Self, 0.2) {
+		t.Errorf("two = %+v", two)
+	}
+
+	// Paging the top level keeps its meaning.
+	first, _ := Children(bytes.NewReader([]byte(midScript)), 0, -1, -1, 1)
+	if first.Next == nil {
+		t.Fatal("no next")
+	}
+	rest, err := Children(bytes.NewReader([]byte(midScript)), 0, -1, *first.Next, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := funcs(rest); len(got) != 2 || got[0] != "two" || got[1] != "after" {
+		t.Errorf("rest of top = %v", got)
+	}
+
+	kids, err := Children(bytes.NewReader([]byte(midScript)), 0, top.Nodes[1].Offset, -1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := funcs(kids); len(got) != 1 || got[0] != "strlen" || kids.Nodes[0].Return == nil || *kids.Nodes[0].Return != "2" {
+		t.Errorf("callees of two = %+v", kids.Nodes)
+	}
+
+	s, err := Search(bytes.NewReader([]byte(midScript)), 0, "strlen", 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.Nodes) != 1 || len(s.Nodes[0].Path) != 1 || s.Nodes[0].Path[0].Func != "two" {
+		t.Errorf("strlen path = %+v", s.Nodes)
+	}
+	a, _ := Search(bytes.NewReader([]byte(midScript)), 0, "after", 0, 0)
+	if len(a.Nodes) != 1 || len(a.Nodes[0].Path) != 0 {
+		t.Errorf("after path = %+v", a.Nodes)
+	}
+}
+
+func TestChildren_FromMustBeACallee(t *testing.T) {
+	off := entryOffsets(t)
+	if _, err := Children(bytes.NewReader([]byte(sample)), 0, off["App\\Kernel->handle"], off["PDO->query"], 0); !errors.Is(err, ErrBadOffset) {
+		t.Errorf("from deeper than a callee: err = %v", err)
 	}
 }

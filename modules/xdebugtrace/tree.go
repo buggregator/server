@@ -89,10 +89,12 @@ func (n *Node) exit(r Record) {
 	n.childOpen = nil
 }
 
-// Children lists the direct callees of the call whose entry line starts at
-// parent. parent < 0 lists the top-level calls ({main}). from >= 0 resumes a
-// list at the callee whose entry starts there (a Page.Next); parent is then
-// ignored. limit caps the nodes (0 or more than MaxNodes = MaxNodes).
+// Children lists one level of calls. parent < 0: the top-level calls — the
+// calls that start while no listed call is open, so a trace started by
+// xdebug_start_trace() deep in a script (first level 3, later 2) lists
+// right. parent >= 0: the direct callees of the call whose entry line
+// starts there. from >= 0 resumes the same list at a Page.Next (pass the
+// same parent). limit caps the nodes (0 or more than MaxNodes = MaxNodes).
 func Children(r io.Reader, sizeLimit, parent, from int64, limit int) (*Page, error) {
 	if limit <= 0 || limit > MaxNodes {
 		limit = MaxNodes
@@ -102,34 +104,37 @@ func Children(r io.Reader, sizeLimit, parent, from int64, limit int) (*Page, err
 		return nil, err
 	}
 	page := &Page{Nodes: []Node{}}
-	level := 1 // the level of the listed calls
 
+	entryAt := func(off int64) (Record, error) {
+		if err := tr.SkipTo(off); err != nil {
+			return Record{}, err
+		}
+		rec, err := tr.Next()
+		if err != nil || rec.Kind != Entry || tr.Offset() != off {
+			return Record{}, ErrBadOffset
+		}
+		return rec, nil
+	}
+	if parent >= 0 {
+		rec, err := entryAt(parent)
+		if err != nil {
+			return nil, err
+		}
+		page.Parent = newNode(rec, parent)
+	}
 	var first *Record
-	var firstOff int64
-	switch {
-	case from >= 0:
-		if err := tr.SkipTo(from); err != nil {
+	if from >= 0 {
+		rec, err := entryAt(from)
+		if err != nil {
 			return nil, err
 		}
-		rec, err := tr.Next()
-		if err != nil || rec.Kind != Entry || tr.Offset() != from {
-			return nil, ErrBadOffset
+		if page.Parent != nil && rec.Level != page.Parent.Level+1 {
+			return nil, ErrBadOffset // not a callee of parent
 		}
-		level = rec.Level
-		first, firstOff = &rec, tr.Offset()
-	case parent >= 0:
-		if err := tr.SkipTo(parent); err != nil {
-			return nil, err
-		}
-		rec, err := tr.Next()
-		if err != nil || rec.Kind != Entry || tr.Offset() != parent {
-			return nil, ErrBadOffset
-		}
-		page.Parent = newNode(rec, tr.Offset())
-		level = rec.Level + 1
+		first = &rec
 	}
 
-	var cur *Node
+	var cur *Node // the listed call open now, or the last one closed
 	add := func(rec Record, off int64) bool {
 		if len(page.Nodes) == limit {
 			page.Next = &off
@@ -141,7 +146,7 @@ func Children(r io.Reader, sizeLimit, parent, from int64, limit int) (*Page, err
 		return true
 	}
 	if first != nil {
-		add(*first, firstOff)
+		add(*first, from)
 	}
 
 	for {
@@ -158,51 +163,41 @@ func Children(r io.Reader, sizeLimit, parent, from int64, limit int) (*Page, err
 		if rec.Kind == Assign {
 			continue
 		}
-		if rec.Level < level-1 || (rec.Level == level-1 && rec.Kind == Entry) {
-			break // left the parent: cannot happen in a whole trace
-		}
-		if rec.Level == level-1 {
-			if rec.Kind == Exit {
-				if page.Parent != nil && rec.Nr == page.Parent.Nr {
-					page.Parent.exit(rec)
-					// Xdebug writes the return value after the exit line.
-					if next, err := tr.Next(); err == nil && next.Kind == Return && next.Nr == page.Parent.Nr {
-						v := clip(next.Value)
-						page.Parent.Return = &v
-					}
+		if p := page.Parent; p != nil && rec.Level <= p.Level {
+			if rec.Kind == Exit && rec.Nr == p.Nr {
+				p.exit(rec)
+				// Xdebug writes the return value after the exit line.
+				if next, err := tr.Next(); err == nil && next.Kind == Return && next.Nr == p.Nr {
+					v := clip(next.Value)
+					p.Return = &v
 				}
-				break // the parent's exit ends its callees
 			}
-			if rec.Kind == Return && page.Parent != nil && rec.Nr == page.Parent.Nr {
-				v := clip(rec.Value)
-				page.Parent.Return = &v
-			}
-			continue
+			break // the parent's exit ends its callees
 		}
+		open := cur != nil && !cur.Done
 		switch {
-		case rec.Level == level && rec.Kind == Entry:
+		case rec.Kind == Entry && !open:
 			if !add(rec, tr.Offset()) {
 				return page, nil
 			}
 		case cur == nil:
-		case rec.Level == level && rec.Nr == cur.Nr && rec.Kind == Exit:
+			// an exit of a caller above the traced part
+		case rec.Nr == cur.Nr && rec.Kind == Exit && open:
 			cur.exit(rec)
-		case rec.Level == level && rec.Nr == cur.Nr && rec.Kind == Return:
+		case rec.Nr == cur.Nr && rec.Kind == Return:
 			v := clip(rec.Value)
 			cur.Return = &v
-		case rec.Level == level+1 && rec.Kind == Entry:
+		case open && rec.Level == cur.Level+1 && rec.Kind == Entry:
 			cur.Children++
-			if cur.childOpen != nil {
-				cur.childOpen[rec.Nr] = rec.Time
-			}
-		case rec.Level == level+1 && rec.Kind == Exit:
+			cur.childOpen[rec.Nr] = rec.Time
+		case open && rec.Level == cur.Level+1 && rec.Kind == Exit:
 			if start, ok := cur.childOpen[rec.Nr]; ok {
 				cur.childTime += max(rec.Time-start, 0)
 				delete(cur.childOpen, rec.Nr)
 			}
 		}
 	}
-	if page.Parent != nil && page.Parent.Done {
+	if page.Parent != nil && page.Parent.Done && from < 0 && page.Next == nil {
 		// The listed callees end with the parent, so it has exactly as many.
 		page.Parent.Children = len(page.Nodes)
 		var sum float64
@@ -233,7 +228,7 @@ func Search(r io.Reader, sizeLimit int64, q string, from int64, limit int) (*Pag
 		return nil, err
 	}
 	page := &Page{Nodes: []Node{}}
-	var callers []PathItem     // open calls by level: callers[i] is at level i+1
+	var callers []PathItem     // open calls, outermost first
 	open := map[int]int{}      // nr → index in page.Nodes
 	stack := map[int]float64{} // nr → start of open calls one level below a match
 	childOf := map[int]int{}   // nr of a direct callee → nr of its open matched caller
@@ -262,9 +257,6 @@ func Search(r io.Reader, sizeLimit int64, q string, from int64, limit int) (*Pag
 		}
 		switch rec.Kind {
 		case Entry:
-			if d := rec.Level - 1; d >= 0 && d <= len(callers) {
-				callers = callers[:d]
-			}
 			self := PathItem{Nr: rec.Nr, Func: rec.Func, Offset: tr.Offset()}
 			path := callers
 			callers = append(callers, self)
@@ -295,6 +287,14 @@ func Search(r io.Reader, sizeLimit int64, q string, from int64, limit int) (*Pag
 			open[rec.Nr] = len(page.Nodes) - 1
 			levelOf[rec.Nr] = rec.Level
 		case Exit:
+			// Pop to the exited call; exits of callers above the traced
+			// part match nothing and leave the stack as it is.
+			for k := len(callers) - 1; k >= 0; k-- {
+				if callers[k].Nr == rec.Nr {
+					callers = callers[:k]
+					break
+				}
+			}
 			if p, ok := childOf[rec.Nr]; ok {
 				if i, ok := open[p]; ok {
 					page.Nodes[i].childTime += max(rec.Time-stack[rec.Nr], 0)

@@ -215,7 +215,7 @@ func TestModule_IndexAndPaging(t *testing.T) {
 		}
 		next := page.Next
 		page = Page{}
-		if c := e.get(t, fmt.Sprintf("%s/tree?from=%d&limit=1000", base, *next), &page); c != 200 {
+		if c := e.get(t, fmt.Sprintf("%s/tree?parent=%d&from=%d&limit=1000", base, top.Nodes[0].Offset, *next), &page); c != 200 {
 			t.Fatalf("next page: %d", c)
 		}
 	}
