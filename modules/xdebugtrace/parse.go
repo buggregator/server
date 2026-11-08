@@ -112,7 +112,7 @@ func (t *Reader) Offset() int64 { return t.recOff }
 // header is not read again, so the next record is taken as valid.
 func (t *Reader) SkipTo(off int64) error {
 	if off < t.pos {
-		return fmt.Errorf("offset %d is behind the reader (%d)", off, t.pos)
+		return ErrBadOffset // behind what was read already
 	}
 	if t.limit > 0 && off > t.limit {
 		return ErrTooLarge

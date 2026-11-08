@@ -276,4 +276,7 @@ func TestChildren_FromMustBeACallee(t *testing.T) {
 	if _, err := Children(bytes.NewReader([]byte(sample)), 0, off["App\\Kernel->handle"], off["PDO->query"], 0); !errors.Is(err, ErrBadOffset) {
 		t.Errorf("from deeper than a callee: err = %v", err)
 	}
+	if _, err := Children(bytes.NewReader([]byte(sample)), 0, off["App\\Db->query"], off["strlen"], 0); !errors.Is(err, ErrBadOffset) {
+		t.Errorf("from before parent: err = %v", err)
+	}
 }
