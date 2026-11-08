@@ -163,7 +163,7 @@ func TestClip(t *testing.T) {
 		t.Errorf("clip len %d", len(c))
 	}
 	for _, r := range c {
-		if r == '�' {
+		if r == '\uFFFD' {
 			t.Fatal("clip split a rune")
 		}
 	}
