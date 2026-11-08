@@ -185,6 +185,15 @@ func main() {
 	// Modules that send notices of their own (module.Broadcasting) get the hub.
 	registry.WireBroadcaster(hub)
 
+	// Events removed by delete or clear-all take their files and module data
+	// with them.
+	store.OnDelete(func(uuids []string) {
+		for _, u := range uuids {
+			attachments.DeleteByEvent(u)
+		}
+		registry.NotifyEventsDeleted(uuids)
+	})
+
 	// Build event service and inject into TCP modules.
 	eventService := httpserver.NewEventService(store, hub, registry, collector, db)
 	if enabled.IsEnabled("monolog") {

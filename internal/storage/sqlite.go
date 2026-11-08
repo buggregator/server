@@ -14,7 +14,8 @@ import (
 
 // SQLiteStore implements event.Store using SQLite.
 type SQLiteStore struct {
-	db *sql.DB
+	db       *sql.DB
+	onDelete []func(uuids []string)
 }
 
 // Open creates a new SQLite database connection with a single connection.
@@ -101,6 +102,45 @@ func NewSQLiteStore(db *sql.DB) *SQLiteStore {
 	return &SQLiteStore{db: db}
 }
 
+// OnDelete registers fn to run after Delete or DeleteAll removed events.
+// fn gets the UUIDs of the removed rows, so files kept outside SQLite
+// (attachments, trace files) can be removed with them. Register hooks at
+// startup, before the store is used.
+func (s *SQLiteStore) OnDelete(fn func(uuids []string)) {
+	s.onDelete = append(s.onDelete, fn)
+}
+
+// deleteReturning runs a DELETE ... RETURNING uuid and passes the removed
+// UUIDs to the OnDelete hooks.
+func (s *SQLiteStore) deleteReturning(ctx context.Context, query string, args ...any) error {
+	rows, err := s.db.QueryContext(ctx, query+" RETURNING uuid", args...)
+	if err != nil {
+		return err
+	}
+	var uuids []string
+	for rows.Next() {
+		var u string
+		if err := rows.Scan(&u); err != nil {
+			rows.Close()
+			return err
+		}
+		uuids = append(uuids, u)
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if len(uuids) == 0 {
+		return nil
+	}
+	for _, fn := range s.onDelete {
+		fn(uuids)
+	}
+	return nil
+}
+
 func (s *SQLiteStore) Store(ctx context.Context, ev event.Event) error {
 	payload, _ := json.Marshal(json.RawMessage(ev.Payload))
 	_, err := s.db.ExecContext(ctx,
@@ -178,8 +218,7 @@ func (s *SQLiteStore) FindAll(ctx context.Context, opts event.FindOptions) ([]ev
 }
 
 func (s *SQLiteStore) Delete(ctx context.Context, uuid string) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM events WHERE uuid = ?`, uuid)
-	return err
+	return s.deleteReturning(ctx, `DELETE FROM events WHERE uuid = ?`, uuid)
 }
 
 func (s *SQLiteStore) DeleteAll(ctx context.Context, opts event.DeleteOptions) error {
@@ -194,9 +233,8 @@ func (s *SQLiteStore) DeleteAll(ctx context.Context, opts event.DeleteOptions) e
 			placeholders[i] = "?"
 			args[i] = u
 		}
-		_, err := s.db.ExecContext(ctx,
+		return s.deleteReturning(ctx,
 			`DELETE FROM events WHERE uuid IN (`+strings.Join(placeholders, ",")+`)`+keep, args...)
-		return err
 	}
 
 	query := `DELETE FROM events`
@@ -218,8 +256,7 @@ func (s *SQLiteStore) DeleteAll(ctx context.Context, opts event.DeleteOptions) e
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	_, err := s.db.ExecContext(ctx, query, args...)
-	return err
+	return s.deleteReturning(ctx, query, args...)
 }
 
 func (s *SQLiteStore) UpdatePayload(ctx context.Context, uuid string, payload json.RawMessage) error {

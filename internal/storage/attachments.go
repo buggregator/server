@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -79,7 +80,12 @@ func (s *AttachmentStore) GetReader(path string) (io.ReadCloser, error) {
 }
 
 // DeleteByEvent removes all files for an event.
+// An empty UUID or one that is not a single path element is ignored, so a
+// bad value can never remove the base directory or a path outside it.
 func (s *AttachmentStore) DeleteByEvent(eventUUID string) {
+	if eventUUID == "" || eventUUID == "." || eventUUID == ".." || strings.ContainsAny(eventUUID, `/\`) {
+		return
+	}
 	prefix := eventUUID + "/"
 
 	if s.mode == "filesystem" {
