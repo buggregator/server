@@ -21,7 +21,7 @@ env:
   #   1) workflow_dispatch input (manual one-off)
   #   2) repository Variable `FRONTEND_VERSION` (https://github.com/buggregator/server/settings/variables/actions)
   #   3) hardcoded fallback so the workflow still works on forks without the Variable set.
-  FRONTEND_VERSION: ${{ inputs.frontend_version || vars.FRONTEND_VERSION || '1.36.0' }}
+  FRONTEND_VERSION: ${{ inputs.frontend_version || vars.FRONTEND_VERSION || '1.37.0' }}
   PHP_VERSION: "8.4.19"
 
 jobs:
