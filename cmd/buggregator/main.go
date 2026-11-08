@@ -129,6 +129,7 @@ func main() {
 			if err != nil {
 				slog.Error("xdebug-trace: cannot create temp dir; module disabled", "err", err)
 				traceDir = ""
+				cfg.Modules.Disable("xdebug-trace") // keep it out of the UI menu
 			} else {
 				defer os.RemoveAll(tmp)
 				traceDir = tmp

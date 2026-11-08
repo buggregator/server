@@ -214,35 +214,49 @@ type ModulesConfig struct {
 	XdebugTrace *bool `yaml:"xdebug-trace"`
 }
 
-// IsEnabled returns true if a module is enabled (default: true).
-func (m ModulesConfig) IsEnabled(moduleType string) bool {
-	var val *bool
+// field is the setting of a module type; nil for an unknown type.
+func (m *ModulesConfig) field(moduleType string) **bool {
 	switch moduleType {
 	case "sentry":
-		val = m.Sentry
+		return &m.Sentry
 	case "ray":
-		val = m.Ray
+		return &m.Ray
 	case "var-dump":
-		val = m.VarDump
+		return &m.VarDump
 	case "inspector":
-		val = m.Inspector
+		return &m.Inspector
 	case "monolog":
-		val = m.Monolog
+		return &m.Monolog
 	case "smtp":
-		val = m.SMTP
+		return &m.SMTP
 	case "sms":
-		val = m.SMS
+		return &m.SMS
 	case "http-dump":
-		val = m.HttpDump
+		return &m.HttpDump
 	case "profiler":
-		val = m.Profiler
+		return &m.Profiler
 	case "xdebug-trace":
-		val = m.XdebugTrace
+		return &m.XdebugTrace
 	}
-	if val == nil {
+	return nil
+}
+
+// IsEnabled returns true if a module is enabled (default: true).
+func (m ModulesConfig) IsEnabled(moduleType string) bool {
+	f := m.field(moduleType)
+	if f == nil || *f == nil {
 		return true // enabled by default
 	}
-	return *val
+	return **f
+}
+
+// Disable turns a module off, e.g. when it cannot start, so EnabledTypes
+// (the UI menu) no longer lists it.
+func (m *ModulesConfig) Disable(moduleType string) {
+	if f := m.field(moduleType); f != nil {
+		off := false
+		*f = &off
+	}
 }
 
 // EnabledTypes returns a list of enabled module type strings.
