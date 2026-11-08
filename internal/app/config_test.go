@@ -298,3 +298,16 @@ func TestModulesConfig_XdebugTrace(t *testing.T) {
 		t.Error("xdebug-trace off although listed")
 	}
 }
+
+func TestModulesConfig_Disable(t *testing.T) {
+	cfg := Config{}
+	cfg.Modules.Disable("xdebug-trace")
+	cfg.Modules.Disable("unknown-module") // no-op
+	if cfg.Modules.IsEnabled("xdebug-trace") {
+		t.Error("xdebug-trace should be disabled")
+	}
+	types := cfg.Modules.EnabledTypes()
+	if strings.Contains(strings.Join(types, ","), "xdebug-trace") || len(types) != 9 {
+		t.Errorf("EnabledTypes = %v", types)
+	}
+}
