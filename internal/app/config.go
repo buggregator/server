@@ -247,7 +247,7 @@ func (m ModulesConfig) IsEnabled(moduleType string) bool {
 
 // EnabledTypes returns a list of enabled module type strings.
 func (m ModulesConfig) EnabledTypes() []string {
-	all := []string{"sentry", "ray", "var-dump", "inspector", "monolog", "smtp", "sms", "http-dump", "profiler"}
+	all := []string{"sentry", "ray", "var-dump", "inspector", "monolog", "smtp", "sms", "http-dump", "profiler", "xdebug-trace"}
 	var enabled []string
 	for _, t := range all {
 		if m.IsEnabled(t) {
