@@ -253,10 +253,11 @@ func parseRecord(line string) (Record, bool) {
 		}
 	case "A":
 		r.Kind = Assign
-		if len(f) >= 10 {
-			r.File = f[7]
-			r.Line, _ = strconv.Atoi(f[8])
-			r.Value = strings.Join(f[9:], "\t")
+		// level, "", "A", 5 empty fields, file, line, "$var = value".
+		if len(f) >= 11 {
+			r.File = f[8]
+			r.Line, _ = strconv.Atoi(f[9])
+			r.Value = strings.Join(f[10:], "\t")
 		}
 	default:
 		return r, false

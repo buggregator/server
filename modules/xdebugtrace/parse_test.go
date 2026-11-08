@@ -21,7 +21,7 @@ const sample = "Version: 3.4.5\n" +
 	"3\t2\t0\t0.000300\t402000\tstrlen\t0\t\t/app/src/Kernel.php\t10\t1\t'abc'\n" +
 	"3\t2\t1\t0.000400\t402000\n" +
 	"3\t2\tR\t\t\t3\n" +
-	"3\t\tA\t\t\t\t\t/app/src/Kernel.php\t11\t$n = 3\n" +
+	"3\t\tA\t\t\t\t\t\t/app/src/Kernel.php\t11\t$n = 3\n" +
 	"3\t3\t0\t0.000500\t403000\tinclude\t1\t/app/src/routes.php\t/app/src/Kernel.php\t12\t0\n" +
 	"3\t3\t1\t0.002500\t450000\n" +
 	"3\t4\t0\t0.002600\t450000\tApp\\Db->query\t1\t\t/app/src/Kernel.php\t13\t2\t'SELECT 1'\t[]\n" +
