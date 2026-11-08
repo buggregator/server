@@ -3,6 +3,7 @@ package smtp
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -104,6 +105,16 @@ func (m *Module) subscribe(f MessageFilter) (<-chan event.Event, func()) {
 				return
 			}
 		}
+	}
+}
+
+// OnEventsDeleted removes the attachment rows of deleted events.
+func (m *Module) OnEventsDeleted(uuids []string) {
+	if m.db == nil {
+		return
+	}
+	if err := storage.DeleteAttachmentRows(context.Background(), m.db, "smtp_attachments", uuids); err != nil {
+		slog.Warn("smtp: failed to delete attachment rows", "err", err)
 	}
 }
 
