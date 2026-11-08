@@ -123,7 +123,7 @@ func (m *Module) RegisterMCPTools(server *sdkmcp.Server) {
 
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "xdebug_trace_call",
-		Description: "One call of an Xdebug trace by its offset: function, file and line, arguments, return value, incl and self time, memory change, and its first 50 direct callees. A non-null next means more callees: call xdebug_trace_calls with the parent and from given in this answer.",
+		Description: "One call of an Xdebug trace by its offset: function, file and line, arguments, return value, incl and self time, memory change, and its first 50 direct callees. A non-null from means more callees: call xdebug_trace_calls with this parent and from.",
 	}, func(ctx context.Context, _ *sdkmcp.CallToolRequest, in callInput) (*sdkmcp.CallToolResult, any, error) {
 		if in.Offset < 0 {
 			return nil, nil, errors.New("offset must not be negative")
