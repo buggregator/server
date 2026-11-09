@@ -4,6 +4,7 @@
 [![CI](https://github.com/buggregator/server/actions/workflows/ci.yml/badge.svg)](https://github.com/buggregator/server/actions/workflows/ci.yml)
 [![Docker pulls](https://img.shields.io/docker/pulls/butschster/buggregator.svg)](https://hub.docker.com/r/butschster/buggregator)
 <a href="https://discord.gg/vDsCD3EKUB"><img src="https://img.shields.io/badge/discord-chat-magenta.svg" alt="Discord"></a>
+[![Follow on X](https://img.shields.io/badge/follow-%40buggregator-black?logo=x)](https://x.com/buggregator)
 
 **One ~40 MB binary catches the errors, dumps, emails, logs, profiles and HTTP requests your app sends in development — through the SDKs and protocols you already use. No account, no cloud, no Buggregator package in your app.**
 
