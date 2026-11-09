@@ -76,6 +76,7 @@ Sentry from other languages — same DSN:
 ```js
 // JavaScript, browser or Node.js
 Sentry.init({ dsn: "http://sentry@127.0.0.1:8000/1", tracesSampleRate: 1.0, enableLogs: true });
+// Browser page-load traces: also pass integrations: [Sentry.browserTracingIntegration()]
 ```
 
 ```python
