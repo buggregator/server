@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/auth"
+	"github.com/buggregator/server/v2/internal/auth"
 	"nhooyr.io/websocket"
 )
 

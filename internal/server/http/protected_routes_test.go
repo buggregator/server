@@ -8,14 +8,14 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/buggregator/go-buggregator/internal/auth"
-	"github.com/buggregator/go-buggregator/internal/module"
-	serverhttp "github.com/buggregator/go-buggregator/internal/server/http"
-	"github.com/buggregator/go-buggregator/internal/server/ws"
-	"github.com/buggregator/go-buggregator/internal/storage"
-	"github.com/buggregator/go-buggregator/modules/profiler"
-	"github.com/buggregator/go-buggregator/modules/sentry"
-	smtpmod "github.com/buggregator/go-buggregator/modules/smtp"
+	"github.com/buggregator/server/v2/internal/auth"
+	"github.com/buggregator/server/v2/internal/module"
+	serverhttp "github.com/buggregator/server/v2/internal/server/http"
+	"github.com/buggregator/server/v2/internal/server/ws"
+	"github.com/buggregator/server/v2/internal/storage"
+	"github.com/buggregator/server/v2/modules/profiler"
+	"github.com/buggregator/server/v2/modules/sentry"
+	smtpmod "github.com/buggregator/server/v2/modules/smtp"
 )
 
 // newRoutedMux wires the module UI APIs, attachment API and ingestion the way

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/buggregator/go-buggregator/internal/module"
+	"github.com/buggregator/server/v2/internal/module"
 )
 
 // recordedNotice is one call of handler.notifyStored.

@@ -15,14 +15,14 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/module"
-	serverhttp "github.com/buggregator/go-buggregator/internal/server/http"
-	"github.com/buggregator/go-buggregator/internal/server/ws"
-	"github.com/buggregator/go-buggregator/internal/storage"
-	"github.com/buggregator/go-buggregator/modules/httpdumps"
-	"github.com/buggregator/go-buggregator/modules/inspector"
-	"github.com/buggregator/go-buggregator/modules/sentry"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/module"
+	serverhttp "github.com/buggregator/server/v2/internal/server/http"
+	"github.com/buggregator/server/v2/internal/server/ws"
+	"github.com/buggregator/server/v2/internal/storage"
+	"github.com/buggregator/server/v2/modules/httpdumps"
+	"github.com/buggregator/server/v2/modules/inspector"
+	"github.com/buggregator/server/v2/modules/sentry"
 )
 
 // spyStore captures all stored events for inspection.

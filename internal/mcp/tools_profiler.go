@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/buggregator/go-buggregator/modules/profiler"
+	"github.com/buggregator/server/v2/modules/profiler"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

@@ -3,7 +3,7 @@ package profiler
 import (
 	"database/sql"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 func storeProfile(db *sql.DB, uuid, name string, peaks Metrics, edges map[string]Edge) error {

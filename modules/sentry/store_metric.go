@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 // storeMetrics batch inserts Sentry trace metric items.

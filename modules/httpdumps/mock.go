@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 // Mock rules: "method + path → status, headers, body, delay" (#332).

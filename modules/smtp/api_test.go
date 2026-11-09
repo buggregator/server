@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/module"
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/module"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 func setupAPITest(t *testing.T) (*http.ServeMux, *storage.SQLiteStore, *Module) {

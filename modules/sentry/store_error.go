@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 // projectKey is the project a Sentry row is stored under. Same key as the main

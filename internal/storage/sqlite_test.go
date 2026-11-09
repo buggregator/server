@@ -11,8 +11,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {

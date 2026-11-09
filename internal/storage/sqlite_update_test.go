@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 func TestSQLiteStore_UpdatePayloadMissing(t *testing.T) {

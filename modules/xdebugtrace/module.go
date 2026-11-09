@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/module"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/module"
 )
 
 // Type is the event type of an uploaded trace.

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 // bpEngine answers a session driven here and records every command.
