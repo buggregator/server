@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 // Requests recorded from real Sentry SDKs (JS browser + Node, Python, Go);
