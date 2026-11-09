@@ -165,7 +165,7 @@ type MetricsConfig struct {
 
 type ServerConfig struct {
 	Addr        string   `yaml:"addr"`
-	CORSOrigins []string `yaml:"cors_origins"` // Allowed CORS origins. Empty = CORS disabled. Use ["*"] to allow all.
+	CORSOrigins []string `yaml:"cors_origins"` // Allowed CORS origins. Empty = all ("*"), so browser SDKs (Sentry JS) work from any page.
 }
 
 type StorageConfig struct {
@@ -278,6 +278,19 @@ type ProjectDef struct {
 }
 
 // LoadConfig reads configuration with priority: flags > env > config file > defaults.
+// corsOrigins picks the allowed origins: CORS_ORIGINS (comma-separated),
+// else the file's list, else all. Allowing all by default is what lets a
+// browser SDK (Sentry JS) on any dev origin send to Buggregator.
+func corsOrigins(file []string, env string) []string {
+	if env != "" {
+		return strings.Split(env, ",")
+	}
+	if len(file) > 0 {
+		return file
+	}
+	return []string{"*"}
+}
+
 func LoadConfig() Config {
 	var configFile string
 	flag.StringVar(&configFile, "config", "", "Path to config file (buggregator.yaml)")
@@ -390,13 +403,7 @@ func LoadConfig() Config {
 	cfg.UI.DefaultWindow = coalesce(os.Getenv("UI_DEFAULT_WINDOW"), fileCfg.UI.DefaultWindow)
 
 	// CORS origins.
-	cfg.Server.CORSOrigins = fileCfg.Server.CORSOrigins
-	if env := os.Getenv("CORS_ORIGINS"); env != "" {
-		cfg.Server.CORSOrigins = strings.Split(env, ",")
-	}
-	if len(cfg.Server.CORSOrigins) == 0 {
-		cfg.Server.CORSOrigins = []string{"*"}
-	}
+	cfg.Server.CORSOrigins = corsOrigins(fileCfg.Server.CORSOrigins, os.Getenv("CORS_ORIGINS"))
 
 	// Modules: merge from file config, env override.
 	cfg.Modules = fileCfg.Modules
