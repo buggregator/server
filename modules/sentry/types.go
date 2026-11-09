@@ -140,6 +140,24 @@ type ExceptionList struct {
 	Values []ExceptionValue `json:"values"`
 }
 
+// UnmarshalJSON also accepts a bare array of exceptions (sentry-go).
+func (e *ExceptionList) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		return nil
+	}
+	if trimmed[0] == '[' {
+		return json.Unmarshal(trimmed, &e.Values)
+	}
+	type alias ExceptionList
+	var a alias
+	if err := json.Unmarshal(trimmed, &a); err != nil {
+		return err
+	}
+	e.Values = a.Values
+	return nil
+}
+
 type ExceptionValue struct {
 	Type       string          `json:"type"`
 	Value      string          `json:"value"`

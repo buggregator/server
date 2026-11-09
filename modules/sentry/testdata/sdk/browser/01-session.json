@@ -1,0 +1,10 @@
+{
+ "method": "POST",
+ "path": "/api/42/envelope/?sentry_version=7&sentry_key=publickey&sentry_client=sentry.javascript.browser%2F11.11.0",
+ "headers": {
+  "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.0.0 Safari/537.36",
+  "content-type": "text/plain;charset=UTF-8",
+  "origin": "http://localhost:18490"
+ },
+ "body": "{\"sent_at\":\"2026-11-09T16:35:43.102Z\",\"sdk\":{\"name\":\"sentry.javascript.browser\",\"version\":\"11.11.0\"}}\n{\"type\":\"session\"}\n{\"sid\":\"48b78ec01c7c49e2a8874449ea3b8fd1\",\"init\":true,\"started\":\"2026-11-09T16:35:43.076Z\",\"timestamp\":\"2026-11-09T16:35:43.102Z\",\"status\":\"ok\",\"errors\":1,\"did\":\"7\",\"attrs\":{\"release\":\"shop@1.2.3\",\"environment\":\"staging\",\"ip_address\":\"{{auto}}\",\"user_agent\":\"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.0.0 Safari/537.36\"}}\n"
+}

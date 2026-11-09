@@ -311,3 +311,22 @@ func TestModulesConfig_Disable(t *testing.T) {
 		t.Errorf("EnabledTypes = %v", types)
 	}
 }
+
+func TestCORSOrigins(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		file []string
+		env  string
+		want string
+	}{
+		{"default allows all", nil, "", "*"},
+		{"file", []string{"http://localhost:3000"}, "", "http://localhost:3000"},
+		{"env wins", []string{"http://a"}, "http://b,http://c", "http://b,http://c"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := strings.Join(corsOrigins(tt.file, tt.env), ","); got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

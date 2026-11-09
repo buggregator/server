@@ -1,0 +1,11 @@
+{
+ "method": "POST",
+ "path": "/api/42/envelope/",
+ "headers": {
+  "content-type": "application/x-sentry-envelope",
+  "content-encoding": "br",
+  "user-agent": "sentry.python/2.74.0",
+  "x-sentry-auth": "Sentry sentry_key=publickey, sentry_version=7, sentry_client=sentry.python/2.74.0"
+ },
+ "body_b64": "G3wJADwU2Makzb5PrJYVzA1fkcWOYTVdfTY2hl2L7G3JtHAtlf0S5WeSzcK5GlsOXS2nTI+R3zunsn3fl1Bt7CbsJSnCpbBm6etS2DosXX1T5KivQUSG8vZQERQVy5YqMxuWyixTA2RoBDvBv3Nzd06pnZXaAOwotIiHpwMUhAzDAkgYyDI27fhBYf3Ihrj+RmoLkBYxa0NJZ1UZYBcnu3cdFioxTsMevFKDySY9kA8IiptUZMuWuHQy+RQ6wp3QDk/xNncMF9LcOkRa3Vsp/UiS56oiSKuLyO6nTU6eSnWSBbzaKeHuAC+XiLZTrcHdDnCx/OamnMopsZ1BffmHC1BcyMsuloGvO5LIhgB4dQm0m8sRIEWG42+hlotwuKaAtIocbIA3uFdSIsYpbjRUNtsP4/rry4mGAGIitxMQxRAOaZTzvBeoAPdosvgC9pXUmIBrHT08hZxryJ0SBV3m5ftfkhDF8XoyNA25RHoybTtCiwgkv5QkyxdzaNTiDALUUy5A71Lj2W98E7NFeGz7RMs4ku4nnv2vganmhmeBnyhJTmE9e2H94fq1tJMe/z8N+OYonyQ24Vb9xnMMa8oJryeETEKjmVhSxa7t867hbwXv9pgkbjAoxjwZ+UkYC/m0FjkxHJ0/bDMYueU5PZGyJ9tHOTRDFUmPQZJM/hpARhP1DYX6shWbNlX+e+by2z8llMSs/vhQiDCneWSFkYtfkEScsmNgxxjw/0Z25cWZIrQdCN9J9VbyOpDIHmHoV1dRa2nkkF6n7SNI1jMmFVSKFTLaIB9jtoTlMm50CRy1zS6hpxChKOnqYngPXQqQCV0MrdqX7U5EUU0F06xJE9aAERk9uiqn97S8BwHE5xkf+Twn9TABaC63ryOUWpoH2bcBwJaeyTvNXGY0/SYxk8IpaHG43L+A8aXO+7LepabWwY2AjPIDfUszbQZFedy+9Gnl0C/KpkHzN/CfrbbVB5zdlsXmLbeXv/X1x1LN29XkVBtVBPZSl7/p8BQuerlewW+ffMSXdI94yTzQ9h5FpT1g59Jm/q81uegbAHK9EeZquPj1R2orXrFOe7EvXEvzrb2Z58N1DXMdC9pZkGakYktLcAKoGDusC0Sj/gM="
+}
