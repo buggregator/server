@@ -57,6 +57,8 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w -X main.version=${VERSION}" -o buggre
 
 # Stage 4: Final minimal image
 FROM alpine:3.20
+# Ownership label for the official MCP Registry; must match "name" in server.json.
+LABEL io.modelcontextprotocol.server.name="io.github.buggregator/server"
 RUN apk add --no-cache ca-certificates
 COPY --from=go-builder /build/buggregator /usr/local/bin/buggregator
 
