@@ -34,7 +34,7 @@ Windows (PowerShell):
 irm https://raw.githubusercontent.com/buggregator/server/master/scripts/install.ps1 | iex
 ```
 
-The script picks the file for your system, checks its checksum and installs it into `~/.local/bin` without `sudo`. If that folder is not on your `PATH`, the script says so; then run `~/.local/bin/buggregator`. By default the binary listens on all network interfaces; to keep it on your machine only, see [Listen only on this machine](https://docs.buggregator.dev/install.html).
+The script picks the file for your system, checks its checksum and installs it without `sudo`. On Linux and macOS it installs into `~/.local/bin`; if that folder is not on your `PATH`, the script says so — then run `~/.local/bin/buggregator`. On Windows it installs into `%LOCALAPPDATA%\Programs\buggregator` and prints the command to start it. By default the binary listens on all network interfaces; to keep it on your machine only, see [Listen only on this machine](https://docs.buggregator.dev/install.html).
 
 **Docker:**
 
