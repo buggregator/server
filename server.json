@@ -1,0 +1,55 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.buggregator/server",
+  "title": "Buggregator",
+  "description": "Local debug server for AI agents: errors, dumps, logs, mail, profiles, Xdebug, mock APIs",
+  "repository": {
+    "url": "https://github.com/buggregator/server",
+    "source": "github"
+  },
+  "websiteUrl": "https://buggregator.dev",
+  "version": "2.8.0",
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/buggregator/server:2.8.0",
+      "transport": {
+        "type": "streamable-http",
+        "url": "http://localhost:8001/mcp"
+      },
+      "runtimeArguments": [
+        {
+          "type": "named",
+          "name": "-p",
+          "description": "Publish the MCP port",
+          "value": "8001:8001"
+        },
+        {
+          "type": "named",
+          "name": "-p",
+          "description": "Publish the web UI and HTTP ingestion port (Sentry, Ray, Inspector, HTTP dumps)",
+          "value": "8000:8000"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "MCP_ENABLED",
+          "description": "Turn on the MCP server",
+          "default": "true",
+          "isRequired": true
+        },
+        {
+          "name": "MCP_TRANSPORT",
+          "description": "MCP transport: http (streamable HTTP)",
+          "default": "http",
+          "isRequired": true
+        },
+        {
+          "name": "MCP_ADDR",
+          "description": "MCP listen address",
+          "default": ":8001"
+        }
+      ]
+    }
+  ]
+}
