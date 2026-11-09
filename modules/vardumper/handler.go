@@ -8,7 +8,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 // tcpHandler handles VarDumper TCP connections on port 9912.

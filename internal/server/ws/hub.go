@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/metrics"
+	"github.com/buggregator/server/v2/internal/metrics"
 	"nhooyr.io/websocket"
 )
 

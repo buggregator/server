@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 // storeLogs batch inserts Sentry native log items.

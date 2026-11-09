@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/server/tcp"
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/server/tcp"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 // Registry collects modules and provides access to their handlers.

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/buggregator/go-buggregator/internal/module"
+	"github.com/buggregator/server/v2/internal/module"
 )
 
 const (

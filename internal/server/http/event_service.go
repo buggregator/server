@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/metrics"
-	"github.com/buggregator/go-buggregator/internal/module"
-	"github.com/buggregator/go-buggregator/internal/server/ws"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/metrics"
+	"github.com/buggregator/server/v2/internal/module"
+	"github.com/buggregator/server/v2/internal/server/ws"
 )
 
 const defaultProject = "default"

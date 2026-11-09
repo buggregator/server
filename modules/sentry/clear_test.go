@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 // clearTestDB has the core events table too: keep_pinned reads the pins there.

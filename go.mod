@@ -1,4 +1,4 @@
-module github.com/buggregator/go-buggregator
+module github.com/buggregator/server/v2
 
 go 1.26.1
 

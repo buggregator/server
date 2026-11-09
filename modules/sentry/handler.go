@@ -13,8 +13,8 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	httpserver "github.com/buggregator/go-buggregator/internal/server/http"
+	"github.com/buggregator/server/v2/internal/event"
+	httpserver "github.com/buggregator/server/v2/internal/server/http"
 )
 
 type handler struct {

@@ -3,8 +3,8 @@ package ray
 import (
 	"net/http"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/module"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/module"
 )
 
 type Module struct {

@@ -11,9 +11,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/module"
-	"github.com/buggregator/go-buggregator/internal/server/tcp"
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/module"
+	"github.com/buggregator/server/v2/internal/server/tcp"
+	"github.com/buggregator/server/v2/internal/storage"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

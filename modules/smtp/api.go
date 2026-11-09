@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 // MessageFilter holds filter criteria for SMTP message queries.

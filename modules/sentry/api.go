@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	httpserver "github.com/buggregator/go-buggregator/internal/server/http"
+	httpserver "github.com/buggregator/server/v2/internal/server/http"
 )
 
 // registerAPI adds the /api/sentry routes; protect is the API auth middleware.

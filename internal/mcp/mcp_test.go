@@ -10,12 +10,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	mcpserver "github.com/buggregator/go-buggregator/internal/mcp"
-	"github.com/buggregator/go-buggregator/internal/module"
-	"github.com/buggregator/go-buggregator/internal/storage"
-	"github.com/buggregator/go-buggregator/modules/profiler"
-	"github.com/buggregator/go-buggregator/modules/sentry"
+	"github.com/buggregator/server/v2/internal/event"
+	mcpserver "github.com/buggregator/server/v2/internal/mcp"
+	"github.com/buggregator/server/v2/internal/module"
+	"github.com/buggregator/server/v2/internal/storage"
+	"github.com/buggregator/server/v2/modules/profiler"
+	"github.com/buggregator/server/v2/modules/sentry"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

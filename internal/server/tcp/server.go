@@ -6,7 +6,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/buggregator/go-buggregator/internal/metrics"
+	"github.com/buggregator/server/v2/internal/metrics"
 )
 
 // ConnectionHandler handles a single TCP connection.
