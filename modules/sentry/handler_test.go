@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
 )
 
@@ -139,6 +140,18 @@ func TestDecompress(t *testing.T) {
 		got := decompress(buf.Bytes(), "gzip")
 		if string(got) != "compressed" {
 			t.Errorf("got %q, want %q", got, "compressed")
+		}
+	})
+
+	t.Run("brotli with header", func(t *testing.T) {
+		var buf bytes.Buffer
+		w := brotli.NewWriter(&buf)
+		w.Write([]byte("brotli body"))
+		w.Close()
+
+		got := decompress(buf.Bytes(), "br")
+		if string(got) != "brotli body" {
+			t.Errorf("got %q, want %q", got, "brotli body")
 		}
 	})
 

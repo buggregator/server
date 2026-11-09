@@ -1,0 +1,59 @@
+// Records what sentry-go sends: error, message, transaction with spans, logs.
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/getsentry/sentry-go"
+)
+
+type OrderError struct{ ID int }
+
+func (e *OrderError) Error() string { return fmt.Sprintf("order %d not found", e.ID) }
+
+func loadOrder(id int) error { return fmt.Errorf("load order: %w", &OrderError{ID: id}) }
+
+func main() {
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn: "http://publickey@127.0.0.1:18490/42", Release: "shop@1.2.3", Environment: "staging",
+		ServerName: "go-01", EnableTracing: true, TracesSampleRate: 1.0, SendDefaultPII: true,
+		AttachStacktrace: true,
+	})
+	if err != nil {
+		panic(err)
+	}
+	sentry.ConfigureScope(func(s *sentry.Scope) {
+		s.SetUser(sentry.User{ID: "7", Email: "dev@example.com"})
+		s.SetTag("feature", "checkout")
+		s.AddBreadcrumb(&sentry.Breadcrumb{Category: "cart", Message: "added item 5", Level: sentry.LevelInfo}, 10)
+	})
+	if err := loadOrder(15); err != nil {
+		var oe *OrderError
+		_ = errors.As(err, &oe)
+		sentry.CaptureException(err)
+	}
+	sentry.CaptureMessage("Payment gateway slow")
+
+	ctx := context.Background()
+	tx := sentry.StartTransaction(ctx, "GET /orders", sentry.WithOpName("http.server"))
+	db := tx.StartChild("db.query", sentry.WithDescription("SELECT * FROM orders WHERE user_id = $1"))
+	db.SetData("db.system", "postgresql")
+	time.Sleep(20 * time.Millisecond)
+	db.Finish()
+	hs := tx.StartChild("http.client", sentry.WithDescription("GET http://127.0.0.1:18490/health"))
+	if resp, err := http.Get("http://127.0.0.1:18490/health"); err == nil {
+		resp.Body.Close()
+	}
+	hs.Finish()
+	tx.Finish()
+
+	logger := sentry.NewLogger(ctx)
+	logger.Info().String("cart_items", "3").Emitf("User %s opened cart", "7")
+	logger.Error().String("sku", "A-1").Emit("Stock sync failed")
+
+	sentry.Flush(5 * time.Second)
+}

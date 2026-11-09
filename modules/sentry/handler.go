@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
 
 	"github.com/buggregator/go-buggregator/internal/event"
@@ -88,6 +89,8 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 		if id, ok := parsed["event_id"].(string); ok {
 			uuid = id
 		}
+
+		body = normalizeExceptionList(body)
 
 		// Resolve source code for browser/JS frames that only carry file+line.
 		if enriched, changed := enrichSourceContext(body, nil); changed {
@@ -259,6 +262,8 @@ func (h *handler) handleEventItem(item EnvelopeItem, envelopeEventID string, pro
 		payload = injectEventID(payload, envelopeEventID)
 	}
 
+	payload = normalizeExceptionList(payload)
+
 	// Resolve source code for browser/JS frames that only carry file+line.
 	if enriched, changed := enrichSourceContext(payload, nil); changed {
 		payload = enriched
@@ -425,7 +430,27 @@ func injectEventID(payload json.RawMessage, eventID string) json.RawMessage {
 	return result
 }
 
-// decompress handles gzip and deflate Content-Encoding.
+// normalizeExceptionList rewrites "exception": [...] (sentry-go and the
+// protocol's short form) to "exception": {"values": [...]}, the form the
+// frontend reads.
+func normalizeExceptionList(payload json.RawMessage) json.RawMessage {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &obj); err != nil {
+		return payload
+	}
+	exc := bytes.TrimSpace(obj["exception"])
+	if len(exc) == 0 || exc[0] != '[' {
+		return payload
+	}
+	obj["exception"] = json.RawMessage(`{"values":` + string(exc) + `}`)
+	result, err := json.Marshal(obj)
+	if err != nil {
+		return payload
+	}
+	return result
+}
+
+// decompress handles gzip, deflate, zstd and br Content-Encoding.
 // Also auto-detects gzip/zlib by magic bytes if header is missing.
 func decompress(data []byte, encoding string) []byte {
 	if len(data) == 0 {
@@ -444,6 +469,12 @@ func decompress(data []byte, encoding string) []byte {
 		}
 	case "zstd":
 		if d, err := decompressZstd(data); err == nil {
+			return d
+		}
+	case "br":
+		// sentry-python sends Brotli when the brotli package is installed.
+		// Brotli has no magic bytes, so it is decoded only on the header.
+		if d, err := io.ReadAll(brotli.NewReader(bytes.NewReader(data))); err == nil {
 			return d
 		}
 	}

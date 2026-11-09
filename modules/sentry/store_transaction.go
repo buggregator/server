@@ -207,6 +207,16 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK, project string) error {
 	for traceID, group := range traceSpans {
 		traceErrors := 0
 
+		// A segment span is the root of a streamed trace (JS SDK v10+ span
+		// streaming): it becomes the transaction, as a transaction item's root
+		// would, and is not a span row of its own.
+		children := 0
+		for _, span := range group {
+			if !span.IsSegment {
+				children++
+			}
+		}
+
 		// Upsert trace.
 		_, err = dbTx.Exec(
 			`INSERT INTO sentry_traces (trace_id, span_count)
@@ -214,13 +224,19 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK, project string) error {
 			ON CONFLICT(trace_id) DO UPDATE SET
 				last_seen = datetime('now'),
 				span_count = sentry_traces.span_count + excluded.span_count`,
-			traceID, len(group),
+			traceID, children,
 		)
 		if err != nil {
 			return fmt.Errorf("upsert sentry_traces: %w", err)
 		}
 
 		for _, span := range group {
+			if span.IsSegment {
+				if err := storeSegment(dbTx, traceID, span, project); err != nil {
+					return err
+				}
+				continue
+			}
 			spanUUID := event.GenerateUUID()
 			peerType, peerAddress := classifySpan(span)
 			serviceName := extractServiceName(span, sdk)
@@ -277,6 +293,34 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK, project string) error {
 	}
 
 	return dbTx.Commit()
+}
+
+// storeSegment stores a segment span as a transaction. Its event_id is made
+// from the trace and span ids, so a segment sent twice is stored once.
+func storeSegment(dbTx *sql.Tx, traceID string, span RawSpan, project string) error {
+	payload, _ := json.Marshal(span)
+	_, err := dbTx.Exec(
+		`INSERT OR IGNORE INTO sentry_transactions
+			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload, project_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+		event.GenerateUUID(),
+		traceID+"-"+span.SpanID,
+		traceID,
+		span.Description,
+		nullIfEmpty(span.Op),
+		nullIfEmpty(span.Status),
+		parseTimestamp(span.StartTimestamp.Number()),
+		parseTimestamp(span.Timestamp.Number()),
+		computeDurationMS(span.StartTimestamp.Number(), span.Timestamp.Number()),
+		nullIfEmpty(span.Data["sentry.environment"]),
+		nullIfEmpty(span.Data["sentry.release"]),
+		string(payload),
+		project,
+	)
+	if err != nil {
+		return fmt.Errorf("insert segment transaction: %w", err)
+	}
+	return nil
 }
 
 // isErrorStatus reports whether a span status means failure: the v1 span

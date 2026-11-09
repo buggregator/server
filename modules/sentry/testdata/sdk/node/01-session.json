@@ -1,0 +1,8 @@
+{
+ "method": "POST",
+ "path": "/api/42/envelope/?sentry_version=7&sentry_key=publickey&sentry_client=sentry.javascript.node%2F11.11.0",
+ "headers": {
+  "user-agent": "sentry.javascript.node/11.11.0"
+ },
+ "body": "{\"sent_at\":\"2026-11-09T16:34:10.825Z\",\"sdk\":{\"name\":\"sentry.javascript.node\",\"version\":\"11.11.0\"}}\n{\"type\":\"session\"}\n{\"sid\":\"39c0cf62bac04e2a9ec57ec752e50ff8\",\"init\":true,\"started\":\"2026-11-09T16:34:10.807Z\",\"timestamp\":\"2026-11-09T16:34:10.825Z\",\"status\":\"ok\",\"errors\":1,\"did\":\"7\",\"duration\":0.01731276512145996,\"attrs\":{\"release\":\"shop@1.2.3\",\"environment\":\"staging\",\"user_agent\":\"Node.js/22\"}}\n"
+}
