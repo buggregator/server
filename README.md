@@ -69,7 +69,7 @@ INSPECTOR_API_KEY=test
 HTTP_DUMP_ENDPOINT=http://http-dump@127.0.0.1:8000
 ```
 
-Any other stack: send mail to SMTP `127.0.0.1:1025`, send any HTTP request to `http://127.0.0.1:8000` to see it as a dump, and put mock rules under `http://127.0.0.1:8000/mock/`.
+Any other stack: send mail to SMTP `127.0.0.1:1025`, send a POST or PUT to `http://127.0.0.1:8000`, or any method to `http://http-dump@127.0.0.1:8000`, to see it as a dump, and put mock rules under `http://127.0.0.1:8000/mock/`.
 
 More setups (Spiral, WordPress, Magento, Docker Compose, Kubernetes): [Getting started](https://docs.buggregator.dev/getting-started.html).
 
