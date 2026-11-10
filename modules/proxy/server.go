@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -146,11 +147,15 @@ func (s *proxyServer) handleHTTP(ctx context.Context, conn net.Conn, req *http.R
 func (s *proxyServer) proxyAndRecord(ctx context.Context, w io.Writer, req *http.Request, scheme string) {
 	start := time.Now()
 
-	// Capture request body.
+	// Capture up to maxBodySize+1 bytes of the request body for the dump;
+	// the upstream still gets all of it.
 	var reqBody []byte
 	if req.Body != nil {
 		reqBody, _ = io.ReadAll(io.LimitReader(req.Body, maxBodySize+1))
-		req.Body = io.NopCloser(strings.NewReader(string(reqBody)))
+		req.Body = struct {
+			io.Reader
+			io.Closer
+		}{io.MultiReader(bytes.NewReader(reqBody), req.Body), req.Body}
 	}
 
 	// Remove hop-by-hop headers.
@@ -181,28 +186,52 @@ func (s *proxyServer) proxyAndRecord(ctx context.Context, w io.Writer, req *http
 	}
 	defer resp.Body.Close()
 
-	// Capture response body.
-	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxBodySize+1))
+	// Stream the whole response to the client; keep the first
+	// maxBodySize+1 bytes for the dump.
+	capture := &cappedBuffer{limit: maxBodySize + 1}
+	resp.Body = struct {
+		io.Reader
+		io.Closer
+	}{io.TeeReader(resp.Body, capture), resp.Body}
+	writeResponse(w, resp)
 
 	capturedResp := &capturedResponse{
 		StatusCode: resp.StatusCode,
 		Headers:    resp.Header,
-		Body:       respBody,
+		Body:       capture.Bytes(),
 	}
-
-	// Write the response back to the client.
-	writeResponse(w, resp, respBody)
 
 	s.storeEvent(ctx, captured, capturedResp, durationMs, "")
 }
 
-func writeResponse(w io.Writer, resp *http.Response, body []byte) {
-	fmt.Fprintf(w, "HTTP/%d.%d %s\r\n", resp.ProtoMajor, resp.ProtoMinor, resp.Status)
-	resp.Header.Del("Transfer-Encoding")
-	resp.Header.Set("Content-Length", fmt.Sprintf("%d", len(body)))
-	resp.Header.Write(w)
-	fmt.Fprintf(w, "\r\n")
-	w.Write(body)
+// writeResponse writes resp to the client with its own framing: its
+// Content-Length, or chunked when the length is unknown, so the client
+// connection stays usable for the next request.
+func writeResponse(w io.Writer, resp *http.Response) {
+	if resp.ContentLength < 0 && len(resp.TransferEncoding) == 0 {
+		resp.TransferEncoding = []string{"chunked"}
+	}
+	if err := resp.Write(w); err != nil {
+		slog.Debug("proxy: writing the response to the client failed", "err", err)
+	}
+}
+
+// cappedBuffer keeps the first limit bytes written to it and drops the rest,
+// never failing a write.
+type cappedBuffer struct {
+	bytes.Buffer
+	limit int
+}
+
+func (b *cappedBuffer) Write(p []byte) (int, error) {
+	if room := b.limit - b.Len(); room > 0 {
+		if len(p) > room {
+			b.Buffer.Write(p[:room])
+		} else {
+			b.Buffer.Write(p)
+		}
+	}
+	return len(p), nil
 }
 
 func (s *proxyServer) storeEvent(ctx context.Context, req *capturedRequest, resp *capturedResponse, durationMs float64, proxyErr string) {
