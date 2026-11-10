@@ -17,7 +17,7 @@
 - **Xdebug in the browser**: pause, step, read variables — with or without an IDE
 - **AI agents** read all of it over MCP
 
-Mail, HTTP dumps, the proxy, mocks and MCP work with any language. The Sentry part speaks the Sentry protocol and is tested with the Sentry PHP SDK.
+Mail, HTTP dumps, the proxy, mocks and MCP work with any language. Sentry errors, traces and logs are tested with the official SDKs for PHP, JavaScript (browser and Node.js), Python and Go.
 
 ## Run it in 30 seconds
 
@@ -70,6 +70,25 @@ HTTP_DUMP_ENDPOINT=http://http-dump@127.0.0.1:8000
 ```
 
 Any other stack: send mail to SMTP `127.0.0.1:1025`, send a POST or PUT to `http://127.0.0.1:8000`, or any method to `http://http-dump@127.0.0.1:8000`, to see it as a dump, and put mock rules under `http://127.0.0.1:8000/mock/`.
+
+Sentry from other languages — same DSN:
+
+```js
+// JavaScript, browser or Node.js
+Sentry.init({ dsn: "http://sentry@127.0.0.1:8000/1", tracesSampleRate: 1.0, enableLogs: true });
+// Browser page-load traces: also pass integrations: [Sentry.browserTracingIntegration()]
+```
+
+```python
+# Python
+sentry_sdk.init(dsn="http://sentry@127.0.0.1:8000/1", traces_sample_rate=1.0, enable_logs=True)
+```
+
+```go
+// Go
+sentry.Init(sentry.ClientOptions{Dsn: "http://sentry@127.0.0.1:8000/1", EnableTracing: true, TracesSampleRate: 1.0})
+defer sentry.Flush(2 * time.Second) // short programs: send events before exit
+```
 
 More setups (Spiral, WordPress, Magento, Docker Compose, Kubernetes): [Getting started](https://docs.buggregator.dev/getting-started.html).
 
