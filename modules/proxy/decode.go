@@ -10,16 +10,18 @@ import (
 	"strings"
 
 	"github.com/andybalholm/brotli"
+	"github.com/klauspost/compress/zstd"
 )
 
 // decodedBody returns the body as stored for the UI: decoded per the
-// Content-Encoding header (gzip, deflate, br; several in the order they were
+// Content-Encoding header (gzip, deflate, br, zstd; several in the order they were
 // applied), so a gzip answer is shown as text. The client still gets the
 // original bytes. The output is capped at maxBodySize+1 bytes, and a body cut
 // at the capture limit decodes as far as it goes. An unknown encoding or one
 // that fails at once leaves the body as it came.
 func decodedBody(body []byte, headers http.Header) []byte {
-	enc := headers.Get("Content-Encoding")
+	// Codings may come on one line or on several header lines.
+	enc := strings.Join(headers.Values("Content-Encoding"), ",")
 	if enc == "" || len(body) == 0 {
 		return body
 	}
@@ -55,6 +57,15 @@ func decode(data []byte, coding string) ([]byte, bool) {
 		}
 	case "br":
 		r = brotli.NewReader(bytes.NewReader(data))
+	case "zstd":
+		// The decoder allocates the declared window up front: cap it at the
+		// HTTP zstd limit (RFC 9659: 8 MB), else a 10-byte body asks for 512 MB.
+		zr, err := zstd.NewReader(bytes.NewReader(data), zstd.WithDecoderMaxWindow(8<<20), zstd.WithDecoderConcurrency(1))
+		if err != nil {
+			return nil, false
+		}
+		defer zr.Close()
+		r = zr
 	default:
 		return nil, false
 	}

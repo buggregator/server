@@ -12,11 +12,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/andybalholm/brotli"
+	"github.com/klauspost/compress/zstd"
 
 	"github.com/buggregator/server/v2/internal/event"
 )
@@ -55,6 +57,15 @@ func br(b []byte) []byte {
 	return buf.Bytes()
 }
 
+func zst(b []byte) []byte {
+	w, _ := zstd.NewWriter(nil)
+	defer w.Close()
+	return w.EncodeAll(b, nil)
+}
+
+// hugeWindowZstd is a zstd frame header declaring a 512 MB window.
+var hugeWindowZstd = []byte{0x28, 0xB5, 0x2F, 0xFD, 0x00, 0x98, 0x09, 0x00, 0x00, 0x61}
+
 func TestDecodedBody(t *testing.T) {
 	plain := []byte(jsonBody)
 	tests := []struct {
@@ -70,7 +81,9 @@ func TestDecodedBody(t *testing.T) {
 		{"br", "br", br(plain), plain},
 		{"br then gzip", "br, gzip", gz(br(plain)), plain},
 		{"identity", "identity", plain, plain},
-		{"unknown kept as is", "zstd", []byte("raw"), []byte("raw")},
+		{"zstd", "zstd", zst(plain), plain},
+		{"zstd window over 8 MB kept as is", "zstd", hugeWindowZstd, hugeWindowZstd},
+		{"unknown kept as is", "compress", []byte("raw"), []byte("raw")},
 		{"broken gzip kept as is", "gzip", []byte("not gzip"), []byte("not gzip")},
 	}
 	for _, tt := range tests {
@@ -84,6 +97,13 @@ func TestDecodedBody(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("codings on two header lines", func(t *testing.T) {
+		h := http.Header{"Content-Encoding": {"br", "gzip"}}
+		if got := decodedBody(gz(br(plain)), h); !bytes.Equal(got, plain) {
+			t.Errorf("got %q, want %q", got, plain)
+		}
+	})
 
 	t.Run("cut gzip decodes as far as it goes", func(t *testing.T) {
 		long := bytes.Repeat([]byte("line of text\n"), 2000)
@@ -161,5 +181,16 @@ func TestProxyAndRecord_GzipResponse(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(payload.Response.Headers["Content-Encoding"], ","), "gzip") {
 		t.Errorf("stored headers lost Content-Encoding: %v", payload.Response.Headers)
+	}
+}
+
+func TestDecodedBody_ZstdHugeWindowAllocatesLittle(t *testing.T) {
+	var before, after runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&before)
+	decodedBody(hugeWindowZstd, http.Header{"Content-Encoding": {"zstd"}})
+	runtime.ReadMemStats(&after)
+	if grew := after.TotalAlloc - before.TotalAlloc; grew > 64<<20 {
+		t.Errorf("allocated %d MB for a 10-byte body", grew>>20)
 	}
 }
