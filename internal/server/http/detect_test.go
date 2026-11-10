@@ -37,6 +37,16 @@ func TestDetectEventType(t *testing.T) {
 			wantProject: "myproject",
 		},
 		{
+			name: "Twilio send API path with SID:TOKEN Basic Auth",
+			makeRequest: func() *nethttp.Request {
+				r := httptest.NewRequest("POST", "http://localhost/2010-04-01/Accounts/AC1/Messages.json", nil)
+				r.SetBasicAuth("AC1", "token")
+				return r
+			},
+			wantType:    "sms",
+			wantProject: "",
+		},
+		{
 			name: "X-Buggregator-Event header",
 			makeRequest: func() *nethttp.Request {
 				r := httptest.NewRequest("POST", "http://localhost/", nil)

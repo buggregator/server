@@ -51,6 +51,11 @@ func detectEventType(r *http.Request) *DetectedEvent {
 	if r.Header.Get("X-Inspector-Key") != "" || r.Header.Get("X-Inspector-Version") != "" {
 		return &DetectedEvent{Type: "inspector"}
 	}
+	// Twilio's send API (/2010-04-01/Accounts/{sid}/Messages.json) carries
+	// Basic Auth SID:TOKEN, which is no type:project pair.
+	if strings.HasPrefix(path, "/2010-04-01/Accounts/") && strings.HasSuffix(path, "/Messages.json") {
+		return &DetectedEvent{Type: "sms"}
+	}
 
 	// Method 4: Basic Auth (Authorization: Basic base64(type:project))
 	if typ, project := basicAuth(r); typ != "" {
