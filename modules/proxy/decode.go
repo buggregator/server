@@ -58,7 +58,9 @@ func decode(data []byte, coding string) ([]byte, bool) {
 	case "br":
 		r = brotli.NewReader(bytes.NewReader(data))
 	case "zstd":
-		zr, err := zstd.NewReader(bytes.NewReader(data))
+		// The decoder allocates the declared window up front: cap it at the
+		// HTTP zstd limit (RFC 9659: 8 MB), else a 10-byte body asks for 512 MB.
+		zr, err := zstd.NewReader(bytes.NewReader(data), zstd.WithDecoderMaxWindow(8<<20), zstd.WithDecoderConcurrency(1))
 		if err != nil {
 			return nil, false
 		}

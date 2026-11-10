@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -62,6 +63,9 @@ func zst(b []byte) []byte {
 	return w.EncodeAll(b, nil)
 }
 
+// hugeWindowZstd is a zstd frame header declaring a 512 MB window.
+var hugeWindowZstd = []byte{0x28, 0xB5, 0x2F, 0xFD, 0x00, 0x98, 0x09, 0x00, 0x00, 0x61}
+
 func TestDecodedBody(t *testing.T) {
 	plain := []byte(jsonBody)
 	tests := []struct {
@@ -78,6 +82,7 @@ func TestDecodedBody(t *testing.T) {
 		{"br then gzip", "br, gzip", gz(br(plain)), plain},
 		{"identity", "identity", plain, plain},
 		{"zstd", "zstd", zst(plain), plain},
+		{"zstd window over 8 MB kept as is", "zstd", hugeWindowZstd, hugeWindowZstd},
 		{"unknown kept as is", "compress", []byte("raw"), []byte("raw")},
 		{"broken gzip kept as is", "gzip", []byte("not gzip"), []byte("not gzip")},
 	}
@@ -176,5 +181,16 @@ func TestProxyAndRecord_GzipResponse(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(payload.Response.Headers["Content-Encoding"], ","), "gzip") {
 		t.Errorf("stored headers lost Content-Encoding: %v", payload.Response.Headers)
+	}
+}
+
+func TestDecodedBody_ZstdHugeWindowAllocatesLittle(t *testing.T) {
+	var before, after runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&before)
+	decodedBody(hugeWindowZstd, http.Header{"Content-Encoding": {"zstd"}})
+	runtime.ReadMemStats(&after)
+	if grew := after.TotalAlloc - before.TotalAlloc; grew > 64<<20 {
+		t.Errorf("allocated %d MB for a 10-byte body", grew>>20)
 	}
 }
