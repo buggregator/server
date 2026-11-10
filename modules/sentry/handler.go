@@ -6,6 +6,8 @@ import (
 	"compress/zlib"
 	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -64,7 +66,7 @@ func (h *handler) Match(r *http.Request) bool {
 }
 
 func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
-	body, err := io.ReadAll(r.Body)
+	body, err := readCapped(r.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -457,33 +459,45 @@ func decompress(data []byte, encoding string) []byte {
 		return data
 	}
 
+	// tooLarge: a decoder hit maxPayloadSize; the body stays as it came and
+	// no other decoder tries it again.
+	tooLarge := false
+	ok := func(d []byte, err error) bool {
+		tooLarge = tooLarge || errors.Is(err, errPayloadTooLarge)
+		return err == nil
+	}
+
 	// Try by Content-Encoding header first.
 	switch strings.ToLower(encoding) {
 	case "gzip":
-		if d, err := decompressGzip(data); err == nil {
+		if d, err := decompressGzip(data); ok(d, err) {
 			return d
 		}
 	case "deflate":
-		if d, err := decompressZlib(data); err == nil {
+		if d, err := decompressZlib(data); ok(d, err) {
 			return d
 		}
 	case "zstd":
-		if d, err := decompressZstd(data); err == nil {
+		if d, err := decompressZstd(data); ok(d, err) {
 			return d
 		}
 	case "br":
 		// sentry-python sends Brotli when the brotli package is installed.
 		// Brotli has no magic bytes, so it is decoded only on the header.
-		if d, err := io.ReadAll(brotli.NewReader(bytes.NewReader(data))); err == nil {
+		if d, err := readCapped(brotli.NewReader(bytes.NewReader(data))); ok(d, err) {
 			return d
 		}
+	}
+
+	if tooLarge {
+		return data
 	}
 
 	// Auto-detect by magic bytes (Sentry SDKs sometimes omit the header).
 	if len(data) >= 4 {
 		// Zstd magic: 0x28 0xb5 0x2f 0xfd
 		if data[0] == 0x28 && data[1] == 0xb5 && data[2] == 0x2f && data[3] == 0xfd {
-			if d, err := decompressZstd(data); err == nil {
+			if d, err := decompressZstd(data); ok(d, err) {
 				return d
 			}
 		}
@@ -491,13 +505,13 @@ func decompress(data []byte, encoding string) []byte {
 	if len(data) >= 2 {
 		// Gzip magic: 0x1f 0x8b
 		if data[0] == 0x1f && data[1] == 0x8b {
-			if d, err := decompressGzip(data); err == nil {
+			if d, err := decompressGzip(data); ok(d, err) {
 				return d
 			}
 		}
 		// Zlib magic: 0x78 (0x01, 0x5e, 0x9c, 0xda)
 		if data[0] == 0x78 {
-			if d, err := decompressZlib(data); err == nil {
+			if d, err := decompressZlib(data); ok(d, err) {
 				return d
 			}
 		}
@@ -512,16 +526,19 @@ func decompressGzip(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer r.Close()
-	return io.ReadAll(r)
+	return readCapped(r)
 }
 
 func decompressZstd(data []byte) ([]byte, error) {
-	r, err := zstd.NewReader(bytes.NewReader(data))
+	// The decoder allocates the window a frame declares before any read:
+	// cap it at the HTTP zstd limit (RFC 9659: 8 MB), else a 10-byte body
+	// asks for 512 MB.
+	r, err := zstd.NewReader(bytes.NewReader(data), zstd.WithDecoderMaxWindow(8<<20), zstd.WithDecoderConcurrency(1))
 	if err != nil {
 		return nil, err
 	}
 	defer r.Close()
-	return io.ReadAll(r)
+	return readCapped(r)
 }
 
 func decompressZlib(data []byte) ([]byte, error) {
@@ -530,7 +547,25 @@ func decompressZlib(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer r.Close()
-	return io.ReadAll(r)
+	return readCapped(r)
+}
+
+// maxPayloadSize caps a Sentry request body, raw and after decompression,
+// so a small compressed body cannot expand into gigabytes.
+const maxPayloadSize = 64 << 20
+
+var errPayloadTooLarge = fmt.Errorf("sentry payload larger than %d MB", maxPayloadSize>>20)
+
+// readCapped reads r whole, or fails past maxPayloadSize.
+func readCapped(r io.Reader) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(r, maxPayloadSize+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > maxPayloadSize {
+		return nil, errPayloadTooLarge
+	}
+	return data, nil
 }
 
 // isTransaction detects Sentry transaction payloads that should be stored
