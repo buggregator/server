@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"encoding/json"
+	"net/http"
 	"time"
 
 	"github.com/buggregator/server/v2/internal/event"
@@ -38,7 +39,7 @@ func buildHTTPDumpEvent(req *capturedRequest, resp *capturedResponse, durationMs
 			"method":  req.Method,
 			"uri":     req.URI,
 			"headers": headers,
-			"body":    truncateBody(req.Body),
+			"body":    truncateBody(decodedBody(req.Body, req.Headers)),
 			"query":   query,
 			"post":    map[string]any{},
 			"cookies": map[string]string{},
@@ -58,7 +59,7 @@ func buildHTTPDumpEvent(req *capturedRequest, resp *capturedResponse, durationMs
 		payload["response"] = map[string]any{
 			"status_code": resp.StatusCode,
 			"headers":     respHeaders,
-			"body":        truncateBody(resp.Body),
+			"body":        truncateBody(decodedBody(resp.Body, resp.Headers)),
 		}
 	}
 
@@ -76,14 +77,14 @@ type capturedRequest struct {
 	URI     string
 	Host    string
 	Scheme  string
-	Headers map[string][]string
+	Headers http.Header
 	Query   map[string][]string
 	Body    []byte
 }
 
 type capturedResponse struct {
 	StatusCode int
-	Headers    map[string][]string
+	Headers    http.Header
 	Body       []byte
 }
 
