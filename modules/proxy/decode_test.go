@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/andybalholm/brotli"
+	"github.com/klauspost/compress/zstd"
 
 	"github.com/buggregator/server/v2/internal/event"
 )
@@ -55,6 +56,12 @@ func br(b []byte) []byte {
 	return buf.Bytes()
 }
 
+func zst(b []byte) []byte {
+	w, _ := zstd.NewWriter(nil)
+	defer w.Close()
+	return w.EncodeAll(b, nil)
+}
+
 func TestDecodedBody(t *testing.T) {
 	plain := []byte(jsonBody)
 	tests := []struct {
@@ -70,7 +77,8 @@ func TestDecodedBody(t *testing.T) {
 		{"br", "br", br(plain), plain},
 		{"br then gzip", "br, gzip", gz(br(plain)), plain},
 		{"identity", "identity", plain, plain},
-		{"unknown kept as is", "zstd", []byte("raw"), []byte("raw")},
+		{"zstd", "zstd", zst(plain), plain},
+		{"unknown kept as is", "compress", []byte("raw"), []byte("raw")},
 		{"broken gzip kept as is", "gzip", []byte("not gzip"), []byte("not gzip")},
 	}
 	for _, tt := range tests {
@@ -84,6 +92,13 @@ func TestDecodedBody(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("codings on two header lines", func(t *testing.T) {
+		h := http.Header{"Content-Encoding": {"br", "gzip"}}
+		if got := decodedBody(gz(br(plain)), h); !bytes.Equal(got, plain) {
+			t.Errorf("got %q, want %q", got, plain)
+		}
+	})
 
 	t.Run("cut gzip decodes as far as it goes", func(t *testing.T) {
 		long := bytes.Repeat([]byte("line of text\n"), 2000)
