@@ -94,6 +94,10 @@ func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			if incoming.Respond != nil {
+				incoming.Respond(w)
+				return
+			}
 			writeIngestionResponse(w, incoming.Type, incoming.UUID)
 			return
 		}
