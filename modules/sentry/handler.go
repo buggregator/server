@@ -490,6 +490,7 @@ func decompress(data []byte, encoding string) []byte {
 	}
 
 	if tooLarge {
+		slog.Warn("sentry: decompressed payload over 64 MB, dropped", "encoding", encoding)
 		return data
 	}
 
