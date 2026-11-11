@@ -25,7 +25,7 @@ RUN ARCH=$(case ${TARGETARCH} in amd64) echo "x86_64";; arm64) echo "aarch64";; 
 
 # Stage 2: Download frontend
 FROM alpine:3.20 AS frontend
-ARG FRONTEND_VERSION=1.32.1
+ARG FRONTEND_VERSION=1.37.0
 RUN apk add --no-cache curl unzip \
     && mkdir -p /frontend \
     && curl -sL "https://github.com/buggregator/frontend/releases/download/${FRONTEND_VERSION}/frontend-${FRONTEND_VERSION}.zip" -o /tmp/fe.zip \
@@ -57,6 +57,8 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w -X main.version=${VERSION}" -o buggre
 
 # Stage 4: Final minimal image
 FROM alpine:3.20
+# Ownership label for the official MCP Registry; must match "name" in server.json.
+LABEL io.modelcontextprotocol.server.name="io.github.buggregator/server"
 RUN apk add --no-cache ca-certificates
 COPY --from=go-builder /build/buggregator /usr/local/bin/buggregator
 

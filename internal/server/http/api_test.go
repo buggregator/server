@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/module"
-	serverhttp "github.com/buggregator/go-buggregator/internal/server/http"
-	"github.com/buggregator/go-buggregator/internal/server/ws"
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/module"
+	serverhttp "github.com/buggregator/server/v2/internal/server/http"
+	"github.com/buggregator/server/v2/internal/server/ws"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 func setupAPI(t *testing.T) (*http.ServeMux, *storage.SQLiteStore) {
@@ -24,6 +24,11 @@ func setupAPI(t *testing.T) (*http.ServeMux, *storage.SQLiteStore) {
 }
 
 func setupAPILimits(t *testing.T, limits serverhttp.ListLimits) (*http.ServeMux, *storage.SQLiteStore) {
+	t.Helper()
+	return setupAPIWith(t, limits, nil)
+}
+
+func setupAPIWith(t *testing.T, limits serverhttp.ListLimits, updateStatus func() any) (*http.ServeMux, *storage.SQLiteStore) {
 	t.Helper()
 	db, err := storage.Open(":memory:")
 	if err != nil {
@@ -51,7 +56,7 @@ func setupAPILimits(t *testing.T, limits serverhttp.ListLimits) (*http.ServeMux,
 
 	mux := http.NewServeMux()
 	noopMiddleware := func(next http.Handler) http.Handler { return next }
-	serverhttp.RegisterAPI(mux, store, event.NewPreviewRegistry(), es, "test-version", db, []string{"sentry", "ray"}, serverhttp.AuthSettings{}, noopMiddleware, limits)
+	serverhttp.RegisterAPI(mux, store, event.NewPreviewRegistry(), es, "test-version", db, []string{"sentry", "ray"}, serverhttp.AuthSettings{}, noopMiddleware, limits, updateStatus)
 
 	return mux, store
 }
@@ -88,6 +93,34 @@ func TestAPI_Settings(t *testing.T) {
 	events, ok := resp["events"].([]any)
 	if !ok || len(events) != 2 {
 		t.Errorf("events = %v", resp["events"])
+	}
+}
+
+// /api/settings carries the new-version check: null when it is off.
+func TestAPI_SettingsUpdate(t *testing.T) {
+	get := func(mux *http.ServeMux) map[string]any {
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("GET", "/api/settings", nil))
+		var resp map[string]any
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatal(err)
+		}
+		return resp
+	}
+
+	off, _ := setupAPI(t)
+	if resp := get(off); resp["update"] != nil {
+		t.Errorf("check off: update = %v", resp["update"])
+	} else if _, ok := resp["update"]; !ok {
+		t.Error("check off: no update field")
+	}
+
+	on, _ := setupAPIWith(t, serverhttp.ListLimits{}, func() any {
+		return map[string]any{"current": "2.7.0", "latest": "2.8.0", "url": "https://github.com/buggregator/server/releases/tag/v2.8.0", "available": true}
+	})
+	u, ok := get(on)["update"].(map[string]any)
+	if !ok || u["latest"] != "2.8.0" || u["available"] != true || u["current"] != "2.7.0" {
+		t.Errorf("check on: update = %v", u)
 	}
 }
 
@@ -249,6 +282,27 @@ func TestAPI_DeleteAll(t *testing.T) {
 	}
 }
 
+// keep_pinned reaches the store: the body field is read.
+func TestAPI_DeleteAll_KeepPinned(t *testing.T) {
+	mux, store := setupAPI(t)
+	ctx := context.Background()
+	for _, u := range []string{"p1", "u1"} {
+		store.Store(ctx, event.Event{UUID: u, Type: "sentry", Payload: json.RawMessage(`{}`), Timestamp: 1.0, Project: "default"})
+	}
+	store.Pin(ctx, "p1")
+
+	r := httptest.NewRequest("DELETE", "/api/events", strings.NewReader(`{"type":"sentry","project":"default","keep_pinned":true}`))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+	if w.Code != 200 {
+		t.Fatalf("status = %d", w.Code)
+	}
+	all, _ := store.FindAll(ctx, event.FindOptions{})
+	if len(all) != 1 || all[0].UUID != "p1" {
+		t.Errorf("left %v, want only pinned p1", all)
+	}
+}
+
 func TestAPI_Projects(t *testing.T) {
 	mux, _ := setupAPI(t)
 
@@ -349,6 +403,54 @@ func TestAPI_Events_Limits(t *testing.T) {
 		}
 		if n, _ := list(t, mux, "?from=2023-01-01"); n != 4 {
 			t.Fatalf("got %d events for an ISO from, want 4", n)
+		}
+	})
+
+	t.Run("no default limit returns everything", func(t *testing.T) {
+		mux, s := setupAPILimits(t, serverhttp.ListLimits{MaxLimit: 10})
+		store(t, mux, s, 12, now)
+
+		if n, meta := list(t, mux, ""); n != 12 || meta["limit"] != float64(0) {
+			t.Fatalf("got %d events, meta %v; want all 12", n, meta)
+		}
+	})
+
+	t.Run("pinned old event survives a small cap", func(t *testing.T) {
+		mux, s := setupAPILimits(t, serverhttp.ListLimits{DefaultLimit: 3})
+		store(t, mux, s, 5, now)
+		if err := s.Store(context.Background(), event.Event{
+			UUID: "pinned-old", Type: "sentry", Payload: json.RawMessage(`{}`),
+			Timestamp: now - 30*24*3600, Project: "default", IsPinned: true,
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		r := httptest.NewRequest("GET", "/api/events", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, r)
+		var resp struct {
+			Data []event.Event `json:"data"`
+		}
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatal(err)
+		}
+		if len(resp.Data) != 3 || resp.Data[0].UUID != "pinned-old" {
+			t.Fatalf("got %d events, first %q; want 3 with pinned-old first", len(resp.Data), resp.Data[0].UUID)
+		}
+	})
+
+	t.Run("offset without limit", func(t *testing.T) {
+		mux, s := setupAPILimits(t, serverhttp.ListLimits{})
+		store(t, mux, s, 5, now)
+
+		r := httptest.NewRequest("GET", "/api/events?offset=2", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, body %s; want 200", w.Code, w.Body.String())
+		}
+		if n, _ := list(t, mux, "?offset=2"); n != 3 {
+			t.Fatalf("got %d events, want 3", n)
 		}
 	})
 }

@@ -172,6 +172,21 @@ func TestHandler_Handle(t *testing.T) {
 		}
 	})
 
+	t.Run("explicit twilio does not require MessageSid", func(t *testing.T) {
+		body := `{"From":"+111","To":"+222","Body":"Hi"}`
+		r := httptest.NewRequest("POST", "/sms/twilio", strings.NewReader(body))
+		r.Header.Set("Content-Type", "application/json")
+		inc, err := h.Handle(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var msg SmsMessage
+		json.Unmarshal(inc.Payload, &msg)
+		if len(msg.Warnings) != 0 {
+			t.Errorf("Warnings = %v, want none (MessageSid is a webhook field)", msg.Warnings)
+		}
+	})
+
 	t.Run("explicit gateway with project", func(t *testing.T) {
 		body := `{"From":"+111","To":"+222","Body":"Hi"}`
 		r := httptest.NewRequest("POST", "/sms/twilio/myproject", strings.NewReader(body))

@@ -48,6 +48,31 @@ func (s *TokenStore) Create(u User) (string, error) {
 
 // Validate parses and validates a JWT token string, returning the user.
 func (s *TokenStore) Validate(tokenStr string) (*User, error) {
+	claims, err := s.parse(tokenStr)
+	if err != nil {
+		return nil, err
+	}
+	return &User{
+		Provider: claims.Provider,
+		Username: claims.Username,
+		Email:    claims.Email,
+		Avatar:   claims.Avatar,
+	}, nil
+}
+
+// ExpiresAt validates a token and returns when it expires (zero: never).
+func (s *TokenStore) ExpiresAt(tokenStr string) (time.Time, error) {
+	claims, err := s.parse(tokenStr)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if claims.ExpiresAt == nil {
+		return time.Time{}, nil
+	}
+	return claims.ExpiresAt.Time, nil
+}
+
+func (s *TokenStore) parse(tokenStr string) (*TokenClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &TokenClaims{}, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
@@ -62,11 +87,5 @@ func (s *TokenStore) Validate(tokenStr string) (*User, error) {
 	if !ok || !token.Valid {
 		return nil, fmt.Errorf("invalid token claims")
 	}
-
-	return &User{
-		Provider: claims.Provider,
-		Username: claims.Username,
-		Email:    claims.Email,
-		Avatar:   claims.Avatar,
-	}, nil
+	return claims, nil
 }

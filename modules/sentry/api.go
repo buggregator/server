@@ -8,41 +8,115 @@ import (
 	"strings"
 	"time"
 
-	httpserver "github.com/buggregator/go-buggregator/internal/server/http"
+	httpserver "github.com/buggregator/server/v2/internal/server/http"
 )
 
-func registerAPI(mux *http.ServeMux, db *sql.DB) {
-	mux.HandleFunc("GET /api/sentry/exceptions", handleExceptionsList(db))
-	mux.HandleFunc("GET /api/sentry/exceptions/{id}", handleExceptionDetail(db))
-	mux.HandleFunc("GET /api/sentry/traces", handleTracesList(db))
-	mux.HandleFunc("GET /api/sentry/traces/{traceId}", handleTraceDetail(db))
-	mux.HandleFunc("GET /api/sentry/logs", handleLogsList(db))
-	mux.HandleFunc("GET /api/sentry/service-map", handleServiceMap(db))
-	mux.HandleFunc("GET /api/sentry/counts", handleCounts(db))
-	mux.HandleFunc("DELETE /api/sentry/all", handleClearAll(db))
+// registerAPI adds the /api/sentry routes; protect is the API auth middleware.
+func registerAPI(mux *http.ServeMux, db *sql.DB, protect func(http.Handler) http.Handler) {
+	route := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, protect(h)) }
+	route("GET /api/sentry/exceptions", handleExceptionsList(db))
+	route("GET /api/sentry/exceptions/{id}", handleExceptionDetail(db))
+	route("GET /api/sentry/traces", handleTracesList(db))
+	route("GET /api/sentry/traces/{traceId}", handleTraceDetail(db))
+	route("GET /api/sentry/logs", handleLogsList(db))
+	route("GET /api/sentry/metrics", handleMetricsList(db))
+	route("GET /api/sentry/service-map", handleServiceMap(db))
+	route("GET /api/sentry/counts", handleCounts(db))
+	route("DELETE /api/sentry/all", handleClearAll(db))
 }
 
-// handleClearAll deletes all data from sentry structured tables.
+// handleClearAll deletes Sentry structured data.
+//
+//	DELETE /api/sentry/all                      every project, everything (as before)
+//	DELETE /api/sentry/all?project=shop         only the project "shop"
+//	DELETE /api/sentry/all?keep_pinned=1        keep errors whose event is pinned
+//
+// Both parameters combine.
 func handleClearAll(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Order matters: child tables first (FK cascades handle some, but be explicit).
-		tables := []string{
-			"sentry_breadcrumbs",
-			"sentry_exceptions",
-			"sentry_error_events",
-			"sentry_spans",
-			"sentry_transactions",
-			"sentry_traces",
-			"sentry_logs",
-		}
-		for _, t := range tables {
-			if _, err := db.Exec("DELETE FROM " + t); err != nil {
-				apiError(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+		q := r.URL.Query()
+		keepPinned, _ := strconv.ParseBool(q.Get("keep_pinned"))
+		if err := clearSentry(db, strings.TrimSpace(q.Get("project")), keepPinned); err != nil {
+			apiError(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		apiJSON(w, map[string]any{"status": true})
 	}
+}
+
+// clearSentry deletes the Sentry rows of one project (every project when
+// project is empty), keeping errors whose event is pinned when keepPinned is
+// set. Foreign keys are not enforced, so child rows are deleted explicitly.
+func clearSentry(db *sql.DB, project string, keepPinned bool) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if project == "" && !keepPinned {
+		for _, t := range []string{
+			"sentry_breadcrumbs", "sentry_exceptions", "sentry_error_events",
+			"sentry_spans", "sentry_transactions", "sentry_traces",
+			"sentry_logs", "sentry_metrics",
+		} {
+			if _, err := tx.Exec("DELETE FROM " + t); err != nil {
+				return err
+			}
+		}
+		return tx.Commit()
+	}
+
+	var where string // " WHERE project_id = ?" or ""
+	var args []any
+	if project != "" {
+		where, args = " WHERE project_id = ?", []any{project}
+	}
+
+	errWhere := where
+	if keepPinned {
+		pinned := "event_id NOT IN (SELECT uuid FROM events WHERE is_pinned = 1)"
+		if errWhere == "" {
+			errWhere = " WHERE " + pinned
+		} else {
+			errWhere += " AND " + pinned
+		}
+	}
+
+	// Traces are shared by trace_id across projects: remember the ones this
+	// clear touches, then recount or drop them once their spans are gone.
+	stmts := []string{
+		`CREATE TEMP TABLE IF NOT EXISTS sentry_clear_traces (trace_id TEXT PRIMARY KEY)`,
+		`DELETE FROM sentry_clear_traces`,
+		`INSERT OR IGNORE INTO sentry_clear_traces SELECT trace_id FROM sentry_spans` + where,
+		`INSERT OR IGNORE INTO sentry_clear_traces SELECT trace_id FROM sentry_transactions` + where,
+		`DELETE FROM sentry_breadcrumbs WHERE error_event_id IN (SELECT id FROM sentry_error_events` + errWhere + `)`,
+		`DELETE FROM sentry_exceptions WHERE error_event_id IN (SELECT id FROM sentry_error_events` + errWhere + `)`,
+		`DELETE FROM sentry_error_events` + errWhere,
+		`DELETE FROM sentry_spans` + where,
+		`DELETE FROM sentry_transactions` + where,
+		`DELETE FROM sentry_logs` + where,
+		`DELETE FROM sentry_metrics` + where,
+		`DELETE FROM sentry_traces WHERE trace_id IN (SELECT trace_id FROM sentry_clear_traces)
+			AND NOT EXISTS (SELECT 1 FROM sentry_spans s WHERE s.trace_id = sentry_traces.trace_id)
+			AND NOT EXISTS (SELECT 1 FROM sentry_transactions t WHERE t.trace_id = sentry_traces.trace_id)`,
+		`UPDATE sentry_traces SET
+			span_count = (SELECT COUNT(*) FROM sentry_spans s WHERE s.trace_id = sentry_traces.trace_id),
+			error_count = (SELECT COUNT(*) FROM sentry_spans s WHERE s.trace_id = sentry_traces.trace_id
+				AND s.transaction_id IS NOT NULL AND s.is_error = 1)
+			WHERE trace_id IN (SELECT trace_id FROM sentry_clear_traces)`,
+		`DELETE FROM sentry_clear_traces`,
+	}
+	for _, st := range stmts {
+		var a []any
+		if strings.Contains(st, "?") {
+			a = args
+		}
+		if _, err := tx.Exec(st, a...); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 // timeWindow reads the period bounds from the query parameters.
@@ -108,6 +182,25 @@ func appendTimeConditions(conditions []string, args []any, r *http.Request, colu
 		args = append(args, to.UTC().Format(layout))
 	}
 	return conditions, args
+}
+
+// appendProject narrows a query to ?project when it is given; without it every
+// project is read, as before.
+func appendProject(conditions []string, args []any, r *http.Request, column string) ([]string, []any) {
+	if v := strings.TrimSpace(r.URL.Query().Get("project")); v != "" {
+		conditions = append(conditions, column+" = ?")
+		args = append(args, v)
+	}
+	return conditions, args
+}
+
+// projectClause is " AND <column> = ?" with its argument for ?project, or nothing.
+func projectClause(r *http.Request, column string) (string, []any) {
+	conds, args := appendProject(nil, nil, r, column)
+	if len(conds) == 0 {
+		return "", nil
+	}
+	return " AND " + conds[0], args
 }
 
 // tsUTC wraps a time column so the value leaves the API as an ISO string with

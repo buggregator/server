@@ -4,9 +4,12 @@ package sms
 type gateway struct {
 	Name         string
 	DetectFields []string // ALL must be present to detect. Empty = always match (generic).
-	FromFields   []string // Candidate field names for "from", first non-empty wins.
-	ToFields     []string // Candidate field names for "to".
-	MsgFields    []string // Candidate field names for "message".
+	// Required lists the fields an explicit /sms/{gateway} request must carry
+	// besides from/to/message; nil means DetectFields.
+	Required   []string
+	FromFields []string // Candidate field names for "from", first non-empty wins.
+	ToFields   []string // Candidate field names for "to".
+	MsgFields  []string // Candidate field names for "message".
 }
 
 // detect returns true if all DetectFields are present in body.
@@ -26,7 +29,11 @@ func (g *gateway) detect(body map[string]any) bool {
 func (g *gateway) validate(body map[string]any) []string {
 	var missing []string
 
-	for _, f := range g.DetectFields {
+	required := g.Required
+	if required == nil {
+		required = g.DetectFields
+	}
+	for _, f := range required {
 		if _, ok := body[f]; !ok {
 			missing = append(missing, f)
 		}
@@ -60,7 +67,7 @@ func (g *gateway) parse(body map[string]any) SmsMessage {
 func allGateways() []*gateway {
 	return []*gateway{
 		// --- Highly unique detection ---
-		{Name: "twilio", DetectFields: []string{"MessageSid", "Body"}, FromFields: []string{"From"}, ToFields: []string{"To"}, MsgFields: []string{"Body"}},
+		{Name: "twilio", DetectFields: []string{"MessageSid", "Body"}, Required: []string{}, FromFields: []string{"From"}, ToFields: []string{"To"}, MsgFields: []string{"Body"}},
 		{Name: "plivo", DetectFields: []string{"MessageUUID"}, FromFields: []string{"From", "src"}, ToFields: []string{"To", "dst"}, MsgFields: []string{"Text", "text"}},
 		{Name: "sinch", DetectFields: []string{"batch_id", "body"}, FromFields: []string{"from"}, ToFields: []string{"to"}, MsgFields: []string{"body"}},
 		{Name: "vonage", DetectFields: []string{"api_key", "api_secret"}, FromFields: []string{"from", "msisdn"}, ToFields: []string{"to"}, MsgFields: []string{"text"}},

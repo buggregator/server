@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"net/http"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/server/tcp"
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/server/tcp"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 // Module is the interface every event module must implement.
@@ -52,6 +52,20 @@ type HTTPIngestionHandler interface {
 
 	// Handle processes the request and returns the event to store.
 	Handle(r *http.Request) (*event.Incoming, error)
+}
+
+// ProtectedRoutesRegistrar is an optional Module add-on for API routes that
+// must sit behind the API's auth middleware. It is called after the
+// middleware is built, unlike RegisterRoutes.
+type ProtectedRoutesRegistrar interface {
+	RegisterProtectedRoutes(mux *http.ServeMux, protect func(http.Handler) http.Handler)
+}
+
+// EventDeleteListener is an optional Module add-on for modules that keep
+// data outside the events table (files, side tables). It is called after
+// events were removed by a single delete, a clear-all or a batch delete.
+type EventDeleteListener interface {
+	OnEventsDeleted(uuids []string)
 }
 
 // BaseModule provides no-op defaults for optional Module methods.

@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/server/tcp"
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/server/tcp"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 // Registry collects modules and provides access to their handlers.
@@ -83,6 +83,11 @@ func (r *Registry) Init(db *sql.DB, mux *http.ServeMux, store event.Store) error
 	return nil
 }
 
+// Modules returns the registered modules in registration order.
+func (r *Registry) Modules() []Module {
+	return r.modules
+}
+
 // Handlers returns HTTP ingestion handlers sorted by priority.
 func (r *Registry) Handlers() []HTTPIngestionHandler {
 	return r.handlers
@@ -96,6 +101,26 @@ func (r *Registry) TCPServers() []tcp.ServerConfig {
 // Previews returns the preview registry.
 func (r *Registry) Previews() *event.PreviewRegistry {
 	return r.previews
+}
+
+// NotifyEventsDeleted calls OnEventsDeleted on modules that implement
+// EventDeleteListener.
+func (r *Registry) NotifyEventsDeleted(uuids []string) {
+	for _, m := range r.modules {
+		if l, ok := m.(EventDeleteListener); ok {
+			l.OnEventsDeleted(uuids)
+		}
+	}
+}
+
+// RegisterProtectedRoutes lets modules that implement ProtectedRoutesRegistrar
+// add their API routes behind protect.
+func (r *Registry) RegisterProtectedRoutes(mux *http.ServeMux, protect func(http.Handler) http.Handler) {
+	for _, m := range r.modules {
+		if p, ok := m.(ProtectedRoutesRegistrar); ok {
+			p.RegisterProtectedRoutes(mux, protect)
+		}
+	}
 }
 
 // NotifyEventStored calls OnEventStored on all modules.

@@ -21,7 +21,7 @@ env:
   #   1) workflow_dispatch input (manual one-off)
   #   2) repository Variable `FRONTEND_VERSION` (https://github.com/buggregator/server/settings/variables/actions)
   #   3) hardcoded fallback so the workflow still works on forks without the Variable set.
-  FRONTEND_VERSION: ${{ inputs.frontend_version || vars.FRONTEND_VERSION || '1.32.0' }}
+  FRONTEND_VERSION: ${{ inputs.frontend_version || vars.FRONTEND_VERSION || '1.37.0' }}
   PHP_VERSION: "8.4.19"
 
 jobs:
@@ -70,6 +70,7 @@ jobs:
       # Build PHP VarDumper parser using pre-built micro.sfx from static-php CDN
       - name: Build VarDumper PHP binary
         run: |
+          set -o pipefail
           cd php/vardumper
           composer install --no-dev --optimize-autoloader --quiet
           curl -sL https://github.com/box-project/box/releases/download/4.6.6/box.phar -o box.phar
@@ -78,8 +79,13 @@ jobs:
             -o /tmp/micro.tar.gz
           mkdir -p /tmp/micro && tar -xzf /tmp/micro.tar.gz -C /tmp/micro/
           mkdir -p ../../modules/vardumper/bin
-          cat /tmp/micro/micro.sfx vardumper-parser.phar > ../../modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}
-          chmod +x ../../modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}
+          OUT=../../modules/vardumper/bin/vardumper-parser-${{ matrix.goos }}-${{ matrix.goarch }}
+          # Embedded gzipped (unpacked at start, php_process.go): the macOS
+          # micro.sfx is ~40 MB unpacked, the Linux one is already packed.
+          cat /tmp/micro/micro.sfx vardumper-parser.phar | gzip -9 -n > "$OUT"
+          ls -l "$OUT"
+          # A broken pipe would still leave a tiny gzip: the parser is ~10 MB+.
+          [ "$(wc -c < "$OUT")" -gt 5000000 ] || { echo "VarDumper parser too small: $OUT"; exit 1; }
 
       # Build Go binary
       - name: Build
@@ -106,7 +112,7 @@ jobs:
   # var-dump on `runtime.GOOS != "windows"` so the binary still boots — every
   # other module (Sentry, SMTP, Monolog, Ray, Inspector, Profiler, HTTP-dump,
   # SMS) works normally. The embedded vardumper binary is a stub byte so
-  # `go:embed bin/vardumper-parser-windows-amd64.exe` succeeds.
+  # `go:embed bin/vardumper-parser-windows-<arch>.exe` succeeds.
   build-windows:
     runs-on: ubuntu-latest
     strategy:
@@ -114,6 +120,8 @@ jobs:
         include:
           - goos: windows
             goarch: amd64
+          - goos: windows
+            goarch: arm64
     steps:
       - uses: actions/checkout@v4
 
@@ -168,6 +176,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
             type=raw,value=latest
 
       - uses: docker/setup-qemu-action@v3
@@ -224,8 +233,17 @@ jobs:
         with:
           path: artifacts
 
+      # checksums.txt is what scripts/install.sh and install.ps1 verify against.
+      - name: Checksums
+        run: |
+          mkdir -p dist
+          cp artifacts/*/buggregator-* dist/
+          cd dist
+          sha256sum buggregator-* > checksums.txt
+          cat checksums.txt
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*/buggregator-*
+          files: dist/*
           generate_release_notes: true

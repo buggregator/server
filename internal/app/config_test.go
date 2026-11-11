@@ -1,7 +1,10 @@
 package app
 
 import (
+	"os"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestModulesConfig_IsEnabled(t *testing.T) {
@@ -48,8 +51,8 @@ func TestModulesConfig_EnabledTypes(t *testing.T) {
 	t.Run("all enabled by default", func(t *testing.T) {
 		cfg := ModulesConfig{}
 		types := cfg.EnabledTypes()
-		if len(types) != 9 {
-			t.Errorf("len = %d, want 9", len(types))
+		if len(types) != 10 {
+			t.Errorf("len = %d, want 10", len(types))
 		}
 	})
 
@@ -57,8 +60,8 @@ func TestModulesConfig_EnabledTypes(t *testing.T) {
 		f := false
 		cfg := ModulesConfig{Sentry: &f, SMTP: &f}
 		types := cfg.EnabledTypes()
-		if len(types) != 7 {
-			t.Errorf("len = %d, want 7", len(types))
+		if len(types) != 8 {
+			t.Errorf("len = %d, want 8", len(types))
 		}
 		for _, typ := range types {
 			if typ == "sentry" || typ == "smtp" {
@@ -151,5 +154,179 @@ func TestConfig_String(t *testing.T) {
 	s := cfg.String()
 	if s == "" {
 		t.Error("String() should not be empty")
+	}
+}
+
+func TestConfig_MCPMockWrite(t *testing.T) {
+	if !(MCPConfig{}).MockWriteOn() {
+		t.Error("mock_write is off by default")
+	}
+	path := t.TempDir() + "/buggregator.yaml"
+	os.WriteFile(path, []byte("mcp:\n  mock_write: false\n"), 0o600)
+	if loadConfigFile(path).MCP.MockWriteOn() {
+		t.Error("mock_write: false is on")
+	}
+}
+
+func TestConfig_MocksOpenAPIFromYAML(t *testing.T) {
+	path := t.TempDir() + "/buggregator.yaml"
+	os.WriteFile(path, []byte("mocks_openapi:\n  - file: ./api.yaml\n    project: shop\n    group: shop-api\n    base_path: \"\"\n  - file: ./b.json\n"), 0o600)
+	defs := loadConfigFile(path).MocksOpenAPI
+	if len(defs) != 2 || defs[0].File != "./api.yaml" || defs[0].Project != "shop" || defs[0].Group != "shop-api" ||
+		defs[0].BasePath == nil || *defs[0].BasePath != "" || defs[1].BasePath != nil {
+		t.Errorf("defs = %+v", defs)
+	}
+}
+
+func TestConfig_MocksFromYAML(t *testing.T) {
+	path := t.TempDir() + "/buggregator.yaml"
+	os.WriteFile(path, []byte(`
+mocks:
+  - method: GET
+    path: /users/{id}
+    status: 200
+    headers: { Content-Type: application/json }
+    body: '{"id": 1}'
+    delay: 150ms
+    project: shop
+  - path: /orders/{id}
+    template: true
+    seed: 42
+    body: '[{{ range $i := repeat 2 }}{{ if $i }},{{ end }}{{ fake "name" | json }}{{ end }}]'
+`), 0o600)
+	cfg := loadConfigFile(path)
+	if len(cfg.Mocks) != 2 {
+		t.Fatalf("mocks = %+v", cfg.Mocks)
+	}
+	m := cfg.Mocks[0]
+	if m.Method != "GET" || m.Path != "/users/{id}" || m.Status != 200 || m.Headers["Content-Type"] != "application/json" ||
+		m.Body != `{"id": 1}` || m.Delay != "150ms" || m.Project != "shop" {
+		t.Errorf("mock = %+v", m)
+	}
+	if m := cfg.Mocks[1]; !m.Template || m.Seed != 42 || !strings.Contains(m.Body, `{{ range $i := repeat 2 }}`) {
+		t.Errorf("template mock = %+v", m)
+	}
+}
+
+// 0 is a real limit value (unlimited) from any source; only empty or
+// unreadable values fall through to the next source.
+func TestResolveLimit(t *testing.T) {
+	zero, ten := 0, 10
+	tests := []struct {
+		name   string
+		file   *int
+		values []string
+		want   int
+	}{
+		{"nothing set", nil, []string{"", ""}, 1000},
+		{"flag 0", &ten, []string{"0", "5"}, 0},
+		{"env 0", &ten, []string{"", "0"}, 0},
+		{"file 0", &zero, []string{"", ""}, 0},
+		{"env over file", &ten, []string{"", "7"}, 7},
+		{"flag over env", nil, []string{"3", "7"}, 3},
+		{"unreadable env", &ten, []string{"", "lots"}, 10},
+		{"negative env", nil, []string{"", "-1"}, 1000},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := *resolveLimit(1000, tt.file, tt.values...); got != tt.want {
+				t.Errorf("resolveLimit = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEnvBool(t *testing.T) {
+	tests := []struct {
+		env  string
+		def  bool
+		want bool
+	}{
+		{"", true, true},
+		{"", false, false},
+		{"false", true, false}, // env switches off a yaml true
+		{"true", false, true},
+		{"0", true, false},
+		{"junk", true, true},
+	}
+	for _, tt := range tests {
+		t.Setenv("BUGGREGATOR_TEST_BOOL", tt.env)
+		if got := envBool("BUGGREGATOR_TEST_BOOL", tt.def); got != tt.want {
+			t.Errorf("env=%q def=%v: got %v", tt.env, tt.def, got)
+		}
+	}
+}
+
+func TestParseIdleTimeout(t *testing.T) {
+	for in, want := range map[string]time.Duration{
+		"10m": 10 * time.Minute, " 90s ": 90 * time.Second, "0": -1, "0s": -1, "-5m": -1,
+		"600": 0, "soon": 0, // not a duration: default
+	} {
+		if got := parseIdleTimeout(in); got != want {
+			t.Errorf("%q: %v, want %v", in, got, want)
+		}
+	}
+}
+
+func TestParseSize(t *testing.T) {
+	for in, want := range map[string]int64{
+		"123": 123, "64KB": 64 << 10, "100MB": 100 << 20, "100mb": 100 << 20, " 1 GB ": 1 << 30,
+		"256MiB": 256 << 20, "10M": 10 << 20, "512B": 512,
+	} {
+		if got, err := parseSize(in); err != nil || got != want {
+			t.Errorf("parseSize(%q) = %d, %v; want %d", in, got, err, want)
+		}
+	}
+	for _, in := range []string{"", "0", "-1MB", "MB", "1.5GB", "10TB", "99999999999GB"} {
+		if _, err := parseSize(in); err == nil {
+			t.Errorf("parseSize(%q) accepted", in)
+		}
+	}
+	if got := sizeOr("x", "junk", 7); got != 7 {
+		t.Errorf("sizeOr fallback = %d", got)
+	}
+}
+
+func TestModulesConfig_XdebugTrace(t *testing.T) {
+	if !(ModulesConfig{}).IsEnabled("xdebug-trace") {
+		t.Error("xdebug-trace is off by default")
+	}
+	if modulesFromCSV("sentry").IsEnabled("xdebug-trace") {
+		t.Error("xdebug-trace on although not listed")
+	}
+	if !modulesFromCSV("sentry,xdebug-trace").IsEnabled("xdebug-trace") {
+		t.Error("xdebug-trace off although listed")
+	}
+}
+
+func TestModulesConfig_Disable(t *testing.T) {
+	cfg := Config{}
+	cfg.Modules.Disable("xdebug-trace")
+	cfg.Modules.Disable("unknown-module") // no-op
+	if cfg.Modules.IsEnabled("xdebug-trace") {
+		t.Error("xdebug-trace should be disabled")
+	}
+	types := cfg.Modules.EnabledTypes()
+	if strings.Contains(strings.Join(types, ","), "xdebug-trace") || len(types) != 9 {
+		t.Errorf("EnabledTypes = %v", types)
+	}
+}
+
+func TestCORSOrigins(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		file []string
+		env  string
+		want string
+	}{
+		{"default allows all", nil, "", "*"},
+		{"file", []string{"http://localhost:3000"}, "", "http://localhost:3000"},
+		{"env wins", []string{"http://a"}, "http://b,http://c", "http://b,http://c"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := strings.Join(corsOrigins(tt.file, tt.env), ","); got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
 	}
 }

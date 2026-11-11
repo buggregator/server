@@ -3,9 +3,9 @@ package monolog
 import (
 	"context"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/module"
-	"github.com/buggregator/go-buggregator/internal/server/tcp"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/module"
+	"github.com/buggregator/server/v2/internal/server/tcp"
 )
 
 type Module struct {

@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/module"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 func setupAPITest(t *testing.T) (*http.ServeMux, *storage.SQLiteStore, *Module) {
@@ -32,6 +34,7 @@ func setupAPITest(t *testing.T) (*http.ServeMux, *storage.SQLiteStore, *Module) 
 
 	mux := http.NewServeMux()
 	mod.RegisterRoutes(mux, store)
+	mod.RegisterProtectedRoutes(mux, func(next http.Handler) http.Handler { return next })
 
 	return mux, store, mod
 }
@@ -573,6 +576,63 @@ func TestSMTPAPI_Wait(t *testing.T) {
 	})
 }
 
+// A wait on project A ignores new mail for project B and returns the mail
+// for A that comes after it.
+func TestSMTPAPI_WaitNewMailOfOtherProjectIgnored(t *testing.T) {
+	mux, store, mod := setupAPITest(t)
+	cursor := tsNow()
+
+	resultCh := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		url := fmt.Sprintf("/api/smtp/messages/wait?project=shop&timeout=5s&since=%.6f", cursor)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("GET", url, nil))
+		resultCh <- w
+	}()
+	waitWaiters(t, mod, 1)
+
+	deliver := func(uuid, project string) {
+		ev := event.Event{
+			UUID:      uuid,
+			Type:      "smtp",
+			Payload:   mustMarshalJSON(ParsedEmail{Subject: "to " + project}),
+			Timestamp: tsNow(),
+			Project:   project,
+		}
+		store.Store(context.Background(), ev)
+		mod.OnEventStored(ev)
+	}
+	deliver("mail-billing", "billing")
+	deliver("mail-shop", "shop")
+
+	select {
+	case w := <-resultCh:
+		if w.Code != 200 {
+			t.Fatalf("status = %d, want 200", w.Code)
+		}
+		if body := w.Body.String(); !strings.Contains(body, "mail-shop") || strings.Contains(body, "mail-billing") {
+			t.Errorf("wait on project shop returned %s, want mail-shop", body)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for result")
+	}
+}
+
+// waitWaiters waits until the module has n long-poll waiters.
+func waitWaiters(t *testing.T, mod *Module, n int) {
+	t.Helper()
+	for i := 0; i < 200; i++ {
+		mod.mu.Lock()
+		got := len(mod.waiters)
+		mod.mu.Unlock()
+		if got == n {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("module has no %d waiters", n)
+}
+
 // TestParseTimestamp verifies timestamp parsing from various formats.
 func TestParseTimestamp(t *testing.T) {
 	tests := []struct {
@@ -728,8 +788,8 @@ func TestExtractLinks(t *testing.T) {
 	}
 }
 
-// TestSessionAuthPlain verifies project extraction from SMTP AUTH.
-func TestSessionAuthPlain(t *testing.T) {
+// TestSessionSetProject verifies project extraction from the SMTP AUTH username.
+func TestSessionSetProject(t *testing.T) {
 	tests := []struct {
 		username string
 		want     string
@@ -741,9 +801,9 @@ func TestSessionAuthPlain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		s := &session{}
-		s.AuthPlain(tt.username, "password")
+		s.setProject(tt.username)
 		if s.project != tt.want {
-			t.Errorf("AuthPlain(%q) project = %q, want %q", tt.username, s.project, tt.want)
+			t.Errorf("setProject(%q) project = %q, want %q", tt.username, s.project, tt.want)
 		}
 	}
 }
@@ -761,4 +821,34 @@ func tsNow() float64 {
 // tsAgo returns a timestamp N seconds before now.
 func tsAgo(d time.Duration) float64 {
 	return float64(time.Now().Add(-d).UnixMicro()) / 1_000_000
+}
+
+func TestSMTP_OnEventsDeleted_RemovesAttachmentRows(t *testing.T) {
+	db, err := storage.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS smtp_attachments (
+		uuid TEXT PRIMARY KEY, event_uuid TEXT NOT NULL, name TEXT NOT NULL, path TEXT NOT NULL,
+		size INTEGER NOT NULL DEFAULT 0, mime TEXT NOT NULL DEFAULT '', content_id TEXT DEFAULT ''
+	)`); err != nil {
+		t.Fatal(err)
+	}
+	db.Exec(`DELETE FROM smtp_attachments`)
+	db.Exec(`INSERT INTO smtp_attachments (uuid, event_uuid, name, path) VALUES
+		('a1', 'gone', 'a.txt', 'gone/a.txt'), ('a2', 'kept', 'b.txt', 'kept/b.txt')`)
+
+	var mod module.EventDeleteListener = New(":1025", nil, db)
+	mod.OnEventsDeleted([]string{"gone"})
+
+	var n int
+	db.QueryRow(`SELECT COUNT(*) FROM smtp_attachments WHERE event_uuid = 'gone'`).Scan(&n)
+	if n != 0 {
+		t.Errorf("rows of deleted event left: %d", n)
+	}
+	db.QueryRow(`SELECT COUNT(*) FROM smtp_attachments WHERE event_uuid = 'kept'`).Scan(&n)
+	if n != 1 {
+		t.Errorf("rows of kept event: %d, want 1", n)
+	}
 }

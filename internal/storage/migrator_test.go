@@ -3,7 +3,7 @@ package storage_test
 import (
 	"testing"
 
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 func TestMigrator_AddSQL_and_Run(t *testing.T) {

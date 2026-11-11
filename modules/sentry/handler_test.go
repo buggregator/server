@@ -8,6 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/andybalholm/brotli"
+	"github.com/klauspost/compress/zstd"
 )
 
 func TestHandler_Priority(t *testing.T) {
@@ -140,6 +143,18 @@ func TestDecompress(t *testing.T) {
 		}
 	})
 
+	t.Run("brotli with header", func(t *testing.T) {
+		var buf bytes.Buffer
+		w := brotli.NewWriter(&buf)
+		w.Write([]byte("brotli body"))
+		w.Close()
+
+		got := decompress(buf.Bytes(), "br")
+		if string(got) != "brotli body" {
+			t.Errorf("got %q, want %q", got, "brotli body")
+		}
+	})
+
 	t.Run("gzip auto-detect by magic bytes", func(t *testing.T) {
 		var buf bytes.Buffer
 		w := gzip.NewWriter(&buf)
@@ -149,6 +164,39 @@ func TestDecompress(t *testing.T) {
 		got := decompress(buf.Bytes(), "")
 		if string(got) != "auto-detected" {
 			t.Errorf("got %q, want %q", got, "auto-detected")
+		}
+	})
+
+	// sentry-php sends Content-Encoding: zstd by default since 4.x. Without zstd
+	// support the body stays compressed, fails to parse as an envelope and the
+	// event is dropped silently — the request still answers 200.
+	t.Run("zstd with header", func(t *testing.T) {
+		var buf bytes.Buffer
+		w, err := zstd.NewWriter(&buf)
+		if err != nil {
+			t.Fatalf("zstd writer: %v", err)
+		}
+		w.Write([]byte("zstd payload"))
+		w.Close()
+
+		got := decompress(buf.Bytes(), "zstd")
+		if string(got) != "zstd payload" {
+			t.Errorf("got %q, want %q", got, "zstd payload")
+		}
+	})
+
+	t.Run("zstd auto-detect by magic bytes", func(t *testing.T) {
+		var buf bytes.Buffer
+		w, err := zstd.NewWriter(&buf)
+		if err != nil {
+			t.Fatalf("zstd writer: %v", err)
+		}
+		w.Write([]byte("zstd auto-detected"))
+		w.Close()
+
+		got := decompress(buf.Bytes(), "")
+		if string(got) != "zstd auto-detected" {
+			t.Errorf("got %q, want %q", got, "zstd auto-detected")
 		}
 	})
 
@@ -258,6 +306,45 @@ not valid json`)
 		// but there's nothing to store in the canonical events table.
 		if inc != nil {
 			t.Errorf("expected nil incoming for invalid payload, got %+v", inc)
+		}
+	})
+}
+
+// traceMetricEnvelope is a "trace_metric" envelope as the Sentry PHP SDK 4.x sends it.
+const traceMetricEnvelope = `{"event_id":"metric-envelope","sent_at":"2026-10-16T10:00:00Z"}
+{"type":"trace_metric","item_count":2,"content_type":"application/vnd.sentry.items.trace-metric+json"}
+{"items":[{"timestamp":1788420877.523564,"trace_id":"53c16245360049e1a0cd3041dede1ec7","span_id":"9ada5f708f96d465","name":"order.status","value":3,"unit":null,"type":"gauge","attributes":{"status":{"type":"string","value":"qa"}}},{"timestamp":1788420877.6,"trace_id":"53c16245360049e1a0cd3041dede1ec7","span_id":"9ada5f708f96d465","name":"http.client.duration","value":12.5,"unit":"millisecond","type":"distribution","attributes":{"server.address":{"type":"string","value":"api"}}}]}
+`
+
+func TestHandleEnvelope_TraceMetrics(t *testing.T) {
+	t.Run("stored, not turned into a feed event", func(t *testing.T) {
+		db := setupTestDB(t)
+		h := &handler{db: db}
+
+		inc, err := h.handleEnvelope([]byte(traceMetricEnvelope), "proj")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if inc != nil {
+			t.Errorf("expected no feed event for a metrics-only envelope, got %+v", inc)
+		}
+
+		var count int
+		db.QueryRow(`SELECT COUNT(*) FROM sentry_metrics`).Scan(&count)
+		if count != 2 {
+			t.Errorf("metric count = %d, want 2", count)
+		}
+	})
+
+	t.Run("dropped without a database", func(t *testing.T) {
+		h := &handler{}
+
+		inc, err := h.handleEnvelope([]byte(traceMetricEnvelope), "proj")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if inc != nil {
+			t.Errorf("expected no feed event for a metrics-only envelope, got %+v", inc)
 		}
 	})
 }
@@ -677,4 +764,246 @@ func TestPreviewMapper(t *testing.T) {
 			t.Errorf("text = %q, expected to contain message and level", text)
 		}
 	})
+}
+
+// v4Envelope builds an envelope shaped like sentry/sentry 4.34.0 output
+// (Serializer/PayloadSerializer.php): header line, then item header/payload pairs.
+func v4Envelope(eventID string, items ...string) string {
+	header := `{"sent_at":"2026-10-23T12:00:00Z","dsn":"http://test@localhost:8000/1","sdk":{"name":"sentry.php","version":"4.34.0"}`
+	if eventID != "" {
+		header += `,"event_id":"` + eventID + `"`
+	}
+	return header + "}\n" + strings.Join(items, "\n")
+}
+
+// TestHandler_MessageWithMixedParams covers captureMessage() with non-string
+// params, which every SDK version serializes as {"message","params","formatted"}.
+func TestHandler_MessageWithMixedParams_WithDB(t *testing.T) {
+	message := `{"message":"Cart %s has %d items, paid: %s","params":["c-1",3,true],"formatted":"Cart c-1 has 3 items, paid: 1"}`
+
+	tests := []struct {
+		name    string
+		path    string
+		body    string
+		eventID string
+	}{
+		{
+			name:    "v2 plain JSON",
+			path:    "/api/1/store/",
+			body:    `{"event_id":"a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1","timestamp":"2026-10-23T12:00:00Z","level":"info","platform":"php","message":` + message + `}`,
+			eventID: "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+		},
+		{
+			name: "v4 envelope",
+			path: "/api/1/envelope/",
+			body: v4Envelope("b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+				`{"type":"event","content_type":"application/json"}`,
+				`{"timestamp":1792756800.25,"platform":"php","sdk":{"name":"sentry.php","version":"4.34.0"},"level":"info","message":`+message+`}`),
+			eventID: "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := setupTestDB(t)
+			h := &handler{db: db}
+
+			r := httptest.NewRequest("POST", tt.path, strings.NewReader(tt.body))
+			r.Header.Set("X-Sentry-Auth", "Sentry sentry_version=7, sentry_key=test")
+
+			inc, err := h.Handle(r)
+			if err != nil {
+				t.Fatalf("Handle() error: %v", err)
+			}
+			if inc == nil {
+				t.Fatal("Handle() returned nil")
+			}
+			if inc.UUID != tt.eventID {
+				t.Errorf("UUID = %q, want %q", inc.UUID, tt.eventID)
+			}
+
+			var parsed map[string]any
+			if err := json.Unmarshal(inc.Payload, &parsed); err != nil {
+				t.Fatalf("failed to parse payload: %v", err)
+			}
+			if parsed["event_id"] != tt.eventID {
+				t.Errorf("payload event_id = %v, want %q", parsed["event_id"], tt.eventID)
+			}
+
+			var count int
+			if err := db.QueryRow("SELECT COUNT(*) FROM sentry_error_events WHERE event_id = ?", tt.eventID).Scan(&count); err != nil {
+				t.Fatalf("query error: %v", err)
+			}
+			if count != 1 {
+				t.Errorf("sentry_error_events count = %d, want 1 (mixed message params must not break structured storage)", count)
+			}
+		})
+	}
+}
+
+// TestHandler_SDKv4_Envelope_UnparseableEventKeepsEventID checks that an event
+// the structured parser rejects still reaches the feed with its event_id.
+func TestHandler_SDKv4_Envelope_UnparseableEventKeepsEventID(t *testing.T) {
+	h := &handler{}
+
+	// "level" as a number does not fit ErrorEvent.
+	body := v4Envelope("c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+		`{"type":"event","content_type":"application/json"}`,
+		`{"timestamp":1792756800.25,"platform":"php","level":40,"message":"odd"}`)
+
+	inc, err := h.handleEnvelope([]byte(body), "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inc == nil {
+		t.Fatal("expected an incoming event")
+	}
+	if inc.UUID != "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3" {
+		t.Errorf("UUID = %q, want envelope event_id", inc.UUID)
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(inc.Payload, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	if parsed["event_id"] != "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3" {
+		t.Errorf("payload event_id = %v, want it injected from the envelope header", parsed["event_id"])
+	}
+}
+
+// TestHandler_SDKv4_Transaction_WithDB covers v4 transactions: event_id only in
+// the envelope header, span data with non-string values (GuzzleTracingMiddleware).
+func TestHandler_SDKv4_Transaction_WithDB(t *testing.T) {
+	db := setupTestDB(t)
+	h := &handler{db: db}
+
+	txn := func(eventID, traceID string) string {
+		return v4Envelope(eventID,
+			`{"type":"transaction","content_type":"application/json"}`,
+			`{"timestamp":1792756801.5,"platform":"php","sdk":{"name":"sentry.php","version":"4.34.0"},"start_timestamp":1792756800.0,"transaction":"GET /orders","contexts":{"trace":{"trace_id":"`+traceID+`","span_id":"1000000000000001","op":"http.server","origin":"manual"}},"spans":[{"span_id":"2000000000000002","trace_id":"`+traceID+`","start_timestamp":1792756800.1,"origin":"auto.http.guzzle","parent_span_id":"1000000000000001","timestamp":1792756800.4,"status":"ok","description":"GET https://api.example.com/stock","op":"http.client","data":{"http.url":"https://api.example.com/stock","http.request.method":"GET","http.request.body.size":0,"http.response.body.size":512,"http.response.status_code":200}}]}`)
+	}
+
+	for _, body := range []string{
+		txn("d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+		txn("e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+	} {
+		r := httptest.NewRequest("POST", "/api/1/envelope/", strings.NewReader(body))
+		inc, err := h.Handle(r)
+		if err != nil {
+			t.Fatalf("Handle() error: %v", err)
+		}
+		if inc != nil {
+			t.Errorf("transaction must not create a feed event, got %+v", inc)
+		}
+	}
+
+	var count int
+	db.QueryRow(`SELECT COUNT(*) FROM sentry_transactions WHERE event_id IN (?, ?)`,
+		"d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4", "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5").Scan(&count)
+	if count != 2 {
+		t.Errorf("sentry_transactions count = %d, want 2 (event_id must come from the envelope header)", count)
+	}
+
+	var peerType, peerAddress, attrs string
+	err := db.QueryRow(`SELECT peer_type, peer_address, attributes FROM sentry_spans WHERE trace_id = ?`,
+		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").Scan(&peerType, &peerAddress, &attrs)
+	if err != nil {
+		t.Fatalf("span not stored: %v", err)
+	}
+	if peerType != "http" || peerAddress != "api.example.com" {
+		t.Errorf("peer = %q %q, want http api.example.com", peerType, peerAddress)
+	}
+	// Span data values are normalized to strings (SpanData).
+	if !strings.Contains(attrs, `"http.response.status_code":"200"`) {
+		t.Errorf("attributes = %s, want the numeric status code kept", attrs)
+	}
+}
+
+// TestHandler_SDKv4_SpanV2Item_WithDB covers the "span" item (Span v2) that
+// SDK v4 adds after a transaction for gen_ai spans.
+func TestHandler_SDKv4_SpanV2Item_WithDB(t *testing.T) {
+	db := setupTestDB(t)
+	h := &handler{db: db}
+
+	body := v4Envelope("f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6",
+		`{"type":"transaction","content_type":"application/json"}`,
+		`{"timestamp":1792756803.0,"platform":"php","start_timestamp":1792756800.0,"transaction":"POST /chat","contexts":{"trace":{"trace_id":"cccccccccccccccccccccccccccccccc","span_id":"1000000000000001"}},"spans":[]}`,
+		`{"type":"span","item_count":1,"content_type":"application/vnd.sentry.items.span.v2+json"}`,
+		`{"items":[{"trace_id":"cccccccccccccccccccccccccccccccc","span_id":"3000000000000003","name":"chat claude","is_segment":false,"start_timestamp":1792756800.5,"attributes":{"sentry.op":{"type":"string","value":"gen_ai.chat"},"gen_ai.usage.input_tokens":{"type":"integer","value":42}},"status":"ok","end_timestamp":1792756802.5,"parent_span_id":"1000000000000001"}],"version":2}`)
+
+	inc, err := h.handleEnvelope([]byte(body), "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inc != nil {
+		t.Errorf("transaction with span item must not create a feed event, got payload %s", inc.Payload)
+	}
+
+	var op, description, attrs string
+	var durationMS int
+	err = db.QueryRow(`SELECT op, description, duration_ms, attributes FROM sentry_spans WHERE span_id = ?`,
+		"3000000000000003").Scan(&op, &description, &durationMS, &attrs)
+	if err != nil {
+		t.Fatalf("span v2 not stored: %v", err)
+	}
+	if op != "gen_ai.chat" {
+		t.Errorf("op = %q, want gen_ai.chat (from sentry.op attribute)", op)
+	}
+	if description != "chat claude" {
+		t.Errorf("description = %q, want span name", description)
+	}
+	if durationMS != 2000 {
+		t.Errorf("duration_ms = %d, want 2000 (from end_timestamp)", durationMS)
+	}
+	if !strings.Contains(attrs, `"gen_ai.usage.input_tokens":"42"`) {
+		t.Errorf("attributes = %s, want typed attribute values unwrapped", attrs)
+	}
+}
+
+// TestHandler_SDKv4_NonFeedEnvelopes checks that envelopes without an event
+// never become cards in the feed.
+func TestHandler_SDKv4_NonFeedEnvelopes(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+	}{
+		{
+			name: "check_in",
+			body: v4Envelope("a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7",
+				`{"type":"check_in","content_type":"application/json"}`,
+				`{"check_in_id":"a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7","monitor_slug":"nightly","status":"ok","duration":1.5,"release":null,"environment":"production"}`),
+		},
+		{
+			name: "client_report",
+			body: "{}\n" + `{"type":"client_report"}` + "\n" +
+				`{"timestamp":1792756800.0,"discarded_events":[{"category":"error","reason":"sample_rate","quantity":2}]}`,
+		},
+		{
+			name: "trace_metric",
+			body: v4Envelope("",
+				`{"type":"trace_metric","item_count":1,"content_type":"application/vnd.sentry.items.trace-metric+json"}`,
+				`{"items":[{"timestamp":1792756800.0,"trace_id":"dddddddddddddddddddddddddddddddd","span_id":"4000000000000004","name":"orders.placed","value":1,"unit":null,"type":"counter","attributes":{}}]}`),
+		},
+		{
+			name: "transaction with profile",
+			body: v4Envelope("b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8",
+				`{"type":"transaction","content_type":"application/json"}`,
+				`{"timestamp":1792756801.0,"platform":"php","start_timestamp":1792756800.0,"transaction":"GET /","contexts":{"trace":{"trace_id":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","span_id":"1000000000000001"}},"spans":[]}`,
+				`{"type":"profile","content_type":"application/json"}`,
+				`{"device":{"architecture":"x86_64"},"os":{"name":"Linux"},"platform":"php","profile":{"frames":[],"samples":[],"stacks":[]},"version":"1"}`),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := &handler{}
+			r := httptest.NewRequest("POST", "/api/1/envelope/", strings.NewReader(tt.body))
+			inc, err := h.Handle(r)
+			if err != nil {
+				t.Fatalf("Handle() error: %v", err)
+			}
+			if inc != nil {
+				t.Errorf("expected no feed event, got payload %s", inc.Payload)
+			}
+		})
+	}
 }

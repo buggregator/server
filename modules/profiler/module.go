@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/module"
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/module"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 type Module struct {
@@ -34,8 +34,9 @@ func (m *Module) HTTPHandler() module.HTTPIngestionHandler {
 	return &handler{}
 }
 
-func (m *Module) RegisterRoutes(mux *http.ServeMux, store event.Store) {
-	registerAPI(mux, m.db, store)
+// RegisterProtectedRoutes adds the profiler UI API behind the API auth.
+func (m *Module) RegisterProtectedRoutes(mux *http.ServeMux, protect func(http.Handler) http.Handler) {
+	registerAPI(mux, m.db, protect)
 }
 
 func (m *Module) PreviewMapper() event.PreviewMapper {

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 type handler struct{}
@@ -21,6 +21,9 @@ func (h *handler) Match(r *http.Request) bool {
 	if r.Header.Get("X-Buggregator-Detected-Type") == "sms" {
 		return true
 	}
+	if _, ok := twilioAccountSID(r.URL.Path); ok {
+		return true
+	}
 	return strings.HasPrefix(r.URL.Path, "/sms")
 }
 
@@ -28,6 +31,10 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 	body, err := parseBody(r)
 	if err != nil {
 		return nil, err
+	}
+
+	if sid, ok := twilioAccountSID(r.URL.Path); ok {
+		return handleTwilioSend(sid, body), nil
 	}
 
 	// Parse URL segments: /sms, /sms/{gateway}, /sms/{gateway}/{project}

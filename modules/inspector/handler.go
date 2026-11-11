@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 type handler struct{}

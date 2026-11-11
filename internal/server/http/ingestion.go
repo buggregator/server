@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/buggregator/go-buggregator/internal/module"
+	"github.com/buggregator/server/v2/internal/module"
 )
 
 const (
@@ -34,6 +34,12 @@ func NewIngestionPipeline(handlers []module.HTTPIngestionHandler, es *EventServi
 }
 
 func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// The detected headers are the pipeline's own: drop any a client sent, so
+	// only detection below sets them (a client names its project with
+	// X-Buggregator-Project or the DSN).
+	r.Header.Del(HeaderDetectedType)
+	r.Header.Del(HeaderDetectedProject)
+
 	// Detect event type from userinfo/headers/basic-auth.
 	detected := detectEventType(r)
 	if detected != nil {
@@ -88,6 +94,10 @@ func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			if incoming.Respond != nil {
+				incoming.Respond(w)
+				return
+			}
 			writeIngestionResponse(w, incoming.Type, incoming.UUID)
 			return
 		}

@@ -1,11 +1,14 @@
 package sentry
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
+	"log/slog"
+	"strings"
 	"testing"
 
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
@@ -220,7 +223,7 @@ func TestStoreTransaction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	id, err := storeTransaction(db, &txn, payload)
+	id, err := storeTransaction(db, &txn, payload, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +301,7 @@ func TestStoreLogs(t *testing.T) {
 		{Level: "info", Body: "Request completed"},
 	}
 
-	err := storeLogs(db, logs)
+	err := storeLogs(db, logs, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,6 +320,37 @@ func TestStoreLogs(t *testing.T) {
 	}
 	if level != "info" {
 		t.Errorf("level = %q, want 'info'", level)
+	}
+}
+
+func TestStoreMetrics(t *testing.T) {
+	db := setupTestDB(t)
+
+	metrics := []MetricRecord{
+		{TraceID: "trace-1", SpanID: "span-1", Name: "http.client.duration", Type: "distribution", Value: 12.5, Unit: "millisecond", Timestamp: "1788420877.523564"},
+		{Name: "order.status", Type: "gauge", Value: 3, Attributes: map[string]any{"status": map[string]any{"type": "string", "value": "qa"}}},
+		{Type: "counter", Value: 1}, // no name: dropped
+	}
+
+	if err := storeMetrics(db, metrics, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	var count int
+	db.QueryRow(`SELECT COUNT(*) FROM sentry_metrics`).Scan(&count)
+	if count != 2 {
+		t.Errorf("metric count = %d, want 2", count)
+	}
+
+	var traceID, metricType, unit, metricTS string
+	var value float64
+	db.QueryRow(`SELECT trace_id, type, value, unit, metric_ts FROM sentry_metrics WHERE name = ?`, "http.client.duration").
+		Scan(&traceID, &metricType, &value, &unit, &metricTS)
+	if traceID != "trace-1" || metricType != "distribution" || value != 12.5 || unit != "millisecond" {
+		t.Errorf("got trace_id=%q type=%q value=%v unit=%q", traceID, metricType, value, unit)
+	}
+	if !strings.HasPrefix(metricTS, "2026-09-03T07:34:37.5") {
+		t.Errorf("metric_ts = %q, want 2026-09-03T07:34:37.5…", metricTS)
 	}
 }
 
@@ -369,31 +403,31 @@ func TestSpanClassifier(t *testing.T) {
 	}{
 		{
 			name:        "db.query",
-			span:        RawSpan{Op: "db.query", Data: map[string]string{"server.address": "db.host.com"}},
+			span:        RawSpan{Op: "db.query", Data: SpanData{"server.address": "db.host.com"}},
 			wantType:    "db",
 			wantAddress: "db.host.com",
 		},
 		{
 			name:        "db with db.name fallback",
-			span:        RawSpan{Op: "db.redis", Data: map[string]string{"db.name": "cache-0"}},
+			span:        RawSpan{Op: "db.redis", Data: SpanData{"db.name": "cache-0"}},
 			wantType:    "db",
 			wantAddress: "cache-0",
 		},
 		{
 			name:        "http.client",
-			span:        RawSpan{Op: "http.client", Data: map[string]string{"http.url": "https://api.example.com:8080/path"}},
+			span:        RawSpan{Op: "http.client", Data: SpanData{"http.url": "https://api.example.com:8080/path"}},
 			wantType:    "http",
 			wantAddress: "api.example.com:8080",
 		},
 		{
 			name:        "cache.get",
-			span:        RawSpan{Op: "cache.get", Data: map[string]string{"server.address": "redis.local"}},
+			span:        RawSpan{Op: "cache.get", Data: SpanData{"server.address": "redis.local"}},
 			wantType:    "cache",
 			wantAddress: "redis.local",
 		},
 		{
 			name:        "queue.publish",
-			span:        RawSpan{Op: "queue.publish", Data: map[string]string{"messaging.destination": "orders-queue"}},
+			span:        RawSpan{Op: "queue.publish", Data: SpanData{"messaging.destination": "orders-queue"}},
 			wantType:    "queue",
 			wantAddress: "orders-queue",
 		},
@@ -466,12 +500,9 @@ func TestSessionItemDiscarded(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Should still return a valid response (no error).
-	if inc == nil {
-		t.Fatal("expected non-nil incoming event")
-	}
-	if inc.Type != "sentry" {
-		t.Errorf("Type = %q, want 'sentry'", inc.Type)
+	// A session ping is not an event: it must not become a card in the feed.
+	if inc != nil {
+		t.Errorf("expected nil incoming event for session-only envelope, got %+v", inc)
 	}
 }
 
@@ -503,5 +534,112 @@ func TestHandlerWithDB(t *testing.T) {
 	db.QueryRow(`SELECT COUNT(*) FROM sentry_exceptions`).Scan(&excCount)
 	if excCount != 1 {
 		t.Errorf("exceptions = %d, want 1", excCount)
+	}
+}
+
+// An empty {"items": []} log or metric item is valid: it stores nothing and
+// must not log the "neither {items} nor an array" drop line. A payload that is
+// neither still logs it.
+func TestHandleItemsEmptyAndInvalidPayload(t *testing.T) {
+	db := setupTestDB(t)
+	h := &handler{db: db}
+
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	tests := []struct {
+		payload  string
+		wantDrop bool
+	}{
+		{`{"items": []}`, false},
+		{`[]`, false},
+		{`"neither"`, true},
+	}
+	for _, tt := range tests {
+		for _, itemType := range []string{"log", "trace_metric"} {
+			buf.Reset()
+			item := EnvelopeItem{Type: itemType, Payload: json.RawMessage(tt.payload)}
+			if itemType == "log" {
+				h.handleLogItem(item, "")
+			} else {
+				h.handleMetricItem(item, "")
+			}
+			if got := strings.Contains(buf.String(), "neither"); got != tt.wantDrop {
+				t.Errorf("%s %s: drop line logged = %v, want %v; log: %q", itemType, tt.payload, got, tt.wantDrop, buf.String())
+			}
+		}
+	}
+}
+
+// TestStoreTransaction_OpStatusFromTraceContext covers SDK v3/v4, which send
+// a transaction's op and status only in contexts.trace.
+func TestStoreTransaction_OpStatusFromTraceContext(t *testing.T) {
+	db := setupTestDB(t)
+
+	payload := json.RawMessage(`{"event_id":"txn-ctx","type":"transaction","transaction":"POST /checkout","start_timestamp":1792756800.0,"timestamp":1792756801.0,"contexts":{"trace":{"trace_id":"ffffffffffffffffffffffffffffffff","span_id":"1000000000000001","op":"http.server","status":"internal_error","origin":"manual"}},"spans":[]}`)
+
+	var txn Transaction
+	if err := json.Unmarshal(payload, &txn); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := storeTransaction(db, &txn, payload, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	var op, status sql.NullString
+	if err := db.QueryRow(`SELECT op, status FROM sentry_transactions WHERE event_id = ?`, "txn-ctx").Scan(&op, &status); err != nil {
+		t.Fatal(err)
+	}
+	if op.String != "http.server" {
+		t.Errorf("op = %q, want http.server from contexts.trace", op.String)
+	}
+	if status.String != "internal_error" {
+		t.Errorf("status = %q, want internal_error from contexts.trace", status.String)
+	}
+}
+
+// TestStoreSpansV2_ErrorStatus covers Span v2 items, whose status is "ok" or "error".
+func TestStoreSpansV2_ErrorStatus(t *testing.T) {
+	db := setupTestDB(t)
+
+	var envelope SpansEnvelope
+	err := json.Unmarshal([]byte(`{"items":[
+		{"trace_id":"9999999999999999999999999999999a","span_id":"5000000000000005","name":"chat claude","start_timestamp":1792756800.0,"end_timestamp":1792756801.0,"status":"error","attributes":{"sentry.op":{"type":"string","value":"gen_ai.chat"}}},
+		{"trace_id":"9999999999999999999999999999999a","span_id":"6000000000000006","name":"chat claude","start_timestamp":1792756801.0,"end_timestamp":1792756802.0,"status":"ok","attributes":{"sentry.op":{"type":"string","value":"gen_ai.chat"}}}
+	],"version":2}`), &envelope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storeSpansV2(db, envelope.Items, nil, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		spanID  string
+		isError int
+	}{
+		{"5000000000000005", 1},
+		{"6000000000000006", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.spanID, func(t *testing.T) {
+			var isError int
+			if err := db.QueryRow(`SELECT is_error FROM sentry_spans WHERE span_id = ?`, tt.spanID).Scan(&isError); err != nil {
+				t.Fatal(err)
+			}
+			if isError != tt.isError {
+				t.Errorf("is_error = %d, want %d", isError, tt.isError)
+			}
+		})
+	}
+
+	var errorCount int
+	if err := db.QueryRow(`SELECT error_count FROM sentry_traces WHERE trace_id = ?`, "9999999999999999999999999999999a").Scan(&errorCount); err != nil {
+		t.Fatal(err)
+	}
+	if errorCount != 1 {
+		t.Errorf("trace error_count = %d, want 1", errorCount)
 	}
 }

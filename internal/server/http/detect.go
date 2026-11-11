@@ -40,26 +40,42 @@ func detectEventType(r *http.Request) *DetectedEvent {
 	path := strings.TrimRight(r.URL.Path, "/")
 	isSentryStore := strings.HasSuffix(path, "/store") && !strings.Contains(path, "/profiler/")
 	if r.Header.Get("X-Sentry-Auth") != "" || strings.HasSuffix(path, "/envelope") || isSentryStore {
-		return &DetectedEvent{Type: "sentry"}
+		// A DSN like http://sentry:shop@host/1 reaches us as Basic Auth on some
+		// SDKs: keep its project.
+		project := ""
+		if typ, p := basicAuth(r); typ == "sentry" {
+			project = p
+		}
+		return &DetectedEvent{Type: "sentry", Project: project}
 	}
 	if r.Header.Get("X-Inspector-Key") != "" || r.Header.Get("X-Inspector-Version") != "" {
 		return &DetectedEvent{Type: "inspector"}
 	}
+	// Twilio's send API (/2010-04-01/Accounts/{sid}/Messages.json) carries
+	// Basic Auth SID:TOKEN, which is no type:project pair.
+	if strings.HasPrefix(path, "/2010-04-01/Accounts/") && strings.HasSuffix(path, "/Messages.json") {
+		return &DetectedEvent{Type: "sms"}
+	}
 
 	// Method 4: Basic Auth (Authorization: Basic base64(type:project))
-	if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Basic ") {
-		decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(auth, "Basic "))
-		if err == nil {
-			parts := strings.SplitN(string(decoded), ":", 2)
-			if len(parts) >= 1 && parts[0] != "" {
-				project := ""
-				if len(parts) >= 2 {
-					project = parts[1]
-				}
-				return &DetectedEvent{Type: parts[0], Project: project}
-			}
-		}
+	if typ, project := basicAuth(r); typ != "" {
+		return &DetectedEvent{Type: typ, Project: project}
 	}
 
 	return nil
+}
+
+// basicAuth reads Authorization: Basic base64(type:project); empty type when
+// there is none.
+func basicAuth(r *http.Request) (typ, project string) {
+	auth := r.Header.Get("Authorization")
+	if !strings.HasPrefix(auth, "Basic ") {
+		return "", ""
+	}
+	decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(auth, "Basic "))
+	if err != nil {
+		return "", ""
+	}
+	typ, project, _ = strings.Cut(string(decoded), ":")
+	return typ, project
 }

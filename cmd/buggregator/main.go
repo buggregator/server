@@ -4,26 +4,30 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"runtime"
+	"time"
 
-	"github.com/buggregator/go-buggregator/internal/app"
-	mcpserver "github.com/buggregator/go-buggregator/internal/mcp"
-	"github.com/buggregator/go-buggregator/internal/metrics"
-	"github.com/buggregator/go-buggregator/internal/module"
-	httpserver "github.com/buggregator/go-buggregator/internal/server/http"
-	"github.com/buggregator/go-buggregator/internal/server/ws"
-	"github.com/buggregator/go-buggregator/internal/storage"
-	"github.com/buggregator/go-buggregator/modules/httpdumps"
-	"github.com/buggregator/go-buggregator/modules/inspector"
-	"github.com/buggregator/go-buggregator/modules/monolog"
-	"github.com/buggregator/go-buggregator/modules/profiler"
-	"github.com/buggregator/go-buggregator/modules/ray"
-	"github.com/buggregator/go-buggregator/modules/sentry"
-	"github.com/buggregator/go-buggregator/modules/sms"
-	"github.com/buggregator/go-buggregator/modules/proxy"
-	smtpmod "github.com/buggregator/go-buggregator/modules/smtp"
-	"github.com/buggregator/go-buggregator/modules/vardumper"
-	"github.com/buggregator/go-buggregator/modules/webhooks"
+	"github.com/buggregator/server/v2/internal/app"
+	mcpserver "github.com/buggregator/server/v2/internal/mcp"
+	"github.com/buggregator/server/v2/internal/metrics"
+	"github.com/buggregator/server/v2/internal/module"
+	httpserver "github.com/buggregator/server/v2/internal/server/http"
+	"github.com/buggregator/server/v2/internal/server/ws"
+	"github.com/buggregator/server/v2/internal/storage"
+	"github.com/buggregator/server/v2/modules/httpdumps"
+	"github.com/buggregator/server/v2/modules/inspector"
+	"github.com/buggregator/server/v2/modules/monolog"
+	"github.com/buggregator/server/v2/modules/profiler"
+	"github.com/buggregator/server/v2/modules/proxy"
+	"github.com/buggregator/server/v2/modules/ray"
+	"github.com/buggregator/server/v2/modules/sentry"
+	"github.com/buggregator/server/v2/modules/sms"
+	smtpmod "github.com/buggregator/server/v2/modules/smtp"
+	"github.com/buggregator/server/v2/modules/vardumper"
+	"github.com/buggregator/server/v2/modules/webhooks"
+	"github.com/buggregator/server/v2/modules/xdebug"
+	"github.com/buggregator/server/v2/modules/xdebugtrace"
 )
 
 // version is set at build time via -ldflags "-X main.version=...".
@@ -48,7 +52,11 @@ func main() {
 	cfg := app.LoadConfig()
 	cfg.Version = version
 
-	db, err := storage.Open(cfg.DatabaseDSN)
+	if limit, source := app.ApplyMemoryLimit(); limit > 0 {
+		slog.Info("go memory limit", "mib", limit>>20, "source", source)
+	}
+
+	db, err := storage.OpenPooled(cfg.DatabaseDSN, cfg.Database.MaxOpenConns)
 	if err != nil {
 		slog.Error("failed to open database", "err", err)
 		os.Exit(1)
@@ -111,6 +119,30 @@ func main() {
 	if enabled.IsEnabled("profiler") {
 		registry.Register(profiler.New())
 	}
+	if enabled.IsEnabled("xdebug-trace") {
+		// Trace files live on disk either way: under storage.path in
+		// filesystem mode, in a temp dir removed at exit in memory mode.
+		// The module is optional: without a dir it stays off, the rest runs.
+		traceDir := filepath.Join(cfg.Storage.Path, "xdebug-traces")
+		if cfg.Storage.Mode != "filesystem" {
+			tmp, err := xdebugtrace.TempDir("")
+			if err != nil {
+				slog.Error("xdebug-trace: cannot create temp dir; module disabled", "err", err)
+				traceDir = ""
+				cfg.Modules.Disable("xdebug-trace") // keep it out of the UI menu
+			} else {
+				defer os.RemoveAll(tmp)
+				traceDir = tmp
+			}
+		}
+		if traceDir != "" {
+			registry.Register(xdebugtrace.New(traceDir, xdebugtrace.Limits{
+				MaxUpload: cfg.XdebugTrace.MaxUploadBytes,
+				MaxSize:   cfg.XdebugTrace.MaxSizeBytes,
+				Keep:      cfg.XdebugTrace.Keep,
+			}))
+		}
+	}
 	if enabled.IsEnabled("monolog") {
 		registry.Register(monologMod)
 	}
@@ -122,6 +154,24 @@ func main() {
 	}
 	if enabled.IsEnabled("sms") {
 		registry.Register(sms.New())
+	}
+	// Xdebug proxy — off by default; forwards DBGp to the IDE, adds read-only
+	// MCP tools and the /api/xdebug routes + "xdebug" WebSocket channel for the UI.
+	if cfg.Xdebug.Enabled {
+		xdebugMod := xdebug.New(xdebug.Config{
+			Addr:      cfg.Xdebug.Addr,
+			IDEAddr:   cfg.Xdebug.IDEAddr,
+			AllowEval: cfg.Xdebug.AllowEval,
+
+			AllowControl: cfg.Xdebug.AllowControlOn(),
+
+			Mode:             cfg.Xdebug.Mode,
+			PauseOnFirstLine: cfg.Xdebug.PauseOnFirstLine,
+			IdleTimeout:      cfg.Xdebug.IdleTimeoutDur,
+		})
+		xdebugMod.SetBroadcaster(hub)
+		hub.AddServerChannel(xdebug.Channel)
+		registry.Register(xdebugMod)
 	}
 	// HTTP proxy — stores events as http-dump with response data.
 	registry.Register(proxyMod)
@@ -150,9 +200,25 @@ func main() {
 		slog.Info("webhooks registered", "count", len(whConfigs))
 	}
 
+	var httpDumpMod *httpdumps.Module
 	if enabled.IsEnabled("http-dump") {
-		registry.Register(httpdumps.New(attachments, db)) // catch-all, must be last
+		httpDumpMod = httpdumps.New(attachments, db)
+		httpDumpMod.SetMockRules(append(mockRules(cfg.Mocks), openAPIMockRules(cfg.MocksOpenAPI)...))
+		httpDumpMod.SetMCPMockWrite(cfg.MCP.MockWriteOn())
+		registry.Register(httpDumpMod) // catch-all, must be last
 	}
+
+	// Modules that send notices of their own (module.Broadcasting) get the hub.
+	registry.WireBroadcaster(hub)
+
+	// Events removed by delete or clear-all take their files and module data
+	// with them.
+	store.OnDelete(func(uuids []string) {
+		for _, u := range uuids {
+			attachments.DeleteByEvent(u)
+		}
+		registry.NotifyEventsDeleted(uuids)
+	})
 
 	// Build event service and inject into TCP modules.
 	eventService := httpserver.NewEventService(store, hub, registry, collector, db)
@@ -166,7 +232,51 @@ func main() {
 		vardumperMod.SetEventService(eventService)
 	}
 	proxyMod.SetEventService(eventService)
+	if httpDumpMod != nil {
+		httpDumpMod.SetEventService(eventService)
+	}
 
 	application := app.New(cfg, db, registry, hub, store, attachments, collector)
 	application.Run()
+}
+
+// openAPIMockRules reads the specs of the mocks_openapi section. A spec that
+// cannot be read is logged and skipped, so a bad file never stops the server.
+func openAPIMockRules(defs []app.MockOpenAPIDef) []httpdumps.MockRule {
+	var rules []httpdumps.MockRule
+	for _, d := range defs {
+		res, err := httpdumps.OpenAPIRulesFromFile(d.File, httpdumps.OpenAPIImport{Project: d.Project, Group: d.Group, BasePath: d.BasePath})
+		if err != nil {
+			slog.Warn("mock: skipping OpenAPI spec", "file", d.File, "err", err)
+			continue
+		}
+		for _, sk := range res.Skipped {
+			slog.Warn("mock: OpenAPI operation skipped", "file", d.File, "method", sk.Method, "path", sk.Path, "reason", sk.Reason)
+		}
+		slog.Info("mock: OpenAPI spec loaded", "file", d.File, "group", res.Group, "rules", len(res.Rules))
+		rules = append(rules, res.Rules...)
+	}
+	return rules
+}
+
+// mockRules converts the mocks section of buggregator.yaml. A delay that is
+// not a duration is logged and dropped; the rest is validated by the module.
+func mockRules(defs []app.MockDef) []httpdumps.MockRule {
+	rules := make([]httpdumps.MockRule, 0, len(defs))
+	for _, d := range defs {
+		r := httpdumps.MockRule{
+			Name: d.Name, Method: d.Method, Path: d.Path, Status: d.Status,
+			Headers: d.Headers, Body: d.Body, Project: d.Project,
+			Template: d.Template, Seed: d.Seed,
+		}
+		if d.Delay != "" {
+			if delay, err := time.ParseDuration(d.Delay); err == nil {
+				r.DelayMs = int(delay / time.Millisecond)
+			} else {
+				slog.Warn("mock: delay is not a duration, ignored", "path", d.Path, "delay", d.Delay)
+			}
+		}
+		rules = append(rules, r)
+	}
+	return rules
 }

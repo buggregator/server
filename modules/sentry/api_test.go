@@ -2,6 +2,7 @@ package sentry
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,7 +13,7 @@ import (
 func seedTestData(t *testing.T, mux *http.ServeMux) {
 	t.Helper()
 	db := setupTestDB(t)
-	registerAPI(mux, db)
+	registerAPI(mux, db, noAuth)
 
 	// Insert error events.
 	for i, evt := range []struct {
@@ -58,14 +59,21 @@ func seedTestData(t *testing.T, mux *http.ServeMux) {
 	})
 	var txn Transaction
 	json.Unmarshal(txnPayload, &txn)
-	storeTransaction(db, &txn, txnPayload)
+	storeTransaction(db, &txn, txnPayload, "")
 
 	// Insert logs.
 	storeLogs(db, []LogRecord{
 		{TraceID: "trace-abc", Level: "info", Body: "Request started", SeverityNumber: 9},
 		{TraceID: "trace-abc", Level: "warning", Body: "Slow query", SeverityNumber: 13},
 		{Level: "error", Body: "Connection refused", SeverityNumber: 17},
-	})
+	}, "")
+
+	// Insert metrics.
+	storeMetrics(db, []MetricRecord{
+		{TraceID: "trace-abc", Name: "http.client.duration", Type: "distribution", Value: 12.5, Unit: "millisecond", Timestamp: "1678272501"},
+		{TraceID: "trace-abc", Name: "http.client.duration", Type: "distribution", Value: 40, Unit: "millisecond", Timestamp: "1678272502"},
+		{Name: "order.status", Type: "gauge", Value: 3, Timestamp: "1678272503"},
+	}, "")
 }
 
 func TestAPIExceptionsChronological(t *testing.T) {
@@ -385,6 +393,68 @@ func TestAPILogsFilterByTraceID(t *testing.T) {
 	}
 }
 
+func TestAPIMetricsList(t *testing.T) {
+	mux := http.NewServeMux()
+	seedTestData(t, mux)
+
+	req := httptest.NewRequest("GET", "/api/sentry/metrics", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+
+	var resp map[string]any
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	data := resp["data"].([]any)
+	if len(data) != 3 {
+		t.Fatalf("data length = %d, want 3", len(data))
+	}
+
+	newest := data[0].(map[string]any)
+	if newest["name"] != "order.status" || newest["type"] != "gauge" || newest["value"] != 3.0 {
+		t.Errorf("newest metric = %v, want the order.status gauge", newest)
+	}
+}
+
+func TestAPIMetricsFilter(t *testing.T) {
+	mux := http.NewServeMux()
+	seedTestData(t, mux)
+
+	tests := []struct {
+		query string
+		want  int
+	}{
+		{"name=http.client.duration", 2},
+		{"type=gauge", 1},
+		{"trace_id=trace-abc", 2},
+		{"name=http.client.duration&type=gauge", 0},
+		{"search=client", 2},
+		{"search=CLIENT.dur", 2},
+		{"search=order", 1},
+		{"search=%25", 0},
+		{"search=http_client", 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.query, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/api/sentry/metrics?"+tt.query, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			var resp map[string]any
+			json.Unmarshal(w.Body.Bytes(), &resp)
+
+			data := resp["data"].([]any)
+			if len(data) != tt.want {
+				t.Errorf("data length = %d, want %d", len(data), tt.want)
+			}
+		})
+	}
+}
+
 func TestAPIServiceMap(t *testing.T) {
 	mux := http.NewServeMux()
 	seedTestData(t, mux)
@@ -436,12 +506,15 @@ func TestAPICounts(t *testing.T) {
 	if int(resp["logs"].(float64)) != 3 {
 		t.Errorf("logs = %v, want 3", resp["logs"])
 	}
+	if int(resp["metrics"].(float64)) != 3 {
+		t.Errorf("metrics = %v, want 3", resp["metrics"])
+	}
 }
 
 func TestAPIEmptyDatabase(t *testing.T) {
 	db := setupTestDB(t)
 	mux := http.NewServeMux()
-	registerAPI(mux, db)
+	registerAPI(mux, db, noAuth)
 
 	endpoints := []string{
 		"/api/sentry/exceptions",
@@ -465,6 +538,99 @@ func TestAPIEmptyDatabase(t *testing.T) {
 	}
 }
 
+// pagedField fetches the given URL, which has a query already, page by page, one row each, and returns the field of every row.
+func pagedField(t *testing.T, mux *http.ServeMux, url, field string, pages int) []string {
+	t.Helper()
+	var got []string
+	for page := 1; page <= pages; page++ {
+		req := httptest.NewRequest("GET", fmt.Sprintf("%s&limit=1&page=%d", url, page), nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		var resp map[string]any
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		for _, row := range resp["data"].([]any) {
+			got = append(got, row.(map[string]any)[field].(string))
+		}
+	}
+	return got
+}
+
+// With a filter SQLite sorts instead of walking the timestamp index backwards, and
+// rows of the same timestamp came in insertion order, so pages could repeat or skip rows.
+func TestAPIMetricsSameTimestampNewestFirst(t *testing.T) {
+	db := setupTestDB(t)
+	mux := http.NewServeMux()
+	registerAPI(mux, db, noAuth)
+
+	storeMetrics(db, []MetricRecord{
+		{Name: "first", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: "1678272501"},
+		{Name: "second", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: "1678272501"},
+		{Name: "third", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: "1678272501"},
+	}, "")
+
+	// trace_id makes SQLite use its index and sort; without the rowid
+	// tie-breaker the rows come back in insertion order.
+	got := pagedField(t, mux, "/api/sentry/metrics?trace_id=trace-abc", "name", 3)
+	want := []string{"third", "second", "first"}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("pages = %v, want %v", got, want)
+	}
+}
+
+func TestAPILogsSameTimestampNewestFirst(t *testing.T) {
+	db := setupTestDB(t)
+	mux := http.NewServeMux()
+	registerAPI(mux, db, noAuth)
+
+	var logs []LogRecord
+	json.Unmarshal([]byte(`[
+		{"trace_id": "trace-abc", "level": "info", "body": "first", "timestamp": 1678272501},
+		{"trace_id": "trace-abc", "level": "info", "body": "second", "timestamp": 1678272501},
+		{"trace_id": "trace-abc", "level": "info", "body": "third", "timestamp": 1678272501}
+	]`), &logs)
+	storeLogs(db, logs, "")
+
+	got := pagedField(t, mux, "/api/sentry/logs?trace_id=trace-abc", "body", 3)
+	want := []string{"third", "second", "first"}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("pages = %v, want %v", got, want)
+	}
+}
+
+func TestAPILogsFilterByLevels(t *testing.T) {
+	mux := http.NewServeMux()
+	seedTestData(t, mux)
+
+	tests := []struct {
+		query string
+		want  int
+	}{
+		{"level=info", 1},
+		{"level=warning,error", 2},
+		{"level=warn,warning", 1},
+		{"level=warn,%20warning", 1},
+		{"level=info,,%20", 1},
+		{"level=fatal", 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.query, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/api/sentry/logs?"+tt.query, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			var resp map[string]any
+			json.Unmarshal(w.Body.Bytes(), &resp)
+
+			data := resp["data"].([]any)
+			if len(data) != tt.want {
+				t.Errorf("data length = %d, want %d", len(data), tt.want)
+			}
+		})
+	}
+}
+
 // The exceptions list could not be narrowed to a project: the column is filled
 // in on write, but the handler had no reader for it, so selecting a project in
 // the UI showed every project's errors. Same for environment, and for the
@@ -472,7 +638,7 @@ func TestAPIEmptyDatabase(t *testing.T) {
 func TestAPIExceptionsFilters(t *testing.T) {
 	db := setupTestDB(t)
 	mux := http.NewServeMux()
-	registerAPI(mux, db)
+	registerAPI(mux, db, noAuth)
 
 	seed := func(eventID, env, project string) {
 		t.Helper()
@@ -554,6 +720,86 @@ func TestAPICountsFollowFilters(t *testing.T) {
 	}
 	if got := counts("?from=2030-01-01")["exceptions"]; int(got.(float64)) != 0 {
 		t.Errorf("exceptions in a future window = %v, want 0", got)
+	}
+}
+
+// A standard DSN (/api/1/...) carries no project name: the main events table
+// stores the event under "default", and the sentry tables must use the same
+// key, or ?project=default (what the UI sends) finds nothing.
+func TestAPIStandardDSNProjectIsDefault(t *testing.T) {
+	db := setupTestDB(t)
+	mux := http.NewServeMux()
+	registerAPI(mux, db, noAuth)
+	h := &handler{db: db}
+
+	// A row stored before the fix, with no project.
+	if _, err := db.Exec(`INSERT INTO sentry_error_events (id, event_id, project_id, level, fingerprint, payload)
+		VALUES ('old-row', 'old-1', NULL, 'error', 'fp-old', '{}')`); err != nil {
+		t.Fatal(err)
+	}
+	sqlBytes, err := migrations.ReadFile("migrations/2024_01_01_000028_default_project_for_sentry_errors.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(string(sqlBytes)); err != nil {
+		t.Fatal(err)
+	}
+
+	// A new event after the migration: stored under "default" by the code.
+	r := httptest.NewRequest("POST", "/api/1/store", strings.NewReader(
+		`{"event_id":"dsn-1","level":"error","exception":{"values":[{"type":"RuntimeException","value":"boom"}]}}`))
+	if _, err := h.Handle(r); err != nil {
+		t.Fatal(err)
+	}
+
+	get := func(url string) map[string]any {
+		t.Helper()
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("GET", url, nil))
+		var resp map[string]any
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		return resp
+	}
+
+	if got := get("/api/sentry/counts?project=default")["exceptions"]; got != float64(2) {
+		t.Errorf("counts exceptions for project=default = %v, want 2", got)
+	}
+	data, _ := get("/api/sentry/exceptions?project=default")["data"].([]any)
+	if len(data) != 2 {
+		t.Errorf("exceptions for project=default = %d, want 2", len(data))
+	}
+}
+
+// The metrics tab counter and the metrics list take the same period.
+func TestAPIMetricsWindowMatchesCount(t *testing.T) {
+	db := setupTestDB(t)
+	mux := http.NewServeMux()
+	registerAPI(mux, db, noAuth)
+
+	storeMetrics(db, []MetricRecord{
+		{Name: "old", Type: "counter", Value: 1, Timestamp: "1678272501"},   // 2023
+		{Name: "new-1", Type: "counter", Value: 1, Timestamp: "1893456000"}, // 2030
+		{Name: "new-2", Type: "counter", Value: 1, Timestamp: "1893456001"},
+	}, "")
+
+	get := func(url string) map[string]any {
+		t.Helper()
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("GET", url, nil))
+		var resp map[string]any
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		return resp
+	}
+
+	for _, q := range []string{"from=2029-01-01", "to=2024-01-01", "from=2029-01-01&to=2030-01-01T00:00:00Z"} {
+		count := get("/api/sentry/counts?" + q)["metrics"]
+		data, _ := get("/api/sentry/metrics?" + q)["data"].([]any)
+		if count != float64(len(data)) {
+			t.Errorf("%s: counts metrics = %v, list = %d", q, count, len(data))
+		}
+	}
+	if data, _ := get("/api/sentry/metrics?from=2029-01-01")["data"].([]any); len(data) != 2 {
+		t.Errorf("metrics from 2029 = %d, want 2", len(data))
 	}
 }
 

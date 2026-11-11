@@ -408,7 +408,7 @@ func loadTraceSummary(db *sql.DB, traceID string) map[string]any {
 	db.QueryRow(`SELECT COUNT(*) FROM sentry_spans WHERE trace_id = ?`, traceID).Scan(&spanCount)
 
 	// Load top 3 spans by duration for preview.
-	previewSpans := loadPreviewSpans(db, traceID, startTS, 3)
+	previewSpans := loadPreviewSpans(db, traceID, startTS, 3, "", nil)
 
 	return map[string]any{
 		"trace_id":         traceID,
@@ -421,10 +421,10 @@ func loadTraceSummary(db *sql.DB, traceID string) map[string]any {
 }
 
 // loadPreviewSpans loads the top N spans by duration for mini-waterfall preview.
-func loadPreviewSpans(db *sql.DB, traceID string, txnStartTS sql.NullString, limit int) []map[string]any {
+func loadPreviewSpans(db *sql.DB, traceID string, txnStartTS sql.NullString, limit int, projectClause string, projectArgs []any) []map[string]any {
 	rows, err := db.Query(
 		fmt.Sprintf(`SELECT span_id, op, description, start_ts, duration_ms, is_error, peer_type
-		FROM sentry_spans WHERE trace_id = ? ORDER BY duration_ms DESC LIMIT %d`, limit), traceID,
+		FROM sentry_spans WHERE trace_id = ?`+projectClause+` ORDER BY duration_ms DESC LIMIT %d`, limit), append([]any{traceID}, projectArgs...)...,
 	)
 	if err != nil {
 		return []map[string]any{}

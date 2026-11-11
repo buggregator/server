@@ -59,14 +59,22 @@ func (m *FlexibleMessage) UnmarshalJSON(data []byte) error {
 	}
 
 	// Try structured form {"message":"...", "params":[...], "formatted":"..."}.
+	// Params are mixed values (captureMessage('%s has %d items', ['cart', 3])).
 	var obj struct {
-		Message   string   `json:"message"`
-		Params    []string `json:"params"`
-		Formatted string   `json:"formatted"`
+		Message   string            `json:"message"`
+		Params    []json.RawMessage `json:"params"`
+		Formatted string            `json:"formatted"`
 	}
 	if json.Unmarshal(data, &obj) == nil {
 		m.Template = obj.Message
-		m.Params = obj.Params
+		m.Params = make([]string, 0, len(obj.Params))
+		for _, p := range obj.Params {
+			var s string
+			if json.Unmarshal(p, &s) != nil {
+				s = string(p)
+			}
+			m.Params = append(m.Params, s)
+		}
 		if obj.Formatted != "" {
 			m.Text = obj.Formatted
 		} else {
@@ -132,6 +140,24 @@ type ExceptionList struct {
 	Values []ExceptionValue `json:"values"`
 }
 
+// UnmarshalJSON also accepts a bare array of exceptions (sentry-go).
+func (e *ExceptionList) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		return nil
+	}
+	if trimmed[0] == '[' {
+		return json.Unmarshal(trimmed, &e.Values)
+	}
+	type alias ExceptionList
+	var a alias
+	if err := json.Unmarshal(trimmed, &a); err != nil {
+		return err
+	}
+	e.Values = a.Values
+	return nil
+}
+
 type ExceptionValue struct {
 	Type       string          `json:"type"`
 	Value      string          `json:"value"`
@@ -176,7 +202,7 @@ type Breadcrumb struct {
 	Category  string          `json:"category"`
 	Level     string          `json:"level"`
 	Message   string          `json:"message"`
-	Timestamp json.Number     `json:"timestamp"`
+	Timestamp FlexibleTS      `json:"timestamp"`
 	Data      json.RawMessage `json:"data"`
 }
 
@@ -187,6 +213,8 @@ type Contexts struct {
 type TraceContext struct {
 	TraceID string `json:"trace_id"`
 	SpanID  string `json:"span_id"`
+	Op      string `json:"op"`
+	Status  string `json:"status"`
 }
 
 type SDK struct {
@@ -199,8 +227,8 @@ type Transaction struct {
 	EventID      string          `json:"event_id"`
 	Type         string          `json:"type"`
 	Transaction  string          `json:"transaction"`
-	Timestamp    json.Number     `json:"timestamp"`
-	StartTime    json.Number     `json:"start_timestamp"`
+	Timestamp    FlexibleTS      `json:"timestamp"`
+	StartTime    FlexibleTS      `json:"start_timestamp"`
 	Platform     string          `json:"platform"`
 	Environment  string          `json:"environment"`
 	Release      string          `json:"release"`
@@ -216,16 +244,64 @@ type Transaction struct {
 
 // RawSpan represents a span within a transaction or spans envelope item.
 type RawSpan struct {
-	SpanID         string            `json:"span_id"`
-	ParentSpanID   string            `json:"parent_span_id"`
-	TraceID        string            `json:"trace_id"`
-	Op             string            `json:"op"`
-	Description    string            `json:"description"`
-	Status         string            `json:"status"`
-	StartTimestamp json.Number       `json:"start_timestamp"`
-	Timestamp      json.Number       `json:"timestamp"`
-	IsSegment      bool              `json:"is_segment"`
-	Data           map[string]string `json:"data"`
+	SpanID         string     `json:"span_id"`
+	ParentSpanID   string     `json:"parent_span_id"`
+	TraceID        string     `json:"trace_id"`
+	Op             string     `json:"op"`
+	Description    string     `json:"description"`
+	Status         string     `json:"status"`
+	StartTimestamp FlexibleTS `json:"start_timestamp"`
+	Timestamp      FlexibleTS `json:"timestamp"`
+	IsSegment      bool       `json:"is_segment"`
+	Data           SpanData   `json:"data"`
+}
+
+// UnmarshalJSON also accepts the Span v2 format (SDK v4 "span" items):
+// name, end_timestamp and typed attributes {"key":{"type":"string","value":...}}.
+func (s *RawSpan) UnmarshalJSON(data []byte) error {
+	type rawSpan RawSpan
+	var v struct {
+		rawSpan
+		Name         string                     `json:"name"`
+		EndTimestamp FlexibleTS                 `json:"end_timestamp"`
+		Attributes   map[string]json.RawMessage `json:"attributes"`
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	*s = RawSpan(v.rawSpan)
+
+	if s.Description == "" {
+		s.Description = v.Name
+	}
+	if s.Timestamp.Number() == "" {
+		s.Timestamp = v.EndTimestamp
+	}
+	if len(v.Attributes) > 0 {
+		if s.Data == nil {
+			s.Data = make(SpanData, len(v.Attributes))
+		}
+		for key, raw := range v.Attributes {
+			var typed struct {
+				Value any `json:"value"`
+			}
+			var val any
+			if json.Unmarshal(raw, &typed) == nil && typed.Value != nil {
+				val = typed.Value
+			} else if json.Unmarshal(raw, &val) != nil {
+				continue
+			}
+			str, err := spanDataString(val)
+			if err != nil {
+				return err
+			}
+			s.Data[key] = str
+		}
+	}
+	if s.Op == "" {
+		s.Op = s.Data["sentry.op"]
+	}
+	return nil
 }
 
 // SpansEnvelope represents a Sentry spans (v2) envelope item body.
@@ -240,13 +316,31 @@ type LogEnvelope struct {
 
 // LogRecord represents a single Sentry native log entry.
 type LogRecord struct {
-	TraceID        string            `json:"trace_id"`
-	SpanID         string            `json:"span_id"`
-	Level          string            `json:"level"`
-	SeverityNumber int               `json:"severity_number"`
-	Body           string            `json:"body"`
-	Timestamp      json.Number       `json:"timestamp"`
-	Attributes     map[string]any    `json:"attributes"`
+	TraceID        string         `json:"trace_id"`
+	SpanID         string         `json:"span_id"`
+	Level          string         `json:"level"`
+	SeverityNumber int            `json:"severity_number"`
+	Body           string         `json:"body"`
+	Timestamp      FlexibleTS     `json:"timestamp"`
+	Attributes     map[string]any `json:"attributes"`
+}
+
+// MetricEnvelope represents a Sentry "trace_metric" envelope item body.
+type MetricEnvelope struct {
+	Items []MetricRecord `json:"items"`
+}
+
+// MetricRecord represents a single Sentry trace metric: a counter, gauge or
+// distribution value, linked to the trace and span it was recorded in.
+type MetricRecord struct {
+	TraceID    string         `json:"trace_id"`
+	SpanID     string         `json:"span_id"`
+	Name       string         `json:"name"`
+	Type       string         `json:"type"`
+	Value      float64        `json:"value"`
+	Unit       string         `json:"unit"`
+	Timestamp  json.Number    `json:"timestamp"`
+	Attributes map[string]any `json:"attributes"`
 }
 
 // effectiveMessage returns the event message, checking logentry fallback.
@@ -274,4 +368,53 @@ func (e *ErrorEvent) spanID() string {
 		return e.Contexts.Trace.SpanID
 	}
 	return ""
+}
+
+// SpanData holds span attributes. SDKs put more than strings in there: numbers
+// and booleans as well (http.response.status_code: 200, http.request.redirect:
+// false). With the declared map[string]string a single numeric attribute made
+// the whole envelope item fail to unmarshal, so the transaction and all of its
+// spans were dropped. Values are normalized to strings, which keeps existing
+// consumers (classifySpan, extractServiceName, the spans table) unchanged.
+type SpanData map[string]string
+
+func (d *SpanData) UnmarshalJSON(data []byte) error {
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	out := make(SpanData, len(raw))
+	for k, v := range raw {
+		str, err := spanDataString(v)
+		if err != nil {
+			return err
+		}
+		out[k] = str
+	}
+	*d = out
+	return nil
+}
+
+// spanDataString normalizes one span attribute value to a string.
+func spanDataString(v any) (string, error) {
+	switch t := v.(type) {
+	case nil:
+		return "", nil
+	case string:
+		return t, nil
+	case bool:
+		return strconv.FormatBool(t), nil
+	case json.Number:
+		return t.String(), nil
+	case float64:
+		return strconv.FormatFloat(t, 'f', -1, 64), nil
+	default:
+		// Objects and arrays: keep the raw JSON rather than losing the value.
+		b, err := json.Marshal(t)
+		if err != nil {
+			return "", err
+		}
+		return string(b), nil
+	}
 }

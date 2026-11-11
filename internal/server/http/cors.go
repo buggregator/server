@@ -1,10 +1,16 @@
 package http
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+)
 
 // CORSMiddleware adds CORS headers based on allowed origins.
 // If origins contains "*", all origins are allowed.
-func CORSMiddleware(next http.Handler, origins []string) http.Handler {
+// A preflight (OPTIONS) is answered here with 204, except under the
+// passPreflight path prefixes: there it gets the CORS headers and goes on to
+// the handler (the mock server, whose OPTIONS rules must see it).
+func CORSMiddleware(next http.Handler, origins []string, passPreflight ...string) http.Handler {
 	allowAll := false
 	allowed := make(map[string]bool, len(origins))
 	for _, o := range origins {
@@ -30,7 +36,7 @@ func CORSMiddleware(next http.Handler, origins []string) http.Handler {
 			}
 			w.Header().Set("Access-Control-Max-Age", "86400")
 
-			if r.Method == http.MethodOptions {
+			if r.Method == http.MethodOptions && !hasPrefix(r.URL.Path, passPreflight) {
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
@@ -38,4 +44,13 @@ func CORSMiddleware(next http.Handler, origins []string) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func hasPrefix(path string, prefixes []string) bool {
+	for _, p := range prefixes {
+		if strings.HasPrefix(path, p) {
+			return true
+		}
+	}
+	return false
 }

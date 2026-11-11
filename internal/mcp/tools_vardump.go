@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

@@ -7,12 +7,23 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
+
+// projectKey is the project a Sentry row is stored under. Same key as the main
+// events table: a standard DSN (/api/1/...) carries no project name, and the
+// event is stored under "default" there.
+func projectKey(project string) string {
+	if project == "" {
+		return "default"
+	}
+	return project
+}
 
 // storeErrorEvent stores a parsed error event with its exceptions and breadcrumbs
 // in a single DB transaction.
 func storeErrorEvent(db *sql.DB, ev *ErrorEvent, payload json.RawMessage, projectID string) (string, error) {
+	projectID = projectKey(projectID)
 	tx, err := db.Begin()
 	if err != nil {
 		return "", err
@@ -104,7 +115,7 @@ func storeErrorEvent(db *sql.DB, ev *ErrorEvent, payload json.RawMessage, projec
 	if ev.Breadcrumbs != nil {
 		for _, bc := range ev.Breadcrumbs.Values {
 			bcID := event.GenerateUUID()
-			bcTS := parseTimestamp(bc.Timestamp)
+			bcTS := parseTimestamp(bc.Timestamp.Number())
 
 			var data *string
 			if bc.Data != nil {

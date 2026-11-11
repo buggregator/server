@@ -7,12 +7,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 // storeTransaction stores a parsed transaction with its spans, upserting the
 // trace registry entry. Returns the transaction's generated UUID.
-func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (string, error) {
+func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage, project string) (string, error) {
+	project = projectKey(project)
 	dbTx, err := db.Begin()
 	if err != nil {
 		return "", err
@@ -55,15 +56,20 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 
 	// Insert transaction.
 	txnID := event.GenerateUUID()
-	startTS := parseTimestamp(txn.StartTime)
-	endTS := parseTimestamp(txn.Timestamp)
-	durationMS := computeDurationMS(txn.StartTime, txn.Timestamp)
+	startTS := parseTimestamp(txn.StartTime.Number())
+	endTS := parseTimestamp(txn.Timestamp.Number())
+	durationMS := computeDurationMS(txn.StartTime.Number(), txn.Timestamp.Number())
 
 	op := txn.Op
 	status := txn.Status
-	// Fallback: extract op/status from contexts.trace if not on root.
-	if op == "" && txn.Contexts != nil && txn.Contexts.Trace != nil {
-		// Some SDKs put these in the transaction's contexts.trace.
+	// Fallback: SDK v3/v4 send op/status only in contexts.trace.
+	if txn.Contexts != nil && txn.Contexts.Trace != nil {
+		if op == "" {
+			op = txn.Contexts.Trace.Op
+		}
+		if status == "" {
+			status = txn.Contexts.Trace.Status
+		}
 	}
 
 	var measurements *string
@@ -74,8 +80,8 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 
 	_, err = dbTx.Exec(
 		`INSERT INTO sentry_transactions
-			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload, project_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		txnID,
 		txn.EventID,
 		traceID,
@@ -89,6 +95,7 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 		nullIfEmpty(txn.Release),
 		measurements,
 		string(payload),
+		project,
 	)
 	if err != nil {
 		return "", fmt.Errorf("insert sentry_transactions: %w", err)
@@ -99,8 +106,8 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 	if len(txn.Spans) > 0 {
 		stmt, err := dbTx.Prepare(
 			`INSERT INTO sentry_spans
-				(id, span_id, transaction_id, trace_id, parent_span_id, op, description, status, start_ts, end_ts, duration_ms, service_name, peer_address, peer_type, is_error, attributes)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				(id, span_id, transaction_id, trace_id, parent_span_id, op, description, status, start_ts, end_ts, duration_ms, service_name, peer_address, peer_type, is_error, attributes, project_id)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		)
 		if err != nil {
 			return "", fmt.Errorf("prepare sentry_spans: %w", err)
@@ -111,12 +118,12 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 			spanUUID := event.GenerateUUID()
 			peerType, peerAddress := classifySpan(span)
 			serviceName := extractServiceName(span, txn.SDK)
-			sStartTS := parseTimestamp(span.StartTimestamp)
-			sEndTS := parseTimestamp(span.Timestamp)
-			sDuration := computeDurationMS(span.StartTimestamp, span.Timestamp)
+			sStartTS := parseTimestamp(span.StartTimestamp.Number())
+			sEndTS := parseTimestamp(span.Timestamp.Number())
+			sDuration := computeDurationMS(span.StartTimestamp.Number(), span.Timestamp.Number())
 
 			isError := 0
-			if span.Status == "internal_error" || span.Status == "unknown_error" {
+			if isErrorStatus(span.Status) {
 				isError = 1
 				errorCount++
 			}
@@ -145,6 +152,7 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 				nullIfEmpty(peerType),
 				isError,
 				attrs,
+				project,
 			)
 			if err != nil {
 				return "", fmt.Errorf("insert sentry_spans: %w", err)
@@ -168,7 +176,8 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage) (st
 
 // storeSpansV2 stores standalone span items (Sentry Span v2 format),
 // upserting the trace registry entry.
-func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK) error {
+func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK, project string) error {
+	project = projectKey(project)
 	if len(spans) == 0 {
 		return nil
 	}
@@ -187,8 +196,8 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK) error {
 
 	stmt, err := dbTx.Prepare(
 		`INSERT INTO sentry_spans
-			(id, span_id, transaction_id, trace_id, parent_span_id, op, description, status, start_ts, end_ts, duration_ms, service_name, peer_address, peer_type, is_error, attributes)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, span_id, transaction_id, trace_id, parent_span_id, op, description, status, start_ts, end_ts, duration_ms, service_name, peer_address, peer_type, is_error, attributes, project_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 	)
 	if err != nil {
 		return fmt.Errorf("prepare sentry_spans: %w", err)
@@ -196,6 +205,18 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK) error {
 	defer stmt.Close()
 
 	for traceID, group := range traceSpans {
+		traceErrors := 0
+
+		// A segment span is the root of a streamed trace (JS SDK v10+ span
+		// streaming): it becomes the transaction, as a transaction item's root
+		// would, and is not a span row of its own.
+		children := 0
+		for _, span := range group {
+			if !span.IsSegment {
+				children++
+			}
+		}
+
 		// Upsert trace.
 		_, err = dbTx.Exec(
 			`INSERT INTO sentry_traces (trace_id, span_count)
@@ -203,23 +224,30 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK) error {
 			ON CONFLICT(trace_id) DO UPDATE SET
 				last_seen = datetime('now'),
 				span_count = sentry_traces.span_count + excluded.span_count`,
-			traceID, len(group),
+			traceID, children,
 		)
 		if err != nil {
 			return fmt.Errorf("upsert sentry_traces: %w", err)
 		}
 
 		for _, span := range group {
+			if span.IsSegment {
+				if err := storeSegment(dbTx, traceID, span, project); err != nil {
+					return err
+				}
+				continue
+			}
 			spanUUID := event.GenerateUUID()
 			peerType, peerAddress := classifySpan(span)
 			serviceName := extractServiceName(span, sdk)
-			sStartTS := parseTimestamp(span.StartTimestamp)
-			sEndTS := parseTimestamp(span.Timestamp)
-			sDuration := computeDurationMS(span.StartTimestamp, span.Timestamp)
+			sStartTS := parseTimestamp(span.StartTimestamp.Number())
+			sEndTS := parseTimestamp(span.Timestamp.Number())
+			sDuration := computeDurationMS(span.StartTimestamp.Number(), span.Timestamp.Number())
 
 			isError := 0
-			if span.Status == "internal_error" || span.Status == "unknown_error" {
+			if isErrorStatus(span.Status) {
 				isError = 1
+				traceErrors++
 			}
 
 			var attrs *string
@@ -246,14 +274,59 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK) error {
 				nullIfEmpty(peerType),
 				isError,
 				attrs,
+				project,
 			)
 			if err != nil {
 				return fmt.Errorf("insert sentry_spans: %w", err)
 			}
 		}
+
+		if traceErrors > 0 {
+			_, err = dbTx.Exec(
+				`UPDATE sentry_traces SET error_count = error_count + ? WHERE trace_id = ?`,
+				traceErrors, traceID,
+			)
+			if err != nil {
+				return fmt.Errorf("update sentry_traces error_count: %w", err)
+			}
+		}
 	}
 
 	return dbTx.Commit()
+}
+
+// storeSegment stores a segment span as a transaction. Its event_id is made
+// from the trace and span ids, so a segment sent twice is stored once.
+func storeSegment(dbTx *sql.Tx, traceID string, span RawSpan, project string) error {
+	payload, _ := json.Marshal(span)
+	_, err := dbTx.Exec(
+		`INSERT OR IGNORE INTO sentry_transactions
+			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload, project_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+		event.GenerateUUID(),
+		traceID+"-"+span.SpanID,
+		traceID,
+		span.Description,
+		nullIfEmpty(span.Op),
+		nullIfEmpty(span.Status),
+		parseTimestamp(span.StartTimestamp.Number()),
+		parseTimestamp(span.Timestamp.Number()),
+		computeDurationMS(span.StartTimestamp.Number(), span.Timestamp.Number()),
+		nullIfEmpty(span.Data["sentry.environment"]),
+		nullIfEmpty(span.Data["sentry.release"]),
+		string(payload),
+		project,
+	)
+	if err != nil {
+		return fmt.Errorf("insert segment transaction: %w", err)
+	}
+	return nil
+}
+
+// isErrorStatus reports whether a span status means failure: the v1 span
+// statuses internal_error/unknown_error, or "error" from Span v2 items.
+func isErrorStatus(status string) bool {
+	return status == "internal_error" || status == "unknown_error" || status == "error"
 }
 
 // computeDurationMS calculates the duration in milliseconds between two JSON number timestamps.

@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"testing"
 
-	serverhttp "github.com/buggregator/go-buggregator/internal/server/http"
-	"github.com/buggregator/go-buggregator/internal/storage"
-	smtpmod "github.com/buggregator/go-buggregator/modules/smtp"
+	serverhttp "github.com/buggregator/server/v2/internal/server/http"
+	"github.com/buggregator/server/v2/internal/storage"
+	smtpmod "github.com/buggregator/server/v2/modules/smtp"
 )
 
 // TestRegisterAttachmentAPI_NoConflictWithSMTPRoutes ensures the attachment
@@ -34,8 +34,9 @@ func TestRegisterAttachmentAPI_NoConflictWithSMTPRoutes(t *testing.T) {
 		}
 	}()
 
-	serverhttp.RegisterAttachmentAPI(mux, db, attachments)
+	serverhttp.RegisterAttachmentAPI(mux, db, attachments, func(next http.Handler) http.Handler { return next })
 
 	mod := smtpmod.New(":0", attachments, db)
 	mod.RegisterRoutes(mux, nil)
+	mod.RegisterProtectedRoutes(mux, func(next http.Handler) http.Handler { return next })
 }

@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/metrics"
-	"github.com/buggregator/go-buggregator/internal/module"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/metrics"
+	"github.com/buggregator/server/v2/internal/module"
 )
 
 // WebhookConfig defines a single webhook from the configuration.

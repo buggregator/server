@@ -7,11 +7,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 // storeLogs batch inserts Sentry native log items.
-func storeLogs(db *sql.DB, logs []LogRecord) error {
+func storeLogs(db *sql.DB, logs []LogRecord, project string) error {
+	project = projectKey(project)
 	if len(logs) == 0 {
 		return nil
 	}
@@ -24,8 +25,8 @@ func storeLogs(db *sql.DB, logs []LogRecord) error {
 
 	stmt, err := tx.Prepare(
 		`INSERT INTO sentry_logs
-			(id, trace_id, span_id, level, severity_number, body, attributes, log_ts)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, trace_id, span_id, level, severity_number, body, attributes, log_ts, project_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 	)
 	if err != nil {
 		return fmt.Errorf("prepare sentry_logs: %w", err)
@@ -48,7 +49,7 @@ func storeLogs(db *sql.DB, logs []LogRecord) error {
 			sevNum = &v
 		}
 
-		logTS := parseLogTimestamp(log.Timestamp)
+		logTS := parseLogTimestamp(log.Timestamp.Number())
 
 		_, err = stmt.Exec(
 			id,
@@ -59,6 +60,7 @@ func storeLogs(db *sql.DB, logs []LogRecord) error {
 			log.Body,
 			attrs,
 			logTS,
+			project,
 		)
 		if err != nil {
 			return fmt.Errorf("insert sentry_logs: %w", err)

@@ -22,9 +22,16 @@ func handleLogsList(db *sql.DB) http.HandlerFunc {
 		var conditions []string
 		var args []any
 
-		if v := q.Get("level"); v != "" {
-			conditions = append(conditions, "l.level = ?")
-			args = append(args, v)
+		// One level or several, comma-separated: "warn,warning".
+		var levels []any
+		for _, level := range strings.Split(q.Get("level"), ",") {
+			if level = strings.TrimSpace(level); level != "" {
+				levels = append(levels, level)
+			}
+		}
+		if len(levels) > 0 {
+			conditions = append(conditions, "l.level IN (?"+strings.Repeat(", ?", len(levels)-1)+")")
+			args = append(args, levels...)
 		}
 		if v := q.Get("trace_id"); v != "" {
 			conditions = append(conditions, "l.trace_id = ?")
@@ -32,13 +39,14 @@ func handleLogsList(db *sql.DB) http.HandlerFunc {
 		}
 		// Period: log_ts is stored in ISO form and covered by idx_sentry_logs_ts.
 		conditions, args = appendTimeConditions(conditions, args, r, "l.log_ts", true)
+		conditions, args = appendProject(conditions, args, r, "l.project_id")
 
 		where := ""
 		if len(conditions) > 0 {
 			where = " WHERE " + strings.Join(conditions, " AND ")
 		}
 
-		query += where + " ORDER BY l.log_ts DESC LIMIT ? OFFSET ?"
+		query += where + " ORDER BY l.log_ts DESC, l.rowid DESC LIMIT ? OFFSET ?"
 		countQuery += where
 
 		var total int

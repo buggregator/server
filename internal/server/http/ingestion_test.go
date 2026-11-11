@@ -3,7 +3,9 @@ package http_test
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -13,14 +15,14 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/module"
-	serverhttp "github.com/buggregator/go-buggregator/internal/server/http"
-	"github.com/buggregator/go-buggregator/internal/server/ws"
-	"github.com/buggregator/go-buggregator/internal/storage"
-	"github.com/buggregator/go-buggregator/modules/httpdumps"
-	"github.com/buggregator/go-buggregator/modules/inspector"
-	"github.com/buggregator/go-buggregator/modules/sentry"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/module"
+	serverhttp "github.com/buggregator/server/v2/internal/server/http"
+	"github.com/buggregator/server/v2/internal/server/ws"
+	"github.com/buggregator/server/v2/internal/storage"
+	"github.com/buggregator/server/v2/modules/httpdumps"
+	"github.com/buggregator/server/v2/modules/inspector"
+	"github.com/buggregator/server/v2/modules/sentry"
 )
 
 // spyStore captures all stored events for inspection.
@@ -43,6 +45,9 @@ func (s *spyStore) Delete(_ context.Context, _ string) error              { retu
 func (s *spyStore) DeleteAll(_ context.Context, _ event.DeleteOptions) error { return nil }
 func (s *spyStore) Pin(_ context.Context, _ string) error                 { return nil }
 func (s *spyStore) Unpin(_ context.Context, _ string) error               { return nil }
+func (s *spyStore) UpdatePayload(_ context.Context, _ string, _ json.RawMessage) error {
+	return nil
+}
 
 func (s *spyStore) storedEvents() []event.Event {
 	s.mu.Lock()
@@ -816,5 +821,114 @@ func dumpSpies(t *testing.T, spies []*spyHandler) {
 		}
 		t.Logf("  [%s] priority=%d matched=%v handled=%v returned=%v payload=%s",
 			s.name, s.Priority(), s.matched, s.handled, hasPayload, payloadSnippet)
+	}
+}
+
+// The structured Sentry rows (errors, transactions, spans, logs, metrics) land
+// in the same project as the events row, whichever way the project was given.
+// They used to read the DSN path only: a header-given project put the event
+// card in "shop" and its Sentry rows in "default".
+func TestPipeline_SentryRowsFollowEventProject(t *testing.T) {
+	basic := func(user, pass string) string {
+		return "Basic " + base64.StdEncoding.EncodeToString([]byte(user+":"+pass))
+	}
+	tests := []struct {
+		name, url string
+		hdr       map[string]string
+		want      string
+	}{
+		{"DSN path", "http://localhost/api/shop/envelope/", map[string]string{"X-Sentry-Auth": "Sentry sentry_key=abc"}, "shop"},
+		{"header", "http://localhost/api/1/envelope/", map[string]string{"X-Buggregator-Event": "sentry", "X-Buggregator-Project": "shop"}, "shop"},
+		{"userinfo", "http://sentry:shop@localhost/api/1/envelope/", nil, "shop"},
+		{"basic auth", "http://localhost/api/1/envelope/", map[string]string{"X-Sentry-Auth": "Sentry sentry_key=abc", "Authorization": basic("sentry", "shop")}, "shop"},
+		{"no project", "http://localhost/api/1/envelope/", map[string]string{"X-Sentry-Auth": "Sentry sentry_key=abc"}, "default"},
+		{"DSN path wins over header", "http://localhost/api/shop/envelope/", map[string]string{"X-Buggregator-Event": "sentry", "X-Buggregator-Project": "other"}, "shop"},
+	}
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pipeline, db := newSentryPipeline(t)
+			id := fmt.Sprintf("evt-%d", i)
+			body := fmt.Sprintf(`{"event_id":"%[1]s","sent_at":"2026-01-01T00:00:00Z"}
+{"type":"event"}
+{"event_id":"%[1]s","level":"error","exception":{"values":[{"type":"E","value":"v"}]}}
+{"type":"transaction"}
+{"event_id":"tx-%[1]s","type":"transaction","transaction":"GET /","start_timestamp":1,"timestamp":2,"contexts":{"trace":{"trace_id":"tr-%[1]s","span_id":"root"}},"spans":[{"span_id":"s1","trace_id":"tr-%[1]s","start_timestamp":1,"timestamp":2}]}
+{"type":"log"}
+{"items":[{"level":"info","body":"hello","timestamp":1}]}
+{"type":"trace_metric"}
+{"items":[{"name":"m","type":"counter","value":1,"timestamp":1}]}`, id)
+			r := httptest.NewRequest("POST", tt.url, strings.NewReader(body))
+			for k, v := range tt.hdr {
+				r.Header.Set(k, v)
+			}
+			w := httptest.NewRecorder()
+			pipeline.ServeHTTP(w, r)
+			if w.Code != 200 {
+				t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+			}
+
+			var project string
+			if err := db.QueryRow(`SELECT project FROM events WHERE uuid = ?`, id).Scan(&project); err != nil {
+				t.Fatalf("event not stored: %v", err)
+			}
+			if project != tt.want {
+				t.Errorf("events.project = %q, want %q", project, tt.want)
+			}
+			for _, table := range []string{"sentry_error_events", "sentry_transactions", "sentry_spans", "sentry_logs", "sentry_metrics"} {
+				var n, wrong int
+				db.QueryRow(`SELECT COUNT(*), COALESCE(SUM(project_id IS NOT ?), 0) FROM `+table, tt.want).Scan(&n, &wrong)
+				if n == 0 || wrong != 0 {
+					t.Errorf("%s: %d rows, %d not in %q", table, n, wrong, tt.want)
+				}
+			}
+		})
+	}
+}
+
+// The detected headers belong to the pipeline: one a client sends is dropped,
+// so it can neither pick the project nor force a handler. The public
+// X-Buggregator-Project still names the project.
+func TestPipeline_ClientDetectedHeadersIgnored(t *testing.T) {
+	pipeline, store, spies := buildPipeline(t)
+
+	post := func(headers map[string]string) {
+		t.Helper()
+		store.reset()
+		resetSpies(spies)
+		r := httptest.NewRequest("POST", "/hook", strings.NewReader(`{"a":1}`))
+		for k, v := range headers {
+			r.Header.Set(k, v)
+		}
+		w := httptest.NewRecorder()
+		pipeline.ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d", w.Code)
+		}
+	}
+	project := func() string {
+		t.Helper()
+		evs := store.storedEvents()
+		if len(evs) != 1 {
+			t.Fatalf("stored %d events, want 1", len(evs))
+		}
+		return evs[0].Project
+	}
+
+	post(map[string]string{serverhttp.HeaderDetectedProject: "forged"})
+	if p := project(); p == "forged" {
+		t.Errorf("client X-Buggregator-Detected-Project picked the project")
+	}
+
+	post(map[string]string{serverhttp.HeaderDetectedType: "sentry"})
+	if findSpy(spies, "sentry").handled {
+		t.Errorf("client X-Buggregator-Detected-Type routed the request to sentry")
+	}
+	if !findSpy(spies, "http-dump").handled {
+		t.Errorf("http-dump did not capture the request")
+	}
+
+	post(map[string]string{"X-Buggregator-Event": "http-dump", "X-Buggregator-Project": "shop", serverhttp.HeaderDetectedProject: "forged"})
+	if p := project(); p != "shop" {
+		t.Errorf("project = %q, want shop from X-Buggregator-Project", p)
 	}
 }

@@ -1,28 +1,42 @@
-# Debug everything. Install nothing.
+# Buggregator — one local server for everything your app sends while you develop
 
-<a href="https://discord.gg/vDsCD3EKUB"><img src="https://img.shields.io/badge/discord-chat-magenta.svg"></a>
-[![Twitter](https://img.shields.io/badge/twitter-Follow-blue)](https://twitter.com/buggregator)
-[![Support me on Patreon](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fshieldsio-patreon.vercel.app%2Fapi%3Fusername%3Dbutschster%26type%3Dpatrons&style=flat)](https://patreon.com/butschster)
+[![Release](https://img.shields.io/github/v/release/buggregator/server)](https://github.com/buggregator/server/releases/latest)
 [![CI](https://github.com/buggregator/server/actions/workflows/ci.yml/badge.svg)](https://github.com/buggregator/server/actions/workflows/ci.yml)
-[![Downloads](https://img.shields.io/docker/pulls/butschster/buggregator.svg)](https://hub.docker.com/repository/docker/butschster/buggregator)
-[![SSL Certificate](https://crt.guru/badge/a0203209-c149-47ee-adbf-a4cf6465b421/shield.svg)](https://crt.guru/badge/a0203209-c149-47ee-adbf-a4cf6465b421)
+[![Docker pulls](https://img.shields.io/docker/pulls/butschster/buggregator.svg)](https://hub.docker.com/r/butschster/buggregator)
+<a href="https://discord.gg/vDsCD3EKUB"><img src="https://img.shields.io/badge/discord-chat-magenta.svg" alt="Discord"></a>
+[![Follow on X](https://img.shields.io/badge/follow-%40buggregator-black?logo=x)](https://x.com/buggregator)
 
-<a href="https://www.producthunt.com/posts/buggregator?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-buggregator" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=478631&theme=light" alt="Buggregator - The&#0032;Ultimate&#0032;Debugging&#0032;Server&#0032;for&#0032;PHP | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+**One ~40 MB binary catches the errors, dumps, emails, logs, profiles and HTTP requests your app sends in development — through the SDKs and protocols you already use. No account, no cloud, no Buggregator package in your app.**
 
-**One binary. Exceptions, dumps, emails, profiling, logs — all in one real-time UI. Works with the SDKs you already have. No cloud account. No code changes. No runtime dependencies.**
+- **Errors and traces** from your Sentry SDK — exceptions, transactions, logs, metrics
+- **Dumps** from Symfony VarDumper and Spatie Ray
+- **Emails** from a fake SMTP server, with an API to wait for a message and pull links or codes in E2E tests
+- **Logs** from Monolog
+- **Profiles** from XHProf — call graph, flame chart, top functions
+- **HTTP**: catch any request, proxy outgoing calls, or answer with a **mock server** (rules or an OpenAPI spec)
+- **Xdebug in the browser**: pause, step, read variables — with or without an IDE
+- **AI agents** read all of it over MCP
 
-Buggregator v2.0 is a complete rewrite in Go — a single self-contained binary with an embedded SQLite database, web UI, and WebSocket server. No PHP runtime, no RoadRunner, no Centrifugo, no external database.
+Mail, HTTP dumps, the proxy, mocks and MCP work with any language. Sentry errors, traces and logs are tested with the official SDKs for PHP, JavaScript (browser and Node.js), Python and Go.
 
-| | |
-|---|---|
-| **Server** | `v2.0.0` |
-| **Frontend** | `v1.30.0` |
+## Run it in 30 seconds
 
-> Looking for the PHP version? See the [1.x branch](https://github.com/buggregator/server/tree/1.x).
+**Binary** (Linux, macOS, Windows; x86-64 and ARM):
 
-Watch our introduction video on [YouTube](https://www.youtube.com/watch?v=yKWbuw8xN_c)
+```bash
+curl -fsSL https://raw.githubusercontent.com/buggregator/server/master/scripts/install.sh | sh
+buggregator
+```
 
-## Quick Start
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/buggregator/server/master/scripts/install.ps1 | iex
+```
+
+The script picks the file for your system, checks its checksum and installs it without `sudo`. On Linux and macOS it installs into `~/.local/bin`; if that folder is not on your `PATH`, the script says so — then run `~/.local/bin/buggregator`. On Windows it installs into `%LOCALAPPDATA%\Programs\buggregator` and prints the command to start it. By default the binary listens on all network interfaces; to keep it on your machine only, see [Listen only on this machine](https://docs.buggregator.dev/install.html).
+
+**Docker:**
 
 ```bash
 docker run --pull always \
@@ -33,266 +47,122 @@ docker run --pull always \
   ghcr.io/buggregator/server:latest
 ```
 
-Open http://127.0.0.1:8000 and start debugging. That's it.
+Open http://127.0.0.1:8000. The UI stays empty until your app sends something.
 
-### Standalone Binary
+Events live in memory and are gone after a restart. To keep them: `buggregator -db ./buggregator.db`.
 
-```bash
-# Download the latest release
-curl -sL https://github.com/buggregator/server/releases/latest/download/buggregator-linux-amd64 -o buggregator
-chmod +x buggregator
-./buggregator
+## Point your app at it
+
+Change addresses, not code. Laravel / Symfony `.env`:
+
+```env
+SENTRY_LARAVEL_DSN=http://sentry@127.0.0.1:8000/1
+MAIL_HOST=127.0.0.1
+MAIL_PORT=1025
+VAR_DUMPER_SERVER=127.0.0.1:9912
+LOG_SOCKET_URL=127.0.0.1:9913
+RAY_HOST=ray@127.0.0.1
+RAY_PORT=8000
+PROFILER_ENDPOINT=http://profiler@127.0.0.1:8000
+INSPECTOR_URL=http://inspector@127.0.0.1:8000
+INSPECTOR_API_KEY=test
+HTTP_DUMP_ENDPOINT=http://http-dump@127.0.0.1:8000
 ```
 
-> No Docker? No binary? Use [Buggregator Trap](https://docs.buggregator.dev/trap/what-is-trap.html) — a lightweight PHP CLI alternative.
+Any other stack: send mail to SMTP `127.0.0.1:1025`, send a POST or PUT to `http://127.0.0.1:8000`, or any method to `http://http-dump@127.0.0.1:8000`, to see it as a dump, and put mock rules under `http://127.0.0.1:8000/mock/`.
 
-## Key Features
+Sentry from other languages — same DSN:
 
-### [Xhprof Profiler](https://docs.buggregator.dev/config/xhprof.html)
+```js
+// JavaScript, browser or Node.js
+Sentry.init({ dsn: "http://sentry@127.0.0.1:8000/1", tracesSampleRate: 1.0, enableLogs: true });
+// Browser page-load traces: also pass integrations: [Sentry.browserTracingIntegration()]
+```
 
-Watch our intro video about profiler on [YouTube](https://www.youtube.com/watch?v=2QbgjIVnz78&pp=ygULYnVnZ3JlZ2F0b3I%3D).
+```python
+# Python
+sentry_sdk.init(dsn="http://sentry@127.0.0.1:8000/1", traces_sample_rate=1.0, enable_logs=True)
+```
 
-![xhprof](https://github.com/buggregator/server/assets/773481/d69e1158-599d-4546-96a9-40a42cb060f4)
+```go
+// Go
+sentry.Init(sentry.ClientOptions{Dsn: "http://sentry@127.0.0.1:8000/1", EnableTracing: true, TracesSampleRate: 1.0})
+defer sentry.Flush(2 * time.Second) // short programs: send events before exit
+```
 
-### [Symfony VarDumper Server](https://docs.buggregator.dev/config/var-dumper.html)
+More setups (Spiral, WordPress, Magento, Docker Compose, Kubernetes): [Getting started](https://docs.buggregator.dev/getting-started.html).
 
-![var-dumper](https://github.com/buggregator/server/assets/773481/b77fa867-0a8e-431a-9126-f69959dc18f4)
+| Port | What listens |
+|------|--------------|
+| `8000` | Web UI, HTTP events (Sentry, Ray, Inspector, XHProf, HTTP dumps, SMS, Xdebug traces), mock server |
+| `1025` | SMTP |
+| `9912` | VarDumper (not on Windows) |
+| `9913` | Monolog |
+| `8080` | HTTP proxy |
 
-### [Spatie Ray Debug Tool](https://docs.buggregator.dev/config/ray.html)
+## What it catches
 
-![ray](https://github.com/buggregator/server/assets/773481/168b27f7-75b1-4837-b0a1-37146d5b8b52)
+| | Send from | Docs |
+|---|---|---|
+| Sentry: exceptions, traces, logs, metrics | Sentry SDK (DSN) | [Sentry](https://docs.buggregator.dev/config/sentry.html) |
+| Emails | any SMTP client | [SMTP](https://docs.buggregator.dev/config/smtp.html) |
+| Dumps | Symfony VarDumper, Spatie Ray | [VarDumper](https://docs.buggregator.dev/config/var-dumper.html), [Ray](https://docs.buggregator.dev/config/ray.html) |
+| Logs | Monolog (JSON over TCP) | [Monolog](https://docs.buggregator.dev/config/monolog.html) |
+| Profiles | XHProf | [XHProf](https://docs.buggregator.dev/config/xhprof.html) |
+| APM transactions | Inspector | [Inspector](https://docs.buggregator.dev/config/inspector.html) |
+| Any HTTP request | curl, webhooks, your app | [HTTP dumps](https://docs.buggregator.dev/config/http-dumps.html) |
+| Outgoing HTTP calls | HTTP proxy on `:8080` | [HTTP proxy](https://docs.buggregator.dev/config/http-proxy.html) |
+| SMS | requests in the format of 42 SMS providers (Twilio, Vonage, Infobip…) | [SMS](https://docs.buggregator.dev/config/sms.html) |
+| Xdebug function traces | `curl` upload of a trace file | [Xdebug traces](https://docs.buggregator.dev/config/xdebug-trace.html) |
 
-### [Fake SMTP Server](https://docs.buggregator.dev/config/smtp.html)
+And around it:
 
-![smtp](https://github.com/buggregator/server/assets/773481/8dd60ddf-c8d8-4a26-a8c0-b05052414a5f)
+- **Mock server.** Requests to `/mock/...` get the response of the first matching rule: method + path → status, headers, body, delay. Rules from the UI, the API, `buggregator.yaml`, Go templates for dynamic bodies, or one rule per operation from an OpenAPI 3.x spec. [Docs](https://docs.buggregator.dev/config/mock-server.html)
+- **Email testing API.** `GET /api/smtp/messages/wait` holds the request until the email your test expects arrives; `/links` and `/codes` pull the confirmation link or the one-time code out of it. [Docs](https://docs.buggregator.dev/config/smtp.html)
+- **Xdebug without an IDE (off by default).** Buggregator sits between Xdebug and your IDE. With no IDE attached, a script pauses at `xdebug_break()` or a saved breakpoint, and you continue or step from the browser. [Docs](https://docs.buggregator.dev/config/xdebug.html)
+- **Projects.** One instance for several apps: each event goes to the project named in its DSN, header or SMTP username. [Docs](https://docs.buggregator.dev/config/projects.html)
+- **Webhooks, SSO, Prometheus metrics** for shared or CI setups. [Webhooks](https://docs.buggregator.dev/config/webhooks.html) · [SSO](https://docs.buggregator.dev/config/sso.html) · [Metrics](https://docs.buggregator.dev/config/metrics.html)
 
-### [Sentry Compatibility](https://docs.buggregator.dev/config/sentry.html)
+## For AI agents (MCP)
 
-![sentry](https://github.com/buggregator/server/assets/773481/e979fda5-54c8-42cc-8224-a1c5d828569a)
+Buggregator has a built-in MCP server. Claude Code, Cursor or any MCP client can list events, read a Sentry error with its stack trace, read dumps and profiles, find the slow calls in an Xdebug trace, and create mock rules. With the Xdebug proxy on, the agent can also set breakpoints and step through PHP code.
 
-### [Monolog Server](https://docs.buggregator.dev/config/monolog.html)
+```bash
+MCP_ENABLED=true buggregator
+claude mcp add buggregator -- buggregator mcp
+```
 
-![monolog](https://github.com/buggregator/server/assets/773481/21919110-fd4d-490d-a78e-41242d329885)
-
-### [Inspector Compatibility](https://docs.buggregator.dev/config/inspector.html)
-
-![inspector](https://github.com/buggregator/server/assets/773481/ab002ecf-e1dc-4433-90d4-0e42ff8c0ab3)
-
-### [HTTP Requests Dump Server](https://docs.buggregator.dev/config/http-dumps.html)
-
-![http dumps](https://github.com/buggregator/server/assets/773481/fc823390-b490-4bbb-a787-44471eca9fb6)
-
-## Supported Modules
-
-| Module | Type | Transport | Description |
-|--------|------|-----------|-------------|
-| Sentry | `sentry` | HTTP | Error tracking (gzip, envelope format) |
-| Ray | `ray` | HTTP | Debug tool for PHP |
-| VarDumper | `var-dump` | TCP :9912 | Symfony VarDumper (embedded PHP parser) |
-| Inspector | `inspector` | HTTP | APM monitoring |
-| Monolog | `monolog` | TCP :9913 | Logging (newline-delimited JSON) |
-| SMTP | `smtp` | TCP :1025 | Email capture (RFC822, multipart, attachments) |
-| SMS | `sms` | HTTP `/sms` | SMS gateway capture (41 providers) |
-| HTTP Dump | `http-dump` | HTTP | Catch-all HTTP request capture |
-| Profiler | `profiler` | HTTP | XHProf profiling (call graph, flame chart, top functions) |
-| Webhooks | `webhooks` | — | HTTP POST notifications when events are received |
+23 tools by default; 35 with the Xdebug proxy, 36 with `allow_eval`. On Windows or in Docker, use the HTTP transport. Setup for other clients: [MCP](https://docs.buggregator.dev/config/mcp.html). Want an agent to install and set it up for you? Give it [this page](https://docs.buggregator.dev/agent-setup.html).
 
 ## Configuration
 
-The server works with zero configuration. Optionally, create a `buggregator.yaml`:
+Zero config to start. Every setting is a flag, an environment variable or a line in `buggregator.yaml` (flags win over variables, variables over the file). Annotated example: [`buggregator.yaml.example`](buggregator.yaml.example). All options: [Server configuration](https://docs.buggregator.dev/config/server.html).
 
-```yaml
-server:
-  addr: ":8000"
+## Build from source
 
-database:
-  driver: sqlite
-  dsn: ":memory:"           # or "data.db" for persistence
-
-# Prometheus metrics (optional)
-metrics:
-  enabled: true
-  addr: ":9090"             # separate server, or empty to use main HTTP
-
-tcp:
-  smtp:
-    addr: ":1025"
-  monolog:
-    addr: ":9913"
-  var-dumper:
-    addr: ":9912"
-
-# Authentication (disabled by default)
-# Supports: auth0, google, github, keycloak, gitlab, oidc (generic)
-auth:
-  enabled: true
-  provider: auth0
-  provider_url: https://your-tenant.us.auth0.com
-  client_id: your-client-id
-  client_secret: your-client-secret
-  callback_url: http://localhost:8000/auth/sso/callback
-  scopes: openid,email,profile
-  jwt_secret: your-secret-for-signing-tokens
-
-# MCP — AI assistant integration (disabled by default)
-mcp:
-  enabled: true
-  transport: socket              # "socket" or "http"
-  socket_path: /tmp/buggregator-mcp.sock
-
-# Enable/disable modules (all enabled by default)
-modules:
-  sentry: true
-  ray: true
-  var-dump: true
-  inspector: true
-  monolog: true
-  smtp: true
-  sms: true
-  http-dump: true
-  profiler: true
-
-# Webhooks — HTTP POST notifications on events
-webhooks:
-  - event: "*"
-    url: https://slack.example.com/webhook
-    headers:
-      Authorization: "Bearer token"
-    verify_ssl: false
-    retry: true
-  - event: sentry
-    url: https://pagerduty.example.com/alert
-
-# Pre-defined projects
-projects:
-  - key: my-app
-    name: My Application
-```
-
-### Configuration Priority
-
-1. **CLI flags** (`--http-addr :9000`)
-2. **Environment variables** (`HTTP_ADDR=:9000`)
-3. **Config file** (`buggregator.yaml`)
-4. **Defaults**
-
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `HTTP_ADDR` | `:8000` | HTTP listen address |
-| `DATABASE_DSN` | `:memory:` | SQLite DSN |
-| `SMTP_ADDR` | `:1025` | SMTP listen address |
-| `MONOLOG_ADDR` | `:9913` | Monolog TCP address |
-| `VAR_DUMPER_ADDR` | `:9912` | VarDumper TCP address |
-| `CLIENT_SUPPORTED_EVENTS` | all | Comma-separated list of enabled modules |
-| `METRICS_ENABLED` | `false` | Enable Prometheus metrics |
-| `METRICS_ADDR` | — | Separate metrics server address |
-| `AUTH_ENABLED` | `false` | Enable OAuth2/OIDC authentication |
-| `AUTH_PROVIDER` | `oidc` | Provider: `auth0`, `google`, `github`, `keycloak`, `gitlab`, `oidc` |
-| `AUTH_PROVIDER_URL` | — | OIDC issuer URL |
-| `AUTH_CLIENT_ID` | — | OAuth2 client ID |
-| `AUTH_CLIENT_SECRET` | — | OAuth2 client secret |
-| `AUTH_CALLBACK_URL` | — | OAuth2 callback URL |
-| `AUTH_SCOPES` | `openid,email,profile` | Comma-separated OAuth2 scopes |
-| `AUTH_JWT_SECRET` | — | Secret for signing internal JWT tokens |
-| `MCP_ENABLED` | `false` | Enable MCP server |
-| `MCP_TRANSPORT` | `socket` | `socket` (local) or `http` (remote) |
-| `MCP_SOCKET_PATH` | `/tmp/buggregator-mcp.sock` | Unix socket path |
-| `MCP_ADDR` | `:8001` | HTTP listen address for MCP |
-| `MCP_AUTH_TOKEN` | — | Bearer token for HTTP MCP transport |
-
-## PHP Client Configuration
-
-### Laravel / Symfony
-
-```env
-# .env
-SENTRY_LARAVEL_DSN=http://sentry@localhost:8000/default
-RAY_HOST=ray@localhost
-RAY_PORT=8000
-VAR_DUMPER_SERVER=localhost:9912
-LOG_SOCKET_URL=localhost:9913
-MAIL_HOST=localhost
-MAIL_PORT=1025
-INSPECTOR_URL=http://inspector@localhost:8000
-INSPECTOR_API_KEY=test
-PROFILER_ENDPOINT=http://profiler@localhost:8000
-HTTP_DUMP_ENDPOINT=http://http-dump@localhost:8000
-SMS_ENDPOINT=http://localhost:8000/sms
-```
-
-## MCP (Model Context Protocol)
-
-Buggregator includes a built-in MCP server that lets AI assistants (Claude Code, Cursor, etc.) query and analyze debugging data directly.
-
-```
-AI Assistant --stdio--> buggregator mcp --unix socket--> buggregator (main process)
-```
-
-### Setup
-
-**Claude Code** (`~/.claude.json` or project settings):
-```json
-{
-  "mcpServers": {
-    "buggregator": {
-      "command": "./buggregator",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-**Cursor** (`.cursor/mcp.json`):
-```json
-{
-  "mcpServers": {
-    "buggregator": {
-      "command": "./buggregator",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-### Available Tools
-
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `events_list` | List captured events | `type`, `project`, `limit` (default 20, max 100) |
-| `event_get` | Get full event payload | `uuid` |
-| `event_delete` | Delete an event | `uuid` |
-| `profiler_summary` | Profile overview: totals, slowest function, memory hotspot | `uuid` |
-| `profiler_top` | Top functions sorted by metric | `uuid`, `metric`, `limit` |
-| `profiler_call_graph` | Filtered call graph with significant paths | `uuid`, `metric`, `percentage`, `threshold` |
-| `sentry_event` | Structured error: exception chain, stack traces, tags | `uuid` |
-| `vardump_get` | Variable value with HTML stripped | `uuid` |
-
-## Building from Source
-
-### Prerequisites
-
-- Go 1.22+
-- PHP 8.1+ with Composer (for VarDumper module)
-- Make
+Needs Go 1.26+, PHP 8.1+ with Composer (for the VarDumper parser) and Make.
 
 ```bash
-make build          # Full build: downloads frontend, builds PHP parser, compiles binary
-make run            # Build and run
-make build-cross GOOS=darwin GOARCH=arm64   # Cross-compile
+make build    # downloads the UI, builds the PHP parser, compiles the binary
+make run
+make build-cross GOOS=darwin GOARCH=arm64
 ```
 
-## Documentation
+## Like it?
 
-See the [documentation](https://docs.buggregator.dev/) for detailed installation and usage instructions.
+**If Buggregator replaced a tool or two on your machine, [give it a star](https://github.com/buggregator/server/stargazers) — that is how other developers find it.**
+
+- Website: [buggregator.dev](https://buggregator.dev)
+- Docs: [docs.buggregator.dev](https://docs.buggregator.dev)
+- Chat: [Discord](https://discord.gg/vDsCD3EKUB)
+- Support the author: [Patreon](https://patreon.com/butschster)
+- No binary or Docker? [Buggregator Trap](https://docs.buggregator.dev/trap/what-is-trap.html) is a small PHP CLI alternative.
+- Buggregator 1.x (PHP) lives on the [1.x branch](https://github.com/buggregator/server/tree/1.x); new work happens here.
 
 ## Contributing
 
-We enthusiastically invite you to contribute to Buggregator Server! Whether you've uncovered a bug, have innovative feature suggestions, or wish to contribute in any other capacity, we warmly welcome your participation. Simply open an issue or submit a pull request on our GitHub repository to get started.
-
-> Read more about how to contribute [here](https://docs.buggregator.dev/contributing.html).
+Found a bug or have an idea? Open an issue or a pull request. How to set up the project: [Contributing](https://docs.buggregator.dev/contributing.html).
 
 ## License
 
-Buggregator is open-sourced software licensed under the MIT License.
+MIT — see [LICENSE](LICENSE).

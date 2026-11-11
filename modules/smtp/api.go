@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 // MessageFilter holds filter criteria for SMTP message queries.
@@ -36,16 +36,18 @@ type Link struct {
 	Source string `json:"source"` // "html" or "text"
 }
 
-func registerSMTPAPI(mux *http.ServeMux, store event.Store, mod *Module) {
-	mux.HandleFunc("GET /api/smtp/cursor", handleCursor())
-	mux.HandleFunc("GET /api/smtp/stats", handleStats(store))
-	mux.HandleFunc("DELETE /api/smtp/messages", handleDeleteMessages(store))
+// registerSMTPAPI adds the /api/smtp routes; protect is the API auth middleware.
+func registerSMTPAPI(mux *http.ServeMux, store event.Store, mod *Module, protect func(http.Handler) http.Handler) {
+	route := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, protect(h)) }
+	route("GET /api/smtp/cursor", handleCursor())
+	route("GET /api/smtp/stats", handleStats(store))
+	route("DELETE /api/smtp/messages", handleDeleteMessages(store))
 	// /wait must be registered before the plain /messages pattern.
-	mux.HandleFunc("GET /api/smtp/messages/wait", handleMessagesWait(store, mod))
-	mux.HandleFunc("GET /api/smtp/messages", handleMessages(store))
-	mux.HandleFunc("GET /api/smtp/message/{uuid}/raw", handleRaw(store))
-	mux.HandleFunc("GET /api/smtp/message/{uuid}/links", handleLinks(store))
-	mux.HandleFunc("GET /api/smtp/message/{uuid}/codes", handleCodes(store))
+	route("GET /api/smtp/messages/wait", handleMessagesWait(store, mod))
+	route("GET /api/smtp/messages", handleMessages(store))
+	route("GET /api/smtp/message/{uuid}/raw", handleRaw(store))
+	route("GET /api/smtp/message/{uuid}/links", handleLinks(store))
+	route("GET /api/smtp/message/{uuid}/codes", handleCodes(store))
 }
 
 // handleCursor returns the current server time as a cursor token.
@@ -364,6 +366,11 @@ func applyFilter(events []event.Event, f MessageFilter) []event.Event {
 
 // matchesFilter returns true if ev satisfies all criteria in f.
 func matchesFilter(ev event.Event, f MessageFilter) bool {
+	// Stored mail is already filtered by project in the query; new mail for
+	// /wait comes here unfiltered.
+	if f.Project != "" && ev.Project != f.Project {
+		return false
+	}
 	if f.Since > 0 && ev.Timestamp < f.Since {
 		return false
 	}

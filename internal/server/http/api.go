@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/buggregator/go-buggregator/internal/event"
+	"github.com/buggregator/server/v2/internal/event"
 )
 
 // AuthSettings holds auth info exposed via /api/settings.
@@ -41,9 +41,10 @@ type ListLimits struct {
 func parseListOptions(r *http.Request, lim ListLimits) event.FindOptions {
 	q := r.URL.Query()
 	opts := event.FindOptions{
-		Type:    q.Get("type"),
-		Project: q.Get("project"),
-		Limit:   lim.DefaultLimit,
+		Type:        q.Get("type"),
+		Project:     q.Get("project"),
+		Limit:       lim.DefaultLimit,
+		PinnedFirst: true,
 	}
 
 	if v := q.Get("limit"); v != "" {
@@ -142,13 +143,19 @@ func listMeta(opts event.FindOptions, returned int) map[string]any {
 
 // RegisterAPI registers core API routes on the given mux.
 // authMiddleware wraps protected routes; pass a no-op when auth is disabled.
-func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewRegistry, es *EventService, version string, db *sql.DB, enabledEvents []string, authSettings AuthSettings, authMiddleware func(http.Handler) http.Handler, listLimits ListLimits) {
+// updateStatus gives the new-version check result for /api/settings; nil when
+// the check is off.
+func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewRegistry, es *EventService, version string, db *sql.DB, enabledEvents []string, authSettings AuthSettings, authMiddleware func(http.Handler) http.Handler, listLimits ListLimits, updateStatus func() any) {
 	// Public routes (no auth required).
 	mux.HandleFunc("GET /api/version", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]string{"version": version})
 	})
 
 	mux.HandleFunc("GET /api/settings", func(w http.ResponseWriter, r *http.Request) {
+		var update any // null: the check is off
+		if updateStatus != nil {
+			update = updateStatus()
+		}
 		writeJSON(w, map[string]any{
 			"auth": map[string]any{
 				"enabled":   authSettings.Enabled,
@@ -156,6 +163,7 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 			},
 			"version": version,
 			"events":  enabledEvents,
+			"update":  update,
 		})
 	})
 
@@ -227,16 +235,18 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 	// Clear events.
 	protect("DELETE /api/events", func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
-			Type    string   `json:"type"`
-			Project string   `json:"project"`
-			UUIDs   []string `json:"uuids"`
+			Type       string   `json:"type"`
+			Project    string   `json:"project"`
+			UUIDs      []string `json:"uuids"`
+			KeepPinned bool     `json:"keep_pinned"`
 		}
 		json.NewDecoder(r.Body).Decode(&body)
 
 		opts := event.DeleteOptions{
-			Type:    body.Type,
-			Project: body.Project,
-			UUIDs:   body.UUIDs,
+			Type:       body.Type,
+			Project:    body.Project,
+			UUIDs:      body.UUIDs,
+			KeepPinned: body.KeepPinned,
 		}
 		if err := store.DeleteAll(r.Context(), opts); err != nil {
 			writeError(w, err.Error(), http.StatusInternalServerError)

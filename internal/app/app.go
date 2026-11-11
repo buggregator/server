@@ -3,24 +3,29 @@ package app
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
-	"github.com/buggregator/go-buggregator/internal/auth"
-	"github.com/buggregator/go-buggregator/internal/event"
-	"github.com/buggregator/go-buggregator/internal/frontend"
-	mcpserver "github.com/buggregator/go-buggregator/internal/mcp"
-	"github.com/buggregator/go-buggregator/internal/metrics"
-	"github.com/buggregator/go-buggregator/internal/module"
-	httpserver "github.com/buggregator/go-buggregator/internal/server/http"
-	"github.com/buggregator/go-buggregator/internal/server/tcp"
-	"github.com/buggregator/go-buggregator/internal/server/ws"
-	"github.com/buggregator/go-buggregator/internal/storage"
+	"github.com/buggregator/server/v2/internal/auth"
+	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/frontend"
+	mcpserver "github.com/buggregator/server/v2/internal/mcp"
+	"github.com/buggregator/server/v2/internal/metrics"
+	"github.com/buggregator/server/v2/internal/module"
+	httpserver "github.com/buggregator/server/v2/internal/server/http"
+	"github.com/buggregator/server/v2/internal/server/tcp"
+	"github.com/buggregator/server/v2/internal/server/ws"
+	"github.com/buggregator/server/v2/internal/storage"
+	"github.com/buggregator/server/v2/internal/updates"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -81,6 +86,10 @@ func (a *App) Run() {
 
 		tokens := auth.NewTokenStore(a.cfg.Auth.JWTSecret)
 		authMiddleware = auth.Middleware(tokens, true)
+		a.hub.SetTokenValidator(func(token string) (time.Time, bool) {
+			exp, err := tokens.ExpiresAt(token)
+			return exp, err == nil
+		})
 		authSettings.LoginURL = auth.LoginURL()
 
 		oauth, err := auth.NewOAuthClient(
@@ -105,16 +114,41 @@ func (a *App) Run() {
 		authMiddleware = func(next http.Handler) http.Handler { return next }
 	}
 
+	// New-version check: GitHub releases/latest, result in /api/settings.
+	// Off = no network call; a dev build never checks.
+	var updateStatus func() any
+	if a.cfg.UpdateCheck.On() {
+		checker := updates.New(a.cfg.Version, a.cfg.UpdateCheck.IntervalDur)
+		go checker.Run(ctx)
+		updateStatus = func() any { return checker.Status() }
+	}
+
 	// Register core API routes (settings endpoint is public, others go through auth middleware).
-	httpserver.RegisterAPI(mux, store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes(), authSettings, authMiddleware, a.listLimits())
+	httpserver.RegisterAPI(mux, store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes(), authSettings, authMiddleware, a.listLimits(), updateStatus)
+
+	// Module API routes that need the same auth as the core API.
+	a.registry.RegisterProtectedRoutes(mux, authMiddleware)
+
+	if !a.cfg.Xdebug.Enabled {
+		// The Xdebug page asks this first; with the module off it shows how to turn it on.
+		mux.Handle("GET /api/xdebug", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"enabled": false, "addr": a.cfg.Xdebug.Addr, "ide_addr": a.cfg.Xdebug.IDEAddr, "allow_eval": a.cfg.Xdebug.AllowEval,
+				"mode": a.cfg.Xdebug.Mode, "allow_control": a.cfg.Xdebug.AllowControlOn(),
+				"pause_on_first_line":  a.cfg.Xdebug.PauseOnFirstLine,
+				"idle_timeout_seconds": idleSeconds(a.cfg.Xdebug.IdleTimeoutDur),
+			})
+		})))
+	}
 
 	// Register attachment API endpoints.
-	httpserver.RegisterAttachmentAPI(mux, a.db, a.attachments)
+	httpserver.RegisterAttachmentAPI(mux, a.db, a.attachments, authMiddleware)
 
 	// Register metrics endpoints.
 	if a.metrics != nil {
 		// JSON API for the frontend dashboard.
-		mux.HandleFunc("GET /api/metrics", metrics.HandleMetricsJSON())
+		mux.Handle("GET /api/metrics", authMiddleware(metrics.HandleMetricsJSON()))
 
 		// Prometheus endpoint.
 		if a.cfg.Metrics.Addr != "" {
@@ -184,7 +218,13 @@ func (a *App) Run() {
 
 	// Start MCP server if enabled.
 	if a.cfg.MCP.Enabled {
-		mcpSrv := mcpserver.NewServer(a.db, store)
+		var providers []mcpserver.ToolProvider
+		for _, m := range a.registry.Modules() {
+			if tp, ok := m.(mcpserver.ToolProvider); ok {
+				providers = append(providers, tp)
+			}
+		}
+		mcpSrv := mcpserver.NewServer(a.db, store, providers...)
 		switch a.cfg.MCP.Transport {
 		case "http":
 			go func() {
@@ -201,6 +241,14 @@ func (a *App) Run() {
 		}
 	}
 
+	// Bind the HTTP port before anything else serves: a busy port must stop
+	// startup (like the TCP ports), not leave a process with no UI.
+	httpLn, err := listenHTTP(a.cfg.HTTPAddr)
+	if err != nil {
+		slog.Error("failed to start HTTP server", "err", err)
+		os.Exit(1)
+	}
+
 	// Start TCP servers.
 	tcpManager := tcp.NewManager(a.registry.TCPServers(), a.metrics)
 	if err := tcpManager.Start(ctx); err != nil {
@@ -214,7 +262,8 @@ func (a *App) Run() {
 	// Start HTTP server (with CORS and optional metrics middleware).
 	var handler http.Handler = mux
 	if len(a.cfg.Server.CORSOrigins) > 0 {
-		handler = httpserver.CORSMiddleware(handler, a.cfg.Server.CORSOrigins)
+		// "/mock/" is httpdumps.MockPrefix: mock OPTIONS rules answer preflights.
+		handler = httpserver.CORSMiddleware(handler, a.cfg.Server.CORSOrigins, "/mock/")
 	}
 	if a.metrics != nil {
 		handler = metrics.HTTPMiddleware(handler, a.metrics)
@@ -223,7 +272,7 @@ func (a *App) Run() {
 	srv := &http.Server{Addr: a.cfg.HTTPAddr, Handler: handler}
 	go func() {
 		slog.Info("HTTP server started", "addr", a.cfg.HTTPAddr)
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		if err := srv.Serve(httpLn); err != http.ErrServerClosed {
 			slog.Error("HTTP server error", "err", err)
 		}
 	}()
@@ -239,8 +288,8 @@ func (a *App) Run() {
 // reason is logged.
 func (a *App) listLimits() httpserver.ListLimits {
 	lim := httpserver.ListLimits{
-		DefaultLimit: a.cfg.UI.DefaultLimit,
-		MaxLimit:     a.cfg.UI.MaxLimit,
+		DefaultLimit: derefInt(a.cfg.UI.DefaultLimit),
+		MaxLimit:     derefInt(a.cfg.UI.MaxLimit),
 	}
 
 	switch w := strings.TrimSpace(a.cfg.UI.DefaultWindow); w {
@@ -258,4 +307,33 @@ func (a *App) listLimits() httpserver.ListLimits {
 	slog.Info("event list limits", "default_limit", lim.DefaultLimit,
 		"max_limit", lim.MaxLimit, "default_window", lim.DefaultWindow)
 	return lim
+}
+
+func derefInt(p *int) int {
+	if p == nil {
+		return 0
+	}
+	return *p
+}
+
+// listenHTTP binds the HTTP address. The error names the address and how to
+// change it, since a busy :8000 is the usual first-run problem.
+func listenHTTP(addr string) (net.Listener, error) {
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("http: listen on %s: %w (change it with -http-addr or HTTP_ADDR)", addr, err)
+	}
+	return ln, nil
+}
+
+// idleSeconds is xdebug idle_timeout_seconds as GET /api/xdebug shows it
+// (0 = the guard is off).
+func idleSeconds(d time.Duration) int {
+	switch {
+	case d < 0:
+		return 0
+	case d == 0:
+		return 600
+	}
+	return int(d / time.Second)
 }
