@@ -23,10 +23,31 @@ type proxyServer struct {
 	ca           *tls.Certificate
 	certCache    sync.Map // host -> *tls.Certificate
 	listener     net.Listener
+	// transport is shared by all proxied requests so upstream connections
+	// are reused and bounded instead of leaking one pool per request.
+	transport *http.Transport
 }
 
 func newProxyServer(addr string, es EventStorer) *proxyServer {
-	return &proxyServer{addr: addr, eventService: es}
+	return &proxyServer{addr: addr, eventService: es, transport: newUpstreamTransport()}
+}
+
+// newUpstreamTransport is the client side of the proxy: no proxy of its
+// own (it would loop back), HTTP/1.1, bounded idle pool.
+func newUpstreamTransport() *http.Transport {
+	return &http.Transport{
+		Proxy: nil,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		TLSClientConfig:       &tls.Config{},
+		MaxIdleConns:          100,
+		MaxIdleConnsPerHost:   10,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
 }
 
 func (s *proxyServer) Start(ctx context.Context) error {
@@ -67,6 +88,7 @@ func (s *proxyServer) Start(ctx context.Context) error {
 }
 
 func (s *proxyServer) Stop() error {
+	s.transport.CloseIdleConnections()
 	if s.listener != nil {
 		return s.listener.Close()
 	}
@@ -130,7 +152,9 @@ func (s *proxyServer) handleConnect(ctx context.Context, conn net.Conn, connectR
 		req.URL.Host = host
 		req.RequestURI = ""
 
-		s.proxyAndRecord(ctx, tlsConn, req, "https")
+		if !s.proxyAndRecord(ctx, tlsConn, req, "https") {
+			return
+		}
 	}
 }
 
@@ -143,9 +167,12 @@ func (s *proxyServer) handleHTTP(ctx context.Context, conn net.Conn, req *http.R
 	s.proxyAndRecord(ctx, conn, req, "http")
 }
 
-// proxyAndRecord forwards the request, records the exchange, and writes the response back.
-func (s *proxyServer) proxyAndRecord(ctx context.Context, w io.Writer, req *http.Request, scheme string) {
+// proxyAndRecord forwards the request, records the exchange, and writes the
+// response back. It reports whether the client connection may carry the next
+// request.
+func (s *proxyServer) proxyAndRecord(ctx context.Context, w io.Writer, req *http.Request, scheme string) (keepAlive bool) {
 	start := time.Now()
+	clientClose := req.Close
 
 	// Capture up to maxBodySize+1 bytes of the request body for the dump;
 	// the upstream still gets all of it.
@@ -172,17 +199,14 @@ func (s *proxyServer) proxyAndRecord(ctx context.Context, w io.Writer, req *http
 	}
 
 	// Forward the request to the real server.
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{},
-	}
-	resp, err := transport.RoundTrip(req)
+	resp, err := s.transport.RoundTrip(req)
 	durationMs := float64(time.Since(start).Milliseconds())
 
 	if err != nil {
 		// Send 502 back to the client.
 		fmt.Fprintf(w, "HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n")
 		s.storeEvent(ctx, captured, nil, durationMs, err.Error())
-		return
+		return !clientClose
 	}
 	defer resp.Body.Close()
 
@@ -193,7 +217,7 @@ func (s *proxyServer) proxyAndRecord(ctx context.Context, w io.Writer, req *http
 		io.Reader
 		io.Closer
 	}{io.TeeReader(resp.Body, capture), resp.Body}
-	writeResponse(w, resp)
+	writeResponse(w, resp, req.ProtoAtLeast(1, 1))
 
 	capturedResp := &capturedResponse{
 		StatusCode: resp.StatusCode,
@@ -202,14 +226,23 @@ func (s *proxyServer) proxyAndRecord(ctx context.Context, w io.Writer, req *http
 	}
 
 	s.storeEvent(ctx, captured, capturedResp, durationMs, "")
+	return !clientClose && !resp.Close
 }
 
 // writeResponse writes resp to the client with its own framing: its
 // Content-Length, or chunked when the length is unknown, so the client
-// connection stays usable for the next request.
-func writeResponse(w io.Writer, resp *http.Response) {
-	if resp.ContentLength < 0 && len(resp.TransferEncoding) == 0 {
-		resp.TransferEncoding = []string{"chunked"}
+// connection stays usable for the next request. An HTTP/1.0 client cannot
+// read chunked (RFC 9112 §7.1): an answer of unknown length goes to it
+// close-delimited, and resp.Close tells the caller to end the connection.
+func writeResponse(w io.Writer, resp *http.Response, clientHTTP11 bool) {
+	if resp.ContentLength < 0 {
+		switch {
+		case !clientHTTP11:
+			resp.TransferEncoding = nil
+			resp.Close = true
+		case len(resp.TransferEncoding) == 0:
+			resp.TransferEncoding = []string{"chunked"}
+		}
 	}
 	if err := resp.Write(w); err != nil {
 		slog.Debug("proxy: writing the response to the client failed", "err", err)
