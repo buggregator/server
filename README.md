@@ -19,6 +19,18 @@
 
 Mail, HTTP dumps, the proxy, mocks and MCP work with any language. Sentry errors, traces and logs are tested with the official SDKs for PHP, JavaScript (browser and Node.js), Python and Go.
 
+## See it
+
+![Buggregator in 30 seconds: events arrive, then an exception, an email, dumps and a profile are opened](.github/assets/demo.gif)
+
+| Sentry | SMTP |
+|---|---|
+| ![A Sentry exception with its stack trace](.github/assets/sentry.webp) | ![An order confirmation email in the HTML preview](.github/assets/smtp.webp) |
+| **VarDumper** | **Profiler** |
+| ![VarDumper dumps: a boolean, a number, a string and an SQL query](.github/assets/dumps.webp) | ![A profiler call graph, slow functions in red](.github/assets/profiler.webp) |
+
+<sub>Buggregator v2.10.0 with the demo data of [`scripts/demo`](scripts/demo/README.md).</sub>
+
 ## Run it in 30 seconds
 
 **Binary** (Linux, macOS, Windows; x86-64 and ARM):
