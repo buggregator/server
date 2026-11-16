@@ -103,7 +103,9 @@ func main() {
 
 	// Register enabled modules.
 	if enabled.IsEnabled("sentry") {
-		registry.Register(sentry.New())
+		sentryMod := sentry.New()
+		sentryMod.SetSourceFetch(cfg.Sentry.SourceFetch)
+		registry.Register(sentryMod)
 	}
 	if enabled.IsEnabled("ray") {
 		registry.Register(ray.New())

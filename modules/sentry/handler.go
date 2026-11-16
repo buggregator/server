@@ -25,6 +25,8 @@ type handler struct {
 	// notifyStored, if set, announces the kinds of structured rows an
 	// envelope stored ("log", "metric", "trace").
 	notifyStored func(project string, kinds []string)
+	// fetchSource fetches JS frame sources; nil is the private-only default.
+	fetchSource sourceFetcher
 }
 
 // storedKinds collects the kinds of structured rows stored for one request,
@@ -99,7 +101,7 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 		body = normalizeExceptionList(body)
 
 		// Resolve source code for browser/JS frames that only carry file+line.
-		if enriched, changed := enrichSourceContext(body, nil); changed {
+		if enriched, changed := enrichSourceContext(body, h.fetchSource); changed {
 			body = enriched
 		}
 
@@ -271,7 +273,7 @@ func (h *handler) handleEventItem(item EnvelopeItem, envelopeEventID string, pro
 	payload = normalizeExceptionList(payload)
 
 	// Resolve source code for browser/JS frames that only carry file+line.
-	if enriched, changed := enrichSourceContext(payload, nil); changed {
+	if enriched, changed := enrichSourceContext(payload, h.fetchSource); changed {
 		payload = enriched
 		_ = json.Unmarshal(payload, &ev) // re-parse so structured storage carries the code too
 	}
