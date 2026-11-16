@@ -21,6 +21,7 @@ import (
 	mcpserver "github.com/buggregator/server/v2/internal/mcp"
 	"github.com/buggregator/server/v2/internal/metrics"
 	"github.com/buggregator/server/v2/internal/module"
+	"github.com/buggregator/server/v2/internal/retention"
 	httpserver "github.com/buggregator/server/v2/internal/server/http"
 	"github.com/buggregator/server/v2/internal/server/tcp"
 	"github.com/buggregator/server/v2/internal/server/ws"
@@ -125,6 +126,12 @@ func (a *App) Run() {
 		checker := updates.New(a.cfg.Version, a.cfg.UpdateCheck.IntervalDur)
 		go checker.Run(ctx)
 		updateStatus = func() any { return checker.Status() }
+	}
+
+	// Optional auto-cleanup; off unless retention is configured.
+	policy := retention.Policy{MaxAge: a.cfg.Retention.MaxAgeDur, MaxEvents: a.cfg.Retention.MaxEvents}
+	if policy.On() {
+		go retention.New(a.db, store, policy, eventService.BroadcastDeleted).Run(ctx)
 	}
 
 	// Register core API routes (settings endpoint is public, others go through auth middleware).

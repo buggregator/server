@@ -61,7 +61,9 @@ type Config struct {
 	UpdateCheck UpdateCheckConfig `yaml:"update_check"`
 	// XdebugTrace bounds uploaded Xdebug function traces (module xdebug-trace).
 	XdebugTrace XdebugTraceConfig `yaml:"xdebug_trace"`
-	Version     string            `yaml:"-"`
+	// Retention deletes old events in the background; unset keeps everything.
+	Retention RetentionConfig `yaml:"retention"`
+	Version   string          `yaml:"-"`
 
 	// Shortcuts.
 	HTTPAddr      string `yaml:"-"`
@@ -156,6 +158,15 @@ type UpdateCheckConfig struct {
 
 // On reports whether the check runs (default true).
 func (c UpdateCheckConfig) On() bool { return c.Enabled == nil || *c.Enabled }
+
+// RetentionConfig is the optional auto-cleanup. Pinned events are never
+// deleted and do not count towards max_events.
+type RetentionConfig struct {
+	MaxAge    string `yaml:"max_age"`    // delete events older than this: "30m", "24h", "7d"; empty or 0 = keep
+	MaxEvents int    `yaml:"max_events"` // keep at most this many events in total, newest first; 0 = no cap
+
+	MaxAgeDur time.Duration `yaml:"-"` // parsed MaxAge, 0 = off
+}
 
 // MetricsConfig controls Prometheus metrics.
 type MetricsConfig struct {
@@ -305,6 +316,9 @@ func LoadConfig() Config {
 	var uiDefaultLimit, uiMaxLimit string
 	flag.StringVar(&uiDefaultLimit, "ui-default-limit", "", "Events per list without a limit param (0 = unlimited)")
 	flag.StringVar(&uiMaxLimit, "ui-max-limit", "", "Ceiling for an explicit list limit (0 = no ceiling)")
+	var retentionMaxEvents string
+	flag.StringVar(&cfg.Retention.MaxAge, "retention-max-age", "", "Delete events older than this (30m, 24h, 7d); empty = keep")
+	flag.StringVar(&retentionMaxEvents, "retention-max-events", "", "Keep at most this many events (0 = no cap)")
 	flag.Parse()
 
 	fileCfg := loadConfigFile(configFile)
@@ -402,6 +416,21 @@ func LoadConfig() Config {
 	cfg.UI.MaxLimit = resolveLimit(5000, fileCfg.UI.MaxLimit, uiMaxLimit, os.Getenv("UI_MAX_LIMIT"))
 	cfg.UI.DefaultWindow = coalesce(os.Getenv("UI_DEFAULT_WINDOW"), fileCfg.UI.DefaultWindow)
 
+	cfg.Retention.MaxAge = coalesce(cfg.Retention.MaxAge, os.Getenv("RETENTION_MAX_AGE"), fileCfg.Retention.MaxAge)
+	cfg.Retention.MaxAgeDur = parseRetentionAge(cfg.Retention.MaxAge)
+	cfg.Retention.MaxEvents = fileCfg.Retention.MaxEvents
+	if v := coalesce(retentionMaxEvents, os.Getenv("RETENTION_MAX_EVENTS")); v != "" {
+		n, err := strconv.Atoi(strings.TrimSpace(v))
+		if err != nil || n < 0 {
+			slog.Warn("retention.max_events is not a whole number, no cap", "value", v)
+			n = 0
+		}
+		cfg.Retention.MaxEvents = n
+	}
+	if cfg.Retention.MaxEvents < 0 {
+		cfg.Retention.MaxEvents = 0
+	}
+
 	// CORS origins.
 	cfg.Server.CORSOrigins = corsOrigins(fileCfg.Server.CORSOrigins, os.Getenv("CORS_ORIGINS"))
 
@@ -430,6 +459,29 @@ func LoadConfig() Config {
 	cfg.ProxyAddr = cfg.TCP.Proxy.Addr
 
 	return cfg
+}
+
+// parseRetentionAge reads retention.max_age: a Go duration or whole days
+// ("7d"). Empty, "0" or a bad value keep everything (a bad one with a warning).
+func parseRetentionAge(v string) time.Duration {
+	v = strings.TrimSpace(v)
+	if v == "" || v == "0" {
+		return 0
+	}
+	var d time.Duration
+	var err error
+	if days, ok := strings.CutSuffix(v, "d"); ok {
+		var n int
+		n, err = strconv.Atoi(days)
+		d = time.Duration(n) * 24 * time.Hour
+	} else {
+		d, err = time.ParseDuration(v)
+	}
+	if err != nil || d <= 0 {
+		slog.Warn("retention.max_age is not a duration like 24h or 7d; keeping all events", "value", v)
+		return 0
+	}
+	return d
 }
 
 // parseIdleTimeout reads xdebug.idle_timeout: a Go duration ("10m", "90s");
