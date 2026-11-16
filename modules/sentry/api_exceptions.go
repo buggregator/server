@@ -434,7 +434,8 @@ func loadPreviewSpans(db *sql.DB, traceID string, txnStartTS sql.NullString, lim
 	var result []map[string]any
 	for rows.Next() {
 		var (
-			spanID, op  string
+			spanID      string
+			op          sql.NullString // spans without op are kept
 			description sql.NullString
 			sStartTS    sql.NullString
 			durationMS  sql.NullInt64
@@ -449,7 +450,7 @@ func loadPreviewSpans(db *sql.DB, traceID string, txnStartTS sql.NullString, lim
 
 		result = append(result, map[string]any{
 			"span_id":         spanID,
-			"op":              op,
+			"op":              scanNullString(op),
 			"description":     scanNullString(description),
 			"start_offset_ms": startOffsetMS,
 			"duration_ms":     scanNullInt(durationMS),

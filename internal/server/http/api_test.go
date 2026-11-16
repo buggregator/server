@@ -282,6 +282,36 @@ func TestAPI_DeleteAll(t *testing.T) {
 	}
 }
 
+// A body that does not parse deletes nothing (400); an empty body still
+// deletes everything.
+func TestAPI_DeleteAll_BadBody(t *testing.T) {
+	mux, store := setupAPI(t)
+	ctx := context.Background()
+	for _, u := range []string{"b1", "b2"} {
+		store.Store(ctx, event.Event{UUID: u, Type: "sentry", Payload: json.RawMessage(`{}`), Timestamp: 1.0, Project: "default"})
+	}
+
+	for _, body := range []string{`{"type":"sentry"`, `type=sentry`, `{"uuids":"b1"}`} {
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("DELETE", "/api/events", strings.NewReader(body)))
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("body %q: status = %d, want 400", body, w.Code)
+		}
+	}
+	if all, _ := store.FindAll(ctx, event.FindOptions{}); len(all) != 2 {
+		t.Fatalf("after bad bodies len = %d, want 2", len(all))
+	}
+
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest("DELETE", "/api/events", nil))
+	if w.Code != 200 {
+		t.Fatalf("empty body: status = %d", w.Code)
+	}
+	if all, _ := store.FindAll(ctx, event.FindOptions{}); len(all) != 0 {
+		t.Errorf("after empty body len = %d, want 0", len(all))
+	}
+}
+
 // keep_pinned reaches the store: the body field is read.
 func TestAPI_DeleteAll_KeepPinned(t *testing.T) {
 	mux, store := setupAPI(t)
