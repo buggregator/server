@@ -123,3 +123,34 @@ func TestPolicyOff(t *testing.T) {
 		t.Errorf("left = %s", got)
 	}
 }
+
+type fakePruner struct{ cutoff time.Time }
+
+func (f *fakePruner) PruneBefore(_ context.Context, cutoff time.Time) (int, error) {
+	f.cutoff = cutoff
+	return 3, nil
+}
+
+// With max_age the pruners get the same cutoff; max_events alone does not call them.
+func TestPruners(t *testing.T) {
+	p := &fakePruner{}
+	c, _, _, _ := setup(t, Policy{MaxAge: 24 * time.Hour})
+	c.pruners = []Pruner{p}
+	n, err := c.RunOnce(context.Background())
+	if err != nil || n != 3 {
+		t.Fatalf("RunOnce = %d, %v; want 3", n, err)
+	}
+	if !p.cutoff.Equal(now.Add(-24 * time.Hour)) {
+		t.Errorf("cutoff = %v", p.cutoff)
+	}
+
+	p2 := &fakePruner{}
+	c, _, _, _ = setup(t, Policy{MaxEvents: 5})
+	c.pruners = []Pruner{p2}
+	if _, err := c.RunOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if !p2.cutoff.IsZero() {
+		t.Error("max_events alone called a pruner")
+	}
+}
