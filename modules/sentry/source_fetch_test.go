@@ -23,6 +23,8 @@ func TestPrivateAddressOnly(t *testing.T) {
 		{"8.8.8.8:80", false},
 		{"[2606:4700::1111]:443", false},
 		{"169.254.169.254:80", false}, // cloud metadata
+		{"[fd00:ec2::254]:80", false}, // AWS IMDS over IPv6, inside fc00::/7
+		{"[fd00:ec2::253]:80", true},
 		{"[fe80::1]:80", false},
 		{"0.0.0.0:80", false},
 		{"[::ffff:8.8.8.8]:80", false},

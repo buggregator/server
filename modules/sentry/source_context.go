@@ -99,6 +99,11 @@ func sourceClient(privateOnly bool) *http.Client {
 	}
 }
 
+// metadataIPs are cloud metadata endpoints inside the allowed ranges: AWS
+// IMDS over IPv6 is in fc00::/7. The IPv4 ones (169.254.169.254, ECS
+// 169.254.170.2) are link-local and refused anyway.
+var metadataIPs = []net.IP{net.ParseIP("fd00:ec2::254")}
+
 // privateAddressOnly is a net.Dialer Control: it runs before connect with the
 // resolved address and refuses anything but loopback and private IPs. Link
 // local (169.254.0.0/16, cloud metadata), unspecified and public are refused.
@@ -108,12 +113,21 @@ func privateAddressOnly(_, address string, _ syscall.RawConn) error {
 		return err
 	}
 	ip := net.ParseIP(host)
-	if ip != nil && (ip.IsLoopback() || ip.IsPrivate()) {
+	if ip != nil && (ip.IsLoopback() || ip.IsPrivate()) && !isMetadataIP(ip) {
 		return nil
 	}
 	err = fmt.Errorf("source fetch: %s is not a loopback or private address (sentry.source_fetch: any allows it)", host)
 	slog.Debug(err.Error())
 	return err
+}
+
+func isMetadataIP(ip net.IP) bool {
+	for _, m := range metadataIPs {
+		if m.Equal(ip) {
+			return true
+		}
+	}
+	return false
 }
 
 func httpFetcher(client *http.Client) sourceFetcher {
