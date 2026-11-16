@@ -76,12 +76,16 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 	body = decompress(body, r.Header.Get("Content-Encoding"))
 
 	// Project: the DSN path (/api/{project}/store), else what the detect step
-	// found (X-Buggregator-Project, userinfo, Basic Auth). The same order the
-	// pipeline uses for the events row, so the structured rows land in the
-	// same project as the event card.
+	// found (X-Buggregator-Project, userinfo, Basic Auth), else the DSN public
+	// key when it names an existing project. The pipeline keeps this project
+	// for the events row, so the structured rows land in the same project as
+	// the event card.
 	project := resolveProject(extractProject(r.URL.Path))
 	if project == "" {
 		project = r.Header.Get(httpserver.HeaderDetectedProject)
+	}
+	if project == "" {
+		project = h.projectByKey(publicKey(r))
 	}
 
 	// Try parsing as plain JSON first (legacy /store format).
@@ -606,6 +610,51 @@ func resolveProject(segment string) string {
 		return ""
 	}
 	return segment
+}
+
+// reservedKey is the public key of the DSN our docs show
+// (http://sentry@host:8000/1); it never names a project.
+const reservedKey = "sentry"
+
+// projectByKey maps a DSN public key to a project, for SDKs that only accept
+// a numeric DSN path (http://billing@host:8000/1). Only a project that already
+// exists counts: an unknown key (a random one copied from a real Sentry DSN)
+// keeps landing in the default project and creates no project. Issue #430.
+func (h *handler) projectByKey(key string) string {
+	if h.db == nil || key == "" || key == reservedKey {
+		return ""
+	}
+	var found int
+	if err := h.db.QueryRow(`SELECT 1 FROM projects WHERE key = ?`, key).Scan(&found); err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			slog.Warn("sentry: project lookup by public key failed", "err", err)
+		}
+		return ""
+	}
+	return key
+}
+
+// publicKey returns the DSN public key: the sentry_key query parameter (the
+// JavaScript SDKs) or the sentry_key field of the X-Sentry-Auth header (PHP,
+// Python, Go), or of an "Authorization: Sentry ..." header.
+func publicKey(r *http.Request) string {
+	if key := r.URL.Query().Get("sentry_key"); key != "" {
+		return key
+	}
+	auth := r.Header.Get("X-Sentry-Auth")
+	if auth == "" {
+		auth = r.Header.Get("Authorization")
+	}
+	fields, ok := strings.CutPrefix(strings.TrimSpace(auth), "Sentry ")
+	if !ok {
+		return ""
+	}
+	for _, field := range strings.Split(fields, ",") {
+		if name, value, ok := strings.Cut(strings.TrimSpace(field), "="); ok && name == "sentry_key" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 func isAllDigits(s string) bool {
