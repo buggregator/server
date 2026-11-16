@@ -1,0 +1,25 @@
+# Runs examples/ci: proves the documented CI setup works against the
+# published image. Copy the job into your own workflow (see examples/ci/README.md).
+name: CI example
+
+on:
+  pull_request:
+    paths: ["examples/ci/**", ".github/workflows/ci-example.yml"]
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    services:
+      buggregator:
+        image: ghcr.io/buggregator/server:latest
+        ports:
+          - 8000:8000 # HTTP: API, UI, Sentry, Ray, ...
+          - 1025:1025 # SMTP
+    env:
+      BUGGREGATOR_URL: http://localhost:8000
+      BUGGREGATOR_SMTP: localhost:1025
+    steps:
+      - uses: actions/checkout@v4
+      # Your test suite goes here, pointed at Buggregator.
+      - run: python3 examples/ci/smoke_test.py
