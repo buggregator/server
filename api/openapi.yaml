@@ -1,0 +1,6137 @@
+openapi: 3.1.0
+info:
+  title: Buggregator HTTP API
+  version: 2.10.0
+  description: 'The HTTP API of the Buggregator server (v2): events, projects and the
+
+    module APIs the web UI uses. It is the same API for scripts and tests,
+
+    for example to wait for an email or to clear events between test runs.
+
+
+    **Auth.** When auth is on (`auth.enabled`), routes marked with
+
+    `authToken` need the header `X-Auth-Token: <jwt>`. The token is issued
+
+    by the SSO login (`/auth/sso/login`). When auth is off (the default),
+
+    no header is needed.
+
+
+    **Ingestion.** SDKs send events to the same port. The paths below tagged
+
+    `Ingestion` are matched by the event handlers, not by this API; any other
+
+    path also accepts events marked with the `X-Buggregator-Event` header, a
+
+    DSN user (`http://sentry@host:8000/1`) or Basic Auth `type:project`.
+
+
+    **Health check.** `GET /api/version` is public, cheap and answers 200
+
+    once the server is up.
+
+    '
+  license:
+    name: MIT
+    url: https://github.com/buggregator/server/blob/master/LICENSE
+servers:
+- url: http://127.0.0.1:8000
+  description: Default local server
+tags:
+- name: Server
+  description: Version, settings, health
+- name: Events
+  description: Stored events of every type
+- name: Projects
+- name: Auth
+- name: Metrics
+- name: Sentry
+- name: SMTP
+- name: Attachments
+- name: Mocks
+- name: Xdebug
+- name: Xdebug traces
+- name: Profiler
+- name: Ingestion
+  description: Where SDKs send events (matched by the event handlers)
+paths:
+  /api/event/{uuid}:
+    parameters:
+    - $ref: '#/components/parameters/EventUUID'
+    get:
+      tags:
+      - Events
+      operationId: getEvent
+      summary: Get one event
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - Events
+      operationId: deleteEvent
+      summary: Delete one event
+      security:
+      - authToken: []
+      responses:
+        '200':
+          $ref: '#/components/responses/StatusTrue'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/event/{uuid}/pin:
+    parameters:
+    - $ref: '#/components/parameters/EventUUID'
+    post:
+      tags:
+      - Events
+      operationId: pinEvent
+      summary: Pin an event (pinned events list first and survive keep_pinned clears)
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Pinned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    const: pinned
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - Events
+      operationId: unpinEvent
+      summary: Unpin an event
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Unpinned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    const: unpinned
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/events:
+    get:
+      tags:
+      - Events
+      operationId: listEvents
+      summary: List stored events, newest first (pinned first)
+      security:
+      - authToken: []
+      parameters:
+      - $ref: '#/components/parameters/EventType'
+      - $ref: '#/components/parameters/Project'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/From'
+      - $ref: '#/components/parameters/To'
+      - $ref: '#/components/parameters/Window'
+      responses:
+        '200':
+          description: Events and the limits that were applied
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - meta
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+                  meta:
+                    $ref: '#/components/schemas/ListMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - Events
+      operationId: clearEvents
+      summary: Delete events (all, or by type, project or UUIDs)
+      description: 'With no body, or an empty JSON object, deletes every event. Use it to
+
+        start each test from a clean state. Filters combine.
+
+        '
+      security:
+      - authToken: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: Only events of this type (`sentry`, `smtp`, `monolog`, ...)
+                project:
+                  type: string
+                  description: Only events of this project
+                uuids:
+                  type: array
+                  items:
+                    type: string
+                  description: Only these events
+                keep_pinned:
+                  type: boolean
+                  description: Keep pinned events
+      responses:
+        '200':
+          $ref: '#/components/responses/StatusTrue'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/events/preview:
+    get:
+      tags:
+      - Events
+      operationId: listEventPreviews
+      summary: List events as previews (smaller payloads, searchable text)
+      security:
+      - authToken: []
+      parameters:
+      - $ref: '#/components/parameters/EventType'
+      - $ref: '#/components/parameters/Project'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/From'
+      - $ref: '#/components/parameters/To'
+      - $ref: '#/components/parameters/Window'
+      responses:
+        '200':
+          description: Previews and the limits that were applied
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - meta
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventPreview'
+                  meta:
+                    $ref: '#/components/schemas/ListMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/http-dump/attachments/{eventUuid}/preview/{uuid}:
+    get:
+      tags:
+      - Attachments
+      operationId: attachmentPreviewHttpDump
+      summary: Show an attachment inline with its own MIME type
+      description: 'Public: opened as a plain link without a token. Same as download, but Content-Type is the stored MIME
+        type and there is no Content-Disposition. Reads http_dump_attachments (HTTP dump events).'
+      security: []
+      parameters:
+      - name: eventUuid
+        in: path
+        required: true
+        description: UUID of the event that owns the attachment.
+        schema:
+          type: string
+      - name: uuid
+        in: path
+        required: true
+        description: UUID of the attachment.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: File content with the stored MIME type as Content-Type.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/AttachmentFile'
+        '403':
+          description: 'Attachment belongs to another event (body: forbidden).'
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: 'Attachment row or file not found (body: attachment not found / file not found).'
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/http-dump/attachments/{eventUuid}/{uuid}:
+    get:
+      tags:
+      - Attachments
+      operationId: attachmentDownloadHttpDump
+      summary: Download an attachment file
+      description: 'Public: opened as a plain link without a token. Needs both the event and attachment UUIDs. Reads http_dump_attachments
+        (HTTP dump events).'
+      security: []
+      parameters:
+      - name: eventUuid
+        in: path
+        required: true
+        description: UUID of the event that owns the attachment.
+        schema:
+          type: string
+      - name: uuid
+        in: path
+        required: true
+        description: UUID of the attachment.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: File content. Content-Disposition is attachment with the stored file name.
+          headers:
+            Content-Disposition:
+              description: attachment; filename="<name>"
+              schema:
+                type: string
+            Content-Length:
+              description: File size in bytes.
+              schema:
+                type: integer
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/AttachmentFile'
+        '403':
+          description: 'Attachment belongs to another event (body: forbidden).'
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: 'Attachment row or file not found (body: attachment not found / file not found).'
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/http-dump/attachments/{uuid}:
+    get:
+      tags:
+      - Attachments
+      operationId: attachmentListHttpDump
+      summary: List attachments of an event
+      description: Reads http_dump_attachments (HTTP dump events).
+      security:
+      - authToken: []
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        description: UUID of the event.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Attachments (empty list if none).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentList'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/http-dumps/attachments/{eventUuid}/preview/{uuid}:
+    get:
+      tags:
+      - Attachments
+      operationId: attachmentPreviewHttpDumps
+      summary: Show an attachment inline with its own MIME type
+      description: 'Public: opened as a plain link without a token. Same as download, but Content-Type is the stored MIME
+        type and there is no Content-Disposition. Reads http_dump_attachments (HTTP dump events; plural alias kept for old
+        clients).'
+      security: []
+      parameters:
+      - name: eventUuid
+        in: path
+        required: true
+        description: UUID of the event that owns the attachment.
+        schema:
+          type: string
+      - name: uuid
+        in: path
+        required: true
+        description: UUID of the attachment.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: File content with the stored MIME type as Content-Type.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/AttachmentFile'
+        '403':
+          description: 'Attachment belongs to another event (body: forbidden).'
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: 'Attachment row or file not found (body: attachment not found / file not found).'
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/http-dumps/attachments/{eventUuid}/{uuid}:
+    get:
+      tags:
+      - Attachments
+      operationId: attachmentDownloadHttpDumps
+      summary: Download an attachment file
+      description: 'Public: opened as a plain link without a token. Needs both the event and attachment UUIDs. Reads http_dump_attachments
+        (HTTP dump events; plural alias kept for old clients).'
+      security: []
+      parameters:
+      - name: eventUuid
+        in: path
+        required: true
+        description: UUID of the event that owns the attachment.
+        schema:
+          type: string
+      - name: uuid
+        in: path
+        required: true
+        description: UUID of the attachment.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: File content. Content-Disposition is attachment with the stored file name.
+          headers:
+            Content-Disposition:
+              description: attachment; filename="<name>"
+              schema:
+                type: string
+            Content-Length:
+              description: File size in bytes.
+              schema:
+                type: integer
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/AttachmentFile'
+        '403':
+          description: 'Attachment belongs to another event (body: forbidden).'
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: 'Attachment row or file not found (body: attachment not found / file not found).'
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/http-dumps/attachments/{uuid}:
+    get:
+      tags:
+      - Attachments
+      operationId: attachmentListHttpDumps
+      summary: List attachments of an event
+      description: Reads http_dump_attachments (HTTP dump events; plural alias kept for old clients).
+      security:
+      - authToken: []
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        description: UUID of the event.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Attachments (empty list if none).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentList'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/me:
+    get:
+      tags:
+      - Auth
+      operationId: getMe
+      summary: The signed-in user (a guest user when auth is off)
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The user
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      username:
+                        type: string
+                      email:
+                        type: string
+                      avatar:
+                        type: string
+                      logout_url:
+                        type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/metrics:
+    get:
+      tags:
+      - Metrics
+      operationId: getMetrics
+      summary: Metrics for the UI dashboard (only when metrics are on)
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Counters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metrics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/mocks:
+    get:
+      tags:
+      - Mocks
+      operationId: mockListRules
+      summary: List all mock rules in matching order
+      description: Rules from the config file come first, then stored rules by position.
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Rules.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockRuleList'
+    post:
+      tags:
+      - Mocks
+      operationId: mockCreateRule
+      summary: Create a mock rule
+      description: The new rule gets source api and goes last. At most 500 stored rules per project (rules for every project
+        count as one project).
+      security:
+      - authToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MockRuleInput'
+      responses:
+        '201':
+          description: Created rule.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockRule'
+        '400':
+          $ref: '#/components/responses/Error'
+        '422':
+          description: Invalid rule.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockValidationError'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/mocks/groups/{group}:
+    delete:
+      tags:
+      - Mocks
+      operationId: mockDeleteGroup
+      summary: Delete all stored rules of an import group
+      security:
+      - authToken: []
+      parameters:
+      - name: group
+        in: path
+        required: true
+        description: Group name. Must not be blank.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Number of deleted rules.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockDeleteGroupResult'
+        '422':
+          description: Blank group name.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockValidationError'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/mocks/helpers:
+    get:
+      tags:
+      - Mocks
+      operationId: mockListHelpers
+      summary: List template helpers and fake data generators
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Helpers and fakes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockHelpersResponse'
+  /api/mocks/import/openapi:
+    post:
+      tags:
+      - Mocks
+      operationId: mockImportOpenAPI
+      summary: Create mock rules from an OpenAPI spec
+      description: Give the spec text or a URL to download it from (not both). The import replaces all stored rules of the
+        group in one step. Content-Type must be application/json.
+      security:
+      - authToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MockOpenAPIImport'
+      responses:
+        '200':
+          description: Import result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockOpenAPIResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '415':
+          $ref: '#/components/responses/Error'
+        '422':
+          description: Invalid spec or url, or no operation could be imported.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockValidationError'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/mocks/order:
+    post:
+      tags:
+      - Mocks
+      operationId: mockReorderRules
+      summary: Reorder stored mock rules
+      description: Listed stored rules go first, in the given order; other stored rules keep their order after them. Config
+        rules cannot be moved. Duplicate IDs are ignored.
+      security:
+      - authToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MockOrderInput'
+      responses:
+        '200':
+          description: All rules in the new order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockRuleList'
+        '400':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/mocks/preview:
+    post:
+      tags:
+      - Mocks
+      operationId: mockPreviewRule
+      summary: Render a rule for a sample request without saving it
+      description: 'A template error does not fail the call: it is returned in error, with status 500, empty headers and empty
+        body.'
+      security:
+      - authToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MockPreviewInput'
+      responses:
+        '200':
+          description: Preview.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockPreview'
+        '400':
+          $ref: '#/components/responses/Error'
+        '422':
+          description: Invalid rule or request path.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockValidationError'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/mocks/requests:
+    get:
+      tags:
+      - Mocks
+      operationId: mockListRequests
+      summary: List the latest requests captured under /mock/
+      description: HTTP dumps that hit the mock server, newest first.
+      security:
+      - authToken: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        description: Max requests. Used only if 1 to 500; otherwise 50.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 50
+      - name: project
+        in: query
+        required: false
+        description: Only requests of this project. Empty means all.
+        schema:
+          type: string
+      - name: rule_id
+        in: query
+        required: false
+        description: Only requests answered by this rule.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockRequestList'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/mocks/{id}:
+    get:
+      tags:
+      - Mocks
+      operationId: mockGetRule
+      summary: Get one mock rule
+      security:
+      - authToken: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Mock rule ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Rule.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockRule'
+        '404':
+          $ref: '#/components/responses/Error'
+    put:
+      tags:
+      - Mocks
+      operationId: mockUpdateRule
+      summary: Replace a stored mock rule
+      description: Replaces all editable fields. If template or seed is missing from the body, the old value is kept. id,
+        source, position, group and created_at cannot change. Config rules are read-only (409).
+      security:
+      - authToken: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Mock rule ID.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MockRuleInput'
+      responses:
+        '200':
+          description: Updated rule.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockRule'
+        '400':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          description: Invalid rule.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockValidationError'
+        '500':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - Mocks
+      operationId: mockDeleteRule
+      summary: Delete a stored mock rule
+      description: Config rules are read-only (409).
+      security:
+      - authToken: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Mock rule ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockStatus'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/profiler/store:
+    post:
+      tags:
+      - Ingestion
+      operationId: ingestProfiler
+      summary: XHProf profile from the Buggregator profiler client
+      x-ingestion: true
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          $ref: '#/components/responses/StatusTrue'
+  /api/profiler/{uuid}/call-graph:
+    get:
+      tags:
+      - Profiler
+      operationId: profilerGetCallGraph
+      summary: Get the call graph of a profile.
+      description: One node per unique callee. A node is dropped when its percent is below `percentage` and at or below `threshold`.
+        Only edges between kept nodes are returned. Nodes and edges at or above `percentage` get a red shade; others are white.
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        description: Profiler event UUID.
+        schema:
+          type: string
+      - name: metric
+        in: query
+        required: false
+        description: Metric for percents and cost. Unknown values act as `cpu`.
+        schema:
+          type: string
+          enum:
+          - cpu
+          - wt
+          - mu
+          - pmu
+          default: cpu
+      - name: threshold
+        in: query
+        required: false
+        description: Percent (0-100). Invalid values use the default.
+        schema:
+          type: number
+          default: 0
+      - name: percentage
+        in: query
+        required: false
+        description: Percent (0-100) that marks a node as important. Invalid values use the default.
+        schema:
+          type: number
+          default: 10
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Graph nodes and edges, plus toolbar metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfilerCallGraph'
+        '404':
+          description: Loading the profile edges failed. Plain text body `not found`. An unknown UUID usually gives 200 with
+            empty data instead.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/profiler/{uuid}/flame-chart:
+    get:
+      tags:
+      - Profiler
+      operationId: profilerGetFlameChart
+      summary: Get the flame chart tree of a profile.
+      description: Each function is expanded once, under the edge that reaches it at the smallest depth; other call sites
+        are leaves. The tree is capped at 50000 nodes and depth 512.
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        description: Profiler event UUID.
+        schema:
+          type: string
+      - name: metric
+        in: query
+        required: false
+        description: Metric for durations and colors. `duration` is the value / 1000 (time metrics) or / 1024 (mu, pmu).
+        schema:
+          type: string
+          enum:
+          - cpu
+          - wt
+          - mu
+          - pmu
+          - ct
+          default: wt
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Root nodes of the flame chart.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProfilerFlameNode'
+        '404':
+          description: Loading the profile edges failed. Plain text body `not found`. An unknown UUID usually gives 200 with
+            empty data instead.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/profiler/{uuid}/summary:
+    get:
+      tags:
+      - Profiler
+      operationId: profilerGetSummary
+      summary: Get profile totals and top functions.
+      description: '`main()` is skipped when picking the slowest, memory-heaviest and most-called function.'
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        description: Profiler event UUID.
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfilerSummary'
+        '404':
+          description: Loading the profile edges failed. Plain text body `not found`. An unknown UUID usually gives 200 with
+            empty data instead.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/profiler/{uuid}/top:
+    get:
+      tags:
+      - Profiler
+      operationId: profilerGetTopFunctions
+      summary: Get top functions of a profile.
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        description: Profiler event UUID.
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        description: Max functions, 10-300. Other or invalid values use the default.
+        schema:
+          type: integer
+          minimum: 10
+          maximum: 300
+          default: 100
+      - name: metric
+        in: query
+        required: false
+        description: Sort key, descending. Unknown values act as `cpu`.
+        schema:
+          type: string
+          default: cpu
+          enum:
+          - cpu
+          - wt
+          - mu
+          - pmu
+          - ct
+          - excl_cpu
+          - excl_wt
+          - excl_mu
+          - excl_pmu
+          - excl_ct
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Function stats with table schema.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfilerTopFunctions'
+        '404':
+          description: Loading the profile edges failed. Plain text body `not found`. An unknown UUID usually gives 200 with
+            empty data instead.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/projects:
+    get:
+      tags:
+      - Projects
+      operationId: listProjects
+      summary: List projects (configured ones and those created by events)
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Projects
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - meta
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+                  meta:
+                    type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/all:
+    delete:
+      tags:
+      - Sentry
+      operationId: sentryClearAll
+      summary: Delete stored Sentry errors, traces, spans, logs and metrics.
+      security:
+      - authToken: []
+      parameters:
+      - name: project
+        in: query
+        description: Delete only this project's data. Without it every project is cleared.
+        schema:
+          type: string
+      - name: keep_pinned
+        in: query
+        description: When true (strconv.ParseBool form, like `1` or `true`), keep error events whose event is pinned.
+        schema:
+          type: string
+          default: 'false'
+      responses:
+        '200':
+          description: Data deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryStatus'
+        '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/counts:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryGetCounts
+      summary: Count error events, transactions, logs and metrics for the tab badges.
+      description: Database errors are not reported; a failed count comes back as 0.
+      security:
+      - authToken: []
+      parameters:
+      - name: project
+        in: query
+        description: Project key. Without it every project is counted.
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: Lower time bound. Unix seconds or ISO, UTC.
+        schema:
+          type: string
+      - name: to
+        in: query
+        description: Upper time bound, same formats as `from`.
+        schema:
+          type: string
+      - name: window
+        in: query
+        description: Period back from now, like `15m`, `24h`, `7d`. Used only when `from` and `to` are both absent.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Counters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryCounts'
+        '401':
+          $ref: '#/components/responses/Error'
+  /api/sentry/exceptions:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryListExceptions
+      summary: List Sentry error events, one by one or grouped by fingerprint.
+      description: 'Without `grouped=true` returns error events newest first (items are SentryExceptionEvent). With `grouped=true`
+        returns one row per fingerprint, most frequent first (items are SentryExceptionGroup).
+
+        '
+      security:
+      - authToken: []
+      parameters:
+      - name: grouped
+        in: query
+        description: Set to `true` to group events by fingerprint. Any other value means chronological list.
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+          default: 'false'
+      - name: level
+        in: query
+        description: Exact error level, for example `error` or `warning`.
+        schema:
+          type: string
+      - name: environment
+        in: query
+        description: Exact environment name.
+        schema:
+          type: string
+      - name: project
+        in: query
+        description: Project key. Without it every project is read.
+        schema:
+          type: string
+      - name: handled
+        in: query
+        description: '`true` keeps handled errors; any other non-empty value keeps unhandled ones.'
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+      - name: from
+        in: query
+        description: Lower bound on received time. Unix seconds or ISO (RFC3339, `2006-01-02T15:04:05`, `2006-01-02`), UTC.
+        schema:
+          type: string
+      - name: to
+        in: query
+        description: Upper bound on received time, same formats as `from`.
+        schema:
+          type: string
+      - name: window
+        in: query
+        description: Period back from now, like `15m`, `24h`, `7d`. Used only when `from` and `to` are both absent. `all`
+          or `0` means no bound.
+        schema:
+          type: string
+      - name: page
+        in: query
+        description: Page number, starting at 1. Invalid values fall back to 1.
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: limit
+        in: query
+        description: Page size, 1..500. Out-of-range or invalid values fall back to the default.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 50
+      responses:
+        '200':
+          description: A page of error events or fingerprint groups.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryExceptionList'
+        '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/exceptions/{id}:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryGetException
+      summary: Get one Sentry error event with exceptions, breadcrumbs and trace summary.
+      security:
+      - authToken: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Internal error event id or Sentry event_id. A match on the internal id wins.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The error event.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryExceptionDetail'
+        '401':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/logs:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryListLogs
+      summary: List Sentry structured logs, newest first.
+      security:
+      - authToken: []
+      parameters:
+      - name: level
+        in: query
+        description: One level or several, comma-separated, like `warn,warning`.
+        schema:
+          type: string
+      - name: trace_id
+        in: query
+        description: Only logs of this trace.
+        schema:
+          type: string
+      - name: project
+        in: query
+        description: Project key. Without it every project is read.
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: Lower bound on log time. Unix seconds or ISO, UTC.
+        schema:
+          type: string
+      - name: to
+        in: query
+        description: Upper bound on log time, same formats as `from`.
+        schema:
+          type: string
+      - name: window
+        in: query
+        description: Period back from now, like `15m`, `24h`, `7d`. Used only when `from` and `to` are both absent.
+        schema:
+          type: string
+      - name: page
+        in: query
+        description: Page number, starting at 1.
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: limit
+        in: query
+        description: Page size, 1..500. Out-of-range values fall back to the default.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+      responses:
+        '200':
+          description: A page of logs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryLogList'
+        '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/metrics:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryListMetrics
+      summary: List Sentry trace metrics, newest first.
+      security:
+      - authToken: []
+      parameters:
+      - name: name
+        in: query
+        description: Exact metric name.
+        schema:
+          type: string
+      - name: type
+        in: query
+        description: Exact metric type, for example `counter`, `gauge`, `distribution`.
+        schema:
+          type: string
+      - name: trace_id
+        in: query
+        description: Only metrics of this trace.
+        schema:
+          type: string
+      - name: search
+        in: query
+        description: Part of the metric name (SQL LIKE, case-insensitive for ASCII).
+        schema:
+          type: string
+      - name: project
+        in: query
+        description: Project key. Without it every project is read.
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: Lower bound on metric time. Unix seconds or ISO, UTC.
+        schema:
+          type: string
+      - name: to
+        in: query
+        description: Upper bound on metric time, same formats as `from`.
+        schema:
+          type: string
+      - name: window
+        in: query
+        description: Period back from now, like `15m`, `24h`, `7d`. Used only when `from` and `to` are both absent.
+        schema:
+          type: string
+      - name: page
+        in: query
+        description: Page number, starting at 1.
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: limit
+        in: query
+        description: Page size, 1..500. Out-of-range values fall back to the default.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+      responses:
+        '200':
+          description: A page of metrics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryMetricList'
+        '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/service-map:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryGetServiceMap
+      summary: Build a service graph from spans that have a peer address.
+      security:
+      - authToken: []
+      parameters:
+      - name: window
+        in: query
+        description: Look-back period in whole minutes, 1..10080. Invalid values fall back to 60. Unlike other endpoints this
+          is not a duration string.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 10080
+          default: 60
+      - name: project
+        in: query
+        description: Project key. Without it every project is read.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Nodes and edges of the service map.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryServiceMap'
+        '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/traces:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryListTraces
+      summary: List transactions with their trace stats, newest first.
+      description: One row per stored transaction, so a trace with several transactions appears several times.
+      security:
+      - authToken: []
+      parameters:
+      - name: project
+        in: query
+        description: Project key. Also narrows the preview spans. Without it every project is read.
+        schema:
+          type: string
+      - name: environment
+        in: query
+        description: Exact transaction environment.
+        schema:
+          type: string
+      - name: release
+        in: query
+        description: Exact transaction release.
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: Lower bound on transaction start time. Unix seconds or ISO, UTC.
+        schema:
+          type: string
+      - name: to
+        in: query
+        description: Upper bound on transaction start time, same formats as `from`.
+        schema:
+          type: string
+      - name: window
+        in: query
+        description: Period back from now, like `15m`, `24h`, `7d`. Used only when `from` and `to` are both absent.
+        schema:
+          type: string
+      - name: page
+        in: query
+        description: Page number, starting at 1.
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: limit
+        in: query
+        description: Page size, 1..500. Out-of-range values fall back to the default.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 50
+      responses:
+        '200':
+          description: A page of traces.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryTraceList'
+        '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/traces/{traceId}:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryGetTrace
+      summary: Get one trace with its first transaction, spans and related errors.
+      security:
+      - authToken: []
+      parameters:
+      - name: traceId
+        in: path
+        required: true
+        description: Sentry trace id.
+        schema:
+          type: string
+      - name: project
+        in: query
+        description: Only this project's part of the trace (transaction, spans, errors, log count).
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The trace.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryTraceDetail'
+        '401':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/settings:
+    get:
+      tags:
+      - Server
+      operationId: getSettings
+      summary: Settings the UI needs at start (auth, enabled modules, update check)
+      security: []
+      responses:
+        '200':
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+  /api/smtp/attachments/{eventUuid}/preview/{uuid}:
+    get:
+      tags:
+      - Attachments
+      operationId: attachmentPreviewSmtp
+      summary: Show an attachment inline with its own MIME type
+      description: 'Public: opened as a plain link without a token. Same as download, but Content-Type is the stored MIME
+        type and there is no Content-Disposition. Reads smtp_attachments (SMTP events).'
+      security: []
+      parameters:
+      - name: eventUuid
+        in: path
+        required: true
+        description: UUID of the event that owns the attachment.
+        schema:
+          type: string
+      - name: uuid
+        in: path
+        required: true
+        description: UUID of the attachment.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: File content with the stored MIME type as Content-Type.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/AttachmentFile'
+        '403':
+          description: 'Attachment belongs to another event (body: forbidden).'
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: 'Attachment row or file not found (body: attachment not found / file not found).'
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/smtp/attachments/{eventUuid}/{uuid}:
+    get:
+      tags:
+      - Attachments
+      operationId: attachmentDownloadSmtp
+      summary: Download an attachment file
+      description: 'Public: opened as a plain link without a token. Needs both the event and attachment UUIDs. Reads smtp_attachments
+        (SMTP events).'
+      security: []
+      parameters:
+      - name: eventUuid
+        in: path
+        required: true
+        description: UUID of the event that owns the attachment.
+        schema:
+          type: string
+      - name: uuid
+        in: path
+        required: true
+        description: UUID of the attachment.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: File content. Content-Disposition is attachment with the stored file name.
+          headers:
+            Content-Disposition:
+              description: attachment; filename="<name>"
+              schema:
+                type: string
+            Content-Length:
+              description: File size in bytes.
+              schema:
+                type: integer
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/AttachmentFile'
+        '403':
+          description: 'Attachment belongs to another event (body: forbidden).'
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: 'Attachment row or file not found (body: attachment not found / file not found).'
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/smtp/attachments/{uuid}:
+    get:
+      tags:
+      - Attachments
+      operationId: attachmentListSmtp
+      summary: List attachments of an event
+      description: Reads smtp_attachments (SMTP events).
+      security:
+      - authToken: []
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        description: UUID of the event.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Attachments (empty list if none).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentList'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/smtp/cursor:
+    get:
+      tags:
+      - SMTP
+      operationId: smtpGetCursor
+      summary: Get the current server time as a cursor for since
+      description: Take the cursor before an action, then pass it as `since` to the list or wait endpoint to skip older mail.
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Cursor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpCursor'
+  /api/smtp/message/{uuid}/codes:
+    get:
+      tags:
+      - SMTP
+      operationId: smtpGetMessageCodes
+      summary: Extract codes (e.g. OTP) from a message with a regex
+      description: Searches the text part, then the HTML part with tags stripped. Unique matches, in order found.
+      security:
+      - authToken: []
+      parameters:
+      - name: pattern
+        in: query
+        required: false
+        description: Go regular expression. Default matches 4 to 8 digit numbers.
+        schema:
+          type: string
+          default: \b\d{4,8}\b
+      - name: uuid
+        in: path
+        required: true
+        description: UUID of the SMTP event.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpCodeList'
+        '400':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/smtp/message/{uuid}/links:
+    get:
+      tags:
+      - SMTP
+      operationId: smtpGetMessageLinks
+      summary: Extract unique links from the HTML and text parts
+      description: HTML <a href> links come first, then http(s) URLs found in the text part. Duplicates (same url) are dropped.
+      security:
+      - authToken: []
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        description: UUID of the SMTP event.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Links.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpLinkList'
+        '404':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/smtp/message/{uuid}/raw:
+    get:
+      tags:
+      - SMTP
+      operationId: smtpGetRawMessage
+      summary: Get the original RFC 822 source of a message
+      security:
+      - authToken: []
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        description: UUID of the SMTP event.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Raw email source.
+          content:
+            message/rfc822:
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/smtp/messages:
+    get:
+      tags:
+      - SMTP
+      operationId: smtpListMessages
+      summary: List SMTP messages matching a filter
+      description: All filters are optional and combined with AND. Filtering happens in memory; meta.total is the count after
+        filtering, before offset and limit.
+      security:
+      - authToken: []
+      parameters:
+      - name: to
+        in: query
+        required: false
+        description: 'Match a To address: case-insensitive substring of the email or the name.'
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        description: 'Match a From address: case-insensitive substring of the email or the name.'
+        schema:
+          type: string
+      - name: cc
+        in: query
+        required: false
+        description: 'Match a Cc address: case-insensitive substring of the email or the name.'
+        schema:
+          type: string
+      - name: subject
+        in: query
+        required: false
+        description: Exact subject (case-sensitive).
+        schema:
+          type: string
+      - name: subject_contains
+        in: query
+        required: false
+        description: Subject contains this text (case-sensitive).
+        schema:
+          type: string
+      - name: subject_regex
+        in: query
+        required: false
+        description: Subject matches this Go regular expression. An invalid regex matches nothing.
+        schema:
+          type: string
+      - name: body_contains
+        in: query
+        required: false
+        description: Text or HTML body contains this text (case-sensitive).
+        schema:
+          type: string
+      - name: project
+        in: query
+        required: false
+        description: Only messages of this project. Empty means all projects.
+        schema:
+          type: string
+      - name: since
+        in: query
+        required: false
+        description: Only messages received at or after this time. RFC 3339 string (e.g. a cursor), unix seconds (float),
+          or unix milliseconds (values above 1e12). Unparsable means no limit.
+        schema:
+          type: string
+      - name: until
+        in: query
+        required: false
+        description: Only messages received at or before this time. Same formats as since.
+        schema:
+          type: string
+      - name: order
+        in: query
+        required: false
+        description: Sort order by time. Any value other than asc gives newest first.
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+          default: desc
+      - name: limit
+        in: query
+        required: false
+        description: Max messages to return. Missing, invalid or not positive means no limit.
+        schema:
+          type: integer
+          minimum: 1
+      - name: offset
+        in: query
+        required: false
+        description: Messages to skip after sorting. Invalid or negative means 0.
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: Matching messages.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpMessageList'
+        '500':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - SMTP
+      operationId: smtpDeleteMessages
+      summary: Delete all SMTP messages, optionally of one project
+      security:
+      - authToken: []
+      parameters:
+      - name: project
+        in: query
+        required: false
+        description: Only delete messages of this project. Empty means all projects.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpStatus'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/smtp/messages/wait:
+    get:
+      tags:
+      - SMTP
+      operationId: smtpWaitMessage
+      summary: Long-poll until an SMTP message matches the filter
+      description: Takes the same filters as the list endpoint (order, limit and offset are ignored). If a stored message
+        already matches, the newest match is returned at once. Otherwise the request is held open until a new matching message
+        arrives or the timeout passes; then it answers 408. Use since (e.g. a cursor) to ignore older mail.
+      security:
+      - authToken: []
+      parameters:
+      - name: to
+        in: query
+        required: false
+        description: 'Match a To address: case-insensitive substring of the email or the name.'
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        description: 'Match a From address: case-insensitive substring of the email or the name.'
+        schema:
+          type: string
+      - name: cc
+        in: query
+        required: false
+        description: 'Match a Cc address: case-insensitive substring of the email or the name.'
+        schema:
+          type: string
+      - name: subject
+        in: query
+        required: false
+        description: Exact subject (case-sensitive).
+        schema:
+          type: string
+      - name: subject_contains
+        in: query
+        required: false
+        description: Subject contains this text (case-sensitive).
+        schema:
+          type: string
+      - name: subject_regex
+        in: query
+        required: false
+        description: Subject matches this Go regular expression. An invalid regex matches nothing.
+        schema:
+          type: string
+      - name: body_contains
+        in: query
+        required: false
+        description: Text or HTML body contains this text (case-sensitive).
+        schema:
+          type: string
+      - name: project
+        in: query
+        required: false
+        description: Only messages of this project. Empty means all projects.
+        schema:
+          type: string
+      - name: since
+        in: query
+        required: false
+        description: Only messages received at or after this time. RFC 3339 string (e.g. a cursor), unix seconds (float),
+          or unix milliseconds (values above 1e12). Unparsable means no limit.
+        schema:
+          type: string
+      - name: until
+        in: query
+        required: false
+        description: Only messages received at or before this time. Same formats as since.
+        schema:
+          type: string
+      - name: timeout
+        in: query
+        required: false
+        description: How long to wait, as a Go duration (e.g. 500ms, 10s, 1m). Default 30s, max 60s (longer values are cut
+          to 60s). Invalid, zero or negative values use the default.
+        schema:
+          type: string
+          default: 30s
+          examples:
+          - 10s
+      responses:
+        '200':
+          description: The first matching message.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpEvent'
+        '408':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/smtp/stats:
+    get:
+      tags:
+      - SMTP
+      operationId: smtpGetStats
+      summary: Count SMTP messages and get the newest receive time
+      security:
+      - authToken: []
+      parameters:
+      - name: project
+        in: query
+        required: false
+        description: Only messages of this project. Empty means all projects.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Stats.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpStats'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/version:
+    get:
+      tags:
+      - Server
+      operationId: getVersion
+      summary: Server version; also the health check
+      security: []
+      responses:
+        '200':
+          description: The running version
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - version
+                properties:
+                  version:
+                    type: string
+                    examples:
+                    - 2.10.0
+  /api/xdebug:
+    get:
+      tags:
+      - Xdebug
+      operationId: xdebugGetStatus
+      summary: Get Xdebug module status and settings.
+      description: 'Returns the module config and the current session settings. When the Xdebug module is disabled, the server
+        registers only this route and it returns the same shape with `enabled: false` and the values from the config, so the
+        UI can show how to turn it on. All other /api/xdebug routes are then absent.'
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Module status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugStatus'
+  /api/xdebug-traces/{uuid}/search:
+    get:
+      tags:
+      - Xdebug traces
+      operationId: xdebugTraceSearch
+      summary: Search calls in a trace.
+      description: Finds calls whose function name or file contains `q` (case-insensitive), in trace order. Each match carries
+        `path`, its callers from the top level down. 400 for a missing or too long `q`, bad numbers, a bad offset, or a trace
+        over the size limit. 404 when the trace or its file is gone. 500 when the file cannot be read.
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        description: Xdebug trace event UUID.
+        schema:
+          type: string
+      - name: q
+        in: query
+        required: true
+        description: Search text, trimmed; 1-256 bytes.
+        schema:
+          type: string
+          maxLength: 256
+      - name: from
+        in: query
+        required: false
+        description: Byte offset to resume the same list (the `next` of a previous page). Non-negative integer; 400 otherwise.
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: limit
+        in: query
+        required: false
+        description: Max calls per page. Must be a positive integer (400 otherwise); values over 1000 are capped at 1000.
+        schema:
+          type: integer
+          minimum: 1
+          default: 200
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: A page of matching calls, each with `path`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugTracePage'
+        '400':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/xdebug-traces/{uuid}/summary:
+    get:
+      tags:
+      - Xdebug traces
+      operationId: xdebugTraceGetSummary
+      summary: Get a trace summary with its call index.
+      description: 404 (`trace not found`) when the UUID is not an xdebug trace event.
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        description: Xdebug trace event UUID.
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Trace file info and summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugTraceSummaryResponse'
+        '404':
+          $ref: '#/components/responses/Error'
+  /api/xdebug-traces/{uuid}/tree:
+    get:
+      tags:
+      - Xdebug traces
+      operationId: xdebugTraceGetTree
+      summary: List one level of calls in a trace.
+      description: 'Without `parent`: the top-level calls. With `parent`: the direct callees of the call whose entry starts
+        at that offset (the page then has `parent`). Pass `from` = `next` with the same `parent` for the next page. 400 for
+        bad numbers, an offset that is not the start of a call, or a trace over the size limit. 404 when the trace or its
+        file is gone. 500 when the file cannot be read.'
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        description: Xdebug trace event UUID.
+        schema:
+          type: string
+      - name: parent
+        in: query
+        required: false
+        description: Byte offset of a call (its `offset`). Non-negative integer; 400 otherwise.
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: from
+        in: query
+        required: false
+        description: Byte offset to resume the same list (the `next` of a previous page). Non-negative integer; 400 otherwise.
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: limit
+        in: query
+        required: false
+        description: Max calls per page. Must be a positive integer (400 otherwise); values over 1000 are capped at 1000.
+        schema:
+          type: integer
+          minimum: 1
+          default: 200
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: A page of calls.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugTracePage'
+        '400':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/xdebug/breakpoints:
+    get:
+      tags:
+      - Xdebug
+      operationId: xdebugListBreakpoints
+      summary: List saved breakpoints.
+      description: Saved breakpoints are sent to sessions driven here.
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Saved breakpoints.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/XdebugBreakpoint'
+    post:
+      tags:
+      - Xdebug
+      operationId: xdebugCreateBreakpoint
+      summary: Save a new breakpoint.
+      description: 'Creates a line breakpoint (`file` + `line` >= 1) or an exception breakpoint (`exception`). `enabled` defaults
+        to true; `source` is set to `ui`. When `type` is left out it is `exception` if `exception` is set and `file` is not,
+        else `line`. `file` must be an absolute path or a file:// URI; a path is turned into a file:// URI. A leading `\`
+        is dropped from `exception`. A `condition` needs `xdebug.allow_eval`. Unknown fields are refused. Body limit 16 KiB.
+        Write guard: the request must have `Content-Type: application/json` (415 `unsupported_media_type` otherwise), and
+        a request with header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. Same-site and non-browser clients
+        pass.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/XdebugBreakpointInput'
+      security:
+      - authToken: []
+      responses:
+        '201':
+          description: The saved breakpoint.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugBreakpoint'
+        '400':
+          description: 'Bad body, unknown field, or invalid breakpoint (`code: bad_request`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '403':
+          description: 'Condition given while eval is off (`code: eval_disabled`), or cross-site request (`code: cross_site`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '415':
+          description: 'Content-Type is not application/json (`code: unsupported_media_type`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/breakpoints/{bp}:
+    patch:
+      tags:
+      - Xdebug
+      operationId: xdebugUpdateBreakpoint
+      summary: Change a saved breakpoint.
+      description: 'A field left out keeps its value. Same checks as create. Write guard: the request must have `Content-Type:
+        application/json` (415 `unsupported_media_type` otherwise), and a request with header `Sec-Fetch-Site: cross-site`
+        is refused with 403 `cross_site`. Same-site and non-browser clients pass.'
+      parameters:
+      - name: bp
+        in: path
+        required: true
+        description: Saved breakpoint id. A value that is not a positive integer gives 404.
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/XdebugBreakpointInput'
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The updated breakpoint.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugBreakpoint'
+        '404':
+          description: 'No such breakpoint (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '400':
+          description: 'Bad body, unknown field, or invalid breakpoint (`code: bad_request`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '403':
+          description: 'Condition given while eval is off (`code: eval_disabled`), or cross-site request (`code: cross_site`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '415':
+          description: 'Content-Type is not application/json (`code: unsupported_media_type`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+    delete:
+      tags:
+      - Xdebug
+      operationId: xdebugDeleteBreakpoint
+      summary: Delete a saved breakpoint.
+      description: 'A request with header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. No Content-Type check
+        (there is no body).'
+      parameters:
+      - name: bp
+        in: path
+        required: true
+        description: Saved breakpoint id. A value that is not a positive integer gives 404.
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      security:
+      - authToken: []
+      responses:
+        '204':
+          description: Deleted.
+        '403':
+          description: 'Cross-site request (`code: cross_site`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '404':
+          description: 'No such breakpoint (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/files:
+    get:
+      tags:
+      - Xdebug
+      operationId: xdebugListFiles
+      summary: Suggest files for a new breakpoint.
+      description: Files seen in pauses and stacks (live and closed sessions) plus files of saved breakpoints, matched case-insensitively.
+      parameters:
+      - name: q
+        in: query
+        required: false
+        description: Text to match. Prefix of the base name or path ranks first, then any substring. Empty lists all.
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        description: Max results, 1-200. Other or invalid values use the default.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 20
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: File URIs, best matches first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /api/xdebug/sessions:
+    get:
+      tags:
+      - Xdebug
+      operationId: xdebugListSessions
+      summary: List Xdebug sessions.
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Live sessions and closed ones not yet dismissed.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/XdebugSession'
+  /api/xdebug/sessions/{id}:
+    get:
+      tags:
+      - Xdebug
+      operationId: xdebugGetSession
+      summary: Get one Xdebug session.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugSession'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+    delete:
+      tags:
+      - Xdebug
+      operationId: xdebugDismissSession
+      summary: Dismiss a closed Xdebug session.
+      description: Removes a closed session from the list. A live session cannot be dismissed.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '204':
+          description: Dismissed.
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'The session is still live; only a closed session can be dismissed (`code: session_live`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/agent-log:
+    get:
+      tags:
+      - Xdebug
+      operationId: xdebugGetAgentLog
+      summary: Get MCP agent calls made on a session.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Agent tool calls, oldest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/XdebugAgentCall'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/breakpoints:
+    get:
+      tags:
+      - Xdebug
+      operationId: xdebugGetSessionBreakpoints
+      summary: List breakpoints in a session.
+      description: A session driven here answers from saved breakpoints at any time. A session an IDE drives asks Xdebug,
+        so it works only while paused.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: 'For a session driven here (`driver: here`): the saved breakpoints with their state in this session.
+            For a session an IDE drives: the breakpoints the IDE set.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/XdebugSessionBreakpoint'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/XdebugIdeBreakpoint'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'The session is not paused (`code: not_paused`, with `state`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '422':
+          description: 'Xdebug answered with a DBGp error (`code: xdebug_error`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '502':
+          description: 'Talking to Xdebug failed (`code: xdebug_failed`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '504':
+          description: 'Xdebug did not answer in time (`code: timeout`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/contexts:
+    get:
+      tags:
+      - Xdebug
+      operationId: xdebugGetContexts
+      summary: List variable contexts of a stack frame.
+      description: Works only while the session is paused.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      - name: frame
+        in: query
+        required: false
+        description: Stack frame level (0 = current frame). Non-negative integer; 400 otherwise.
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Contexts (for example locals, superglobals, constants).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/XdebugContext'
+        '400':
+          description: 'Bad query parameter (`code: bad_request`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'The session is not paused (`code: not_paused`, with `state`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '422':
+          description: 'Xdebug answered with a DBGp error (`code: xdebug_error`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '502':
+          description: 'Talking to Xdebug failed (`code: xdebug_failed`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '504':
+          description: 'Xdebug did not answer in time (`code: timeout`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/detach:
+    post:
+      tags:
+      - Xdebug
+      operationId: xdebugDetach
+      summary: Detach and let the script run to its end (DBGp `detach`).
+      description: 'Works only on a paused session driven here (`driver: here`), never while an IDE drives it. The body is
+        not read. Write guard: the request must have `Content-Type: application/json` (415 `unsupported_media_type` otherwise),
+        and a request with header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. Same-site and non-browser
+        clients pass.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The session after the command was sent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugSession'
+        '403':
+          description: 'Cross-site request (`code: cross_site`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'An IDE drives this session (`code: ide_attached`) or it is not paused (`code: not_paused`); both carry
+            `state`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '415':
+          description: 'Content-Type is not application/json (`code: unsupported_media_type`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '502':
+          description: 'Sending the command failed (`code: xdebug_failed`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/eval:
+    post:
+      tags:
+      - Xdebug
+      operationId: xdebugEval
+      summary: Evaluate a PHP expression in a paused session.
+      description: 'Needs `xdebug.allow_eval`; otherwise 403 `eval_disabled`. Results are never cached, since an expression
+        may change state. Body limit 64 KiB. Write guard: the request must have `Content-Type: application/json` (415 `unsupported_media_type`
+        otherwise), and a request with header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. Same-site and
+        non-browser clients pass.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/XdebugEvalRequest'
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The result value.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugVar'
+        '400':
+          description: 'Body is not `{"expression": "..."}` or the expression is blank (`code: bad_request`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '403':
+          description: 'Eval is off in config (`code: eval_disabled`) or cross-site request (`code: cross_site`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '415':
+          description: 'Content-Type is not application/json (`code: unsupported_media_type`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'The session is not paused (`code: not_paused`, with `state`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '422':
+          description: 'Xdebug answered with a DBGp error (`code: xdebug_error`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '502':
+          description: 'Talking to Xdebug failed (`code: xdebug_failed`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '504':
+          description: 'Xdebug did not answer in time (`code: timeout`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/property:
+    get:
+      tags:
+      - Xdebug
+      operationId: xdebugGetProperty
+      summary: Get one variable or property with its children.
+      description: Works only while the session is paused.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      - name: name
+        in: query
+        required: true
+        description: Full name of the variable or property (the `fullname` field, e.g. `$user->address`). Must not be blank
+          or contain NUL.
+        schema:
+          type: string
+      - name: frame
+        in: query
+        required: false
+        description: Stack frame level (0 = current frame). Non-negative integer; 400 otherwise.
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      - name: context
+        in: query
+        required: false
+        description: Context id (0 = locals). Non-negative integer; 400 otherwise.
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      - name: page
+        in: query
+        required: false
+        description: Page of children for large arrays and objects (0-based). Non-negative integer; 400 otherwise.
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The property.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugVar'
+        '400':
+          description: '`name` missing or contains NUL, or a bad integer parameter (`code: bad_request`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '404':
+          description: 'No such session, or the property was not found (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'The session is not paused (`code: not_paused`, with `state`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '422':
+          description: 'Xdebug answered with a DBGp error (`code: xdebug_error`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '502':
+          description: 'Talking to Xdebug failed (`code: xdebug_failed`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '504':
+          description: 'Xdebug did not answer in time (`code: timeout`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/run:
+    post:
+      tags:
+      - Xdebug
+      operationId: xdebugRun
+      summary: Continue a paused session (DBGp `run`).
+      description: 'Works only on a paused session driven here (`driver: here`), never while an IDE drives it. The body is
+        not read. Write guard: the request must have `Content-Type: application/json` (415 `unsupported_media_type` otherwise),
+        and a request with header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. Same-site and non-browser
+        clients pass.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The session after the command was sent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugSession'
+        '403':
+          description: 'Cross-site request (`code: cross_site`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'An IDE drives this session (`code: ide_attached`) or it is not paused (`code: not_paused`); both carry
+            `state`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '415':
+          description: 'Content-Type is not application/json (`code: unsupported_media_type`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '502':
+          description: 'Sending the command failed (`code: xdebug_failed`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/source:
+    get:
+      tags:
+      - Xdebug
+      operationId: xdebugGetSource
+      summary: Get source lines of a file.
+      description: Works only while the session is paused. `begin` below 1 becomes 1. If `end` is before `begin` or the range
+        is over 2000 lines, `end` becomes `begin + 2000`.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      - name: file
+        in: query
+        required: true
+        description: File URI as Xdebug reports it (e.g. from a stack frame).
+        schema:
+          type: string
+      - name: begin
+        in: query
+        required: false
+        description: First line (values below 1 are treated as 1). Non-negative integer; 400 otherwise.
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      - name: end
+        in: query
+        required: false
+        description: Last line. Non-negative integer; 400 otherwise.
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Source lines.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugSource'
+        '400':
+          description: '`file` missing or contains NUL, or a bad integer parameter (`code: bad_request`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'The session is not paused (`code: not_paused`, with `state`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '422':
+          description: 'Xdebug answered with a DBGp error (`code: xdebug_error`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '502':
+          description: 'Talking to Xdebug failed (`code: xdebug_failed`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '504':
+          description: 'Xdebug did not answer in time (`code: timeout`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/stack:
+    get:
+      tags:
+      - Xdebug
+      operationId: xdebugGetStack
+      summary: Get the call stack of a paused session.
+      description: Works only while the session is paused. Replies are cached per pause.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Stack frames, current frame first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/XdebugStackFrame'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'The session is not paused (`code: not_paused`, with `state`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '422':
+          description: 'Xdebug answered with a DBGp error (`code: xdebug_error`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '502':
+          description: 'Talking to Xdebug failed (`code: xdebug_failed`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '504':
+          description: 'Xdebug did not answer in time (`code: timeout`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/step-into:
+    post:
+      tags:
+      - Xdebug
+      operationId: xdebugStepInto
+      summary: Step into the next call (DBGp `step_into`).
+      description: 'Works only on a paused session driven here (`driver: here`), never while an IDE drives it. The body is
+        not read. Write guard: the request must have `Content-Type: application/json` (415 `unsupported_media_type` otherwise),
+        and a request with header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. Same-site and non-browser
+        clients pass.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The session after the command was sent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugSession'
+        '403':
+          description: 'Cross-site request (`code: cross_site`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'An IDE drives this session (`code: ide_attached`) or it is not paused (`code: not_paused`); both carry
+            `state`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '415':
+          description: 'Content-Type is not application/json (`code: unsupported_media_type`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '502':
+          description: 'Sending the command failed (`code: xdebug_failed`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/step-out:
+    post:
+      tags:
+      - Xdebug
+      operationId: xdebugStepOut
+      summary: Step out of the current function (DBGp `step_out`).
+      description: 'Works only on a paused session driven here (`driver: here`), never while an IDE drives it. The body is
+        not read. Write guard: the request must have `Content-Type: application/json` (415 `unsupported_media_type` otherwise),
+        and a request with header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. Same-site and non-browser
+        clients pass.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The session after the command was sent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugSession'
+        '403':
+          description: 'Cross-site request (`code: cross_site`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'An IDE drives this session (`code: ide_attached`) or it is not paused (`code: not_paused`); both carry
+            `state`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '415':
+          description: 'Content-Type is not application/json (`code: unsupported_media_type`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '502':
+          description: 'Sending the command failed (`code: xdebug_failed`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/step-over:
+    post:
+      tags:
+      - Xdebug
+      operationId: xdebugStepOver
+      summary: Step over to the next line (DBGp `step_over`).
+      description: 'Works only on a paused session driven here (`driver: here`), never while an IDE drives it. The body is
+        not read. Write guard: the request must have `Content-Type: application/json` (415 `unsupported_media_type` otherwise),
+        and a request with header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. Same-site and non-browser
+        clients pass.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The session after the command was sent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugSession'
+        '403':
+          description: 'Cross-site request (`code: cross_site`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'An IDE drives this session (`code: ide_attached`) or it is not paused (`code: not_paused`); both carry
+            `state`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '415':
+          description: 'Content-Type is not application/json (`code: unsupported_media_type`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '502':
+          description: 'Sending the command failed (`code: xdebug_failed`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/stop:
+    post:
+      tags:
+      - Xdebug
+      operationId: xdebugStop
+      summary: Stop the PHP script (DBGp `stop`).
+      description: 'Works only on a paused session driven here (`driver: here`), never while an IDE drives it. The body is
+        not read. Write guard: the request must have `Content-Type: application/json` (415 `unsupported_media_type` otherwise),
+        and a request with header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. Same-site and non-browser
+        clients pass.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The session after the command was sent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugSession'
+        '403':
+          description: 'Cross-site request (`code: cross_site`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'An IDE drives this session (`code: ide_attached`) or it is not paused (`code: not_paused`); both carry
+            `state`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '415':
+          description: 'Content-Type is not application/json (`code: unsupported_media_type`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '502':
+          description: 'Sending the command failed (`code: xdebug_failed`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/sessions/{id}/variables:
+    get:
+      tags:
+      - Xdebug
+      operationId: xdebugGetVariables
+      summary: List variables of a frame and context.
+      description: Works only while the session is paused.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Xdebug session id (`id` from the session list).
+        schema:
+          type: string
+      - name: frame
+        in: query
+        required: false
+        description: Stack frame level (0 = current frame). Non-negative integer; 400 otherwise.
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      - name: context
+        in: query
+        required: false
+        description: Context id from /contexts (0 = locals). Non-negative integer; 400 otherwise.
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Variables. Child depth follows the IDE's max_depth setting; expand deeper values with /property.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/XdebugVar'
+        '400':
+          description: 'Bad query parameter (`code: bad_request`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '404':
+          description: 'No such session (`code: not_found`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '409':
+          description: 'The session is not paused (`code: not_paused`, with `state`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '422':
+          description: 'Xdebug answered with a DBGp error (`code: xdebug_error`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '502':
+          description: 'Talking to Xdebug failed (`code: xdebug_failed`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '504':
+          description: 'Xdebug did not answer in time (`code: timeout`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/xdebug/settings:
+    put:
+      tags:
+      - Xdebug
+      operationId: xdebugUpdateSettings
+      summary: Change session settings for new sessions.
+      description: 'Changes `mode` and `pause_on_first_line`; a field left out keeps its value, but at least one must be given.
+        Unknown fields are refused. Settings live in memory: a restart goes back to the config. Body limit 4 KiB. Write guard:
+        the request must have `Content-Type: application/json` (415 `unsupported_media_type` otherwise), and a request with
+        header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. Same-site and non-browser clients pass.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/XdebugSettingsUpdate'
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Current settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugSettings'
+        '400':
+          description: 'Bad body, unknown field, no field given, or invalid mode (`code: bad_request`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '403':
+          description: 'Cross-site request (`code: cross_site`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+        '415':
+          description: 'Content-Type is not application/json (`code: unsupported_media_type`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugError'
+  /api/{project}/envelope/:
+    post:
+      tags:
+      - Ingestion
+      operationId: ingestSentryEnvelope
+      summary: Sentry envelope endpoint (errors, transactions, spans, logs, metrics)
+      description: Bodies may be gzip, deflate, br or zstd encoded; at most 64 MB after decoding.
+      x-ingestion: true
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/SentryProject'
+      requestBody:
+        content:
+          application/x-sentry-envelope:
+            schema:
+              type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/SentryAccepted'
+        '400':
+          description: Body too large or unreadable
+  /api/{project}/store/:
+    post:
+      tags:
+      - Ingestion
+      operationId: ingestSentryStore
+      summary: Sentry legacy store endpoint (JSON event)
+      description: '`project` is the DSN path: a name routes to that project; a number
+
+        (`/api/1/store/`, needed by the JavaScript SDKs) routes by the DSN
+
+        public key when a project with that key exists, else to `default`.
+
+        '
+      x-ingestion: true
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/SentryProject'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          $ref: '#/components/responses/SentryAccepted'
+  /auth/sso/callback:
+    get:
+      tags:
+      - Auth
+      operationId: ssoCallback
+      summary: OAuth2 callback; redirects to /login?token=<jwt>
+      security: []
+      parameters:
+      - name: code
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '302':
+          description: Redirect to the UI with the token in `token`
+        '400':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /auth/sso/login:
+    get:
+      tags:
+      - Auth
+      operationId: ssoLogin
+      summary: Start the SSO login (only when auth is on)
+      security: []
+      responses:
+        '302':
+          description: Redirect to the OAuth2 provider
+  /connection/websocket:
+    get:
+      tags:
+      - Server
+      operationId: websocket
+      summary: WebSocket (Centrifugo v5 JSON protocol) with live events
+      description: Clients subscribe to `events.project.{key}`. `/ws` is an alias.
+      security: []
+      responses:
+        '101':
+          description: Switching protocols
+  /metrics:
+    get:
+      tags:
+      - Metrics
+      operationId: getPrometheusMetrics
+      summary: Prometheus metrics (when metrics are on and metrics.addr is empty; else on that address)
+      security: []
+      responses:
+        '200':
+          description: Prometheus text format
+          content:
+            text/plain:
+              schema:
+                type: string
+  /ws:
+    get:
+      tags:
+      - Server
+      operationId: websocketAlias
+      summary: Alias of /connection/websocket
+      security: []
+      responses:
+        '101':
+          description: Switching protocols
+components:
+  securitySchemes:
+    authToken:
+      type: apiKey
+      in: header
+      name: X-Auth-Token
+      description: JWT from the SSO login. Needed only when auth is on.
+  parameters:
+    EventUUID:
+      name: uuid
+      in: path
+      required: true
+      schema:
+        type: string
+    EventType:
+      name: type
+      in: query
+      description: Only events of this type (`sentry`, `smtp`, `monolog`, `var-dump`, `ray`, `inspector`, `profiler`, `http-dump`,
+        `sms`, ...)
+      schema:
+        type: string
+    Project:
+      name: project
+      in: query
+      description: Only events of this project key
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      description: Max events. Default `ui.default_limit` (unset = no limit); capped by `ui.max_limit` (default 5000).
+      schema:
+        type: integer
+        minimum: 1
+    Offset:
+      name: offset
+      in: query
+      description: Events to skip. Wins over `page`.
+      schema:
+        type: integer
+        minimum: 0
+    Page:
+      name: page
+      in: query
+      description: 1-based page of `limit` events, used when `offset` is absent.
+      schema:
+        type: integer
+        minimum: 1
+    From:
+      name: from
+      in: query
+      description: Lower time bound, unix seconds or RFC3339.
+      schema:
+        type: string
+    To:
+      name: to
+      in: query
+      description: Upper time bound, unix seconds or RFC3339.
+      schema:
+        type: string
+    Window:
+      name: window
+      in: query
+      description: Time window back from now (`15m`, `24h`, `7d`) when `from`/`to` are absent; `all` or `0` turns off `ui.default_window`.
+      schema:
+        type: string
+    SentryProject:
+      name: project
+      in: path
+      required: true
+      description: DSN project segment
+      schema:
+        type: string
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Auth is on and the X-Auth-Token header is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    StatusTrue:
+      description: Done
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: boolean
+                const: true
+    SentryAccepted:
+      description: Accepted
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+                description: The event id (empty for envelopes without one)
+  schemas:
+    Error:
+      type: object
+      required:
+      - message
+      - code
+      properties:
+        message:
+          type: string
+        code:
+          type: integer
+    Event:
+      type: object
+      required:
+      - uuid
+      - type
+      - payload
+      - timestamp
+      - is_pinned
+      properties:
+        uuid:
+          type: string
+        type:
+          type: string
+          description: Event type (`sentry`, `smtp`, `monolog`, ...)
+        payload:
+          description: The event as the module stored it; its shape depends on `type`.
+        timestamp:
+          type: number
+          description: Unix seconds with fraction
+        project:
+          type: string
+          description: Project key; omitted for the default project in some events
+        is_pinned:
+          type: boolean
+    EventPreview:
+      type: object
+      required:
+      - uuid
+      - type
+      - payload
+      - timestamp
+      - searchable_text
+      - is_pinned
+      properties:
+        uuid:
+          type: string
+        type:
+          type: string
+        payload:
+          description: A reduced payload for lists; its shape depends on `type`.
+        timestamp:
+          type: number
+        project:
+          type: string
+        searchable_text:
+          type: string
+        is_pinned:
+          type: boolean
+    ListMeta:
+      type: object
+      required:
+      - limit
+      - offset
+      - returned
+      properties:
+        limit:
+          type: integer
+          description: Applied limit; 0 = no limit
+        offset:
+          type: integer
+        returned:
+          type: integer
+          description: Number of items in `data`
+        from:
+          type: number
+          description: Applied lower bound (unix seconds), when set
+        to:
+          type: number
+          description: Applied upper bound (unix seconds), when set
+    Project:
+      type: object
+      required:
+      - key
+      - name
+      - is_default
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        is_default:
+          type: boolean
+    Settings:
+      type: object
+      required:
+      - auth
+      - version
+      - events
+      properties:
+        auth:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            login_url:
+              type: string
+        version:
+          type: string
+        events:
+          type: array
+          description: Enabled event types
+          items:
+            type: string
+        update:
+          description: New-version check; null when the check is off
+          oneOf:
+          - type: 'null'
+          - type: object
+            properties:
+              current:
+                type: string
+              latest:
+                type: string
+              url:
+                type: string
+              available:
+                type: boolean
+              checked_at:
+                type: string
+                format: date-time
+    Metrics:
+      type: object
+      properties:
+        events:
+          type: object
+          properties:
+            received:
+              type: object
+              additionalProperties:
+                type: number
+            stored:
+              type: object
+              additionalProperties:
+                type: number
+            errors:
+              type: number
+        connections:
+          type: object
+          properties:
+            websocket:
+              type: number
+            tcp:
+              type: object
+              additionalProperties:
+                type: number
+        http:
+          type: object
+          properties:
+            requests_total:
+              type: number
+        webhooks:
+          type: object
+          properties:
+            sent:
+              type: number
+            failed:
+              type: number
+    SentryListMeta:
+      type: object
+      description: Pagination info.
+      required:
+      - total
+      - page
+      - limit
+      properties:
+        total:
+          type: integer
+          description: Total rows matching the filters.
+        page:
+          type: integer
+          description: Current page, starting at 1.
+        limit:
+          type: integer
+          description: Page size used.
+    SentryExceptionList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/SentryExceptionEvent'
+            - $ref: '#/components/schemas/SentryExceptionGroup'
+        meta:
+          $ref: '#/components/schemas/SentryListMeta'
+    SentryExceptionEvent:
+      type: object
+      description: One error event in the chronological list.
+      required:
+      - id
+      - event_id
+      - fingerprint
+      - occurrence_count
+      - exception_type
+      - exception_value
+      - level
+      - handled
+      - transaction
+      - received_at
+      - trace_id
+      properties:
+        id:
+          type: string
+          description: Internal error event id.
+        event_id:
+          type: string
+          description: Sentry event id.
+        fingerprint:
+          type: string
+          description: Grouping fingerprint.
+        occurrence_count:
+          type: integer
+          description: Events with the same fingerprint in the whole database (filters are not applied).
+        exception_type:
+          type: string
+          description: Type of the first exception; empty when none.
+        exception_value:
+          type: string
+          description: Message of the first exception; empty when none.
+        level:
+          type: string
+        handled:
+          type:
+          - boolean
+          - 'null'
+        transaction:
+          type: string
+          description: Transaction name; empty when none.
+        received_at:
+          type: string
+          description: Receive time, ISO UTC like `2026-09-04T05:33:12Z`.
+        trace_id:
+          type: string
+          description: Trace id; empty when none.
+    SentryExceptionGroup:
+      type: object
+      description: Error events grouped by fingerprint.
+      required:
+      - fingerprint
+      - exception_type
+      - exception_value
+      - count
+      - first_seen
+      - last_seen
+      - level
+      - handled
+      - sample_event_id
+      properties:
+        fingerprint:
+          type: string
+        exception_type:
+          type: string
+          description: Type of the first exception of the sample event; empty when none.
+        exception_value:
+          type: string
+          description: Message of the first exception of the sample event; empty when none.
+        count:
+          type: integer
+          description: Events in the group.
+        first_seen:
+          type: string
+          description: Earliest receive time, ISO UTC.
+        last_seen:
+          type: string
+          description: Latest receive time, ISO UTC.
+        level:
+          type: string
+          description: Highest level by string order (SQL MAX).
+        handled:
+          type:
+          - boolean
+          - 'null'
+          description: False if any event in the group is unhandled.
+        sample_event_id:
+          type: string
+          description: Sentry event id of one event in the group.
+    SentryExceptionDetail:
+      type: object
+      required:
+      - id
+      - event_id
+      - fingerprint
+      - level
+      - handled
+      - platform
+      - environment
+      - server_name
+      - transaction
+      - release
+      - trace_id
+      - span_id
+      - received_at
+      - event_ts
+      - exceptions
+      - breadcrumbs
+      - trace_summary
+      - payload
+      properties:
+        id:
+          type: string
+          description: Internal error event id.
+        event_id:
+          type: string
+          description: Sentry event id.
+        fingerprint:
+          type: string
+        level:
+          type: string
+        handled:
+          type:
+          - boolean
+          - 'null'
+        platform:
+          type: string
+          description: Empty when unknown.
+        environment:
+          type: string
+          description: Empty when unknown.
+        server_name:
+          type: string
+          description: Empty when unknown.
+        transaction:
+          type: string
+          description: Empty when unknown.
+        release:
+          type: string
+          description: Empty when unknown.
+        trace_id:
+          type: string
+          description: Empty when unknown.
+        span_id:
+          type: string
+          description: Empty when unknown.
+        received_at:
+          type: string
+          description: Receive time, ISO UTC.
+        event_ts:
+          type: string
+          description: Event timestamp as stored; empty when unknown.
+        exceptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentryExceptionEntry'
+        breadcrumbs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentryBreadcrumb'
+        trace_summary:
+          description: Summary of the event's trace; null when the event has no trace id or the trace has no transaction.
+          oneOf:
+          - $ref: '#/components/schemas/SentryTraceSummary'
+          - type: 'null'
+        payload:
+          description: The original Sentry event JSON as stored; null when empty.
+    SentryExceptionEntry:
+      type: object
+      description: One exception in the event's exception chain.
+      required:
+      - position
+      - exception_type
+      - exception_value
+      - mechanism_type
+      - handled
+      - stacktrace
+      properties:
+        position:
+          type: integer
+          description: Order in the chain, 0 first.
+        exception_type:
+          type: string
+        exception_value:
+          type: string
+        mechanism_type:
+          type: string
+          description: Empty when unknown.
+        handled:
+          type:
+          - boolean
+          - 'null'
+        stacktrace:
+          description: Stored Sentry stacktrace JSON, passed through as is; null when absent.
+    SentryBreadcrumb:
+      type: object
+      required:
+      - type
+      - category
+      - level
+      - message
+      - timestamp
+      - data
+      properties:
+        type:
+          type: string
+        category:
+          type: string
+        level:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          description: Breadcrumb timestamp as stored.
+        data:
+          description: Breadcrumb data JSON as stored; null when absent.
+    SentryTraceSummary:
+      type: object
+      required:
+      - trace_id
+      - transaction_name
+      - op
+      - duration_ms
+      - span_count
+      - preview_spans
+      properties:
+        trace_id:
+          type: string
+        transaction_name:
+          type: string
+          description: Name of the earliest transaction of the trace.
+        op:
+          type: string
+        duration_ms:
+          type:
+          - integer
+          - 'null'
+        span_count:
+          type: integer
+          description: Spans in the trace.
+        preview_spans:
+          type: array
+          description: Up to 3 longest spans.
+          items:
+            $ref: '#/components/schemas/SentryPreviewSpan'
+    SentryPreviewSpan:
+      type: object
+      required:
+      - span_id
+      - op
+      - description
+      - start_offset_ms
+      - duration_ms
+      - is_error
+      - peer_type
+      properties:
+        span_id:
+          type: string
+        op:
+          type: string
+        description:
+          type: string
+        start_offset_ms:
+          type: integer
+          description: Span start minus transaction start, in ms; 0 when unknown.
+        duration_ms:
+          type:
+          - integer
+          - 'null'
+        is_error:
+          type: boolean
+        peer_type:
+          type: string
+          description: Peer kind like `db`, `cache`, `queue`; empty when none.
+    SentryTraceList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentryTraceListItem'
+        meta:
+          $ref: '#/components/schemas/SentryListMeta'
+    SentryTraceListItem:
+      type: object
+      required:
+      - trace_id
+      - transaction_id
+      - transaction_name
+      - op
+      - status
+      - duration_ms
+      - span_count
+      - error_count
+      - received_at
+      - preview_spans
+      properties:
+        trace_id:
+          type: string
+        transaction_id:
+          type: string
+          description: Internal transaction id.
+        transaction_name:
+          type: string
+        op:
+          type: string
+        status:
+          type: string
+        duration_ms:
+          type:
+          - integer
+          - 'null'
+        span_count:
+          type: integer
+          description: Spans in the whole trace.
+        error_count:
+          type: integer
+          description: Error spans in the whole trace.
+        received_at:
+          type: string
+          description: Transaction start time (start_ts), ISO.
+        preview_spans:
+          type: array
+          description: Up to 3 longest spans.
+          items:
+            $ref: '#/components/schemas/SentryPreviewSpan'
+    SentryTraceDetail:
+      type: object
+      required:
+      - trace_id
+      - transaction
+      - spans
+      - related_errors
+      - related_log_count
+      properties:
+        trace_id:
+          type: string
+        transaction:
+          $ref: '#/components/schemas/SentryTransaction'
+        spans:
+          type: array
+          description: All spans of the trace, by start time.
+          items:
+            $ref: '#/components/schemas/SentrySpan'
+        related_errors:
+          type: array
+          description: Error events with this trace id, newest first.
+          items:
+            $ref: '#/components/schemas/SentryRelatedError'
+        related_log_count:
+          type: integer
+          description: Logs with this trace id.
+    SentryTransaction:
+      type: object
+      description: The earliest transaction of the trace.
+      required:
+      - id
+      - transaction_name
+      - op
+      - status
+      - start_ts
+      - end_ts
+      - duration_ms
+      properties:
+        id:
+          type: string
+        transaction_name:
+          type: string
+        op:
+          type: string
+        status:
+          type: string
+        start_ts:
+          type: string
+          description: Start time, ISO; empty when unknown.
+        end_ts:
+          type: string
+          description: End time, ISO; empty when unknown.
+        duration_ms:
+          type:
+          - integer
+          - 'null'
+    SentrySpan:
+      type: object
+      required:
+      - span_id
+      - parent_span_id
+      - op
+      - description
+      - status
+      - start_offset_ms
+      - duration_ms
+      - peer_type
+      - peer_address
+      - is_error
+      properties:
+        span_id:
+          type: string
+        parent_span_id:
+          type: string
+          description: Empty for a root span.
+        op:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        start_offset_ms:
+          type: integer
+          description: Span start minus transaction start, in ms; 0 when unknown.
+        duration_ms:
+          type:
+          - integer
+          - 'null'
+        peer_type:
+          type: string
+        peer_address:
+          type: string
+        is_error:
+          type: boolean
+    SentryRelatedError:
+      type: object
+      required:
+      - id
+      - exception_type
+      - received_at
+      properties:
+        id:
+          type: string
+          description: Sentry event id of the error (not the internal id).
+        exception_type:
+          type: string
+        received_at:
+          type: string
+          description: Receive time, ISO UTC.
+    SentryLogList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentryLog'
+        meta:
+          $ref: '#/components/schemas/SentryListMeta'
+    SentryLog:
+      type: object
+      required:
+      - id
+      - level
+      - severity_number
+      - body
+      - trace_id
+      - span_id
+      - log_ts
+      - attributes
+      - trace_exists
+      properties:
+        id:
+          type: string
+        level:
+          type: string
+        severity_number:
+          type:
+          - integer
+          - 'null'
+        body:
+          type: string
+        trace_id:
+          type: string
+          description: Empty when none.
+        span_id:
+          type: string
+          description: Empty when none.
+        log_ts:
+          type: string
+          description: Log time, ISO; empty when unknown.
+        attributes:
+          description: Log attributes JSON as stored; null when absent.
+        trace_exists:
+          type: boolean
+          description: True when the referenced trace is stored.
+    SentryMetricList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentryMetric'
+        meta:
+          $ref: '#/components/schemas/SentryListMeta'
+    SentryMetric:
+      type: object
+      required:
+      - id
+      - name
+      - type
+      - value
+      - unit
+      - trace_id
+      - span_id
+      - metric_ts
+      - attributes
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          description: Metric type, for example `counter`, `gauge`, `distribution`.
+        value:
+          type: number
+        unit:
+          type: string
+          description: Empty when none.
+        trace_id:
+          type: string
+          description: Empty when none.
+        span_id:
+          type: string
+          description: Empty when none.
+        metric_ts:
+          type: string
+          description: Metric time, ISO; empty when unknown.
+        attributes:
+          description: Metric attributes JSON as stored; null when absent.
+    SentryServiceMap:
+      type: object
+      required:
+      - nodes
+      - edges
+      - window_minutes
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentryServiceNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentryServiceEdge'
+        window_minutes:
+          type: integer
+          description: Look-back window that was applied.
+    SentryServiceNode:
+      type: object
+      required:
+      - id
+      - label
+      - request_count
+      - error_count
+      - avg_duration_ms
+      properties:
+        id:
+          type: string
+          description: Service name or peer address.
+        label:
+          type: string
+          description: Display label, prefixed `DB:`, `Cache:` or `Queue:` for such peers.
+        request_count:
+          type: integer
+        error_count:
+          type: integer
+        avg_duration_ms:
+          type:
+          - integer
+          - 'null'
+          description: Weighted average of incoming calls; null for nodes with no incoming durations.
+    SentryServiceEdge:
+      type: object
+      required:
+      - source
+      - target
+      - op_type
+      - request_count
+      - error_count
+      - avg_duration_ms
+      properties:
+        source:
+          type: string
+          description: Calling service name, `unknown` when not set.
+        target:
+          type: string
+          description: Peer address.
+        op_type:
+          type: string
+          description: Peer type of the spans.
+        request_count:
+          type: integer
+        error_count:
+          type: integer
+        avg_duration_ms:
+          type:
+          - integer
+          - 'null'
+    SentryCounts:
+      type: object
+      required:
+      - exceptions
+      - traces
+      - logs
+      - metrics
+      properties:
+        exceptions:
+          type: integer
+          description: Error events.
+        traces:
+          type: integer
+          description: Transactions.
+        logs:
+          type: integer
+        metrics:
+          type: integer
+    SentryStatus:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: boolean
+          const: true
+    SmtpCursor:
+      type: object
+      required:
+      - cursor
+      properties:
+        cursor:
+          type: string
+          description: Current server time, UTC, RFC 3339 with nanoseconds.
+    SmtpStats:
+      type: object
+      required:
+      - count
+      - last_received_at
+      properties:
+        count:
+          type: integer
+          description: Number of SMTP messages.
+        last_received_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Time of the newest message, UTC, RFC 3339. Null when there are none.
+    SmtpStatus:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: boolean
+          const: true
+    SmtpEmailAddress:
+      type: object
+      required:
+      - email
+      - name
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+    SmtpParsedEmail:
+      type: object
+      description: Payload of an SMTP event.
+      properties:
+        id:
+          type:
+          - string
+          - 'null'
+          description: Message-ID header, or null.
+        subject:
+          type: string
+        from:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/SmtpEmailAddress'
+        to:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/SmtpEmailAddress'
+        cc:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/SmtpEmailAddress'
+        bcc:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+        reply_to:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/SmtpEmailAddress'
+        text:
+          type: string
+          description: Plain text body.
+        html:
+          type: string
+          description: HTML body.
+        raw:
+          type: string
+          description: Original RFC 822 source.
+    SmtpEvent:
+      type: object
+      description: A stored SMTP event.
+      required:
+      - uuid
+      - type
+      - payload
+      - timestamp
+      - is_pinned
+      properties:
+        uuid:
+          type: string
+        type:
+          type: string
+          const: smtp
+        payload:
+          $ref: '#/components/schemas/SmtpParsedEmail'
+        timestamp:
+          type: number
+          description: Unix time in seconds (with fraction).
+        project:
+          type: string
+          description: Project key. Omitted when empty.
+        is_pinned:
+          type: boolean
+    SmtpMessageList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SmtpEvent'
+        meta:
+          type: object
+          required:
+          - total
+          - limit
+          - offset
+          properties:
+            total:
+              type: integer
+              description: Matches before offset and limit.
+            limit:
+              type: integer
+              description: Applied limit; 0 means none.
+            offset:
+              type: integer
+              description: Applied offset.
+    SmtpLink:
+      type: object
+      required:
+      - url
+      - source
+      properties:
+        url:
+          type: string
+        text:
+          type: string
+          description: Link text with tags removed. Only for html links; omitted when empty.
+        source:
+          type: string
+          enum:
+          - html
+          - text
+          description: Body part the link came from.
+    SmtpLinkList:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SmtpLink'
+    SmtpCodeList:
+      type: object
+      required:
+      - data
+      - pattern
+      properties:
+        data:
+          type: array
+          items:
+            type: string
+          description: Unique matches.
+        pattern:
+          type: string
+          description: The regex that was used.
+    MockRule:
+      type: object
+      required:
+      - id
+      - project
+      - name
+      - method
+      - path
+      - status
+      - headers
+      - body
+      - delay_ms
+      - template
+      - seed
+      - group
+      - enabled
+      - position
+      - source
+      - read_only
+      properties:
+        id:
+          type: string
+        project:
+          type: string
+          description: Project the rule applies to. Empty means every project.
+        name:
+          type: string
+        method:
+          type: string
+          enum:
+          - ANY
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - HEAD
+          - OPTIONS
+        path:
+          type: string
+          description: Path under /mock, e.g. /users/me, /users/{id}, /files/*.
+        status:
+          type: integer
+          description: Response status, 100-599.
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Response headers.
+        body:
+          type: string
+          description: Response body.
+        delay_ms:
+          type: integer
+          description: Delay before the answer, 0-30000 ms.
+        template:
+          type: boolean
+          description: Body and header values are Go templates.
+        seed:
+          type: integer
+          format: int64
+          description: 'Not 0: template fake data is the same on every request.'
+        group:
+          type: string
+          description: OpenAPI import group that made the rule. Empty means none.
+        enabled:
+          type: boolean
+        position:
+          type: integer
+        source:
+          type: string
+          enum:
+          - config
+          - api
+          - mcp
+          description: config (buggregator.yaml, read-only), api (UI/REST) or mcp.
+        read_only:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          description: Omitted when empty.
+        updated_at:
+          type: string
+          format: date-time
+          description: Omitted when empty.
+    MockRuleInput:
+      type: object
+      description: Body for creating or replacing a rule. Other MockRule fields (id, group, position, source, read_only, created_at,
+        updated_at) are ignored or overwritten. Body size limit 2 MB.
+      required:
+      - path
+      properties:
+        project:
+          type: string
+          description: Project the rule applies to. Empty means every project. Trimmed.
+        name:
+          type: string
+          description: Trimmed.
+        method:
+          type: string
+          description: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS or ANY (case-insensitive). Default ANY.
+        path:
+          type: string
+          description: Must start with /. Supports {param} segments and a trailing *.
+        status:
+          type: integer
+          default: 200
+          description: 100-599. 0 or missing means 200.
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Header names must not be blank or contain space, colon or newline.
+        body:
+          type: string
+          description: At most 1 MB.
+        delay_ms:
+          type: integer
+          minimum: 0
+          maximum: 30000
+          default: 0
+        template:
+          type: boolean
+          description: Body and header values are Go templates. On update, missing keeps the old value.
+        seed:
+          type: integer
+          format: int64
+          description: 'Not 0: same fake data every time. On update, missing keeps the old value.'
+        enabled:
+          type: boolean
+          default: true
+          description: Missing means true.
+    MockRuleList:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MockRule'
+    MockStatus:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: boolean
+          const: true
+    MockValidationError:
+      type: object
+      required:
+      - message
+      - code
+      - errors
+      properties:
+        message:
+          type: string
+          description: 'e.g. invalid mock rule: path: must start with /'
+        code:
+          type: integer
+          const: 422
+        errors:
+          type: object
+          additionalProperties:
+            type: string
+          description: Invalid field name to message.
+    MockOrderInput:
+      type: object
+      description: Body size limit 1 MB.
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+          description: Stored rule IDs in the wanted order. An unknown ID gives 404.
+    MockDeleteGroupResult:
+      type: object
+      required:
+      - deleted
+      properties:
+        deleted:
+          type: integer
+          description: Number of deleted rules.
+    MockHelper:
+      type: object
+      required:
+      - name
+      - group
+      - usage
+      - description
+      - example
+      - result
+      properties:
+        name:
+          type: string
+        group:
+          type: string
+          enum:
+          - request
+          - data
+          - output
+          - fake
+        usage:
+          type: string
+        description:
+          type: string
+        example:
+          type: string
+        result:
+          type: string
+    MockFakeParam:
+      type: object
+      required:
+      - name
+      - type
+      - optional
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        optional:
+          type: boolean
+        default:
+          type: string
+          description: Omitted when empty.
+        options:
+          type: array
+          items:
+            type: string
+          description: Omitted when empty.
+    MockFake:
+      type: object
+      required:
+      - name
+      - category
+      - description
+      - example
+      - output
+      - params
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        example:
+          type: string
+        output:
+          type: string
+        params:
+          type: array
+          items:
+            $ref: '#/components/schemas/MockFakeParam'
+    MockHelpersResponse:
+      type: object
+      required:
+      - helpers
+      - fake
+      properties:
+        helpers:
+          type: array
+          items:
+            $ref: '#/components/schemas/MockHelper'
+        fake:
+          type: array
+          items:
+            $ref: '#/components/schemas/MockFake'
+          description: Fake generators, sorted by category then name.
+    MockPreviewInput:
+      type: object
+      description: A rule (not saved) and a sample request. Body size limit 3 MB.
+      properties:
+        rule:
+          $ref: '#/components/schemas/MockRule'
+        request:
+          type: object
+          properties:
+            method:
+              type: string
+              description: 'Default: the rule''s method, or GET when the rule is ANY.'
+            path:
+              type: string
+              description: Must start with /. May include a query string. A leading /mock is removed.
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+            body:
+              type: string
+    MockPreview:
+      type: object
+      required:
+      - matched
+      - status
+      - headers
+      - body
+      - error
+      properties:
+        matched:
+          type: boolean
+          description: The rule's method and path match the sample request.
+        status:
+          type: integer
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        body:
+          type: string
+        error:
+          type:
+          - string
+          - 'null'
+          description: Template error, or null.
+    MockOpenAPIImport:
+      type: object
+      description: Give spec or url, not both.
+      properties:
+        spec:
+          type: string
+          description: Spec text, YAML or JSON, at most 5 MB.
+        url:
+          type: string
+          description: http or https URL to download the spec from (10 s timeout, at most 5 MB).
+        project:
+          type: string
+          description: Project of the rules. Empty means every project.
+        group:
+          type: string
+          description: Group name. Default openapi:<title>, or openapi:<project>:<title> with a project.
+        base_path:
+          type:
+          - string
+          - 'null'
+          description: 'Prefix for every path. Null or missing: path of servers[0].url. Empty: none.'
+    MockOpenAPISkip:
+      type: object
+      required:
+      - method
+      - path
+      - reason
+      properties:
+        method:
+          type: string
+        path:
+          type: string
+        reason:
+          type: string
+    MockOpenAPIResult:
+      type: object
+      required:
+      - group
+      - title
+      - rules
+      - skipped
+      properties:
+        group:
+          type: string
+        title:
+          type: string
+          description: Spec title.
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/MockRule'
+        skipped:
+          type: array
+          items:
+            $ref: '#/components/schemas/MockOpenAPISkip'
+          description: Operations that could not become rules.
+    MockNear:
+      type: object
+      required:
+      - rule_id
+      - rule_name
+      - reason
+      properties:
+        rule_id:
+          type: string
+        rule_name:
+          type: string
+        reason:
+          type: string
+          enum:
+          - disabled
+          - method
+          - project
+    MockRequestInfo:
+      type: object
+      description: The mock field of a captured request payload.
+      required:
+      - matched
+      - rule_id
+      - rule_name
+      - status
+      - headers
+      - body
+      - body_size
+      - body_truncated
+      - delay_ms
+      properties:
+        matched:
+          type: boolean
+        rule_id:
+          type:
+          - string
+          - 'null'
+        rule_name:
+          type:
+          - string
+          - 'null'
+        status:
+          type: integer
+          description: Status that was sent.
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Headers that were sent.
+        body:
+          type: string
+          description: Body that was sent, maybe truncated.
+        body_size:
+          type: integer
+          description: Full size of the sent body.
+        body_truncated:
+          type: boolean
+        delay_ms:
+          type: integer
+        template_error:
+          type: string
+          description: Only when the template failed.
+        near:
+          type: array
+          items:
+            $ref: '#/components/schemas/MockNear'
+          description: 'Only when no rule matched: rules that almost matched.'
+    MockRequest:
+      type: object
+      required:
+      - uuid
+      - type
+      - project
+      - timestamp
+      - payload
+      properties:
+        uuid:
+          type: string
+        type:
+          type: string
+          const: http-dump
+        project:
+          type: string
+          description: Empty when none.
+        timestamp:
+          type: number
+          description: Unix time in seconds (with fraction).
+        payload:
+          type: object
+          additionalProperties: true
+          description: HTTP dump payload as stored, plus a mock field.
+          properties:
+            mock:
+              $ref: '#/components/schemas/MockRequestInfo'
+    MockRequestList:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MockRequest'
+    Attachment:
+      type: object
+      required:
+      - uuid
+      - name
+      - path
+      - size
+      - mime
+      properties:
+        uuid:
+          type: string
+        name:
+          type: string
+          description: File name.
+        path:
+          type: string
+          description: Storage path.
+        size:
+          type: integer
+          description: Size in bytes.
+        mime:
+          type: string
+          description: MIME type.
+    AttachmentList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+        meta:
+          type: object
+          description: Always empty.
+    AttachmentFile:
+      type: string
+      contentMediaType: application/octet-stream
+      description: Raw file bytes.
+    XdebugError:
+      type: object
+      required:
+      - code
+      - error
+      description: Error body of the /api/xdebug routes.
+      properties:
+        code:
+          type: string
+          description: Machine code, e.g. not_found, not_paused, ide_attached, bad_request, eval_disabled, cross_site, unsupported_media_type,
+            session_live, timeout, xdebug_error, xdebug_failed.
+        error:
+          type: string
+          description: Human-readable message.
+        state:
+          type: string
+          description: Session state; set on not_paused and ide_attached.
+    XdebugSettings:
+      type: object
+      required:
+      - mode
+      - pause_on_first_line
+      - idle_timeout_seconds
+      properties:
+        mode:
+          type: string
+          enum:
+          - proxy
+          - auto
+          - standalone
+        pause_on_first_line:
+          type: boolean
+          description: A session driven here stops at the first line.
+        idle_timeout_seconds:
+          type: integer
+          description: Idle timeout for a paused session driven here, in seconds.
+    XdebugStatus:
+      type: object
+      required:
+      - enabled
+      - addr
+      - ide_addr
+      - allow_eval
+      - allow_control
+      - mode
+      - pause_on_first_line
+      - idle_timeout_seconds
+      properties:
+        enabled:
+          type: boolean
+          description: false when the module is disabled.
+        addr:
+          type: string
+          description: Address Xdebug connects to.
+        ide_addr:
+          type: string
+          description: IDE address sessions are forwarded to.
+        allow_eval:
+          type: boolean
+        allow_control:
+          type: boolean
+        mode:
+          type: string
+          description: proxy, auto or standalone.
+        pause_on_first_line:
+          type: boolean
+        idle_timeout_seconds:
+          type: integer
+          description: 0 means the idle guard is off (module disabled case).
+    XdebugSettingsUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        mode:
+          type: string
+          enum:
+          - proxy
+          - auto
+          - standalone
+        pause_on_first_line:
+          type: boolean
+    XdebugSession:
+      type: object
+      required:
+      - id
+      - idekey
+      - state
+      - entry_file
+      - ide_connected
+      - started_at
+      - agent_calls
+      - driver
+      - last_continuation_by
+      - idle_deadline
+      properties:
+        id:
+          type: string
+        idekey:
+          type: string
+        state:
+          type: string
+          description: starting, break, running, stopping, stopped or detached.
+        kind:
+          type: string
+          description: http or cli, once known.
+        target:
+          type: string
+          description: HTTP method and URI, or the CLI command line.
+        entry_file:
+          type: string
+        language:
+          type: string
+        engine:
+          type: string
+        ide_connected:
+          type: boolean
+        last_file:
+          type: string
+        last_line:
+          type: integer
+        started_at:
+          type: string
+          format: date-time
+        paused_at:
+          type: string
+          format: date-time
+        agent_calls:
+          type: integer
+        closed_reason:
+          type: string
+        closed_at:
+          type: string
+          format: date-time
+        driver:
+          type: string
+          enum:
+          - ide
+          - here
+        last_continuation_by:
+          type:
+          - string
+          - 'null'
+          description: ui, agent or null.
+        last_continuation_agent:
+          type: string
+          description: The agent's name.
+        idle_deadline:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: When a paused session driven here is released; null otherwise.
+    XdebugStackFrame:
+      type: object
+      required:
+      - level
+      - file
+      - line
+      - vendor
+      properties:
+        level:
+          type: integer
+        where:
+          type: string
+        file:
+          type: string
+        line:
+          type: integer
+        type:
+          type: string
+        vendor:
+          type: boolean
+          description: The file path contains /vendor/.
+    XdebugContext:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    XdebugVar:
+      type: object
+      required:
+      - name
+      - type
+      properties:
+        name:
+          type: string
+        fullname:
+          type: string
+        type:
+          type: string
+        class:
+          type: string
+        facet:
+          type: string
+        value:
+          type: string
+          description: Absent for null, uninitialized and values with children.
+        size:
+          type: integer
+        numchildren:
+          type: integer
+        page:
+          type: integer
+        pagesize:
+          type: integer
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/XdebugVar'
+    XdebugSource:
+      type: object
+      required:
+      - file
+      - begin
+      - lines
+      properties:
+        file:
+          type: string
+        begin:
+          type: integer
+        lines:
+          type: array
+          items:
+            type: object
+            required:
+            - line
+            - text
+            properties:
+              line:
+                type: integer
+              text:
+                type: string
+    XdebugIdeBreakpoint:
+      type: object
+      required:
+      - id
+      - type
+      - state
+      - hit_count
+      description: A breakpoint an IDE set.
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        state:
+          type: string
+        file:
+          type: string
+        line:
+          type: integer
+        function:
+          type: string
+        hit_count:
+          type: integer
+    XdebugBreakpoint:
+      type: object
+      required:
+      - id
+      - type
+      - enabled
+      - source
+      - created_at
+      description: A saved breakpoint.
+      properties:
+        id:
+          type: integer
+          format: int64
+        type:
+          type: string
+          enum:
+          - line
+          - exception
+        file:
+          type: string
+          description: file:// URI as PHP sees it (line breakpoints).
+        line:
+          type: integer
+        exception:
+          type: string
+          description: Exception class, or * for any (exception breakpoints).
+        condition:
+          type: string
+          description: PHP expression; sent only with allow_eval.
+        enabled:
+          type: boolean
+        source:
+          type: string
+          enum:
+          - ui
+          - mcp
+        created_at:
+          type: string
+          format: date-time
+    XdebugSessionBreakpoint:
+      allOf:
+      - $ref: '#/components/schemas/XdebugBreakpoint'
+      - type: object
+        required:
+        - state
+        - hit_count
+        properties:
+          state:
+            type: string
+            enum:
+            - resolved
+            - unresolved
+            - skipped
+            - disabled
+            - pending
+          resolved_line:
+            type: integer
+          hit_count:
+            type: integer
+      description: A saved breakpoint with its state in one session.
+    XdebugBreakpointInput:
+      type: object
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          enum:
+          - line
+          - exception
+        file:
+          type: string
+          description: Absolute path as PHP sees it, or a file:// URI.
+        line:
+          type: integer
+          minimum: 1
+        exception:
+          type: string
+          description: Class name, or * for any.
+        condition:
+          type: string
+          description: PHP expression; trimmed. Needs allow_eval.
+        enabled:
+          type: boolean
+    XdebugEvalRequest:
+      type: object
+      required:
+      - expression
+      properties:
+        expression:
+          type: string
+          description: PHP expression; must not be blank.
+    XdebugAgentCall:
+      type: object
+      required:
+      - seq
+      - session_id
+      - at
+      - tool
+      - ok
+      - result_summary
+      - duration_ms
+      properties:
+        seq:
+          type: integer
+        session_id:
+          type: string
+        at:
+          type: string
+          format: date-time
+        tool:
+          type: string
+        args:
+          type: string
+        ok:
+          type: boolean
+        result_summary:
+          type: string
+        duration_ms:
+          type: integer
+          format: int64
+    ProfilerTotals:
+      type: object
+      required:
+      - cpu
+      - wt
+      - mu
+      - pmu
+      - ct
+      description: 'Profile metrics: cpu, wall time (wt), memory (mu), peak memory (pmu), calls (ct).'
+      properties:
+        cpu:
+          type: integer
+          format: int64
+        wt:
+          type: integer
+          format: int64
+        mu:
+          type: integer
+          format: int64
+        pmu:
+          type: integer
+          format: int64
+        ct:
+          type: integer
+          format: int64
+    ProfilerSummary:
+      type: object
+      required:
+      - overall_totals
+      - slowest_function
+      - memory_hotspot
+      - most_called
+      properties:
+        overall_totals:
+          $ref: '#/components/schemas/ProfilerTotals'
+        slowest_function:
+          type:
+          - object
+          - 'null'
+          required:
+          - function
+          - excl_wt
+          - p_excl_wt
+          properties:
+            function:
+              type: string
+            excl_wt:
+              type: integer
+              format: int64
+            p_excl_wt:
+              type: number
+              description: Percent of total, 1 decimal.
+        memory_hotspot:
+          type:
+          - object
+          - 'null'
+          required:
+          - function
+          - excl_mu
+          - p_excl_mu
+          properties:
+            function:
+              type: string
+            excl_mu:
+              type: integer
+              format: int64
+            p_excl_mu:
+              type: number
+              description: Percent of total, 1 decimal.
+        most_called:
+          type:
+          - object
+          - 'null'
+          required:
+          - function
+          - ct
+          properties:
+            function:
+              type: string
+            ct:
+              type: integer
+              format: int64
+    ProfilerFunction:
+      type: object
+      required:
+      - function
+      - ct
+      - cpu
+      - wt
+      - mu
+      - pmu
+      - excl_cpu
+      - excl_wt
+      - excl_mu
+      - excl_pmu
+      - excl_ct
+      - p_cpu
+      - p_wt
+      - p_mu
+      - p_pmu
+      - p_excl_cpu
+      - p_excl_wt
+      - p_excl_mu
+      - p_excl_pmu
+      properties:
+        function:
+          type: string
+        ct:
+          type: integer
+          format: int64
+        cpu:
+          type: integer
+          format: int64
+        wt:
+          type: integer
+          format: int64
+        mu:
+          type: integer
+          format: int64
+        pmu:
+          type: integer
+          format: int64
+        excl_cpu:
+          type: integer
+          format: int64
+        excl_wt:
+          type: integer
+          format: int64
+        excl_mu:
+          type: integer
+          format: int64
+        excl_pmu:
+          type: integer
+          format: int64
+        excl_ct:
+          type: integer
+          format: int64
+        p_cpu:
+          type: number
+          description: Percent of total, 2 decimals.
+        p_wt:
+          type: number
+          description: Percent of total, 2 decimals.
+        p_mu:
+          type: number
+          description: Percent of total, 2 decimals.
+        p_pmu:
+          type: number
+          description: Percent of total, 2 decimals.
+        p_excl_cpu:
+          type: number
+          description: Percent of total, 2 decimals.
+        p_excl_wt:
+          type: number
+          description: Percent of total, 2 decimals.
+        p_excl_mu:
+          type: number
+          description: Percent of total, 2 decimals.
+        p_excl_pmu:
+          type: number
+          description: Percent of total, 2 decimals.
+    ProfilerTopFunctions:
+      type: object
+      required:
+      - schema
+      - overall_totals
+      - functions
+      properties:
+        schema:
+          type: array
+          description: Fixed column definitions for the table.
+          items:
+            type: object
+            required:
+            - key
+            - label
+            - description
+            - sortable
+            - values
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              description:
+                type: string
+              sortable:
+                type: boolean
+              values:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - key
+                  - format
+                  properties:
+                    key:
+                      type: string
+                    format:
+                      type: string
+                      enum:
+                      - string
+                      - number
+                      - ms
+                      - bytes
+                      - percent
+                    type:
+                      type: string
+                      enum:
+                      - sub
+        overall_totals:
+          $ref: '#/components/schemas/ProfilerTotals'
+        functions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfilerFunction'
+    ProfilerCallGraph:
+      type: object
+      required:
+      - toolbar
+      - nodes
+      - edges
+      properties:
+        toolbar:
+          type: array
+          description: Fixed list of selectable metrics.
+          items:
+            type: object
+            required:
+            - label
+            - metric
+            - description
+            properties:
+              label:
+                type: string
+              metric:
+                type: string
+              description:
+                type: string
+        nodes:
+          type: array
+          items:
+            type: object
+            required:
+            - data
+            properties:
+              data:
+                type: object
+                required:
+                - id
+                - name
+                - cost
+                - metrics
+                - color
+                - textColor
+                properties:
+                  id:
+                    type: string
+                    description: Edge UUID.
+                  name:
+                    type: string
+                    description: Callee, with ` (Nx)` call count when calls > 0.
+                  cost:
+                    $ref: '#/components/schemas/ProfilerTotals'
+                  metrics:
+                    type: object
+                    required:
+                    - cost
+                    - percents
+                    properties:
+                      cost:
+                        type: integer
+                        format: int64
+                      percents:
+                        type: number
+                  color:
+                    type: string
+                    description: Hex color.
+                  textColor:
+                    type: string
+                    description: Hex color.
+        edges:
+          type: array
+          items:
+            type: object
+            required:
+            - data
+            properties:
+              data:
+                type: object
+                required:
+                - source
+                - target
+                - label
+                - color
+                properties:
+                  source:
+                    type: string
+                  target:
+                    type: string
+                  label:
+                    type: string
+                    description: Percent, e.g. `12.50%`.
+                  color:
+                    type: string
+                    description: Hex color.
+    ProfilerFlameNode:
+      type: object
+      required:
+      - name
+      - start
+      - duration
+      - type
+      - children
+      - cost
+      - color
+      properties:
+        name:
+          type: string
+        start:
+          type: number
+        duration:
+          type: number
+        type:
+          type: string
+          enum:
+          - task
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfilerFlameNode'
+        cost:
+          $ref: '#/components/schemas/ProfilerTotals'
+        color:
+          type: string
+          description: Hex color.
+    XdebugTraceCall:
+      type: object
+      required:
+      - nr
+      - func
+      - file
+      - line
+      - level
+      - start
+      - incl
+      - self
+      - memory
+      - offset
+      properties:
+        nr:
+          type: integer
+        func:
+          type: string
+        file:
+          type: string
+        line:
+          type: integer
+        level:
+          type: integer
+        start:
+          type: number
+        incl:
+          type: number
+        self:
+          type: number
+        memory:
+          type: integer
+          format: int64
+          description: Memory change from entry to exit.
+        offset:
+          type: integer
+          format: int64
+          description: Byte offset of its entry line.
+    XdebugTraceSummary:
+      type: object
+      required:
+      - xdebug_version
+      - file_format
+      - start
+      - end
+      - end_time
+      - end_memory
+      - calls
+      - user_calls
+      - max_depth
+      - duration
+      - peak_memory
+      - assignments
+      - returns
+      - truncated
+      - main
+      - top
+      - slowest
+      properties:
+        xdebug_version:
+          type: string
+        file_format:
+          type: integer
+        start:
+          type: string
+          description: TRACE START timestamp.
+        end:
+          type: string
+          description: TRACE END timestamp; empty when the trace was cut.
+        end_time:
+          type: number
+          description: Seconds at the end of the script.
+        end_memory:
+          type: integer
+          format: int64
+        calls:
+          type: integer
+        user_calls:
+          type: integer
+        max_depth:
+          type: integer
+        duration:
+          type: number
+          description: Seconds.
+        peak_memory:
+          type: integer
+          format: int64
+        assignments:
+          type: integer
+        returns:
+          type: boolean
+          description: Return values were collected.
+        truncated:
+          type: boolean
+        main:
+          type: string
+          description: Script of {main}.
+        top:
+          type:
+          - array
+          - 'null'
+          description: Functions by self time.
+          items:
+            type: object
+            required:
+            - func
+            - user
+            - count
+            - self
+            - incl
+            properties:
+              func:
+                type: string
+              user:
+                type: boolean
+              count:
+                type: integer
+              self:
+                type: number
+              incl:
+                type: number
+        slowest:
+          type:
+          - array
+          - 'null'
+          description: Calls by inclusive time.
+          items:
+            $ref: '#/components/schemas/XdebugTraceCall'
+        index:
+          type: array
+          description: Every 1000th call, for jumping into the trace.
+          items:
+            type: object
+            required:
+            - nr
+            - offset
+            - level
+            properties:
+              nr:
+                type: integer
+              offset:
+                type: integer
+                format: int64
+              level:
+                type: integer
+    XdebugTraceSummaryResponse:
+      type: object
+      required:
+      - file
+      - name
+      - url
+      - size
+      - compressed
+      - summary
+      properties:
+        file:
+          type: string
+          description: File name in the trace dir.
+        name:
+          type: string
+          description: Name the client gave; may be empty.
+        url:
+          type: string
+          description: Request the trace was recorded for; may be empty.
+        size:
+          type: integer
+          format: int64
+          description: Bytes stored.
+        compressed:
+          type: boolean
+          description: Stored as gzip.
+        summary:
+          $ref: '#/components/schemas/XdebugTraceSummary'
+    XdebugTraceNode:
+      type: object
+      required:
+      - nr
+      - func
+      - user
+      - file
+      - line
+      - level
+      - start
+      - incl
+      - self
+      - memory
+      - children
+      - done
+      - offset
+      properties:
+        nr:
+          type: integer
+        func:
+          type: string
+        user:
+          type: boolean
+        include:
+          type: string
+        file:
+          type: string
+        line:
+          type: integer
+        level:
+          type: integer
+        start:
+          type: number
+        incl:
+          type: number
+        self:
+          type: number
+        memory:
+          type: integer
+          format: int64
+          description: Memory change from entry to exit.
+        args:
+          type: array
+          items:
+            type: string
+        return:
+          type: string
+        children:
+          type: integer
+          description: Number of direct callees.
+        done:
+          type: boolean
+          description: Its exit was seen (false when the trace was cut).
+        offset:
+          type: integer
+          format: int64
+          description: Pass as parent= or from=.
+        path:
+          type: array
+          description: 'Search results only: callers from the top level down.'
+          items:
+            type: object
+            required:
+            - nr
+            - func
+            - offset
+            properties:
+              nr:
+                type: integer
+              func:
+                type: string
+              offset:
+                type: integer
+                format: int64
+    XdebugTracePage:
+      type: object
+      required:
+      - nodes
+      - next
+      - truncated
+      properties:
+        parent:
+          $ref: '#/components/schemas/XdebugTraceNode'
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/XdebugTraceNode'
+        next:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          description: Offset for from=; null when there is no more.
+        truncated:
+          type: boolean
+          description: The trace was cut or hit the size limit.

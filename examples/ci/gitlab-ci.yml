@@ -1,0 +1,12 @@
+# GitLab CI: Buggregator as a service; the job reaches it by its alias.
+tests:
+  image: python:3.12-slim
+  services:
+    - name: ghcr.io/buggregator/server:latest
+      alias: buggregator
+  variables:
+    BUGGREGATOR_URL: http://buggregator:8000
+    BUGGREGATOR_SMTP: buggregator:1025
+  script:
+    # Your test suite goes here, pointed at Buggregator.
+    - python3 examples/ci/smoke_test.py
