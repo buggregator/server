@@ -3,9 +3,13 @@ package sentry
 import (
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
+	"log/slog"
+	"net"
 	"net/http"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -24,7 +28,10 @@ import (
 //   - only http(s) `filename`s are touched, which naturally scopes this to
 //     browser/JS frames (PHP/Python frames carry filesystem paths, not URLs);
 //   - frames that already include source are left alone;
-//   - any fetch error leaves the frame untouched.
+//   - any fetch error leaves the frame untouched;
+//   - by default only loopback and private hosts are fetched (see
+//     SourceFetchPrivate): ingestion is open even with SSO, so a frame URL is
+//     input from anyone who can post an event.
 
 const (
 	sourceContextLines = 5            // lines of context kept before and after
@@ -36,32 +43,99 @@ const (
 // retrieved. It is an injection point for tests.
 type sourceFetcher func(url string) (string, bool)
 
-var defaultSourceClient = &http.Client{
-	Timeout: sourceFetchTimeout,
-	Transport: &http.Transport{
-		// Local dev servers (Vite behind ddev/https) use self-signed certs.
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	},
+// Source fetch modes, config sentry.source_fetch.
+const (
+	// SourceFetchPrivate fetches only from loopback and private addresses
+	// (127.0.0.0/8, ::1, 10/8, 172.16/12, 192.168/16, fc00::/7): the dev
+	// server, a docker service, ddev. The default.
+	SourceFetchPrivate = "private"
+	// SourceFetchAny fetches from any host.
+	SourceFetchAny = "any"
+	// SourceFetchOff never fetches.
+	SourceFetchOff = "off"
+)
+
+// newSourceFetcher returns the fetcher for a mode; an unknown mode is private.
+func newSourceFetcher(mode string) sourceFetcher {
+	switch mode {
+	case SourceFetchOff:
+		return func(string) (string, bool) { return "", false }
+	case SourceFetchAny:
+		return httpFetcher(sourceClient(false))
+	default:
+		return httpFetcher(sourceClient(true))
+	}
 }
 
-func httpSourceFetcher(url string) (string, bool) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+// defaultSourceFetcher serves callers that set no mode (tests, a handler
+// built without the module).
+var defaultSourceFetcher = newSourceFetcher(SourceFetchPrivate)
+
+// sourceClient is the HTTP client of the fetcher. With privateOnly the dialer
+// checks the address it actually connects to, after DNS, so a public name or
+// one rebound to a public IP is refused too, and redirects stay on the host.
+func sourceClient(privateOnly bool) *http.Client {
+	dialer := &net.Dialer{Timeout: sourceFetchTimeout}
+	if privateOnly {
+		dialer.Control = privateAddressOnly
+	}
+	return &http.Client{
+		Timeout: sourceFetchTimeout,
+		Transport: &http.Transport{
+			Proxy:       nil, // a proxy would hide the target address from the check
+			DialContext: dialer.DialContext,
+			// Local dev servers (Vite behind ddev/https) use self-signed certs.
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 3 {
+				return http.ErrUseLastResponse
+			}
+			if privateOnly && req.URL.Host != via[0].URL.Host {
+				return http.ErrUseLastResponse // the 3xx is not 200: no source
+			}
+			return nil
+		},
+	}
+}
+
+// privateAddressOnly is a net.Dialer Control: it runs before connect with the
+// resolved address and refuses anything but loopback and private IPs. Link
+// local (169.254.0.0/16, cloud metadata), unspecified and public are refused.
+func privateAddressOnly(_, address string, _ syscall.RawConn) error {
+	host, _, err := net.SplitHostPort(address)
 	if err != nil {
-		return "", false
+		return err
 	}
-	resp, err := defaultSourceClient.Do(req)
-	if err != nil {
-		return "", false
+	ip := net.ParseIP(host)
+	if ip != nil && (ip.IsLoopback() || ip.IsPrivate()) {
+		return nil
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return "", false
+	err = fmt.Errorf("source fetch: %s is not a loopback or private address (sentry.source_fetch: any allows it)", host)
+	slog.Debug(err.Error())
+	return err
+}
+
+func httpFetcher(client *http.Client) sourceFetcher {
+	return func(url string) (string, bool) {
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			return "", false
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			return "", false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return "", false
+		}
+		data, err := io.ReadAll(io.LimitReader(resp.Body, sourceMaxBytes))
+		if err != nil {
+			return "", false
+		}
+		return string(data), true
 	}
-	data, err := io.ReadAll(io.LimitReader(resp.Body, sourceMaxBytes))
-	if err != nil {
-		return "", false
-	}
-	return string(data), true
 }
 
 // enrichSourceContext walks every stacktrace in a Sentry error payload and
@@ -69,7 +143,7 @@ func httpSourceFetcher(url string) (string, bool) {
 // It returns the (possibly rewritten) payload and whether anything changed.
 func enrichSourceContext(payload json.RawMessage, fetch sourceFetcher) (json.RawMessage, bool) {
 	if fetch == nil {
-		fetch = httpSourceFetcher
+		fetch = defaultSourceFetcher
 	}
 
 	var root map[string]any
