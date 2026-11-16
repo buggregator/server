@@ -1,8 +1,10 @@
 package module
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
+	"time"
 
 	"github.com/buggregator/server/v2/internal/event"
 	"github.com/buggregator/server/v2/internal/server/tcp"
@@ -66,6 +68,13 @@ type ProtectedRoutesRegistrar interface {
 // events were removed by a single delete, a clear-all or a batch delete.
 type EventDeleteListener interface {
 	OnEventsDeleted(uuids []string)
+}
+
+// AgePruner is an optional Module add-on for modules that keep rows with no
+// event card (Sentry logs, metrics, traces). Retention with max_age calls it
+// to delete those rows older than cutoff; it returns how many it deleted.
+type AgePruner interface {
+	PruneBefore(ctx context.Context, cutoff time.Time) (int, error)
 }
 
 // BaseModule provides no-op defaults for optional Module methods.

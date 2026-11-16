@@ -113,6 +113,17 @@ func (r *Registry) NotifyEventsDeleted(uuids []string) {
 	}
 }
 
+// AgePruners returns the modules that implement AgePruner.
+func (r *Registry) AgePruners() []AgePruner {
+	var out []AgePruner
+	for _, m := range r.modules {
+		if p, ok := m.(AgePruner); ok {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 // RegisterProtectedRoutes lets modules that implement ProtectedRoutesRegistrar
 // add their API routes behind protect.
 func (r *Registry) RegisterProtectedRoutes(mux *http.ServeMux, protect func(http.Handler) http.Handler) {

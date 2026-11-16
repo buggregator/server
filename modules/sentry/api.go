@@ -97,16 +97,8 @@ func clearSentry(db *sql.DB, project string, keepPinned bool) error {
 		`DELETE FROM sentry_transactions` + where,
 		`DELETE FROM sentry_logs` + where,
 		`DELETE FROM sentry_metrics` + where,
-		`DELETE FROM sentry_traces WHERE trace_id IN (SELECT trace_id FROM sentry_clear_traces)
-			AND NOT EXISTS (SELECT 1 FROM sentry_spans s WHERE s.trace_id = sentry_traces.trace_id)
-			AND NOT EXISTS (SELECT 1 FROM sentry_transactions t WHERE t.trace_id = sentry_traces.trace_id)`,
-		`UPDATE sentry_traces SET
-			span_count = (SELECT COUNT(*) FROM sentry_spans s WHERE s.trace_id = sentry_traces.trace_id),
-			error_count = (SELECT COUNT(*) FROM sentry_spans s WHERE s.trace_id = sentry_traces.trace_id
-				AND s.transaction_id IS NOT NULL AND s.is_error = 1)
-			WHERE trace_id IN (SELECT trace_id FROM sentry_clear_traces)`,
-		`DELETE FROM sentry_clear_traces`,
 	}
+	stmts = append(stmts, tidyTracesStmts...)
 	for _, st := range stmts {
 		var a []any
 		if strings.Contains(st, "?") {
@@ -117,6 +109,21 @@ func clearSentry(db *sql.DB, project string, keepPinned bool) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// tidyTracesStmts drop the traces listed in the temp table
+// sentry_clear_traces that have no spans or transactions left, and recount
+// the others. Run them after deleting spans or transactions.
+var tidyTracesStmts = []string{
+	`DELETE FROM sentry_traces WHERE trace_id IN (SELECT trace_id FROM sentry_clear_traces)
+			AND NOT EXISTS (SELECT 1 FROM sentry_spans s WHERE s.trace_id = sentry_traces.trace_id)
+			AND NOT EXISTS (SELECT 1 FROM sentry_transactions t WHERE t.trace_id = sentry_traces.trace_id)`,
+	`UPDATE sentry_traces SET
+			span_count = (SELECT COUNT(*) FROM sentry_spans s WHERE s.trace_id = sentry_traces.trace_id),
+			error_count = (SELECT COUNT(*) FROM sentry_spans s WHERE s.trace_id = sentry_traces.trace_id
+				AND s.transaction_id IS NOT NULL AND s.is_error = 1)
+			WHERE trace_id IN (SELECT trace_id FROM sentry_clear_traces)`,
+	`DELETE FROM sentry_clear_traces`,
 }
 
 // timeWindow reads the period bounds from the query parameters.

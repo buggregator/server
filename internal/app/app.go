@@ -131,7 +131,11 @@ func (a *App) Run() {
 	// Optional auto-cleanup; off unless retention is configured.
 	policy := retention.Policy{MaxAge: a.cfg.Retention.MaxAgeDur, MaxEvents: a.cfg.Retention.MaxEvents}
 	if policy.On() {
-		go retention.New(a.db, store, policy, eventService.BroadcastDeleted).Run(ctx)
+		var pruners []retention.Pruner
+		for _, p := range a.registry.AgePruners() {
+			pruners = append(pruners, p)
+		}
+		go retention.New(a.db, store, policy, eventService.BroadcastDeleted, pruners...).Run(ctx)
 	}
 
 	// Register core API routes (settings endpoint is public, others go through auth middleware).

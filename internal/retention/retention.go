@@ -27,6 +27,12 @@ type Policy struct {
 // On reports whether any rule is set.
 func (p Policy) On() bool { return p.MaxAge > 0 || p.MaxEvents > 0 }
 
+// Pruner deletes rows that have no event card older than cutoff (Sentry
+// logs, metrics, traces); module.AgePruner satisfies it.
+type Pruner interface {
+	PruneBefore(ctx context.Context, cutoff time.Time) (int, error)
+}
+
 // Cleaner applies a Policy. Deletes go through the store, so attachments and
 // module data go with the events, as with a delete from the UI.
 type Cleaner struct {
@@ -34,13 +40,15 @@ type Cleaner struct {
 	store     event.Store
 	policy    Policy
 	onDeleted func(uuid, project string)
+	pruners   []Pruner
 	now       func() time.Time
 }
 
 // New returns a cleaner. onDeleted (may be nil) is called for each deleted
-// event, so open UIs drop it.
-func New(db *sql.DB, store event.Store, policy Policy, onDeleted func(uuid, project string)) *Cleaner {
-	return &Cleaner{db: db, store: store, policy: policy, onDeleted: onDeleted, now: time.Now}
+// event, so open UIs drop it. pruners age out rows with no event card when
+// MaxAge is set.
+func New(db *sql.DB, store event.Store, policy Policy, onDeleted func(uuid, project string), pruners ...Pruner) *Cleaner {
+	return &Cleaner{db: db, store: store, policy: policy, onDeleted: onDeleted, pruners: pruners, now: time.Now}
 }
 
 // Run cleans at once and then every Interval until ctx is done.
@@ -70,7 +78,8 @@ func (c *Cleaner) Run(ctx context.Context) {
 
 type victim struct{ uuid, project string }
 
-// RunOnce deletes what the policy allows to delete and returns how many.
+// RunOnce deletes what the policy allows to delete and returns how many rows
+// went: events, and with MaxAge the pruners' rows.
 func (c *Cleaner) RunOnce(ctx context.Context) (int, error) {
 	total := 0
 	if c.policy.MaxAge > 0 {
@@ -80,6 +89,13 @@ func (c *Cleaner) RunOnce(ctx context.Context) (int, error) {
 		total += n
 		if err != nil {
 			return total, err
+		}
+		for _, p := range c.pruners {
+			n, err := p.PruneBefore(ctx, c.now().Add(-c.policy.MaxAge))
+			total += n
+			if err != nil {
+				return total, err
+			}
 		}
 	}
 	if c.policy.MaxEvents > 0 {
