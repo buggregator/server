@@ -30,6 +30,12 @@ retention:
   max_age: ${RETENTION_MAX_AGE:}          # e.g. "24h", "7d"; empty or 0 = keep
   max_events: ${RETENTION_MAX_EVENTS:0}   # keep at most this many events in total; 0 = no cap
 
+# Sentry: JS stack frames carry only a URL; the server fetches that file to show
+# the code. Ingestion is open even with auth, so by default only loopback and
+# private hosts (dev server, docker service, ddev) are fetched.
+sentry:
+  source_fetch: ${SENTRY_SOURCE_FETCH:private}  # private | any | off
+
 # UI event lists: how much /api/events and /api/events/preview return
 ui:
   default_limit: ${UI_DEFAULT_LIMIT:}       # Events returned when the request has no limit param. Empty or 0 = unlimited

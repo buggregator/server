@@ -13,7 +13,12 @@ type Module struct {
 	module.BaseModule
 	db          *sql.DB
 	broadcaster module.Broadcaster
+	fetchSource sourceFetcher
 }
+
+// SetSourceFetch sets where source code of JS frames may be fetched from:
+// SourceFetchPrivate (default), SourceFetchAny or SourceFetchOff.
+func (m *Module) SetSourceFetch(mode string) { m.fetchSource = newSourceFetcher(mode) }
 
 // StoredEvent is the WebSocket notice that structured rows were stored: logs,
 // metrics or traces, which create no feed card and so no "event.received".
@@ -60,7 +65,7 @@ func (m *Module) RegisterProtectedRoutes(mux *http.ServeMux, protect func(http.H
 }
 
 func (m *Module) HTTPHandler() module.HTTPIngestionHandler {
-	return &handler{db: m.db, notifyStored: m.notifyStored}
+	return &handler{db: m.db, notifyStored: m.notifyStored, fetchSource: m.fetchSource}
 }
 
 func (m *Module) PreviewMapper() event.PreviewMapper {

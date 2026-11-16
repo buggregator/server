@@ -341,3 +341,13 @@ func TestParseRetentionAge(t *testing.T) {
 		}
 	}
 }
+
+func TestSourceFetchMode(t *testing.T) {
+	for in, want := range map[string]string{
+		"private": "private", "ANY": "any", " off ": "off", "": "private", "all": "private",
+	} {
+		if got := sourceFetchMode(in); got != want {
+			t.Errorf("sourceFetchMode(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

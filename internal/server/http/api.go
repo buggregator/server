@@ -3,6 +3,8 @@ package http
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -240,7 +242,11 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 			UUIDs      []string `json:"uuids"`
 			KeepPinned bool     `json:"keep_pinned"`
 		}
-		json.NewDecoder(r.Body).Decode(&body)
+		// No body deletes everything; a body that does not parse must not.
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
+			writeError(w, "invalid JSON body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
 
 		opts := event.DeleteOptions{
 			Type:       body.Type,

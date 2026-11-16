@@ -50,6 +50,7 @@ type Config struct {
 	Xdebug   XdebugConfig   `yaml:"xdebug"`
 	Auth     AuthConfig     `yaml:"auth"`
 	UI       UIConfig       `yaml:"ui"`
+	Sentry   SentryConfig   `yaml:"sentry"`
 	Modules  ModulesConfig  `yaml:"modules"`
 	Webhooks []WebhookDef   `yaml:"webhooks"`
 	Projects []ProjectDef   `yaml:"projects"`
@@ -166,6 +167,14 @@ type RetentionConfig struct {
 	MaxEvents int    `yaml:"max_events"` // keep at most this many events in total, newest first; 0 = no cap
 
 	MaxAgeDur time.Duration `yaml:"-"` // parsed MaxAge, 0 = off
+}
+
+// SentryConfig controls the Sentry module.
+type SentryConfig struct {
+	// SourceFetch: where the server may fetch the source of JS stack frames
+	// (frame filename is a URL): "private" (default) loopback and private
+	// hosts only, "any" any host, "off" never.
+	SourceFetch string `yaml:"source_fetch"`
 }
 
 // MetricsConfig controls Prometheus metrics.
@@ -319,6 +328,7 @@ func LoadConfig() Config {
 	var retentionMaxEvents string
 	flag.StringVar(&cfg.Retention.MaxAge, "retention-max-age", "", "Delete events older than this (30m, 24h, 7d); empty = keep")
 	flag.StringVar(&retentionMaxEvents, "retention-max-events", "", "Keep at most this many events (0 = no cap)")
+	flag.StringVar(&cfg.Sentry.SourceFetch, "sentry-source-fetch", "", "Fetch JS frame sources from: private (default), any, off")
 	flag.Parse()
 
 	fileCfg := loadConfigFile(configFile)
@@ -430,6 +440,7 @@ func LoadConfig() Config {
 	if cfg.Retention.MaxEvents < 0 {
 		cfg.Retention.MaxEvents = 0
 	}
+	cfg.Sentry.SourceFetch = sourceFetchMode(coalesce(cfg.Sentry.SourceFetch, os.Getenv("SENTRY_SOURCE_FETCH"), fileCfg.Sentry.SourceFetch, "private"))
 
 	// CORS origins.
 	cfg.Server.CORSOrigins = corsOrigins(fileCfg.Server.CORSOrigins, os.Getenv("CORS_ORIGINS"))
@@ -482,6 +493,18 @@ func parseRetentionAge(v string) time.Duration {
 		return 0
 	}
 	return d
+}
+
+// sourceFetchMode checks sentry.source_fetch; an unknown value is the safe
+// default, private.
+func sourceFetchMode(v string) string {
+	switch m := strings.ToLower(strings.TrimSpace(v)); m {
+	case "private", "any", "off":
+		return m
+	default:
+		slog.Warn("sentry.source_fetch must be private, any or off; using private", "value", v)
+		return "private"
+	}
 }
 
 // parseIdleTimeout reads xdebug.idle_timeout: a Go duration ("10m", "90s");
