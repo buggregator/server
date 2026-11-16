@@ -23,6 +23,13 @@ storage:
   mode: ${STORAGE_MODE:memory}          # "memory" (default, lost on restart) or "filesystem"
   path: ${STORAGE_PATH:./storage}       # Directory for filesystem mode
 
+# Retention: delete old events in the background (every minute). Unset keeps
+# everything. Pinned events are never deleted and do not count towards
+# max_events. Attachments are deleted with their events.
+retention:
+  max_age: ${RETENTION_MAX_AGE:}          # e.g. "24h", "7d"; empty or 0 = keep
+  max_events: ${RETENTION_MAX_EVENTS:0}   # keep at most this many events in total; 0 = no cap
+
 # Sentry: JS stack frames carry only a URL; the server fetches that file to show
 # the code. Ingestion is open even with auth, so by default only loopback and
 # private hosts (dev server, docker service, ddev) are fetched.

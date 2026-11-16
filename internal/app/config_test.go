@@ -331,6 +331,17 @@ func TestCORSOrigins(t *testing.T) {
 	}
 }
 
+func TestParseRetentionAge(t *testing.T) {
+	for in, want := range map[string]time.Duration{
+		"": 0, "0": 0, "24h": 24 * time.Hour, "30m": 30 * time.Minute, "7d": 7 * 24 * time.Hour,
+		"-1h": 0, "week": 0, "1.5d": 0,
+	} {
+		if got := parseRetentionAge(in); got != want {
+			t.Errorf("parseRetentionAge(%q) = %v, want %v", in, got, want)
+		}
+	}
+}
+
 func TestSourceFetchMode(t *testing.T) {
 	for in, want := range map[string]string{
 		"private": "private", "ANY": "any", " off ": "off", "": "private", "all": "private",
