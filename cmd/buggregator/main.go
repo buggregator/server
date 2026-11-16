@@ -63,11 +63,6 @@ func main() {
 	}
 	defer db.Close()
 
-	// Seed projects from config file.
-	for _, p := range cfg.Projects {
-		db.Exec(`INSERT OR IGNORE INTO projects (key, name) VALUES (?, ?)`, p.Key, p.Name)
-	}
-
 	// Create metrics collector if enabled.
 	var collector *metrics.Collector
 	if cfg.Metrics.Enabled {

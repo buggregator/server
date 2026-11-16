@@ -71,6 +71,10 @@ func (a *App) Run() {
 		os.Exit(1)
 	}
 
+	// Projects from the config file: after the migrations, which create the
+	// projects table (issue #432).
+	seedProjects(a.db, a.cfg.Projects)
+
 	// Build the event service that ties ingestion -> store -> broadcast.
 	eventService := httpserver.NewEventService(store, a.hub, a.registry, a.metrics, a.db)
 
@@ -336,4 +340,14 @@ func idleSeconds(d time.Duration) int {
 		return 600
 	}
 	return int(d / time.Second)
+}
+
+// seedProjects registers the projects listed in the config file. It runs after
+// the migrations; a failed insert is logged, not fatal.
+func seedProjects(db *sql.DB, projects []ProjectDef) {
+	for _, p := range projects {
+		if _, err := db.Exec(`INSERT OR IGNORE INTO projects (key, name) VALUES (?, ?)`, p.Key, p.Name); err != nil {
+			slog.Warn("failed to register project from config", "key", p.Key, "err", err)
+		}
+	}
 }
