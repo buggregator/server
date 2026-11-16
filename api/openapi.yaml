@@ -188,7 +188,7 @@ paths:
         With `uuids`, only those events are deleted (`keep_pinned` still applies); `type` and `project` are then ignored.
         Without `uuids`, `type`, `project` and `keep_pinned` combine.
 
-        A body that is not valid JSON is ignored and deletes every event.'
+        A body that is not valid JSON is refused with 400 and deletes nothing.'
       security:
       - authToken: []
       requestBody:
@@ -213,6 +213,8 @@ paths:
                   type: boolean
                   description: Keep pinned events
       responses:
+        '400':
+          $ref: '#/components/responses/Error'
         '200':
           $ref: '#/components/responses/StatusTrue'
         '401':
