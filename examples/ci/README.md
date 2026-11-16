@@ -6,7 +6,7 @@ mail and SDKs at it, then assert through the HTTP API what the app sent.
 | What | How |
 |------|-----|
 | Health check | `GET /api/version` (no auth) |
-| Clean state before a test | `DELETE /api/events` — no body deletes all; JSON body `{"type": "smtp", "project": "...", "uuids": [...], "keep_pinned": true}` narrows it |
+| Clean state before a test | `DELETE /api/events` — no body deletes all. JSON body: `type`, `project`, `keep_pinned` combine; `uuids` deletes only those events and ignores `type`/`project`. A body that is not valid JSON deletes all |
 | Wait for a mail | `GET /api/smtp/messages/wait?subject=...&to=...&timeout=10s` — 200 with the message, 408 on timeout |
 | List events | `GET /api/events?type=sentry` (also `smtp`, `monolog`, `ray`, `var-dump`, ...) |
 | Auth | Only when `auth.enabled`: header `X-Auth-Token: <jwt>` |

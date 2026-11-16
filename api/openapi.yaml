@@ -183,11 +183,12 @@ paths:
       - Events
       operationId: clearEvents
       summary: Delete events (all, or by type, project or UUIDs)
-      description: 'With no body, or an empty JSON object, deletes every event. Use it to
+      description: 'With no body, or an empty JSON object, deletes every event: use it to start each test from a clean state.
 
-        start each test from a clean state. Filters combine.
+        With `uuids`, only those events are deleted (`keep_pinned` still applies); `type` and `project` are then ignored.
+        Without `uuids`, `type`, `project` and `keep_pinned` combine.
 
-        '
+        A body that is not valid JSON is ignored and deletes every event.'
       security:
       - authToken: []
       requestBody:
@@ -372,6 +373,8 @@ paths:
                 $ref: '#/components/schemas/AttachmentList'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/http-dumps/attachments/{eventUuid}/preview/{uuid}:
     get:
       tags:
@@ -489,12 +492,14 @@ paths:
                 $ref: '#/components/schemas/AttachmentList'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/me:
     get:
       tags:
       - Auth
       operationId: getMe
-      summary: The signed-in user (a guest user when auth is off)
+      summary: The signed-in user (only when auth is on)
       security:
       - authToken: []
       responses:
@@ -520,6 +525,8 @@ paths:
                         type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
+      description: 'The route exists only when auth is on. With auth off the path is not an API route: the UI page answers
+        it (200 text/html).'
   /api/metrics:
     get:
       tags:
@@ -553,6 +560,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MockRuleList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       tags:
       - Mocks
@@ -585,6 +594,8 @@ paths:
                 $ref: '#/components/schemas/MockValidationError'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/mocks/groups/{group}:
     delete:
       tags:
@@ -615,6 +626,8 @@ paths:
                 $ref: '#/components/schemas/MockValidationError'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/mocks/helpers:
     get:
       tags:
@@ -630,6 +643,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MockHelpersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/mocks/import/openapi:
     post:
       tags:
@@ -665,6 +680,8 @@ paths:
                 $ref: '#/components/schemas/MockValidationError'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/mocks/order:
     post:
       tags:
@@ -694,6 +711,8 @@ paths:
           $ref: '#/components/responses/Error'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/mocks/preview:
     post:
       tags:
@@ -727,6 +746,8 @@ paths:
                 $ref: '#/components/schemas/MockValidationError'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/mocks/requests:
     get:
       tags:
@@ -767,6 +788,8 @@ paths:
                 $ref: '#/components/schemas/MockRequestList'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/mocks/{id}:
     get:
       tags:
@@ -791,6 +814,8 @@ paths:
                 $ref: '#/components/schemas/MockRule'
         '404':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     put:
       tags:
       - Mocks
@@ -834,6 +859,8 @@ paths:
                 $ref: '#/components/schemas/MockValidationError'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     delete:
       tags:
       - Mocks
@@ -862,6 +889,8 @@ paths:
           $ref: '#/components/responses/Error'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/profiler/store:
     post:
       tags:
@@ -935,6 +964,8 @@ paths:
             text/plain:
               schema:
                 type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/profiler/{uuid}/flame-chart:
     get:
       tags:
@@ -981,6 +1012,8 @@ paths:
             text/plain:
               schema:
                 type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/profiler/{uuid}/summary:
     get:
       tags:
@@ -1011,6 +1044,8 @@ paths:
             text/plain:
               schema:
                 type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/profiler/{uuid}/top:
     get:
       tags:
@@ -1067,6 +1102,8 @@ paths:
             text/plain:
               schema:
                 type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/projects:
     get:
       tags:
@@ -1684,6 +1721,8 @@ paths:
                 $ref: '#/components/schemas/AttachmentList'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/smtp/cursor:
     get:
       tags:
@@ -1700,6 +1739,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SmtpCursor'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/smtp/message/{uuid}/codes:
     get:
       tags:
@@ -1736,6 +1777,8 @@ paths:
           $ref: '#/components/responses/Error'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/smtp/message/{uuid}/links:
     get:
       tags:
@@ -1763,6 +1806,8 @@ paths:
           $ref: '#/components/responses/Error'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/smtp/message/{uuid}/raw:
     get:
       tags:
@@ -1789,6 +1834,8 @@ paths:
           $ref: '#/components/responses/Error'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/smtp/messages:
     get:
       tags:
@@ -1895,6 +1942,8 @@ paths:
                 $ref: '#/components/schemas/SmtpMessageList'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     delete:
       tags:
       - SMTP
@@ -1918,6 +1967,8 @@ paths:
                 $ref: '#/components/schemas/SmtpStatus'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/smtp/messages/wait:
     get:
       tags:
@@ -2012,6 +2063,8 @@ paths:
           $ref: '#/components/responses/Error'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/smtp/stats:
     get:
       tags:
@@ -2036,6 +2089,8 @@ paths:
                 $ref: '#/components/schemas/SmtpStats'
         '500':
           $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/version:
     get:
       tags:
@@ -2075,15 +2130,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug-traces/{uuid}/search:
     get:
       tags:
       - Xdebug traces
       operationId: xdebugTraceSearch
       summary: Search calls in a trace.
-      description: Finds calls whose function name or file contains `q` (case-insensitive), in trace order. Each match carries
-        `path`, its callers from the top level down. 400 for a missing or too long `q`, bad numbers, a bad offset, or a trace
-        over the size limit. 404 when the trace or its file is gone. 500 when the file cannot be read.
+      description: 'Finds calls whose function name or file contains `q` (case-insensitive), in trace order. Each match carries
+        `path`, its callers from the top level down. 400 for a missing or too long `q`, bad numbers, a bad offset. 404 when
+        the trace or its file is gone. 500 when the file cannot be read. A trace over the size limit is no error: 200 with
+        `truncated: true`.'
       parameters:
       - name: uuid
         in: path
@@ -2124,11 +2182,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/XdebugTracePage'
         '400':
-          $ref: '#/components/responses/Error'
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugTraceError'
         '404':
-          $ref: '#/components/responses/Error'
+          description: Trace or its file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugTraceError'
         '500':
-          $ref: '#/components/responses/Error'
+          description: The trace file cannot be read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugTraceError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug-traces/{uuid}/summary:
     get:
       tags:
@@ -2153,7 +2225,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/XdebugTraceSummaryResponse'
         '404':
-          $ref: '#/components/responses/Error'
+          description: Trace or its file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugTraceError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug-traces/{uuid}/tree:
     get:
       tags:
@@ -2162,8 +2240,8 @@ paths:
       summary: List one level of calls in a trace.
       description: 'Without `parent`: the top-level calls. With `parent`: the direct callees of the call whose entry starts
         at that offset (the page then has `parent`). Pass `from` = `next` with the same `parent` for the next page. 400 for
-        bad numbers, an offset that is not the start of a call, or a trace over the size limit. 404 when the trace or its
-        file is gone. 500 when the file cannot be read.'
+        bad numbers, an offset that is not the start of a call. 404 when the trace or its file is gone. 500 when the file
+        cannot be read. A trace over the size limit is no error: 200 with `truncated: true`.'
       parameters:
       - name: uuid
         in: path
@@ -2205,11 +2283,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/XdebugTracePage'
         '400':
-          $ref: '#/components/responses/Error'
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugTraceError'
         '404':
-          $ref: '#/components/responses/Error'
+          description: Trace or its file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugTraceError'
         '500':
-          $ref: '#/components/responses/Error'
+          description: The trace file cannot be read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XdebugTraceError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/breakpoints:
     get:
       tags:
@@ -2228,6 +2320,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/XdebugBreakpoint'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       tags:
       - Xdebug
@@ -2239,7 +2333,7 @@ paths:
         is dropped from `exception`. A `condition` needs `xdebug.allow_eval`. Unknown fields are refused. Body limit 16 KiB.
         Write guard: the request must have `Content-Type: application/json` (415 `unsupported_media_type` otherwise), and
         a request with header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. Same-site and non-browser clients
-        pass.'
+        pass. A body over the size limit is 400, not 413.'
       requestBody:
         required: true
         content:
@@ -2273,6 +2367,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/breakpoints/{bp}:
     patch:
       tags:
@@ -2281,7 +2377,7 @@ paths:
       summary: Change a saved breakpoint.
       description: 'A field left out keeps its value. Same checks as create. Write guard: the request must have `Content-Type:
         application/json` (415 `unsupported_media_type` otherwise), and a request with header `Sec-Fetch-Site: cross-site`
-        is refused with 403 `cross_site`. Same-site and non-browser clients pass.'
+        is refused with 403 `cross_site`. Same-site and non-browser clients pass. A body over the size limit is 400, not 413.'
       parameters:
       - name: bp
         in: path
@@ -2330,6 +2426,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     delete:
       tags:
       - Xdebug
@@ -2363,6 +2461,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/files:
     get:
       tags:
@@ -2397,6 +2497,8 @@ paths:
                 type: array
                 items:
                   type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions:
     get:
       tags:
@@ -2414,6 +2516,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/XdebugSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}:
     get:
       tags:
@@ -2442,6 +2546,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     delete:
       tags:
       - Xdebug
@@ -2472,6 +2578,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/agent-log:
     get:
       tags:
@@ -2502,6 +2610,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/breakpoints:
     get:
       tags:
@@ -2563,6 +2673,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/contexts:
     get:
       tags:
@@ -2632,6 +2744,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/detach:
     post:
       tags:
@@ -2689,6 +2803,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/eval:
     post:
       tags:
@@ -2698,7 +2814,7 @@ paths:
       description: 'Needs `xdebug.allow_eval`; otherwise 403 `eval_disabled`. Results are never cached, since an expression
         may change state. Body limit 64 KiB. Write guard: the request must have `Content-Type: application/json` (415 `unsupported_media_type`
         otherwise), and a request with header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. Same-site and
-        non-browser clients pass.'
+        non-browser clients pass. A body over the size limit is 400, not 413.'
       parameters:
       - name: id
         in: path
@@ -2769,6 +2885,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/property:
     get:
       tags:
@@ -2859,6 +2977,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/run:
     post:
       tags:
@@ -2916,6 +3036,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/source:
     get:
       tags:
@@ -2998,6 +3120,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/stack:
     get:
       tags:
@@ -3053,6 +3177,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/step-into:
     post:
       tags:
@@ -3110,6 +3236,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/step-out:
     post:
       tags:
@@ -3167,6 +3295,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/step-over:
     post:
       tags:
@@ -3224,6 +3354,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/stop:
     post:
       tags:
@@ -3281,6 +3413,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/sessions/{id}/variables:
     get:
       tags:
@@ -3358,6 +3492,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/xdebug/settings:
     put:
       tags:
@@ -3367,7 +3503,8 @@ paths:
       description: 'Changes `mode` and `pause_on_first_line`; a field left out keeps its value, but at least one must be given.
         Unknown fields are refused. Settings live in memory: a restart goes back to the config. Body limit 4 KiB. Write guard:
         the request must have `Content-Type: application/json` (415 `unsupported_media_type` otherwise), and a request with
-        header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. Same-site and non-browser clients pass.'
+        header `Sec-Fetch-Site: cross-site` is refused with 403 `cross_site`. Same-site and non-browser clients pass. A body
+        over the size limit is 400, not 413.'
       requestBody:
         required: true
         content:
@@ -3401,6 +3538,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/XdebugError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/{project}/envelope/:
     post:
       tags:
@@ -3464,9 +3603,18 @@ paths:
         '302':
           description: Redirect to the UI with the token in `token`
         '400':
-          $ref: '#/components/responses/Error'
+          description: Bad callback (plain text)
+          content:
+            text/plain:
+              schema:
+                type: string
         '500':
-          $ref: '#/components/responses/Error'
+          description: Login failed (plain text)
+          content:
+            text/plain:
+              schema:
+                type: string
+      description: Only when auth is on.
   /auth/sso/login:
     get:
       tags:
@@ -3483,7 +3631,8 @@ paths:
       - Server
       operationId: websocket
       summary: WebSocket (Centrifugo v5 JSON protocol) with live events
-      description: Clients subscribe to `events.project.{key}`. `/ws` is an alias.
+      description: Clients subscribe to `events.project.{key}`. `/ws` is an alias. With auth on, the JWT goes in the `token`
+        of the Centrifugo `connect` command.
       security: []
       responses:
         '101':
@@ -3593,11 +3742,11 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
     Unauthorized:
-      description: Auth is on and the X-Auth-Token header is missing or invalid
+      description: Auth is on and the X-Auth-Token header is missing or invalid. Plain text body (`http.Error`).
       content:
-        application/json:
+        text/plain:
           schema:
-            $ref: '#/components/schemas/Error'
+            type: string
     StatusTrue:
       description: Done
       content:
@@ -4720,8 +4869,8 @@ components:
           description: Omitted when empty.
     MockRuleInput:
       type: object
-      description: Body for creating or replacing a rule. Other MockRule fields (id, group, position, source, read_only, created_at,
-        updated_at) are ignored or overwritten. Body size limit 2 MB.
+      description: Body for creating or replacing a rule. `group` is stored on create and kept on replace. Other MockRule
+        fields (id, position, source, read_only, created_at, updated_at) are ignored or overwritten. Body size limit 2 MB.
       required:
       - path
       properties:
@@ -4909,7 +5058,7 @@ components:
       description: A rule (not saved) and a sample request. Body size limit 3 MB.
       properties:
         rule:
-          $ref: '#/components/schemas/MockRule'
+          $ref: '#/components/schemas/MockRuleInput'
         request:
           type: object
           properties:
@@ -4925,6 +5074,8 @@ components:
                 type: string
             body:
               type: string
+      required:
+      - rule
     MockPreview:
       type: object
       required:
@@ -5210,6 +5361,8 @@ components:
           type: boolean
         allow_control:
           type: boolean
+          description: Gates only the MCP control tools (step, continue, stop, wait); the HTTP control routes work with it
+            off.
         mode:
           type: string
           description: proxy, auto or standalone.
@@ -5288,6 +5441,8 @@ components:
           enum:
           - ide
           - here
+          - ''
+          description: Empty for a session closed before an IDE connected.
         last_continuation_by:
           type:
           - string
@@ -6135,3 +6290,10 @@ components:
         truncated:
           type: boolean
           description: The trace was cut or hit the size limit.
+    XdebugTraceError:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: string
