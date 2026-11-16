@@ -4,7 +4,11 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
+	"time"
 )
+
+// now is the clock of the service-map window; tests pin it.
+var now = time.Now
 
 func handleServiceMap(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -27,10 +31,10 @@ func handleServiceMap(db *sql.DB) http.HandlerFunc {
 				CAST(AVG(duration_ms) AS INTEGER) as avg_duration_ms
 			FROM sentry_spans
 			WHERE peer_address IS NOT NULL
-				AND start_ts >= datetime('now', ? || ' minutes')`+pc+`
+				AND start_ts >= ?`+pc+`
 			GROUP BY source, target, op_type
 			ORDER BY request_count DESC`,
-			append([]any{strconv.Itoa(-windowMinutes)}, pa...)...,
+			append([]any{windowStart(now(), windowMinutes)}, pa...)...,
 		)
 		if err != nil {
 			apiError(w, err.Error(), http.StatusInternalServerError)
@@ -107,6 +111,13 @@ func handleServiceMap(db *sql.DB) http.HandlerFunc {
 			"window_minutes": windowMinutes,
 		})
 	}
+}
+
+// windowStart is the lower bound of the window in the format of span start_ts
+// (ISO, "2026-11-16T11:00:00.5Z"). A datetime() bound ("2026-11-16 11:00:00")
+// compared as text let every span of the same UTC date pass: 'T' > ' '.
+func windowStart(t time.Time, minutes int) string {
+	return t.UTC().Add(-time.Duration(minutes) * time.Minute).Format("2006-01-02T15:04:05")
 }
 
 type serviceNode struct {
