@@ -246,4 +246,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
+          # First line of every release; generate_release_notes appends below.
+          body: |
+            Built with [harnsy](https://harnsy.dev/?utm_source=github&utm_medium=release_notes&utm_campaign=built-with-harnsy&utm_content=buggregator) — the Buggregator team runs its AI agents in harnsy.
           generate_release_notes: true
