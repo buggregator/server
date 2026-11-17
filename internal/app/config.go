@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -325,7 +326,8 @@ func (c Config) ListenPorts() map[string]int {
 	add("http", c.Server.Addr, true)
 	add("smtp", c.TCP.SMTP.Addr, c.Modules.IsEnabled("smtp"))
 	add("monolog", c.TCP.Monolog.Addr, c.Modules.IsEnabled("monolog"))
-	add("var_dumper", c.TCP.VarDumper.Addr, c.Modules.IsEnabled("var-dump"))
+	// VarDumper has no Windows build: main.go never starts its listener there.
+	add("var_dumper", c.TCP.VarDumper.Addr, c.Modules.IsEnabled("var-dump") && runtime.GOOS != "windows")
 	add("proxy", c.TCP.Proxy.Addr, true)
 	add("xdebug", c.Xdebug.Addr, c.Xdebug.Enabled)
 	add("mcp", c.MCP.Addr, c.MCP.Enabled && c.MCP.Transport == "http")
