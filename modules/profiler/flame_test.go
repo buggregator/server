@@ -2,6 +2,7 @@ package profiler
 
 import (
 	"fmt"
+	"math"
 	"testing"
 )
 
@@ -139,4 +140,108 @@ func TestBuildFlameChart_Limits(t *testing.T) {
 			t.Errorf("depth = %d, want %d", depth, maxFlameDepth+1)
 		}
 	})
+}
+
+// checkInsideParents fails when a child starts before its parent, ends past
+// it, or overlaps the sibling before it.
+func checkInsideParents(t *testing.T, tree []*flameNode) {
+	t.Helper()
+	const eps = 1e-9
+	var walk func(n *flameNode)
+	walk = func(n *flameNode) {
+		end := n.Start
+		for _, c := range n.Children {
+			if c.Duration < 0 || c.Start < end-eps || c.Start+c.Duration > n.Start+n.Duration+eps {
+				t.Errorf("child %s [%v,%v] outside parent %s [%v,%v] or over its sibling",
+					c.Name, c.Start, c.Start+c.Duration, n.Name, n.Start, n.Start+n.Duration)
+			}
+			end = c.Start + c.Duration
+			walk(c)
+		}
+	}
+	for _, r := range tree {
+		walk(r)
+	}
+}
+
+func findFlame(nodes []*flameNode, path ...string) *flameNode {
+	var n *flameNode
+	for _, name := range path {
+		n = nil
+		for _, c := range nodes {
+			if c.Name == name {
+				n = c
+				break
+			}
+		}
+		if n == nil {
+			return nil
+		}
+		nodes = n.Children
+	}
+	return n
+}
+
+// #446: x is called from a (10) and b (70); x==>y (65) sums both. y used to
+// be drawn 65 wide under a 10-wide x, over b's subtree.
+func TestBuildFlameChart_MultiCallerChildrenFitParent(t *testing.T) {
+	edges := []EdgeRow{
+		flameEdge("", "main()", 100),
+		flameEdge("main()", "a", 20),
+		flameEdge("main()", "b", 80),
+		flameEdge("a", "x", 10),
+		flameEdge("b", "z", 5),
+		flameEdge("b", "x", 70),
+		flameEdge("x", "y", 65),
+		flameEdge("z", "w", 4),
+	}
+	tree, _, _ := buildFlameChart(edges, "wt", 100)
+	checkInsideParents(t, tree)
+
+	// x is expanded under its heaviest caller b; under a it is a leaf.
+	if n := findFlame(tree, "main()", "a", "x"); n == nil || len(n.Children) != 0 {
+		t.Errorf("a/x = %+v, want a leaf", n)
+	}
+	y := findFlame(tree, "main()", "b", "x", "y")
+	if y == nil {
+		t.Fatal("b/x/y missing")
+	}
+	// y gets x's share under b: 65 * 70/80.
+	if want := 65.0 * 70 / 80 / 1000; math.Abs(y.Duration-want) > 1e-12 {
+		t.Errorf("y width = %v, want %v", y.Duration, want)
+	}
+}
+
+func TestBuildFlameChart_RecursionFitsParents(t *testing.T) {
+	// Smarty-like: render@N recursion and a helper called at every level.
+	edges := []EdgeRow{flameEdge("", "main()", 1000), flameEdge("main()", "render", 900)}
+	prev := "render"
+	for i := 1; i <= 8; i++ {
+		cur := fmt.Sprintf("render@%d", i)
+		edges = append(edges, flameEdge(prev, cur, int64(900-100*i)), flameEdge(prev, "escape", 20))
+		prev = cur
+	}
+	edges = append(edges, flameEdge("escape", "htmlspecialchars", 150))
+	tree, _, _ := buildFlameChart(edges, "wt", 1000)
+	checkInsideParents(t, tree)
+}
+
+func TestBuildFlameChart_NegativeMemoryClamped(t *testing.T) {
+	e := func(caller, callee string, mu int64) EdgeRow {
+		r := flameEdge(caller, callee, 0)
+		r.Cost.Memory = mu
+		return r
+	}
+	edges := []EdgeRow{e("", "main()", 1000), e("main()", "a", -300), e("main()", "b", 400), e("a", "c", 50)}
+	tree, _, _ := buildFlameChart(edges, "mu", 1000)
+	checkInsideParents(t, tree)
+	if a := findFlame(tree, "main()", "a"); a == nil || a.Duration != 0 {
+		t.Errorf("a = %+v, want width 0", a)
+	}
+	if b := findFlame(tree, "main()", "b"); b == nil || b.Start != 0 {
+		t.Errorf("b = %+v, want start 0 after a zero-width a", b)
+	}
+	if n := findFlame(tree, "main()", "a"); n != nil && n.Cost["mu"] != int64(-300) {
+		t.Errorf("tooltip cost mu = %v, want the raw -300", n.Cost["mu"])
+	}
 }
