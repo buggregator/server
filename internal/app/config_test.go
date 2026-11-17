@@ -351,3 +351,52 @@ func TestSourceFetchMode(t *testing.T) {
 		}
 	}
 }
+
+// /api/settings gives the setup help the real listen ports: only listeners
+// that are on, only addresses with a fixed port.
+func TestConfig_ListenPorts(t *testing.T) {
+	off := false
+	base := func() Config {
+		var c Config
+		c.Server.Addr = ":8000"
+		c.TCP.SMTP.Addr = "0.0.0.0:2525"
+		c.TCP.Monolog.Addr = ":9913"
+		c.TCP.VarDumper.Addr = "127.0.0.1:9912"
+		c.TCP.Proxy.Addr = ":8080"
+		c.Xdebug.Addr = "127.0.0.1:9003"
+		c.MCP.Addr = ":8001"
+		c.MCP.Transport = "socket"
+		return c
+	}
+	tests := []struct {
+		name string
+		mod  func(*Config)
+		want map[string]int
+	}{
+		{"defaults: xdebug and mcp off", func(*Config) {},
+			map[string]int{"http": 8000, "smtp": 2525, "monolog": 9913, "var_dumper": 9912, "proxy": 8080}},
+		{"xdebug on, mcp over http", func(c *Config) { c.Xdebug.Enabled = true; c.MCP.Enabled = true; c.MCP.Transport = "http" },
+			map[string]int{"http": 8000, "smtp": 2525, "monolog": 9913, "var_dumper": 9912, "proxy": 8080, "xdebug": 9003, "mcp": 8001}},
+		{"mcp over socket has no port", func(c *Config) { c.MCP.Enabled = true },
+			map[string]int{"http": 8000, "smtp": 2525, "monolog": 9913, "var_dumper": 9912, "proxy": 8080}},
+		{"modules off", func(c *Config) { c.Modules.SMTP = &off; c.Modules.Monolog = &off; c.Modules.VarDump = &off },
+			map[string]int{"http": 8000, "proxy": 8080}},
+		{"no fixed port", func(c *Config) { c.Server.Addr = ":0"; c.TCP.SMTP.Addr = "bad"; c.TCP.Proxy.Addr = ":http" },
+			map[string]int{"monolog": 9913, "var_dumper": 9912}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := base()
+			tt.mod(&c)
+			got := c.ListenPorts()
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %v, want %v", got, tt.want)
+			}
+			for k, v := range tt.want {
+				if got[k] != v {
+					t.Errorf("%s = %d, want %d (all: %v)", k, got[k], v, got)
+				}
+			}
+		})
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"regexp"
 	"strconv"
@@ -302,6 +303,33 @@ func (m ModulesConfig) EnabledTypes() []string {
 		}
 	}
 	return enabled
+}
+
+// ListenPorts gives the port of each listener that is on, for /api/settings:
+// the setup help fills real values. A listener that is off, or whose address
+// has no fixed port, is left out; the UI then shows its default.
+func (c Config) ListenPorts() map[string]int {
+	ports := map[string]int{}
+	add := func(name, addr string, on bool) {
+		if !on {
+			return
+		}
+		_, p, err := net.SplitHostPort(addr)
+		if err != nil {
+			return
+		}
+		if n, err := strconv.Atoi(p); err == nil && n > 0 {
+			ports[name] = n
+		}
+	}
+	add("http", c.Server.Addr, true)
+	add("smtp", c.TCP.SMTP.Addr, c.Modules.IsEnabled("smtp"))
+	add("monolog", c.TCP.Monolog.Addr, c.Modules.IsEnabled("monolog"))
+	add("var_dumper", c.TCP.VarDumper.Addr, c.Modules.IsEnabled("var-dump"))
+	add("proxy", c.TCP.Proxy.Addr, true)
+	add("xdebug", c.Xdebug.Addr, c.Xdebug.Enabled)
+	add("mcp", c.MCP.Addr, c.MCP.Enabled && c.MCP.Transport == "http")
+	return ports
 }
 
 // ProjectDef defines a project from config.

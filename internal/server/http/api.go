@@ -146,8 +146,9 @@ func listMeta(opts event.FindOptions, returned int) map[string]any {
 // RegisterAPI registers core API routes on the given mux.
 // authMiddleware wraps protected routes; pass a no-op when auth is disabled.
 // updateStatus gives the new-version check result for /api/settings; nil when
-// the check is off.
-func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewRegistry, es *EventService, version string, db *sql.DB, enabledEvents []string, authSettings AuthSettings, authMiddleware func(http.Handler) http.Handler, listLimits ListLimits, updateStatus func() any) {
+// the check is off. ports are the listen ports shown in /api/settings
+// (name → port, only listeners that are on).
+func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewRegistry, es *EventService, version string, db *sql.DB, enabledEvents []string, authSettings AuthSettings, authMiddleware func(http.Handler) http.Handler, listLimits ListLimits, updateStatus func() any, ports map[string]int) {
 	// Public routes (no auth required).
 	mux.HandleFunc("GET /api/version", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]string{"version": version})
@@ -166,6 +167,7 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 			"version": version,
 			"events":  enabledEvents,
 			"update":  update,
+			"ports":   ports,
 		})
 	})
 
