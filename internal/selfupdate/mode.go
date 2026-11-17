@@ -113,7 +113,10 @@ func Commands(install, goos, exe, version string) []Command {
 		}
 	case InstallKubernetes:
 		return []Command{
-			{ID: "helm", Label: "Helm", Command: "helm upgrade buggregator oci://ghcr.io/buggregator/helm-chart/buggregator --reuse-values --set image.tag=" + tag},
+			// The UI shows labels only as tabs (2+ commands): the second one
+			// says which Helm the first needs.
+			{ID: "helm", Label: "Helm 3.14+", Command: "helm upgrade buggregator oci://ghcr.io/buggregator/helm-chart/buggregator --reset-then-reuse-values --set image.tag=" + tag},
+			{ID: "helm-old", Label: "Older Helm (keeps the old chart's defaults)", Command: "helm upgrade buggregator oci://ghcr.io/buggregator/helm-chart/buggregator --reuse-values --set image.tag=" + tag},
 		}
 	}
 	dir := filepath.Dir(exe)
