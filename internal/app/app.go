@@ -162,7 +162,7 @@ func (a *App) Run() {
 	}
 
 	// Register core API routes (settings endpoint is public, others go through auth middleware).
-	httpserver.RegisterAPI(mux, store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes(), authSettings, authMiddleware, a.listLimits(), updateStatus)
+	httpserver.RegisterAPI(mux, store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes(), authSettings, authMiddleware, a.listLimits(), updateStatus, a.cfg.ListenPorts())
 
 	updater.Register(mux, authMiddleware)
 

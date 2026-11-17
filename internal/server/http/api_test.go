@@ -56,7 +56,7 @@ func setupAPIWith(t *testing.T, limits serverhttp.ListLimits, updateStatus func(
 
 	mux := http.NewServeMux()
 	noopMiddleware := func(next http.Handler) http.Handler { return next }
-	serverhttp.RegisterAPI(mux, store, event.NewPreviewRegistry(), es, "test-version", db, []string{"sentry", "ray"}, serverhttp.AuthSettings{}, noopMiddleware, limits, updateStatus)
+	serverhttp.RegisterAPI(mux, store, event.NewPreviewRegistry(), es, "test-version", db, []string{"sentry", "ray"}, serverhttp.AuthSettings{}, noopMiddleware, limits, updateStatus, map[string]int{"http": 8000, "smtp": 1025})
 
 	return mux, store
 }
@@ -93,6 +93,10 @@ func TestAPI_Settings(t *testing.T) {
 	events, ok := resp["events"].([]any)
 	if !ok || len(events) != 2 {
 		t.Errorf("events = %v", resp["events"])
+	}
+	ports, ok := resp["ports"].(map[string]any)
+	if !ok || ports["http"] != float64(8000) || ports["smtp"] != float64(1025) {
+		t.Errorf("ports = %v", resp["ports"])
 	}
 }
 
