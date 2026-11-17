@@ -4,7 +4,8 @@
 #   curl -fsSL https://raw.githubusercontent.com/buggregator/server/master/scripts/install.sh | sh
 #
 # Downloads the binary for this OS/CPU from a GitHub release, checks it against
-# the release's checksums.txt, and puts it in ~/.local/bin (no sudo).
+# the release's checksums.txt, and puts it in ~/.local/bin (no sudo). With
+# OpenSSL 3 it also checks checksums.txt.sig, the release's ed25519 signature.
 #
 # Environment:
 #   BUGGREGATOR_VERSION      release tag, e.g. v2.6.0 (default: latest)
@@ -13,7 +14,39 @@
 #   BUGGREGATOR_NO_VERIFY=1  skip the checksum (only for releases without checksums.txt)
 set -eu
 
+# The ed25519 public key whose private half signs checksums.txt (the same key as
+# releaseKey in internal/selfupdate/verify.go), as a PEM SubjectPublicKeyInfo.
+RELEASE_KEY_PEM='-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAbFthyZgjx8k7TUu4ZekM3sa0zSxSRzOTaX2BfxaUH2I=
+-----END PUBLIC KEY-----'
+
 fail() { echo "buggregator install: $*" >&2; exit 1; }
+
+# OpenSSL 3+ verifies a raw ed25519 signature (pkeyutl -rawin); LibreSSL (macOS)
+# and OpenSSL 1.x cannot.
+have_openssl3() {
+  command -v openssl >/dev/null 2>&1 || return 1
+  set -- $(openssl version 2>/dev/null)
+  [ "${1:-}" = OpenSSL ] || return 1
+  [ "${2%%.*}" -ge 3 ] 2>/dev/null
+}
+
+# verify_signature DIR: checks DIR/checksums.txt against DIR/checksums.txt.sig.
+verify_signature() {
+  if ! fetch "$base/checksums.txt.sig" "$1/checksums.txt.sig" 2>/dev/null; then
+    echo "Signature not checked: this release has no checksums.txt.sig."
+    return 0
+  fi
+  if ! have_openssl3; then
+    echo "Signature not checked: needs OpenSSL 3 (openssl version)."
+    return 0
+  fi
+  printf '%s\n' "$RELEASE_KEY_PEM" > "$1/release-key.pem"
+  openssl pkeyutl -verify -pubin -inkey "$1/release-key.pem" -rawin \
+    -in "$1/checksums.txt" -sigfile "$1/checksums.txt.sig" >/dev/null 2>&1 ||
+    fail "the signature of checksums.txt does not match the Buggregator release key: do not use this download"
+  echo "Signature OK."
+}
 
 # Everything runs from main: a download cut short by `curl | sh` runs nothing.
 main() {
@@ -65,6 +98,7 @@ main() {
   else
     fetch "$base/checksums.txt" "$tmp/checksums.txt" ||
       fail "no checksums.txt in this release; set BUGGREGATOR_NO_VERIFY=1 to install without a check"
+    verify_signature "$tmp"
     want="$(awk -v a="$asset" '{ sub(/\r$/, "") } $2 == a || $2 == "*" a { print $1 }' "$tmp/checksums.txt")"
     [ -n "$want" ] || fail "$asset is not listed in checksums.txt"
     if command -v sha256sum >/dev/null 2>&1; then

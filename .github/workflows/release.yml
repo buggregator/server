@@ -46,6 +46,10 @@ jobs:
           test -n "$built" || { echo "releaseKey not found in internal/selfupdate/verify.go"; exit 1; }
           have="$(openssl pkey -in "$key" -pubout -outform DER | tail -c 32 | base64)"
           test "$have" = "$built" || { echo "RELEASE_SIGNING_KEY does not match releaseKey in internal/selfupdate/verify.go"; exit 1; }
+          # The install scripts carry the same key as a PEM (ed25519 SPKI prefix + raw key).
+          for s in scripts/install.sh scripts/install.ps1; do
+            grep -q "MCowBQYDK2VwAyEA$built" "$s" || { echo "$s does not carry releaseKey from internal/selfupdate/verify.go"; exit 1; }
+          done
 
   build-unix:
     runs-on: ubuntu-latest

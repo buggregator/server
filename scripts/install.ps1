@@ -4,6 +4,8 @@
 #
 # Downloads the binary for this CPU from a GitHub release, checks it against
 # the release's checksums.txt, and puts it in %LOCALAPPDATA%\Programs\buggregator.
+# With OpenSSL 3 on PATH (e.g. from Git for Windows) it also checks
+# checksums.txt.sig, the release's ed25519 signature; Windows has no ed25519 of its own.
 #
 # Environment:
 #   BUGGREGATOR_VERSION      release tag, e.g. v2.6.0 (default: latest)
@@ -53,6 +55,28 @@
                 $parts = $line -split '\s+'
                 if ($parts.Count -ge 2 -and $parts[1].TrimStart('*') -eq $asset) { $want = $parts[0].ToLower() }
             }
+
+            # The ed25519 key that signs checksums.txt (releaseKey in internal/selfupdate/verify.go).
+            $sig = Join-Path $tmp 'checksums.txt.sig'
+            $hasSig = $true
+            try { Invoke-WebRequest -UseBasicParsing -Uri "$base/checksums.txt.sig" -OutFile $sig } catch { $hasSig = $false }
+            $openssl = Get-Command openssl -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+            $sslVersion = if ($openssl) { (& $openssl.Source version 2>$null) -join ' ' } else { '' }
+            if (-not $hasSig) {
+                Write-Host 'Signature not checked: this release has no checksums.txt.sig.'
+            } elseif ($sslVersion -notmatch '^OpenSSL ([3-9]|\d{2,})\.') {
+                Write-Host 'Signature not checked: needs OpenSSL 3 on PATH (e.g. from Git for Windows).'
+            } else {
+                $pem = Join-Path $tmp 'release-key.pem'
+                Set-Content -Path $pem -Encoding Ascii -Value @(
+                    '-----BEGIN PUBLIC KEY-----'
+                    'MCowBQYDK2VwAyEAbFthyZgjx8k7TUu4ZekM3sa0zSxSRzOTaX2BfxaUH2I='
+                    '-----END PUBLIC KEY-----')
+                & $openssl.Source pkeyutl -verify -pubin -inkey $pem -rawin -in $sums -sigfile $sig *> $null
+                if ($LASTEXITCODE -ne 0) { throw 'buggregator install: the signature of checksums.txt does not match the Buggregator release key: do not use this download' }
+                Write-Host 'Signature OK.'
+            }
+
             if (-not $want) { throw "buggregator install: $asset is not listed in checksums.txt" }
             $got = (Get-FileHash -Algorithm SHA256 -Path $file).Hash.ToLower()
             if ($got -ne $want) { throw "buggregator install: checksum mismatch for $asset (got $got, want $want)" }
