@@ -22,8 +22,9 @@ func handleServiceMap(db *sql.DB) http.HandlerFunc {
 		// Build edges from spans with peer_address. An outgoing call to a
 		// service we also receive spans from is drawn to that service, not to
 		// its address: the callee's span (span v2) or transaction (contexts.trace)
-		// names the call's span as its parent. Databases, caches and queues
-		// keep their address.
+		// names the call's span as its parent. Only another service counts: a
+		// child of the call in the caller itself (a retry, a sub-span) is not
+		// the callee. Databases, caches and queues keep their address.
 		pc, pa := projectClause(r, "s.project_id")
 		edgeRows, err := db.Query(
 			`WITH calls AS (
@@ -33,12 +34,12 @@ func handleServiceMap(db *sql.DB) http.HandlerFunc {
 					CASE WHEN s.peer_type IN ('db', 'cache', 'queue') THEN NULL ELSE COALESCE(
 						(SELECT d.service_name FROM sentry_spans d
 							WHERE d.trace_id = s.trace_id AND d.parent_span_id = s.span_id
-								AND d.service_name IS NOT NULL LIMIT 1),
+								AND d.service_name <> COALESCE(s.service_name, '') LIMIT 1),
 						(SELECT sp.service_name FROM sentry_transactions t
 							JOIN sentry_spans sp ON sp.transaction_id = t.id
 							WHERE t.trace_id = s.trace_id
 								AND json_extract(t.payload, '$.contexts.trace.parent_span_id') = s.span_id
-								AND sp.service_name IS NOT NULL LIMIT 1)
+								AND sp.service_name <> COALESCE(s.service_name, '') LIMIT 1)
 					) END AS callee
 				FROM sentry_spans s
 				WHERE s.peer_address IS NOT NULL

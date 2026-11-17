@@ -48,6 +48,11 @@ func TestServiceMapCallToKnownService(t *testing.T) {
 		VALUES ('shop-txn', 'e1', 'tr', 'POST /api/checkout', '2026-11-16T11:30:00Z',
 			'{"contexts":{"trace":{"span_id":"shop-root","parent_span_id":"sf-call"}}}')`)
 	span("shop-sql", "shop-txn", "shop-root", "shop-api", "mysql:3306", "db")
+	// A child of the call in storefront itself (a retry) is not the callee.
+	span("sf-retry", "", "sf-call", "storefront", "", "")
+	// storefront → search.test: only a storefront child, nobody else reports it.
+	span("sf-search", "", "sf-root", "storefront", "search.test", "http")
+	span("sf-search-child", "", "sf-search", "storefront", "", "")
 	// shop-api → billing-api:9000: billing-api sends span v2 with the call as parent.
 	span("shop-call", "shop-txn", "shop-root", "shop-api", "billing-api:9000", "http")
 	span("bill-server", "", "shop-call", "billing-api", "", "")
@@ -80,10 +85,10 @@ func TestServiceMapCallToKnownService(t *testing.T) {
 	}
 	sort.Strings(edges)
 	sort.Strings(nodes)
-	if got, want := strings.Join(edges, " "), "billing-api->api.stripe.com shop-api->billing-api shop-api->mysql:3306 storefront->shop-api"; got != want {
+	if got, want := strings.Join(edges, " "), "billing-api->api.stripe.com shop-api->billing-api shop-api->mysql:3306 storefront->search.test storefront->shop-api"; got != want {
 		t.Errorf("edges = %s\nwant    %s", got, want)
 	}
-	if got, want := strings.Join(nodes, " "), "api.stripe.com billing-api mysql:3306 shop-api storefront"; got != want {
+	if got, want := strings.Join(nodes, " "), "api.stripe.com billing-api mysql:3306 search.test shop-api storefront"; got != want {
 		t.Errorf("nodes = %s\nwant    %s", got, want)
 	}
 }
