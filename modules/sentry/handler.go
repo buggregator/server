@@ -626,14 +626,23 @@ func (h *handler) projectByKey(key string) string {
 	if h.db == nil || key == "" || key == reservedKey {
 		return ""
 	}
-	var found int
-	if err := h.db.QueryRow(`SELECT 1 FROM projects WHERE key = ?`, key).Scan(&found); err != nil {
+	// Exact key first. The JavaScript SDKs reject a DSN key with «-» (only
+	// letters, digits and «_»), so a key with «_» also finds the project whose
+	// key has «-» there: iris_app → iris-app. Several such projects: the first
+	// by key.
+	var found string
+	err := h.db.QueryRow(
+		`SELECT key FROM projects WHERE key = ?1
+		UNION ALL
+		SELECT * FROM (SELECT key FROM projects WHERE replace(key, '-', '_') = replace(?1, '-', '_') ORDER BY key)
+		LIMIT 1`, key).Scan(&found)
+	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			slog.Warn("sentry: project lookup by public key failed", "err", err)
 		}
 		return ""
 	}
-	return key
+	return found
 }
 
 // publicKey returns the DSN public key: the sentry_key query parameter (the
