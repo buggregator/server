@@ -1,6 +1,7 @@
 package profiler
 
 import (
+	"container/heap"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -269,15 +270,27 @@ func handleFlameChart(db *sql.DB) http.HandlerFunc {
 // XHProf only records caller→callee pairs, not full call stacks, so a function
 // reached from many callers would be copied with its whole subtree once per
 // path — exponential on real profiles (#356). Instead each function is
-// expanded once, under the edge that reaches it at the smallest depth; its
-// other call sites are shown as leaves. Every edge becomes at most one node.
+// expanded once, under its heaviest incoming edge among those reachable from
+// the roots; its other call sites are shown as leaves. Every edge becomes at
+// most one node.
+//
+// The callee==>* edges of a function sum all its calls, so under one call
+// site its children are scaled by that site's share of the function's
+// incoming total: children are never wider than their parent (#446).
 // It returns the tree, its node count, and whether a cap cut it short.
 func buildFlameChart(edges []EdgeRow, metric string, peakVal float64) (tree []*flameNode, count int, truncated bool) {
 	divisor := metricDivisor(metric)
 
+	// value is the edge's metric, never below 0 (memory deltas can be).
+	value := func(i int) float64 {
+		return math.Max(0, float64(GetEdgeMetricValue(&edges[i], metric)))
+	}
+
 	childrenMap := make(map[string][]int) // caller → edge indexes
+	incoming := make(map[string]float64)  // callee → Σ value of edges into it
 	var roots []int
 	for i := range edges {
+		incoming[edges[i].Callee] += value(i)
 		if edges[i].Caller == nil {
 			roots = append(roots, i)
 		} else {
@@ -285,40 +298,42 @@ func buildFlameChart(edges []EdgeRow, metric string, peakVal float64) (tree []*f
 		}
 	}
 
-	// BFS: the first edge that reaches a callee is the one that expands it.
+	// Heaviest reachable edge first: it expands its callee. Ties keep the
+	// order edges were reached in.
 	expandedBy := make(map[string]int)
-	queue := make([]int, 0, len(edges))
+	h := &edgeHeap{value: value}
 	for _, i := range roots {
-		if _, ok := expandedBy[edges[i].Callee]; !ok {
-			expandedBy[edges[i].Callee] = i
-			queue = append(queue, i)
-		}
+		h.add(i)
 	}
-	for len(queue) > 0 {
-		cur := queue[0]
-		queue = queue[1:]
-		for _, i := range childrenMap[edges[cur].Callee] {
+	for h.Len() > 0 {
+		cur := heap.Pop(h).(heapItem).edge
+		callee := edges[cur].Callee
+		if _, ok := expandedBy[callee]; ok {
+			continue
+		}
+		expandedBy[callee] = cur
+		for _, i := range childrenMap[callee] {
 			if _, ok := expandedBy[edges[i].Callee]; !ok {
-				expandedBy[edges[i].Callee] = i
-				queue = append(queue, i)
+				h.add(i)
 			}
 		}
 	}
 
-	var buildNode func(i int, start float64, depth int) *flameNode
-	buildNode = func(i int, start float64, depth int) *flameNode {
+	// buildNode draws edge i at value(i)*scale.
+	var buildNode func(i int, start, scale float64, depth int) *flameNode
+	buildNode = func(i int, start, scale float64, depth int) *flameNode {
 		count++
 		e := &edges[i]
-		val := float64(GetEdgeMetricValue(e, metric))
+		width := value(i) * scale
 		pct := 0.0
 		if peakVal > 0 {
-			pct = val / peakVal * 100
+			pct = float64(GetEdgeMetricValue(e, metric)) / peakVal * 100
 		}
 
 		node := &flameNode{
 			Name:     e.Callee,
 			Start:    start,
-			Duration: val / divisor,
+			Duration: width / divisor,
 			Type:     "task",
 			Children: []*flameNode{},
 			Cost: map[string]any{
@@ -330,17 +345,31 @@ func buildFlameChart(edges []EdgeRow, metric string, peakVal float64) (tree []*f
 		if expandedBy[e.Callee] != i {
 			return node
 		}
+		kids := childrenMap[e.Callee]
 		if depth >= maxFlameDepth {
-			truncated = truncated || len(childrenMap[e.Callee]) > 0
+			truncated = truncated || len(kids) > 0
 			return node
 		}
+		// This call site's share of all calls of the function; then never
+		// more than the parent in total (data noise).
+		childScale := 0.0
+		if in := incoming[e.Callee]; in > 0 {
+			childScale = width / in
+		}
+		sum := 0.0
+		for _, c := range kids {
+			sum += value(c) * childScale
+		}
+		if sum > width && sum > 0 {
+			childScale *= width / sum
+		}
 		childStart := start
-		for _, c := range childrenMap[e.Callee] {
+		for _, c := range kids {
 			if count >= maxFlameNodes {
 				truncated = true
 				break
 			}
-			child := buildNode(c, childStart, depth+1)
+			child := buildNode(c, childStart, childScale, depth+1)
 			node.Children = append(node.Children, child)
 			childStart += child.Duration
 		}
@@ -354,11 +383,45 @@ func buildFlameChart(edges []EdgeRow, metric string, peakVal float64) (tree []*f
 			truncated = true
 			break
 		}
-		node := buildNode(i, start, 0)
+		node := buildNode(i, start, 1, 0)
 		tree = append(tree, node)
 		start += node.Duration
 	}
 	return tree, count, truncated
+}
+
+// edgeHeap pops the edge with the largest value; equal values in push order.
+type heapItem struct {
+	edge int
+	val  float64
+	seq  int
+}
+
+type edgeHeap struct {
+	items []heapItem
+	value func(int) float64
+	seq   int
+}
+
+func (h *edgeHeap) add(i int) {
+	h.seq++
+	heap.Push(h, heapItem{edge: i, val: h.value(i), seq: h.seq})
+}
+
+func (h *edgeHeap) Len() int { return len(h.items) }
+func (h *edgeHeap) Less(a, b int) bool {
+	if h.items[a].val != h.items[b].val {
+		return h.items[a].val > h.items[b].val
+	}
+	return h.items[a].seq < h.items[b].seq
+}
+func (h *edgeHeap) Swap(a, b int) { h.items[a], h.items[b] = h.items[b], h.items[a] }
+func (h *edgeHeap) Push(x any)    { h.items = append(h.items, x.(heapItem)) }
+func (h *edgeHeap) Pop() any {
+	n := len(h.items)
+	it := h.items[n-1]
+	h.items = h.items[:n-1]
+	return it
 }
 
 // --- Helpers ---
