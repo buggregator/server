@@ -4,12 +4,16 @@
 #
 # Downloads the binary for this CPU from a GitHub release, checks it against
 # the release's checksums.txt, and puts it in %LOCALAPPDATA%\Programs\buggregator.
+# With OpenSSL 3 on PATH (e.g. from Git for Windows) it also checks
+# checksums.txt.sig, the release's ed25519 signature; Windows has no ed25519 of its own.
 #
 # Environment:
 #   BUGGREGATOR_VERSION      release tag, e.g. v2.6.0 (default: latest)
 #   BUGGREGATOR_INSTALL_DIR  where to put the binary
 #   BUGGREGATOR_BASE_URL     download base URL instead of GitHub (mirrors, tests)
 #   BUGGREGATOR_NO_VERIFY=1  skip the checksum (only for releases without checksums.txt)
+#   BUGGREGATOR_NO_SIGNATURE=1  install without checksums.txt.sig (releases from
+#                            v2.11.0 on are signed; a missing signature stops the install)
 
 # Runs in its own scope: with `irm | iex` nothing (preferences, variables) is left
 # behind in the user's session.
@@ -53,6 +57,36 @@
                 $parts = $line -split '\s+'
                 if ($parts.Count -ge 2 -and $parts[1].TrimStart('*') -eq $asset) { $want = $parts[0].ToLower() }
             }
+
+            # The ed25519 key that signs checksums.txt (releaseKey in internal/selfupdate/verify.go).
+            $sig = Join-Path $tmp 'checksums.txt.sig'
+            $hasSig = $true
+            try { Invoke-WebRequest -UseBasicParsing -Uri "$base/checksums.txt.sig" -OutFile $sig } catch { $hasSig = $false }
+            $openssl = Get-Command openssl -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+            $sslVersion = if ($openssl) { (& $openssl.Source version 2>$null) -join ' ' } else { '' }
+            # Releases from v2.11.0 on (and so "latest") are signed; a version we cannot read counts as signed.
+            $signed = $true
+            if ($version -match '^v?(\d+)\.(\d+)') {
+                $signed = ([int]$Matches[1] -gt 2) -or ([int]$Matches[1] -eq 2 -and [int]$Matches[2] -ge 11)
+            }
+            if (-not $hasSig) {
+                # Someone who replaced the binary and checksums.txt would also drop the signature.
+                if ($env:BUGGREGATOR_NO_SIGNATURE -eq '1') { Write-Host 'Signature NOT checked (BUGGREGATOR_NO_SIGNATURE=1).' }
+                elseif ($signed) { throw "buggregator install: no checksums.txt.sig: $version should be signed. Set BUGGREGATOR_NO_SIGNATURE=1 only for a mirror you trust that has no signature" }
+                else { Write-Host "Signature not checked: $version predates signed releases (v2.11.0)." }
+            } elseif ($sslVersion -notmatch '^OpenSSL ([3-9]|\d{2,})\.') {
+                Write-Host 'Signature not checked: needs OpenSSL 3 on PATH (e.g. from Git for Windows).'
+            } else {
+                $pem = Join-Path $tmp 'release-key.pem'
+                Set-Content -Path $pem -Encoding Ascii -Value @(
+                    '-----BEGIN PUBLIC KEY-----'
+                    'MCowBQYDK2VwAyEAbFthyZgjx8k7TUu4ZekM3sa0zSxSRzOTaX2BfxaUH2I='
+                    '-----END PUBLIC KEY-----')
+                & $openssl.Source pkeyutl -verify -pubin -inkey $pem -rawin -in $sums -sigfile $sig *> $null
+                if ($LASTEXITCODE -ne 0) { throw 'buggregator install: the signature of checksums.txt does not match the Buggregator release key: do not use this download' }
+                Write-Host 'Signature OK.'
+            }
+
             if (-not $want) { throw "buggregator install: $asset is not listed in checksums.txt" }
             $got = (Get-FileHash -Algorithm SHA256 -Path $file).Hash.ToLower()
             if ($got -ne $want) { throw "buggregator install: checksum mismatch for $asset (got $got, want $want)" }

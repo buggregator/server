@@ -4,16 +4,70 @@
 #   curl -fsSL https://raw.githubusercontent.com/buggregator/server/master/scripts/install.sh | sh
 #
 # Downloads the binary for this OS/CPU from a GitHub release, checks it against
-# the release's checksums.txt, and puts it in ~/.local/bin (no sudo).
+# the release's checksums.txt, and puts it in ~/.local/bin (no sudo). With
+# OpenSSL 3 it also checks checksums.txt.sig, the release's ed25519 signature.
 #
 # Environment:
 #   BUGGREGATOR_VERSION      release tag, e.g. v2.6.0 (default: latest)
 #   BUGGREGATOR_INSTALL_DIR  where to put the binary (default: ~/.local/bin)
 #   BUGGREGATOR_BASE_URL     download base URL instead of GitHub (mirrors, tests)
 #   BUGGREGATOR_NO_VERIFY=1  skip the checksum (only for releases without checksums.txt)
+#   BUGGREGATOR_NO_SIGNATURE=1  install without checksums.txt.sig (releases from
+#                            v2.11.0 on are signed; a missing signature stops the install)
 set -eu
 
+# The ed25519 public key whose private half signs checksums.txt (the same key as
+# releaseKey in internal/selfupdate/verify.go), as a PEM SubjectPublicKeyInfo.
+RELEASE_KEY_PEM='-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAbFthyZgjx8k7TUu4ZekM3sa0zSxSRzOTaX2BfxaUH2I=
+-----END PUBLIC KEY-----'
+
 fail() { echo "buggregator install: $*" >&2; exit 1; }
+
+# OpenSSL 3+ verifies a raw ed25519 signature (pkeyutl -rawin); LibreSSL (macOS)
+# and OpenSSL 1.x cannot.
+have_openssl3() {
+  command -v openssl >/dev/null 2>&1 || return 1
+  set -- $(openssl version 2>/dev/null)
+  [ "${1:-}" = OpenSSL ] || return 1
+  [ "${2%%.*}" -ge 3 ] 2>/dev/null
+}
+
+# signed_release: releases from v2.11.0 on (and so "latest") carry checksums.txt.sig.
+# A version we cannot read counts as signed.
+signed_release() {
+  [ "$VERSION" = latest ] && return 0
+  v="${VERSION#v}"
+  major="${v%%.*}"
+  rest="${v#*.}"
+  minor="${rest%%.*}"
+  case "$major$minor" in '' | *[!0-9]*) return 0 ;; esac
+  [ "$major" -gt 2 ] || { [ "$major" -eq 2 ] && [ "$minor" -ge 11 ]; }
+}
+
+# verify_signature DIR: checks DIR/checksums.txt against DIR/checksums.txt.sig.
+verify_signature() {
+  if ! fetch "$base/checksums.txt.sig" "$1/checksums.txt.sig" 2>/dev/null; then
+    # Someone who replaced the binary and checksums.txt would also drop the signature.
+    if [ "${BUGGREGATOR_NO_SIGNATURE:-}" = 1 ]; then
+      echo "Signature NOT checked (BUGGREGATOR_NO_SIGNATURE=1)."
+    elif signed_release; then
+      fail "no checksums.txt.sig: $VERSION should be signed. Set BUGGREGATOR_NO_SIGNATURE=1 only for a mirror you trust that has no signature"
+    else
+      echo "Signature not checked: $VERSION predates signed releases (v2.11.0)."
+    fi
+    return 0
+  fi
+  if ! have_openssl3; then
+    echo "Signature not checked: needs OpenSSL 3 (openssl version)."
+    return 0
+  fi
+  printf '%s\n' "$RELEASE_KEY_PEM" > "$1/release-key.pem"
+  openssl pkeyutl -verify -pubin -inkey "$1/release-key.pem" -rawin \
+    -in "$1/checksums.txt" -sigfile "$1/checksums.txt.sig" >/dev/null 2>&1 ||
+    fail "the signature of checksums.txt does not match the Buggregator release key: do not use this download"
+  echo "Signature OK."
+}
 
 # Everything runs from main: a download cut short by `curl | sh` runs nothing.
 main() {
@@ -65,6 +119,7 @@ main() {
   else
     fetch "$base/checksums.txt" "$tmp/checksums.txt" ||
       fail "no checksums.txt in this release; set BUGGREGATOR_NO_VERIFY=1 to install without a check"
+    verify_signature "$tmp"
     want="$(awk -v a="$asset" '{ sub(/\r$/, "") } $2 == a || $2 == "*" a { print $1 }' "$tmp/checksums.txt")"
     [ -n "$want" ] || fail "$asset is not listed in checksums.txt"
     if command -v sha256sum >/dev/null 2>&1; then
