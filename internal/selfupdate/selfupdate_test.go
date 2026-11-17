@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/buggregator/server/v2/internal/server/ws"
 	"github.com/buggregator/server/v2/internal/storage"
 	"github.com/buggregator/server/v2/internal/updates"
 )
@@ -587,5 +588,38 @@ func TestAPI_SameOrigin(t *testing.T) {
 				h.wait(t)
 			}
 		})
+	}
+}
+
+// Any page can open the WebSocket, and a bridged RPC request has no Origin:
+// the bridge must not reach the update API (open port, no auth: no Host guard).
+func TestAPI_RPCBridgeRefused(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(nil)
+	h := setup(t, newRelease(t, priv, "1.1.0"), pub, ":memory:", nil)
+	h.u.cfg.HTTPAddr, h.u.cfg.AuthOn = ":8000", false
+	mux := http.NewServeMux()
+	h.u.Register(mux, func(next http.Handler) http.Handler { return next })
+	rpc := ws.NewMuxRPCHandler(mux)
+	for _, c := range []struct {
+		uri  string
+		body json.RawMessage
+	}{
+		{"api/update/check", nil},
+		{"api/update", json.RawMessage(`{"version":"1.1.0"}`)},
+		{"/api/%75pdate", json.RawMessage(`{"version":"1.1.0"}`)},
+		{"api/update?x=1", json.RawMessage(`{"version":"1.1.0"}`)},
+	} {
+		out, _ := rpc.HandleRPC("POST", c.uri, c.body)
+		var r struct{ Code int }
+		_ = json.Unmarshal(out, &r)
+		if r.Code != http.StatusForbidden {
+			t.Errorf("RPC post:%s = %d, want 403", c.uri, r.Code)
+		}
+	}
+	if out, _ := rpc.HandleRPC("GET", "api/update", nil); !strings.Contains(string(out), `"code":403`) {
+		t.Errorf("RPC get:api/update = %s, want 403", out)
+	}
+	if st := h.u.Info().State.Phase; st != "idle" {
+		t.Errorf("update started over RPC: phase %q", st)
 	}
 }
