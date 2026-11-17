@@ -87,11 +87,20 @@ jobs:
 
       # Download frontend
       - name: Download frontend
+        env:
+          # Anonymous api.github.com calls share the runner IP's rate limit.
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           mkdir -p internal/frontend/dist
-          ASSET_URL=$(curl -s "https://api.github.com/repos/buggregator/frontend/releases/tags/${FRONTEND_VERSION}" \
-            | jq -r '.assets[0].url')
-          curl -sL -H "Accept: application/octet-stream" "$ASSET_URL" -o /tmp/frontend.zip
+          release=$(curl -sS --retry 3 -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/buggregator/frontend/releases/tags/${FRONTEND_VERSION}")
+          ASSET_URL=$(jq -r '.assets[0].url // empty' <<<"$release")
+          if [ -z "$ASSET_URL" ]; then
+            echo "::error::No asset in buggregator/frontend release ${FRONTEND_VERSION}: $(jq -r '.message // "release has no assets"' <<<"$release")"
+            exit 1
+          fi
+          curl -fsSL --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" "$ASSET_URL" -o /tmp/frontend.zip
           unzip -qo /tmp/frontend.zip -d internal/frontend/dist/
 
       # Build PHP VarDumper parser using pre-built micro.sfx from static-php CDN
@@ -158,11 +167,20 @@ jobs:
           go-version-file: go.mod
 
       - name: Download frontend
+        env:
+          # Anonymous api.github.com calls share the runner IP's rate limit.
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           mkdir -p internal/frontend/dist
-          ASSET_URL=$(curl -s "https://api.github.com/repos/buggregator/frontend/releases/tags/${FRONTEND_VERSION}" \
-            | jq -r '.assets[0].url')
-          curl -sL -H "Accept: application/octet-stream" "$ASSET_URL" -o /tmp/frontend.zip
+          release=$(curl -sS --retry 3 -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/buggregator/frontend/releases/tags/${FRONTEND_VERSION}")
+          ASSET_URL=$(jq -r '.assets[0].url // empty' <<<"$release")
+          if [ -z "$ASSET_URL" ]; then
+            echo "::error::No asset in buggregator/frontend release ${FRONTEND_VERSION}: $(jq -r '.message // "release has no assets"' <<<"$release")"
+            exit 1
+          fi
+          curl -fsSL --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" "$ASSET_URL" -o /tmp/frontend.zip
           unzip -qo /tmp/frontend.zip -d internal/frontend/dist/
 
       - name: Create VarDumper placeholder
