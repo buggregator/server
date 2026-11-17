@@ -22,6 +22,7 @@ import (
 	"github.com/buggregator/server/v2/internal/metrics"
 	"github.com/buggregator/server/v2/internal/module"
 	"github.com/buggregator/server/v2/internal/retention"
+	"github.com/buggregator/server/v2/internal/selfupdate"
 	httpserver "github.com/buggregator/server/v2/internal/server/http"
 	"github.com/buggregator/server/v2/internal/server/tcp"
 	"github.com/buggregator/server/v2/internal/server/ws"
@@ -53,10 +54,13 @@ func New(cfg Config, db *sql.DB, registry *module.Registry, hub *ws.Hub, store e
 	}
 }
 
-// Run starts all servers and blocks until shutdown signal.
+// Run starts all servers and blocks until a shutdown signal or a restart
+// asked by a self-update (then selfupdate.Restarting() is true).
 func (a *App) Run() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	ctx, stop := context.WithCancel(ctx)
+	defer stop()
 
 	// Wrap store with metrics instrumentation.
 	var store event.Store = a.store
@@ -69,7 +73,7 @@ func (a *App) Run() {
 	// Initialize modules (migrations, routes, handlers).
 	if err := a.registry.Init(a.db, mux, store); err != nil {
 		slog.Error("failed to initialize modules", "err", err)
-		os.Exit(1)
+		selfupdate.Exit(1)
 	}
 
 	// Projects from the config file: after the migrations, which create the
@@ -86,7 +90,7 @@ func (a *App) Run() {
 	if a.cfg.Auth.Enabled {
 		if a.cfg.Auth.JWTSecret == "" {
 			slog.Error("AUTH_JWT_SECRET is required when auth is enabled")
-			os.Exit(1)
+			selfupdate.Exit(1)
 		}
 
 		tokens := auth.NewTokenStore(a.cfg.Auth.JWTSecret)
@@ -107,7 +111,7 @@ func (a *App) Run() {
 		)
 		if err != nil {
 			slog.Error("failed to initialize OAuth client", "err", err)
-			os.Exit(1)
+			selfupdate.Exit(1)
 		}
 
 		handlers := auth.NewHandlers(oauth, tokens)
@@ -122,11 +126,30 @@ func (a *App) Run() {
 	// New-version check: GitHub releases/latest, result in /api/settings.
 	// Off = no network call; a dev build never checks.
 	var updateStatus func() any
+	var checker *updates.Checker
 	if a.cfg.UpdateCheck.On() {
-		checker := updates.New(a.cfg.Version, a.cfg.UpdateCheck.IntervalDur)
+		checker = updates.New(a.cfg.Version, a.cfg.UpdateCheck.IntervalDur)
+		checker.SetURL(a.cfg.Update.ReleaseURL)
 		go checker.Run(ctx)
 		updateStatus = func() any { return checker.Status() }
 	}
+
+	// Update from the UI: /api/update, progress as update.progress on every
+	// project channel; a swap stops Run so main can re-exec.
+	updater := selfupdate.New(selfupdate.Config{
+		Checker:  checker,
+		Setting:  a.cfg.Update.SelfUpdate,
+		AuthOn:   a.cfg.Auth.Enabled,
+		HTTPAddr: a.cfg.HTTPAddr,
+		DSN:      a.cfg.DatabaseDSN,
+		DB:       a.db,
+		Broadcast: func(st selfupdate.State) {
+			for _, key := range a.projectKeys() {
+				a.hub.Broadcast("events.project."+key, "update.progress", st)
+			}
+		},
+		Restart: stop,
+	}, a.cfg.Version)
 
 	// Optional auto-cleanup; off unless retention is configured.
 	policy := retention.Policy{MaxAge: a.cfg.Retention.MaxAgeDur, MaxEvents: a.cfg.Retention.MaxEvents}
@@ -140,6 +163,8 @@ func (a *App) Run() {
 
 	// Register core API routes (settings endpoint is public, others go through auth middleware).
 	httpserver.RegisterAPI(mux, store, a.registry.Previews(), eventService, a.cfg.Version, a.db, a.cfg.Modules.EnabledTypes(), authSettings, authMiddleware, a.listLimits(), updateStatus)
+
+	updater.Register(mux, authMiddleware)
 
 	// Module API routes that need the same auth as the core API.
 	a.registry.RegisterProtectedRoutes(mux, authMiddleware)
@@ -185,23 +210,7 @@ func (a *App) Run() {
 	a.hub.SetRPCHandler(ws.NewMuxRPCHandler(mux))
 
 	// Provide project list for server-side WebSocket subscriptions.
-	a.hub.SetProjectProvider(func() []string {
-		rows, err := a.db.Query(`SELECT key FROM projects`)
-		if err != nil {
-			return []string{"default"}
-		}
-		defer rows.Close()
-		var keys []string
-		for rows.Next() {
-			var key string
-			rows.Scan(&key)
-			keys = append(keys, key)
-		}
-		if len(keys) == 0 {
-			keys = []string{"default"}
-		}
-		return keys
-	})
+	a.hub.SetProjectProvider(a.projectKeys)
 
 	// Set metrics on hub.
 	if a.metrics != nil {
@@ -223,7 +232,7 @@ func (a *App) Run() {
 		frontendFS, err = fs.Sub(frontend.Dist, "dist")
 		if err != nil {
 			slog.Error("failed to load frontend", "err", err)
-			os.Exit(1)
+			selfupdate.Exit(1)
 		}
 	}
 
@@ -261,14 +270,14 @@ func (a *App) Run() {
 	httpLn, err := listenHTTP(a.cfg.HTTPAddr)
 	if err != nil {
 		slog.Error("failed to start HTTP server", "err", err)
-		os.Exit(1)
+		selfupdate.Exit(1)
 	}
 
 	// Start TCP servers.
 	tcpManager := tcp.NewManager(a.registry.TCPServers(), a.metrics)
 	if err := tcpManager.Start(ctx); err != nil {
 		slog.Error("failed to start TCP servers", "err", err)
-		os.Exit(1)
+		selfupdate.Exit(1)
 	}
 
 	// Start WebSocket hub.
@@ -292,10 +301,32 @@ func (a *App) Run() {
 		}
 	}()
 
+	// A start after a self-update is good once everything serves.
+	selfupdate.Ready()
+
 	<-ctx.Done()
 	slog.Info("shutting down...")
 	_ = srv.Shutdown(context.Background())
 	tcpManager.Wait()
+}
+
+// projectKeys are the project keys for the WebSocket channels.
+func (a *App) projectKeys() []string {
+	rows, err := a.db.Query(`SELECT key FROM projects`)
+	if err != nil {
+		return []string{"default"}
+	}
+	defer rows.Close()
+	var keys []string
+	for rows.Next() {
+		var key string
+		rows.Scan(&key)
+		keys = append(keys, key)
+	}
+	if len(keys) == 0 {
+		keys = []string{"default"}
+	}
+	return keys
 }
 
 // listLimits turns the ui config section into list limits. An unreadable

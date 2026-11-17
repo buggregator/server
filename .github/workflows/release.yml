@@ -242,6 +242,20 @@ jobs:
           sha256sum buggregator-* > checksums.txt
           cat checksums.txt
 
+      # Self-update verifies checksums.txt with the ed25519 public key built
+      # into the binary (internal/selfupdate/verify.go). The private key never
+      # leaves the secret: written to a temp file for one command, then removed.
+      - name: Sign checksums
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          test -n "$RELEASE_SIGNING_KEY" || { echo "RELEASE_SIGNING_KEY secret is missing"; exit 1; }
+          key="$(mktemp)"
+          trap 'rm -f "$key"' EXIT
+          printf '%s\n' "$RELEASE_SIGNING_KEY" > "$key"
+          openssl pkeyutl -sign -inkey "$key" -rawin -in dist/checksums.txt -out dist/checksums.txt.sig
+          test "$(wc -c < dist/checksums.txt.sig)" -eq 64
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:

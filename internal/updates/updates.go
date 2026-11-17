@@ -10,6 +10,7 @@ package updates
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -41,6 +42,16 @@ type Status struct {
 	CheckedAt *time.Time `json:"checked_at,omitempty"` // last successful check
 }
 
+// Release is what self-update needs from the last successful check: the
+// notes and the download URL of each asset by name.
+type Release struct {
+	Notes  string
+	Assets map[string]string
+}
+
+// ErrNotRelease is CheckNow's answer for a build without a release version.
+var ErrNotRelease = errors.New("not a release build")
+
 // Checker keeps the result of the last successful check.
 type Checker struct {
 	current  string
@@ -49,8 +60,9 @@ type Checker struct {
 	retry    time.Duration
 	client   *http.Client
 
-	mu sync.RWMutex
-	st Status
+	mu  sync.RWMutex
+	st  Status
+	rel Release
 }
 
 // New returns a checker for the running version. interval <= 0 means the
@@ -71,6 +83,32 @@ func New(current string, interval time.Duration) *Checker {
 		client:   &http.Client{Timeout: requestTimeout},
 		st:       Status{Current: current},
 	}
+}
+
+// SetURL points the checker at another releases/latest endpoint (a mirror or
+// a test server). Empty keeps the GitHub one.
+func (c *Checker) SetURL(u string) {
+	if u != "" {
+		c.url = u
+	}
+}
+
+// Current is the running version without a leading v.
+func (c *Checker) Current() string { return c.current }
+
+// Release returns the notes and assets of the last successful check.
+func (c *Checker) Release() Release {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.rel
+}
+
+// CheckNow checks at once, outside the schedule.
+func (c *Checker) CheckNow(ctx context.Context) error {
+	if _, ok := parseVersion(c.current); !ok {
+		return ErrNotRelease
+	}
+	return c.check(ctx)
 }
 
 // Status returns the last known result.
@@ -128,6 +166,11 @@ func (c *Checker) check(ctx context.Context) error {
 	var rel struct {
 		TagName string `json:"tag_name"`
 		HTMLURL string `json:"html_url"`
+		Body    string `json:"body"`
+		Assets  []struct {
+			Name string `json:"name"`
+			URL  string `json:"browser_download_url"`
+		} `json:"assets"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, maxBody)).Decode(&rel); err != nil {
 		return fmt.Errorf("github: %w", err)
@@ -140,10 +183,22 @@ func (c *Checker) check(ctx context.Context) error {
 	cv, _ := parseVersion(c.current)
 	now := time.Now().UTC()
 
+	assets := make(map[string]string, len(rel.Assets))
+	for _, a := range rel.Assets {
+		assets[a.Name] = a.URL
+	}
+
 	c.mu.Lock()
 	c.st = Status{Current: c.current, Latest: latest, URL: rel.HTMLURL, Available: newer(lv, cv), CheckedAt: &now}
+	c.rel = Release{Notes: rel.Body, Assets: assets}
 	c.mu.Unlock()
 	return nil
+}
+
+// IsRelease reports whether v is a release version (not "dev").
+func IsRelease(v string) bool {
+	_, ok := parseVersion(strings.TrimSpace(v))
+	return ok
 }
 
 // version is major.minor.patch plus a pre-release flag ("2.7.0-rc.1").

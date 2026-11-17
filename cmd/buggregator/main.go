@@ -12,6 +12,7 @@ import (
 	mcpserver "github.com/buggregator/server/v2/internal/mcp"
 	"github.com/buggregator/server/v2/internal/metrics"
 	"github.com/buggregator/server/v2/internal/module"
+	"github.com/buggregator/server/v2/internal/selfupdate"
 	httpserver "github.com/buggregator/server/v2/internal/server/http"
 	"github.com/buggregator/server/v2/internal/server/ws"
 	"github.com/buggregator/server/v2/internal/storage"
@@ -34,6 +35,13 @@ import (
 var version = "dev"
 
 func main() {
+	// --version prints the version and exits; self-update probes a new
+	// binary with it.
+	if len(os.Args) == 2 && (os.Args[1] == "--version" || os.Args[1] == "-version" || os.Args[1] == "version") {
+		fmt.Println(version)
+		return
+	}
+
 	// MCP proxy subcommand: "buggregator mcp" bridges stdio to the running instance.
 	if len(os.Args) > 1 && os.Args[1] == "mcp" {
 		socketPath := os.Getenv("MCP_SOCKET_PATH")
@@ -47,7 +55,22 @@ func main() {
 		return
 	}
 
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	// After a self-update, Boot keeps the start-up log and Exit rolls back.
+	logOut := selfupdate.Boot(version)
+	slog.SetDefault(slog.New(slog.NewTextHandler(logOut, &slog.HandlerOptions{Level: slog.LevelInfo})))
+
+	run()
+
+	// A self-update swapped the binary: everything above is closed, run the
+	// new one in place of this process.
+	if selfupdate.Restarting() {
+		selfupdate.Reexec()
+	}
+}
+
+// run starts the server and returns on shutdown; its defers close the
+// database and helpers before a self-update re-exec.
+func run() {
 
 	cfg := app.LoadConfig()
 	cfg.Version = version
@@ -59,7 +82,7 @@ func main() {
 	db, err := storage.OpenPooled(cfg.DatabaseDSN, cfg.Database.MaxOpenConns)
 	if err != nil {
 		slog.Error("failed to open database", "err", err)
-		os.Exit(1)
+		selfupdate.Exit(1)
 	}
 	defer db.Close()
 
@@ -95,7 +118,7 @@ func main() {
 		} else {
 			if err := vardumperMod.StartPHP(); err != nil {
 				slog.Error("failed to start VarDumper PHP parser", "err", err)
-				os.Exit(1)
+				selfupdate.Exit(1)
 			}
 			defer vardumperMod.StopPHP()
 		}

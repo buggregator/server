@@ -2093,6 +2093,93 @@ paths:
           $ref: '#/components/responses/Error'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/update:
+    get:
+      tags:
+      - Server
+      operationId: getUpdate
+      summary: Update from the UI — latest release, what this install allows, progress
+      description: '`mode` self shows the button; manual gives `commands` to copy (Docker, Helm, read-only dir, open
+        port without auth); off when the check is off, `update.self_update: off` or a dev build. `reason` says why
+        and names the setting.'
+      responses:
+        '200':
+          description: Update info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateInfo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+      - Server
+      operationId: startUpdate
+      summary: Install the latest release (binary installs, mode self)
+      description: 'Downloads the asset of this platform, checks checksums.txt and its ed25519 signature, probes the new
+        binary with --version, swaps it keeping the old one and restarts (Windows: restart by hand). Progress comes
+        as `update.progress` on every `events.project.{key}` channel. JSON only; `Sec-Fetch-Site: cross-site` is
+        refused.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - version
+              properties:
+                version:
+                  type: string
+                  description: Must be the latest release.
+      responses:
+        '202':
+          description: Started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateInfo'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '415':
+          $ref: '#/components/responses/Error'
+  /api/update/check:
+    post:
+      tags:
+      - Server
+      operationId: checkUpdate
+      summary: Check GitHub for a new release now (at most once a minute)
+      responses:
+        '200':
+          description: Update info after the check
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateInfo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Checked less than a minute ago
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  code:
+                    type: integer
+                  retry_after:
+                    type: integer
+                    description: Seconds until the next check is allowed.
+        '502':
+          $ref: '#/components/responses/Error'
   /api/version:
     get:
       tags:
@@ -3770,6 +3857,79 @@ components:
                 type: string
                 description: The event id (empty for envelopes without one)
   schemas:
+    UpdateState:
+      type: object
+      description: Progress of an update; also the payload of the update.progress WebSocket event.
+      properties:
+        phase:
+          type: string
+          enum: [idle, downloading, verifying, installing, restarting, done, failed, rolled_back, restart_required]
+        version:
+          type: string
+        previous:
+          type: string
+        failed_step:
+          type: string
+        bytes:
+          type: integer
+        total:
+          type: integer
+        error:
+          type: string
+        log:
+          type: string
+          description: Last start-up output of the new version (up to 8 KB) when rolled_back.
+        updated_at:
+          type: [string, "null"]
+          format: date-time
+    UpdateInfo:
+      type: object
+      properties:
+        current:
+          type: string
+        latest:
+          type: string
+        available:
+          type: boolean
+        url:
+          type: string
+        notes:
+          type: string
+          description: Release notes (Markdown).
+        checked_at:
+          type: [string, "null"]
+          format: date-time
+        check_enabled:
+          type: boolean
+        mode:
+          type: string
+          enum: [self, manual, "off"]
+        reason:
+          type: string
+        install:
+          type: string
+          enum: [binary, docker, kubernetes]
+        os:
+          type: string
+        commands:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              command:
+                type: string
+        memory_db:
+          type: boolean
+          description: The database is in memory; a restart loses all events.
+        restart_manual:
+          type: boolean
+          description: Windows; after the swap the state is restart_required.
+        state:
+          $ref: '#/components/schemas/UpdateState'
     Error:
       type: object
       required:

@@ -48,6 +48,13 @@ update_check:
   enabled: ${UPDATE_CHECK_ENABLED:true}
   interval: ${UPDATE_CHECK_INTERVAL:12h}  # Go duration, at least 1h
 
+# Update from the UI (binary installs). auto: allowed unless the server
+# listens beyond 127.0.0.1 without auth; on: allowed then too; off: never.
+# Docker, Kubernetes and a read-only install dir get the command to run instead.
+# The download is checked against checksums.txt and its ed25519 signature.
+update:
+  self_update: ${UPDATE_SELF:auto}
+
 # Xdebug function traces (xdebug.trace_format=1), uploaded over HTTP:
 #   curl -H 'X-Buggregator-Event: xdebug-trace' --data-binary @trace.xt.gz http://127.0.0.1:8000/
 # Optional headers: X-Buggregator-Project, X-Buggregator-Trace-Url (the request

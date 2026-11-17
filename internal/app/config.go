@@ -60,6 +60,8 @@ type Config struct {
 	// UpdateCheck asks GitHub for the latest release so the UI can say a new
 	// version is out.
 	UpdateCheck UpdateCheckConfig `yaml:"update_check"`
+	// Update controls installing a new release from the UI.
+	Update UpdateConfig `yaml:"update"`
 	// XdebugTrace bounds uploaded Xdebug function traces (module xdebug-trace).
 	XdebugTrace XdebugTraceConfig `yaml:"xdebug_trace"`
 	// Retention deletes old events in the background; unset keeps everything.
@@ -159,6 +161,17 @@ type UpdateCheckConfig struct {
 
 // On reports whether the check runs (default true).
 func (c UpdateCheckConfig) On() bool { return c.Enabled == nil || *c.Enabled }
+
+// UpdateConfig controls updating from the UI (binary installs only).
+type UpdateConfig struct {
+	// SelfUpdate: "auto" (default) the UI may update a binary install unless
+	// the server listens beyond loopback without auth; "on" also then; "off"
+	// never.
+	SelfUpdate string `yaml:"self_update"`
+	// ReleaseURL replaces the GitHub releases/latest API (a mirror); empty =
+	// GitHub. Downloads are still checked against the built-in release key.
+	ReleaseURL string `yaml:"release_url"`
+}
 
 // RetentionConfig is the optional auto-cleanup. Pinned events are never
 // deleted and do not count towards max_events.
@@ -328,6 +341,7 @@ func LoadConfig() Config {
 	var retentionMaxEvents string
 	flag.StringVar(&cfg.Retention.MaxAge, "retention-max-age", "", "Delete events older than this (30m, 24h, 7d); empty = keep")
 	flag.StringVar(&retentionMaxEvents, "retention-max-events", "", "Keep at most this many events (0 = no cap)")
+	flag.StringVar(&cfg.Update.SelfUpdate, "update-self", "", "Update from the UI: auto (default), on, off")
 	flag.StringVar(&cfg.Sentry.SourceFetch, "sentry-source-fetch", "", "Fetch JS frame sources from: private (default), any, off")
 	flag.Parse()
 
@@ -370,6 +384,14 @@ func LoadConfig() Config {
 	} else {
 		slog.Warn("update_check.interval is not a positive duration, using 12h", "value", cfg.UpdateCheck.Interval)
 	}
+
+	// Update from the UI.
+	cfg.Update.SelfUpdate = strings.ToLower(strings.TrimSpace(coalesce(cfg.Update.SelfUpdate, os.Getenv("UPDATE_SELF"), fileCfg.Update.SelfUpdate, "auto")))
+	if v := cfg.Update.SelfUpdate; v != "auto" && v != "on" && v != "off" {
+		slog.Warn("update.self_update must be auto, on or off, using auto", "value", v)
+		cfg.Update.SelfUpdate = "auto"
+	}
+	cfg.Update.ReleaseURL = coalesce(os.Getenv("UPDATE_RELEASE_URL"), fileCfg.Update.ReleaseURL)
 
 	// Xdebug traces.
 	cfg.XdebugTrace.MaxUpload = coalesce(os.Getenv("XDEBUG_TRACE_MAX_UPLOAD"), fileCfg.XdebugTrace.MaxUpload, "100MB")
