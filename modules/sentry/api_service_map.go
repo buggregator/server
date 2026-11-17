@@ -19,19 +19,40 @@ func handleServiceMap(db *sql.DB) http.HandlerFunc {
 			}
 		}
 
-		// Build edges from spans with peer_address.
-		pc, pa := projectClause(r, "project_id")
+		// Build edges from spans with peer_address. An outgoing call to a
+		// service we also receive spans from is drawn to that service, not to
+		// its address: the callee's span (span v2) or transaction (contexts.trace)
+		// names the call's span as its parent. Only another service counts: a
+		// child of the call in the caller itself (a retry, a sub-span) is not
+		// the callee. Databases, caches and queues keep their address.
+		pc, pa := projectClause(r, "s.project_id")
 		edgeRows, err := db.Query(
-			`SELECT
-				COALESCE(service_name, 'unknown') as source,
-				peer_address as target,
-				peer_type as op_type,
-				COUNT(*) as request_count,
-				SUM(CASE WHEN is_error = 1 THEN 1 ELSE 0 END) as error_count,
-				CAST(AVG(duration_ms) AS INTEGER) as avg_duration_ms
-			FROM sentry_spans
-			WHERE peer_address IS NOT NULL
-				AND start_ts >= ?`+pc+`
+			`WITH calls AS (
+				SELECT
+					COALESCE(s.service_name, 'unknown') AS source,
+					s.peer_address, s.peer_type, s.is_error, s.duration_ms, s.span_id, s.trace_id,
+					CASE WHEN s.peer_type IN ('db', 'cache', 'queue') THEN NULL ELSE COALESCE(
+						(SELECT d.service_name FROM sentry_spans d
+							WHERE d.trace_id = s.trace_id AND d.parent_span_id = s.span_id
+								AND d.service_name <> COALESCE(s.service_name, '') LIMIT 1),
+						(SELECT sp.service_name FROM sentry_transactions t
+							JOIN sentry_spans sp ON sp.transaction_id = t.id
+							WHERE t.trace_id = s.trace_id
+								AND json_extract(t.payload, '$.contexts.trace.parent_span_id') = s.span_id
+								AND sp.service_name <> COALESCE(s.service_name, '') LIMIT 1)
+					) END AS callee
+				FROM sentry_spans s
+				WHERE s.peer_address IS NOT NULL
+					AND s.start_ts >= ?`+pc+`
+			)
+			SELECT
+				source,
+				COALESCE(callee, peer_address) AS target,
+				peer_type AS op_type,
+				COUNT(*) AS request_count,
+				SUM(CASE WHEN is_error = 1 THEN 1 ELSE 0 END) AS error_count,
+				CAST(AVG(duration_ms) AS INTEGER) AS avg_duration_ms
+			FROM calls
 			GROUP BY source, target, op_type
 			ORDER BY request_count DESC`,
 			append([]any{windowStart(now(), windowMinutes)}, pa...)...,
