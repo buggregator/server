@@ -12,6 +12,8 @@
 #   BUGGREGATOR_INSTALL_DIR  where to put the binary
 #   BUGGREGATOR_BASE_URL     download base URL instead of GitHub (mirrors, tests)
 #   BUGGREGATOR_NO_VERIFY=1  skip the checksum (only for releases without checksums.txt)
+#   BUGGREGATOR_NO_SIGNATURE=1  install without checksums.txt.sig (releases from
+#                            v2.11.0 on are signed; a missing signature stops the install)
 
 # Runs in its own scope: with `irm | iex` nothing (preferences, variables) is left
 # behind in the user's session.
@@ -62,8 +64,16 @@
             try { Invoke-WebRequest -UseBasicParsing -Uri "$base/checksums.txt.sig" -OutFile $sig } catch { $hasSig = $false }
             $openssl = Get-Command openssl -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
             $sslVersion = if ($openssl) { (& $openssl.Source version 2>$null) -join ' ' } else { '' }
+            # Releases from v2.11.0 on (and so "latest") are signed; a version we cannot read counts as signed.
+            $signed = $true
+            if ($version -match '^v?(\d+)\.(\d+)') {
+                $signed = ([int]$Matches[1] -gt 2) -or ([int]$Matches[1] -eq 2 -and [int]$Matches[2] -ge 11)
+            }
             if (-not $hasSig) {
-                Write-Host 'Signature not checked: this release has no checksums.txt.sig.'
+                # Someone who replaced the binary and checksums.txt would also drop the signature.
+                if ($env:BUGGREGATOR_NO_SIGNATURE -eq '1') { Write-Host 'Signature NOT checked (BUGGREGATOR_NO_SIGNATURE=1).' }
+                elseif ($signed) { throw "buggregator install: no checksums.txt.sig: $version should be signed. Set BUGGREGATOR_NO_SIGNATURE=1 only for a mirror you trust that has no signature" }
+                else { Write-Host "Signature not checked: $version predates signed releases (v2.11.0)." }
             } elseif ($sslVersion -notmatch '^OpenSSL ([3-9]|\d{2,})\.') {
                 Write-Host 'Signature not checked: needs OpenSSL 3 on PATH (e.g. from Git for Windows).'
             } else {

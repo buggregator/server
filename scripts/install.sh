@@ -12,6 +12,8 @@
 #   BUGGREGATOR_INSTALL_DIR  where to put the binary (default: ~/.local/bin)
 #   BUGGREGATOR_BASE_URL     download base URL instead of GitHub (mirrors, tests)
 #   BUGGREGATOR_NO_VERIFY=1  skip the checksum (only for releases without checksums.txt)
+#   BUGGREGATOR_NO_SIGNATURE=1  install without checksums.txt.sig (releases from
+#                            v2.11.0 on are signed; a missing signature stops the install)
 set -eu
 
 # The ed25519 public key whose private half signs checksums.txt (the same key as
@@ -31,10 +33,29 @@ have_openssl3() {
   [ "${2%%.*}" -ge 3 ] 2>/dev/null
 }
 
+# signed_release: releases from v2.11.0 on (and so "latest") carry checksums.txt.sig.
+# A version we cannot read counts as signed.
+signed_release() {
+  [ "$VERSION" = latest ] && return 0
+  v="${VERSION#v}"
+  major="${v%%.*}"
+  rest="${v#*.}"
+  minor="${rest%%.*}"
+  case "$major$minor" in '' | *[!0-9]*) return 0 ;; esac
+  [ "$major" -gt 2 ] || { [ "$major" -eq 2 ] && [ "$minor" -ge 11 ]; }
+}
+
 # verify_signature DIR: checks DIR/checksums.txt against DIR/checksums.txt.sig.
 verify_signature() {
   if ! fetch "$base/checksums.txt.sig" "$1/checksums.txt.sig" 2>/dev/null; then
-    echo "Signature not checked: this release has no checksums.txt.sig."
+    # Someone who replaced the binary and checksums.txt would also drop the signature.
+    if [ "${BUGGREGATOR_NO_SIGNATURE:-}" = 1 ]; then
+      echo "Signature NOT checked (BUGGREGATOR_NO_SIGNATURE=1)."
+    elif signed_release; then
+      fail "no checksums.txt.sig: $VERSION should be signed. Set BUGGREGATOR_NO_SIGNATURE=1 only for a mirror you trust that has no signature"
+    else
+      echo "Signature not checked: $VERSION predates signed releases (v2.11.0)."
+    fi
     return 0
   fi
   if ! have_openssl3; then
