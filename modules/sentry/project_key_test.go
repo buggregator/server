@@ -100,6 +100,32 @@ func TestHandle_ProjectByPublicKey(t *testing.T) {
 	}
 }
 
+// TestProjectByKey_UnderscoreFindsDash: the JS SDKs reject «-» in a DSN key,
+// so iris_app also reaches the project iris-app; an exact key always wins.
+func TestProjectByKey_UnderscoreFindsDash(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		projects []string
+		key      string
+		want     string
+	}{
+		{"underscore key finds dash project", []string{"iris-app"}, "iris_app", "iris-app"},
+		{"exact dash key", []string{"iris-app"}, "iris-app", "iris-app"},
+		{"exact match wins over normalised", []string{"iris-app", "iris_app"}, "iris_app", "iris_app"},
+		{"exact dash wins too", []string{"iris_app", "iris-app"}, "iris-app", "iris-app"},
+		{"two normalised matches: first by key", []string{"a_b-c", "a-b_c"}, "a_b_c", "a-b_c"},
+		{"no match goes to default", []string{"iris-app"}, "iris_ap", ""},
+		{"reserved key", []string{"sentry"}, "sentry", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := &handler{db: setupProjectsDB(t, tc.projects...)}
+			if got := h.projectByKey(tc.key); got != tc.want {
+				t.Errorf("projectByKey(%q) = %q, want %q", tc.key, got, tc.want)
+			}
+		})
+	}
+}
+
 // TestSDKFixtures_ProjectByPublicKey: the recorded SDK requests (DSN
 // http://publickey@host/42) land in the project "publickey" once it exists.
 func TestSDKFixtures_ProjectByPublicKey(t *testing.T) {
