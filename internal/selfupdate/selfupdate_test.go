@@ -73,11 +73,17 @@ func TestLoopbackOnly(t *testing.T) {
 }
 
 func TestCommands(t *testing.T) {
-	if c := Commands(InstallKubernetes, "linux", "/x", "2.1.0"); c[0].Command != "helm upgrade buggregator ./helm-chart --reuse-values --set image.tag=2.1.0" {
+	if c := Commands(InstallKubernetes, "linux", "/x", "2.1.0"); c[0].Command != "helm upgrade buggregator oci://ghcr.io/buggregator/helm-chart/buggregator --reuse-values --set image.tag=2.1.0" {
 		t.Errorf("helm: %q", c[0].Command)
 	}
 	if c := Commands(InstallBinary, "linux", "/opt/bg/buggregator", "2.1.0"); !strings.Contains(c[0].Command, "BUGGREGATOR_INSTALL_DIR='/opt/bg' sh") {
 		t.Errorf("shell: %q", c[0].Command)
+	}
+	if c := Commands(InstallBinary, "linux", "/opt/it's/buggregator", ""); !strings.Contains(c[0].Command, `BUGGREGATOR_INSTALL_DIR='/opt/it'\''s' sh`) {
+		t.Errorf("shell quote: %q", c[0].Command)
+	}
+	if c := Commands(InstallBinary, "windows", "C:/it's/buggregator.exe", ""); !strings.Contains(c[0].Command, "'C:/it''s'") {
+		t.Errorf("powershell quote: %q", c[0].Command)
 	}
 }
 
@@ -438,7 +444,7 @@ func TestAPI(t *testing.T) {
 	h.u.Register(mux, func(next http.Handler) http.Handler { return next })
 
 	do := func(method, path, ctype, body string, hdr ...string) (*httptest.ResponseRecorder, map[string]any) {
-		req := httptest.NewRequest(method, path, strings.NewReader(body))
+		req := httptest.NewRequest(method, "http://127.0.0.1:8000"+path, strings.NewReader(body))
 		if ctype != "" {
 			req.Header.Set("Content-Type", ctype)
 		}
@@ -462,6 +468,13 @@ func TestAPI(t *testing.T) {
 
 	if rec, _ := do("POST", "/api/update", "application/json", `{"version":"1.1.0"}`, "Sec-Fetch-Site", "cross-site"); rec.Code != 403 {
 		t.Errorf("cross-site: %d", rec.Code)
+	}
+	rebind := httptest.NewRequest("POST", "http://evil.example/api/update", strings.NewReader(`{"version":"1.1.0"}`))
+	rebind.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, rebind)
+	if rr.Code != 403 {
+		t.Errorf("DNS rebinding host without auth: %d", rr.Code)
 	}
 	if rec, _ := do("POST", "/api/update", "text/plain", `{"version":"1.1.0"}`); rec.Code != 415 {
 		t.Errorf("not JSON: %d", rec.Code)

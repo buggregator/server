@@ -16,8 +16,7 @@ func (u *Updater) Register(mux *http.ServeMux, protect func(http.Handler) http.H
 	})))
 
 	mux.Handle("POST /api/update/check", protect(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Sec-Fetch-Site") == "cross-site" {
-			writeErr(w, http.StatusForbidden, "cross-site requests cannot check for updates")
+		if !u.sameSite(w, r) {
 			return
 		}
 		wait, err := u.CheckNow(r.Context())
@@ -39,8 +38,7 @@ func (u *Updater) Register(mux *http.ServeMux, protect func(http.Handler) http.H
 	})))
 
 	mux.Handle("POST /api/update", protect(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Sec-Fetch-Site") == "cross-site" {
-			writeErr(w, http.StatusForbidden, "cross-site requests cannot start an update")
+		if !u.sameSite(w, r) {
 			return
 		}
 		if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
@@ -67,6 +65,20 @@ func (u *Updater) Register(mux *http.ServeMux, protect func(http.Handler) http.H
 			writeErr(w, http.StatusInternalServerError, err.Error())
 		}
 	})))
+}
+
+// sameSite refuses cross-site requests and, without auth, a Host that is not
+// this machine (DNS rebinding: the page's own name with a loopback address).
+func (u *Updater) sameSite(w http.ResponseWriter, r *http.Request) bool {
+	if r.Header.Get("Sec-Fetch-Site") == "cross-site" {
+		writeErr(w, http.StatusForbidden, "cross-site requests cannot start or check an update")
+		return false
+	}
+	if !u.cfg.AuthOn && !loopbackHost(r.Host) {
+		writeErr(w, http.StatusForbidden, "without auth, open the UI as localhost or 127.0.0.1 to update")
+		return false
+	}
+	return true
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {

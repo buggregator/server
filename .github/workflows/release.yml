@@ -228,6 +228,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-unix, build-windows]
     steps:
+      # For the built-in release key the signing step compares against.
+      - uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -253,6 +256,11 @@ jobs:
           key="$(mktemp)"
           trap 'rm -f "$key"' EXIT
           printf '%s\n' "$RELEASE_SIGNING_KEY" > "$key"
+          # The secret must match the key built into the binary, else every
+          # self-update fails with "signature does not match".
+          built="$(grep -o 'releaseKey = "[^"]*"' internal/selfupdate/verify.go | cut -d'"' -f2)"
+          have="$(openssl pkey -in "$key" -pubout -outform DER | tail -c 32 | base64)"
+          test "$have" = "$built" || { echo "RELEASE_SIGNING_KEY does not match releaseKey in internal/selfupdate/verify.go"; exit 1; }
           openssl pkeyutl -sign -inkey "$key" -rawin -in dist/checksums.txt -out dist/checksums.txt.sig
           test "$(wc -c < dist/checksums.txt.sig)" -eq 64
 

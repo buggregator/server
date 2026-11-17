@@ -108,19 +108,30 @@ func Commands(install, goos, exe, version string) []Command {
 	switch install {
 	case InstallDocker:
 		return []Command{
-			{ID: "compose", Label: "Docker Compose", Command: "docker compose pull && docker compose up -d"},
+			{ID: "compose", Label: "Docker Compose (image tag latest; a pinned tag: set it to " + tag + " first)", Command: "docker compose pull && docker compose up -d"},
 			{ID: "docker", Label: "Docker (then re-create the container)", Command: "docker pull ghcr.io/buggregator/server:" + tag},
 		}
 	case InstallKubernetes:
 		return []Command{
-			{ID: "helm", Label: "Helm", Command: "helm upgrade buggregator ./helm-chart --reuse-values --set image.tag=" + tag},
+			{ID: "helm", Label: "Helm", Command: "helm upgrade buggregator oci://ghcr.io/buggregator/helm-chart/buggregator --reuse-values --set image.tag=" + tag},
 		}
 	}
 	dir := filepath.Dir(exe)
 	if goos == "windows" {
-		return []Command{{ID: "powershell", Label: "PowerShell", Command: "$env:BUGGREGATOR_INSTALL_DIR='" + dir + "'; irm " + installPs1 + " | iex"}}
+		// PowerShell single quotes: a quote is doubled.
+		return []Command{{ID: "powershell", Label: "PowerShell", Command: "$env:BUGGREGATOR_INSTALL_DIR='" + strings.ReplaceAll(dir, "'", "''") + "'; irm " + installPs1 + " | iex"}}
 	}
-	return []Command{{ID: "shell", Label: "Shell", Command: "curl -fsSL " + installSh + " | BUGGREGATOR_INSTALL_DIR='" + dir + "' sh"}}
+	// sh single quotes: a quote ends the string, is escaped, starts it again.
+	return []Command{{ID: "shell", Label: "Shell", Command: "curl -fsSL " + installSh + " | BUGGREGATOR_INSTALL_DIR='" + strings.ReplaceAll(dir, "'", `'\''`) + "' sh"}}
+}
+
+// loopbackHost reports whether a request's Host names this machine
+// (localhost, 127.0.0.1, [::1]); a DNS-rebinding page sends its own name.
+func loopbackHost(host string) bool {
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	return LoopbackOnly(host)
 }
 
 // LoopbackOnly reports whether a listen address takes local connections only.
