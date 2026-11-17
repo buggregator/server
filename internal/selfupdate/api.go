@@ -6,6 +6,8 @@ import (
 	"math"
 	"mime"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 // Register adds GET /api/update, POST /api/update/check and POST
@@ -67,13 +69,14 @@ func (u *Updater) Register(mux *http.ServeMux, protect func(http.Handler) http.H
 	})))
 }
 
-// sameSite refuses cross-site requests and, without auth on a loopback-only
-// listen, a Host that is not this machine (DNS rebinding: the page's own name
-// resolving to 127.0.0.1). On an open port without auth the network can call
-// the API anyway, so the Host proves nothing there.
+// sameSite refuses requests from any page but this server's own UI and,
+// without auth on a loopback-only listen, a Host that is not this machine (DNS
+// rebinding: the page's own name resolving to 127.0.0.1). On an open port
+// without auth the network can call the API anyway, so the Host proves nothing
+// there.
 func (u *Updater) sameSite(w http.ResponseWriter, r *http.Request) bool {
-	if r.Header.Get("Sec-Fetch-Site") == "cross-site" {
-		writeErr(w, http.StatusForbidden, "cross-site requests cannot start or check an update")
+	if !sameOrigin(r) {
+		writeErr(w, http.StatusForbidden, "only the Buggregator UI itself can start or check an update")
 		return false
 	}
 	if !u.cfg.AuthOn && LoopbackOnly(u.cfg.HTTPAddr) && !loopbackHost(r.Host) {
@@ -81,6 +84,26 @@ func (u *Updater) sameSite(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 	return true
+}
+
+// sameOrigin reports whether a request comes from this server's own page or
+// from no page at all (curl, scripts). "same-site" is refused too: another port
+// of localhost (a dev server on :5173) is the same site. A browser without
+// Sec-Fetch-* is judged by Origin, which must name this Host.
+func sameOrigin(r *http.Request) bool {
+	switch r.Header.Get("Sec-Fetch-Site") {
+	case "same-origin", "none":
+		return true
+	case "":
+	default:
+		return false
+	}
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	o, err := url.Parse(origin)
+	return err == nil && o.Host != "" && strings.EqualFold(o.Host, r.Host)
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {

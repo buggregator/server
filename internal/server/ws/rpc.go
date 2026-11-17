@@ -6,8 +6,16 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	pathpkg "path"
 	"strings"
 )
+
+// rpcRefused are paths the RPC bridge never forwards. Any page can open the
+// WebSocket (no CORS there) and the bridged request carries no Origin, so a
+// same-origin check in the handler cannot tell it from curl. The UI calls the
+// update API over fetch only.
+var rpcRefused = []string{"/api/update"}
 
 // MuxRPCHandler routes Centrifugo RPC calls to the HTTP mux.
 type MuxRPCHandler struct {
@@ -24,6 +32,19 @@ func (h *MuxRPCHandler) HandleRPC(method, uri string, data json.RawMessage) (jso
 	// Ensure URI starts with /.
 	if !strings.HasPrefix(uri, "/") {
 		uri = "/" + uri
+	}
+	// The decoded, cleaned path, as the mux routes it (%75 is "u").
+	path := "/"
+	if u, err := url.Parse(uri); err == nil {
+		path = pathpkg.Clean(u.Path)
+	}
+	for _, p := range rpcRefused {
+		if path == p || strings.HasPrefix(path, p+"/") {
+			return json.Marshal(map[string]any{
+				"code": http.StatusForbidden,
+				"data": map[string]any{"message": "not available over the WebSocket", "code": http.StatusForbidden},
+			})
+		}
 	}
 
 	// Parse RPC payload — extract token and build request body.
