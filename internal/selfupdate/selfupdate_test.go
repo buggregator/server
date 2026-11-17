@@ -541,3 +541,51 @@ func TestAPI_HostGuard(t *testing.T) {
 		})
 	}
 }
+
+// Only this server's own page (or no page: curl) may start or check an update:
+// another port of localhost is the same site, not the same origin.
+func TestAPI_SameOrigin(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(nil)
+	tests := []struct {
+		name string
+		hdr  []string
+		want int
+	}{
+		{"UI, same origin", []string{"Sec-Fetch-Site", "same-origin", "Origin", "http://127.0.0.1:8000"}, 202},
+		{"curl, no headers", nil, 202},
+		{"typed by the user", []string{"Sec-Fetch-Site", "none"}, 202},
+		{"no Sec-Fetch, Origin of this host", []string{"Origin", "http://127.0.0.1:8000"}, 202},
+		{"other port of localhost", []string{"Sec-Fetch-Site", "same-site", "Origin", "http://localhost:5173"}, 403},
+		{"cross-site", []string{"Sec-Fetch-Site", "cross-site", "Origin", "https://evil.example"}, 403},
+		{"no Sec-Fetch, other port", []string{"Origin", "http://127.0.0.1:5173"}, 403},
+		{"no Sec-Fetch, foreign Origin", []string{"Origin", "https://evil.example"}, 403},
+		{"no Sec-Fetch, Origin null", []string{"Origin", "null"}, 403},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := setup(t, newRelease(t, priv, "1.1.0"), pub, ":memory:", nil)
+			mux := http.NewServeMux()
+			h.u.Register(mux, func(next http.Handler) http.Handler { return next })
+			send := func(path, body string) int {
+				req := httptest.NewRequest("POST", "http://127.0.0.1:8000"+path, strings.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
+				for i := 0; i+1 < len(tt.hdr); i += 2 {
+					req.Header.Set(tt.hdr[i], tt.hdr[i+1])
+				}
+				rec := httptest.NewRecorder()
+				mux.ServeHTTP(rec, req)
+				return rec.Code
+			}
+			wantCheck := map[bool]int{true: 403, false: 200}[tt.want == 403]
+			if got := send("/api/update/check", ""); got != wantCheck {
+				t.Errorf("POST /api/update/check = %d, want %d", got, wantCheck)
+			}
+			if got := send("/api/update", `{"version":"1.1.0"}`); got != tt.want {
+				t.Errorf("POST /api/update = %d, want %d", got, tt.want)
+			}
+			if tt.want == 202 {
+				h.wait(t)
+			}
+		})
+	}
+}

@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+// sameOriginOnly are paths no other origin may call, whatever cors.origins
+// says: no CORS headers, and a preflight is not answered (selfupdate's
+// /api/update and /api/update/check replace the binary and restart).
+var sameOriginOnly = []string{"/api/update"}
+
 // CORSMiddleware adds CORS headers based on allowed origins.
 // If origins contains "*", all origins are allowed.
 // A preflight (OPTIONS) is answered here with 204, except under the
@@ -23,7 +28,7 @@ func CORSMiddleware(next http.Handler, origins []string, passPreflight ...string
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
-		if origin != "" && (allowAll || allowed[origin]) {
+		if origin != "" && (allowAll || allowed[origin]) && !hasPrefix(r.URL.Path, sameOriginOnly) {
 			allow := origin
 			if allowAll {
 				allow = "*"
