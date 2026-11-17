@@ -73,7 +73,7 @@ func TestLoopbackOnly(t *testing.T) {
 }
 
 func TestCommands(t *testing.T) {
-	if c := Commands(InstallKubernetes, "linux", "/x", "2.1.0"); c[0].Command != "helm upgrade buggregator oci://ghcr.io/buggregator/helm-chart/buggregator --reuse-values --set image.tag=2.1.0" {
+	if c := Commands(InstallKubernetes, "linux", "/x", "2.1.0"); c[0].Command != "helm upgrade buggregator oci://ghcr.io/buggregator/helm-chart/buggregator --reset-then-reuse-values --set image.tag=2.1.0" {
 		t.Errorf("helm: %q", c[0].Command)
 	}
 	if c := Commands(InstallBinary, "linux", "/opt/bg/buggregator", "2.1.0"); !strings.Contains(c[0].Command, "BUGGREGATOR_INSTALL_DIR='/opt/bg' sh") {
