@@ -469,13 +469,6 @@ func TestAPI(t *testing.T) {
 	if rec, _ := do("POST", "/api/update", "application/json", `{"version":"1.1.0"}`, "Sec-Fetch-Site", "cross-site"); rec.Code != 403 {
 		t.Errorf("cross-site: %d", rec.Code)
 	}
-	rebind := httptest.NewRequest("POST", "http://evil.example/api/update", strings.NewReader(`{"version":"1.1.0"}`))
-	rebind.Header.Set("Content-Type", "application/json")
-	rr := httptest.NewRecorder()
-	mux.ServeHTTP(rr, rebind)
-	if rr.Code != 403 {
-		t.Errorf("DNS rebinding host without auth: %d", rr.Code)
-	}
 	if rec, _ := do("POST", "/api/update", "text/plain", `{"version":"1.1.0"}`); rec.Code != 415 {
 		t.Errorf("not JSON: %d", rec.Code)
 	}
@@ -501,5 +494,47 @@ func TestAPI(t *testing.T) {
 	h.u.mode = Mode{Mode: ModeManual, Reason: "set update.self_update: on (env UPDATE_SELF=on)"}
 	if rec, m := do("POST", "/api/update", "application/json", `{"version":"1.1.0"}`); rec.Code != 403 || m["message"] != h.u.mode.Reason {
 		t.Errorf("manual: %d %v", rec.Code, m)
+	}
+}
+
+// The Host guard (DNS rebinding) applies only without auth on a loopback-only
+// listen; an open port (update.self_update: on) answers by its LAN address.
+func TestAPI_HostGuard(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(nil)
+	tests := []struct {
+		name   string
+		listen string
+		auth   bool
+		url    string
+		want   int
+	}{
+		{"loopback listen, rebinding host", "127.0.0.1:8000", false, "http://evil.example:8000", 403},
+		{"loopback listen, localhost", "127.0.0.1:8000", false, "http://localhost:8000", 202},
+		{"open port, setting on, LAN host", ":8000", false, "http://192.168.1.5:8000", 202},
+		{"auth on, any host", "127.0.0.1:8000", true, "http://bugs.example", 202},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := setup(t, newRelease(t, priv, "1.1.0"), pub, ":memory:", nil)
+			h.u.cfg.HTTPAddr, h.u.cfg.AuthOn = tt.listen, tt.auth
+			mux := http.NewServeMux()
+			h.u.Register(mux, func(next http.Handler) http.Handler { return next })
+			req := httptest.NewRequest("POST", tt.url+"/api/update", strings.NewReader(`{"version":"1.1.0"}`))
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, req)
+			if rec.Code != tt.want {
+				t.Errorf("POST /api/update = %d, want %d: %s", rec.Code, tt.want, rec.Body)
+			}
+			if rec.Code == 202 {
+				h.wait(t)
+			}
+			chk := httptest.NewRequest("POST", tt.url+"/api/update/check", nil)
+			rec = httptest.NewRecorder()
+			mux.ServeHTTP(rec, chk)
+			if wantCheck := map[bool]int{true: 403, false: 200}[tt.want == 403]; rec.Code != wantCheck {
+				t.Errorf("POST /api/update/check = %d, want %d", rec.Code, wantCheck)
+			}
+		})
 	}
 }

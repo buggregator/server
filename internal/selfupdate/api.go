@@ -67,14 +67,16 @@ func (u *Updater) Register(mux *http.ServeMux, protect func(http.Handler) http.H
 	})))
 }
 
-// sameSite refuses cross-site requests and, without auth, a Host that is not
-// this machine (DNS rebinding: the page's own name with a loopback address).
+// sameSite refuses cross-site requests and, without auth on a loopback-only
+// listen, a Host that is not this machine (DNS rebinding: the page's own name
+// resolving to 127.0.0.1). On an open port without auth the network can call
+// the API anyway, so the Host proves nothing there.
 func (u *Updater) sameSite(w http.ResponseWriter, r *http.Request) bool {
 	if r.Header.Get("Sec-Fetch-Site") == "cross-site" {
 		writeErr(w, http.StatusForbidden, "cross-site requests cannot start or check an update")
 		return false
 	}
-	if !u.cfg.AuthOn && !loopbackHost(r.Host) {
+	if !u.cfg.AuthOn && LoopbackOnly(u.cfg.HTTPAddr) && !loopbackHost(r.Host) {
 		writeErr(w, http.StatusForbidden, "without auth, open the UI as localhost or 127.0.0.1 to update")
 		return false
 	}
