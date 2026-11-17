@@ -63,6 +63,14 @@ Open http://127.0.0.1:8000. The UI stays empty until your app sends something.
 
 Events live in memory and are gone after a restart. To keep them: `buggregator -db ./buggregator.db`.
 
+## Run it in Kubernetes
+
+```bash
+helm install buggregator oci://ghcr.io/buggregator/helm-chart/buggregator
+```
+
+One replica, with its SQLite database on a persistent volume that survives upgrades and `helm uninstall`. The pod runs as non-root with a read-only root filesystem and has startup, liveness and readiness probes. SSO for the UI, Ingress, Prometheus metrics with a ServiceMonitor and event retention are values. [Helm chart docs](https://docs.buggregator.dev/config/helm-chart.html)
+
 ## Point your app at it
 
 Change addresses, not code. Laravel / Symfony `.env`:
