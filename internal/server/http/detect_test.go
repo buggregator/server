@@ -58,6 +58,29 @@ func TestDetectEventType(t *testing.T) {
 			wantProject: "my-proj",
 		},
 		{
+			name: "Inspector URL with project as Basic Auth",
+			makeRequest: func() *nethttp.Request {
+				r := httptest.NewRequest("POST", "http://localhost/", nil)
+				r.Header.Set("X-Inspector-Key", "inspector")
+				r.Header.Set("X-Inspector-Version", "4.7")
+				r.SetBasicAuth("inspector", "shop")
+				return r
+			},
+			wantType:    "inspector",
+			wantProject: "shop",
+		},
+		{
+			name: "Inspector headers with another type's Basic Auth keep no project",
+			makeRequest: func() *nethttp.Request {
+				r := httptest.NewRequest("POST", "http://localhost/", nil)
+				r.Header.Set("X-Inspector-Key", "k")
+				r.SetBasicAuth("someuser", "secret")
+				return r
+			},
+			wantType:    "inspector",
+			wantProject: "",
+		},
+		{
 			name: "X-Buggregator-Event header without project",
 			makeRequest: func() *nethttp.Request {
 				r := httptest.NewRequest("POST", "http://localhost/", nil)
