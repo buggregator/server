@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/buggregator/server/v2/internal/event"
@@ -76,10 +75,8 @@ func parseLogTimestamp(ts json.Number) *string {
 		return nil
 	}
 
-	if f, err := strconv.ParseFloat(string(ts), 64); err == nil {
-		sec := int64(f)
-		nsec := int64((f - float64(sec)) * 1e9)
-		t := time.Unix(sec, nsec).UTC().Format(time.RFC3339Nano)
+	if tm, ok := epochToTime(string(ts)); ok {
+		t := tm.Format(time.RFC3339Nano)
 		return &t
 	}
 

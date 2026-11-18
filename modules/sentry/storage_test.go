@@ -327,7 +327,7 @@ func TestStoreMetrics(t *testing.T) {
 	db := setupTestDB(t)
 
 	metrics := []MetricRecord{
-		{TraceID: "trace-1", SpanID: "span-1", Name: "http.client.duration", Type: "distribution", Value: 12.5, Unit: "millisecond", Timestamp: "1788420877.523564"},
+		{TraceID: "trace-1", SpanID: "span-1", Name: "http.client.duration", Type: "distribution", Value: 12.5, Unit: "millisecond", Timestamp: epochTS("1788420877.523564")},
 		{Name: "order.status", Type: "gauge", Value: 3, Attributes: map[string]any{"status": map[string]any{"type": "string", "value": "qa"}}},
 		{Type: "counter", Value: 1}, // no name: dropped
 	}

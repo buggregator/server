@@ -350,29 +350,12 @@ func (h *handler) handleLogItem(item EnvelopeItem, project string) bool {
 		return false
 	}
 
-	// Log items can be {"items": [...]} or a bare array.
-	var envelope LogEnvelope
-	if err := json.Unmarshal(item.Payload, &envelope); err == nil && envelope.Items != nil {
-		if len(envelope.Items) == 0 {
-			return false // {"items": []}: nothing to store, nothing dropped
-		}
-		if err := storeLogs(h.db, envelope.Items, project); err != nil {
-			slog.Warn("sentry: failed to store logs", "err", err)
-			return false
-		}
-		return true
-	}
-
-	var logs []LogRecord
-	if err := json.Unmarshal(item.Payload, &logs); err != nil {
-		slog.Debug("sentry: dropped log item, neither {\"items\": [...]} nor an array", "err", err)
-		return false
-	}
+	logs := decodeItems[LogRecord](item.Payload, "log")
 	if len(logs) == 0 {
 		return false
 	}
 	if err := storeLogs(h.db, logs, project); err != nil {
-		slog.Warn("sentry: failed to store logs (array)", "err", err)
+		slog.Warn("sentry: failed to store logs", "err", err)
 		return false
 	}
 	return true
@@ -385,29 +368,12 @@ func (h *handler) handleMetricItem(item EnvelopeItem, project string) bool {
 		return false
 	}
 
-	// Metric items can be {"items": [...]} or a bare array.
-	var envelope MetricEnvelope
-	if err := json.Unmarshal(item.Payload, &envelope); err == nil && envelope.Items != nil {
-		if len(envelope.Items) == 0 {
-			return false // {"items": []}: nothing to store, nothing dropped
-		}
-		if err := storeMetrics(h.db, envelope.Items, project); err != nil {
-			slog.Warn("sentry: failed to store metrics", "err", err)
-			return false
-		}
-		return true
-	}
-
-	var metrics []MetricRecord
-	if err := json.Unmarshal(item.Payload, &metrics); err != nil {
-		slog.Debug("sentry: dropped metric item, neither {\"items\": [...]} nor an array", "err", err)
-		return false
-	}
+	metrics := decodeItems[MetricRecord](item.Payload, "trace_metric")
 	if len(metrics) == 0 {
 		return false
 	}
 	if err := storeMetrics(h.db, metrics, project); err != nil {
-		slog.Warn("sentry: failed to store metrics (array)", "err", err)
+		slog.Warn("sentry: failed to store metrics", "err", err)
 		return false
 	}
 	return true
@@ -678,4 +644,38 @@ func isAllDigits(s string) bool {
 		}
 	}
 	return true
+}
+
+// decodeItems reads a log / trace_metric item body: {"items": [...]} or a bare
+// array. Records are decoded one by one, so a record the server cannot read is
+// logged and skipped instead of dropping the whole item (the SDK got 200 and
+// will not resend).
+func decodeItems[T any](payload []byte, kind string) []T {
+	var raw []json.RawMessage
+	if p := bytes.TrimSpace(payload); len(p) > 0 && p[0] == '[' {
+		if err := json.Unmarshal(p, &raw); err != nil {
+			slog.Warn("sentry: dropped "+kind+" item: not a JSON array", "err", err)
+			return nil
+		}
+	} else {
+		var env struct {
+			Items []json.RawMessage `json:"items"`
+		}
+		if err := json.Unmarshal(p, &env); err != nil {
+			slog.Warn("sentry: dropped "+kind+" item: neither {\"items\": [...]} nor an array", "err", err)
+			return nil
+		}
+		raw = env.Items
+	}
+
+	out := make([]T, 0, len(raw))
+	for i, r := range raw {
+		var rec T
+		if err := json.Unmarshal(r, &rec); err != nil {
+			slog.Warn("sentry: skipped a "+kind+" record it cannot read", "index", i, "err", err)
+			continue
+		}
+		out = append(out, rec)
+	}
+	return out
 }

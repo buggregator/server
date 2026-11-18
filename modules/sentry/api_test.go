@@ -70,9 +70,9 @@ func seedTestData(t *testing.T, mux *http.ServeMux) {
 
 	// Insert metrics.
 	storeMetrics(db, []MetricRecord{
-		{TraceID: "trace-abc", Name: "http.client.duration", Type: "distribution", Value: 12.5, Unit: "millisecond", Timestamp: "1678272501"},
-		{TraceID: "trace-abc", Name: "http.client.duration", Type: "distribution", Value: 40, Unit: "millisecond", Timestamp: "1678272502"},
-		{Name: "order.status", Type: "gauge", Value: 3, Timestamp: "1678272503"},
+		{TraceID: "trace-abc", Name: "http.client.duration", Type: "distribution", Value: 12.5, Unit: "millisecond", Timestamp: epochTS("1678272501")},
+		{TraceID: "trace-abc", Name: "http.client.duration", Type: "distribution", Value: 40, Unit: "millisecond", Timestamp: epochTS("1678272502")},
+		{Name: "order.status", Type: "gauge", Value: 3, Timestamp: epochTS("1678272503")},
 	}, "")
 }
 
@@ -564,9 +564,9 @@ func TestAPIMetricsSameTimestampNewestFirst(t *testing.T) {
 	registerAPI(mux, db, noAuth)
 
 	storeMetrics(db, []MetricRecord{
-		{Name: "first", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: "1678272501"},
-		{Name: "second", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: "1678272501"},
-		{Name: "third", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: "1678272501"},
+		{Name: "first", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: epochTS("1678272501")},
+		{Name: "second", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: epochTS("1678272501")},
+		{Name: "third", Type: "counter", TraceID: "trace-abc", Value: 1, Timestamp: epochTS("1678272501")},
 	}, "")
 
 	// trace_id makes SQLite use its index and sort; without the rowid
@@ -777,9 +777,9 @@ func TestAPIMetricsWindowMatchesCount(t *testing.T) {
 	registerAPI(mux, db, noAuth)
 
 	storeMetrics(db, []MetricRecord{
-		{Name: "old", Type: "counter", Value: 1, Timestamp: "1678272501"},   // 2023
-		{Name: "new-1", Type: "counter", Value: 1, Timestamp: "1893456000"}, // 2030
-		{Name: "new-2", Type: "counter", Value: 1, Timestamp: "1893456001"},
+		{Name: "old", Type: "counter", Value: 1, Timestamp: epochTS("1678272501")},   // 2023
+		{Name: "new-1", Type: "counter", Value: 1, Timestamp: epochTS("1893456000")}, // 2030
+		{Name: "new-2", Type: "counter", Value: 1, Timestamp: epochTS("1893456001")},
 	}, "")
 
 	get := func(url string) map[string]any {
