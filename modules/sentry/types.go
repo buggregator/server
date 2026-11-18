@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -50,31 +51,43 @@ func (t *FlexibleTS) UnmarshalJSON(data []byte) error {
 func (t FlexibleTS) Number() json.Number { return t.value }
 
 // epochToTime reads epoch seconds such as "1795020502.327121" without going
-// through float64, which is off by tens of nanoseconds at this magnitude.
+// through float64, which is off by tens of nanoseconds at this magnitude. Only
+// plain digits with an optional fraction take that path; a sign or an exponent
+// ("1.795020502327121E9", as Java writes doubles) goes through ParseFloat.
 func epochToTime(s string) (time.Time, bool) {
-	whole, frac, _ := strings.Cut(s, ".")
-	sec, err := strconv.ParseInt(whole, 10, 64)
-	if err != nil {
-		// Exponent notation and the like: float64 is close enough.
-		f, ferr := strconv.ParseFloat(s, 64)
-		if ferr != nil {
+	whole, frac, hasDot := strings.Cut(s, ".")
+	if !allDigits(whole) || (hasDot && !allDigits(frac)) {
+		f, err := strconv.ParseFloat(s, 64)
+		if err != nil {
 			return time.Time{}, false
 		}
-		sec = int64(f)
-		return time.Unix(sec, int64((f-float64(sec))*1e9)).UTC(), true
+		sec := math.Floor(f)
+		return time.Unix(int64(sec), int64((f-sec)*1e9)).UTC(), true
+	}
+	sec, err := strconv.ParseInt(whole, 10, 64)
+	if err != nil {
+		return time.Time{}, false
 	}
 	var nsec int64
 	if frac != "" {
 		if len(frac) > 9 {
 			frac = frac[:9]
 		}
-		n, err := strconv.ParseInt(frac+strings.Repeat("0", 9-len(frac)), 10, 64)
-		if err != nil {
-			return time.Time{}, false
-		}
-		nsec = n
+		nsec, _ = strconv.ParseInt(frac+strings.Repeat("0", 9-len(frac)), 10, 64)
 	}
 	return time.Unix(sec, nsec).UTC(), true
+}
+
+func allDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // FlexibleMessage handles Sentry "message" which can be a plain string

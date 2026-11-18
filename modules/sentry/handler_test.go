@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
@@ -1093,3 +1094,30 @@ func TestHandleEnvelope_TraceMetricTimestamps(t *testing.T) {
 
 // epochTS is a FlexibleTS holding epoch seconds, as decoded from a number.
 func epochTS(s string) FlexibleTS { return FlexibleTS{value: json.Number(s)} }
+
+func TestEpochToTime(t *testing.T) {
+	want := time.Date(2026, 11, 18, 16, 48, 22, 327121000, time.UTC)
+	tests := []struct {
+		in   string
+		want time.Time
+		tol  time.Duration
+	}{
+		{"1795020502.327121", want, 0},
+		{"1795020502", want.Truncate(time.Second), 0},
+		{"1795020502.3271210001", want, 0}, // past nanoseconds: cut
+		{"1.795020502327121E9", want, time.Microsecond},
+		{"1795020502e0", want.Truncate(time.Second), 0},
+		{"-1.5", time.Unix(-2, 500000000).UTC(), 0},
+	}
+	for _, tt := range tests {
+		got, ok := epochToTime(tt.in)
+		if d := got.Sub(tt.want); !ok || d > tt.tol || d < -tt.tol {
+			t.Errorf("epochToTime(%q) = %v, %v; want %v (±%v)", tt.in, got, ok, tt.want, tt.tol)
+		}
+	}
+	for _, bad := range []string{"", "abc", "1.2.3", "."} {
+		if _, ok := epochToTime(bad); ok {
+			t.Errorf("epochToTime(%q) = ok, want not ok", bad)
+		}
+	}
+}
