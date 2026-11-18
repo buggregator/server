@@ -3,8 +3,11 @@ package sentry
 import (
 	"bytes"
 	"compress/gzip"
+	"database/sql"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -1007,3 +1010,86 @@ func TestHandler_SDKv4_NonFeedEnvelopes(t *testing.T) {
 		})
 	}
 }
+
+// Issue #457: sentry-go sends the metric timestamp as RFC 3339 (time.Time);
+// other SDKs send epoch seconds. Both are stored and listed by the API, and a
+// record the server cannot read is skipped without dropping the rest.
+func TestHandleEnvelope_TraceMetricTimestamps(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+		want    map[string]string // metric name -> stored metric_ts
+	}{
+		{
+			"sentry-go, RFC 3339 with offset (issue #457)",
+			`{"items":[{"timestamp":"2026-11-18T11:48:22.327121-05:00","type":"counter","name":"compose.smoke","value":1}]}`,
+			map[string]string{"compose.smoke": "2026-11-18T16:48:22.327121Z"},
+		},
+		{
+			"RFC 3339 UTC, bare array",
+			`[{"timestamp":"2026-11-18T16:48:22Z","type":"gauge","name":"queue.depth","value":4}]`,
+			map[string]string{"queue.depth": "2026-11-18T16:48:22Z"},
+		},
+		{
+			"epoch seconds, integer",
+			`{"items":[{"timestamp":1795020502,"type":"counter","name":"jobs.done","value":2}]}`,
+			map[string]string{"jobs.done": "2026-11-18T16:48:22Z"},
+		},
+		{
+			"epoch seconds, float",
+			`{"items":[{"timestamp":1795020502.5,"type":"distribution","name":"http.duration","value":12.5}]}`,
+			map[string]string{"http.duration": "2026-11-18T16:48:22.5Z"},
+		},
+		{
+			"epoch seconds, microseconds kept exactly",
+			`{"items":[{"timestamp":1795020502.327121,"type":"counter","name":"precise","value":1}]}`,
+			map[string]string{"precise": "2026-11-18T16:48:22.327121Z"},
+		},
+		{
+			"one unreadable record does not drop the others",
+			`{"items":[{"timestamp":"2026-11-18T16:48:22Z","type":"counter","name":"bad","value":"not a number"},{"timestamp":"2026-11-18T16:48:22Z","type":"counter","name":"good","value":1}]}`,
+			map[string]string{"good": "2026-11-18T16:48:22Z"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := setupTestDB(t)
+			h := &handler{db: db}
+			body := "{\"event_id\":\"m\"}\n{\"type\":\"trace_metric\",\"content_type\":\"application/vnd.sentry.items.trace-metric+json\"}\n" + tt.payload + "\n"
+			if _, err := h.handleEnvelope([]byte(body), "proj"); err != nil {
+				t.Fatal(err)
+			}
+
+			rows, err := db.Query(`SELECT name, metric_ts FROM sentry_metrics`)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := map[string]string{}
+			for rows.Next() {
+				var name string
+				var ts sql.NullString
+				if err := rows.Scan(&name, &ts); err != nil {
+					t.Fatal(err)
+				}
+				got[name] = ts.String
+			}
+			rows.Close()
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("stored %v, want %v", got, tt.want)
+			}
+
+			mux := http.NewServeMux()
+			registerAPI(mux, db, noAuth)
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, httptest.NewRequest("GET", "/api/sentry/metrics", nil))
+			for name := range tt.want {
+				if !strings.Contains(rec.Body.String(), `"`+name+`"`) {
+					t.Errorf("GET /api/sentry/metrics has no %q: %s", name, rec.Body)
+				}
+			}
+		})
+	}
+}
+
+// epochTS is a FlexibleTS holding epoch seconds, as decoded from a number.
+func epochTS(s string) FlexibleTS { return FlexibleTS{value: json.Number(s)} }

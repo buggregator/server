@@ -52,7 +52,7 @@ func storeMetrics(db *sql.DB, metrics []MetricRecord, project string) error {
 			m.Value,
 			nullIfEmpty(m.Unit),
 			attrs,
-			parseLogTimestamp(m.Timestamp),
+			parseLogTimestamp(m.Timestamp.Number()),
 			project,
 		)
 		if err != nil {

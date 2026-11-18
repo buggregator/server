@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -26,9 +27,15 @@ func (t *FlexibleTS) UnmarshalJSON(data []byte) error {
 	var s string
 	if json.Unmarshal(data, &s) == nil {
 		// Convert ISO 8601 to epoch seconds for uniform downstream handling.
-		if parsed, err := time.Parse(time.RFC3339, s); err == nil {
-			epoch := float64(parsed.UnixNano()) / 1e9
-			t.value = json.Number(strconv.FormatFloat(epoch, 'f', 6, 64))
+		// sentry-go sends time.Time: RFC 3339 with nanoseconds and an offset.
+		if parsed, err := time.Parse(time.RFC3339Nano, s); err == nil {
+			// Exact digits: a float64 would turn .327121 into .327121019.
+			frac := strings.TrimRight(fmt.Sprintf("%09d", parsed.Nanosecond()), "0")
+			num := strconv.FormatInt(parsed.Unix(), 10)
+			if frac != "" {
+				num += "." + frac
+			}
+			t.value = json.Number(num)
 			return nil
 		}
 		// Unrecognized string — store as-is.
@@ -41,6 +48,34 @@ func (t *FlexibleTS) UnmarshalJSON(data []byte) error {
 
 // Number returns the underlying json.Number for use with parseTimestamp.
 func (t FlexibleTS) Number() json.Number { return t.value }
+
+// epochToTime reads epoch seconds such as "1795020502.327121" without going
+// through float64, which is off by tens of nanoseconds at this magnitude.
+func epochToTime(s string) (time.Time, bool) {
+	whole, frac, _ := strings.Cut(s, ".")
+	sec, err := strconv.ParseInt(whole, 10, 64)
+	if err != nil {
+		// Exponent notation and the like: float64 is close enough.
+		f, ferr := strconv.ParseFloat(s, 64)
+		if ferr != nil {
+			return time.Time{}, false
+		}
+		sec = int64(f)
+		return time.Unix(sec, int64((f-float64(sec))*1e9)).UTC(), true
+	}
+	var nsec int64
+	if frac != "" {
+		if len(frac) > 9 {
+			frac = frac[:9]
+		}
+		n, err := strconv.ParseInt(frac+strings.Repeat("0", 9-len(frac)), 10, 64)
+		if err != nil {
+			return time.Time{}, false
+		}
+		nsec = n
+	}
+	return time.Unix(sec, nsec).UTC(), true
+}
 
 // FlexibleMessage handles Sentry "message" which can be a plain string
 // or an object {"message":"...", "params":[...], "formatted":"..."}.
@@ -339,7 +374,7 @@ type MetricRecord struct {
 	Type       string         `json:"type"`
 	Value      float64        `json:"value"`
 	Unit       string         `json:"unit"`
-	Timestamp  json.Number    `json:"timestamp"`
+	Timestamp  FlexibleTS     `json:"timestamp"` // epoch seconds, or RFC 3339 from sentry-go (time.Time)
 	Attributes map[string]any `json:"attributes"`
 }
 
