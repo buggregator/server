@@ -59,6 +59,12 @@ func TestServiceMapCallToKnownService(t *testing.T) {
 	// billing-api → api.stripe.com: nobody reports it.
 	span("bill-call", "", "bill-server", "billing-api", "api.stripe.com", "http")
 
+	// shop-api → payments-worker (OTel): the callee's entry span is a
+	// transaction row with its own parent_span_id and service_name, no spans.
+	span("shop-pay", "shop-txn", "shop-root", "shop-api", "payments.svc", "http")
+	exec(`INSERT INTO sentry_transactions (id, event_id, trace_id, transaction_name, start_ts, payload, parent_span_id, service_name, source)
+		VALUES ('pay-txn', 'e2', 'tr', 'process order', '2026-11-16T11:30:00Z', '{}', 'shop-pay', 'payments-worker', 'otel')`)
+
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, httptest.NewRequest("GET", "/api/sentry/service-map?window=60", nil))
 	if w.Code != 200 {
@@ -85,10 +91,10 @@ func TestServiceMapCallToKnownService(t *testing.T) {
 	}
 	sort.Strings(edges)
 	sort.Strings(nodes)
-	if got, want := strings.Join(edges, " "), "billing-api->api.stripe.com shop-api->billing-api shop-api->mysql:3306 storefront->search.test storefront->shop-api"; got != want {
+	if got, want := strings.Join(edges, " "), "billing-api->api.stripe.com shop-api->billing-api shop-api->mysql:3306 shop-api->payments-worker storefront->search.test storefront->shop-api"; got != want {
 		t.Errorf("edges = %s\nwant    %s", got, want)
 	}
-	if got, want := strings.Join(nodes, " "), "api.stripe.com billing-api mysql:3306 search.test shop-api storefront"; got != want {
+	if got, want := strings.Join(nodes, " "), "api.stripe.com billing-api mysql:3306 payments-worker search.test shop-api storefront"; got != want {
 		t.Errorf("nodes = %s\nwant    %s", got, want)
 	}
 }

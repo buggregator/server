@@ -24,7 +24,9 @@ func handleServiceMap(db *sql.DB) http.HandlerFunc {
 		// its address: the callee's span (span v2) or transaction (contexts.trace)
 		// names the call's span as its parent. Only another service counts: a
 		// child of the call in the caller itself (a retry, a sub-span) is not
-		// the callee. Databases, caches and queues keep their address.
+		// the callee. A transaction's own service_name (OTel entry spans, new
+		// Sentry rows) is tried before the service of its spans (older rows).
+		// Databases, caches and queues keep their address.
 		pc, pa := projectClause(r, "s.project_id")
 		edgeRows, err := db.Query(
 			`WITH calls AS (
@@ -35,6 +37,9 @@ func handleServiceMap(db *sql.DB) http.HandlerFunc {
 						(SELECT d.service_name FROM sentry_spans d
 							WHERE d.trace_id = s.trace_id AND d.parent_span_id = s.span_id
 								AND d.service_name <> COALESCE(s.service_name, '') LIMIT 1),
+						(SELECT t.service_name FROM sentry_transactions t
+							WHERE t.trace_id = s.trace_id AND t.parent_span_id = s.span_id
+								AND t.service_name <> COALESCE(s.service_name, '') LIMIT 1),
 						(SELECT sp.service_name FROM sentry_transactions t
 							JOIN sentry_spans sp ON sp.transaction_id = t.id
 							WHERE t.trace_id = s.trace_id
