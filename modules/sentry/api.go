@@ -22,7 +22,6 @@ func registerAPI(mux *http.ServeMux, db *sql.DB, protect func(http.Handler) http
 	route("GET /api/sentry/metrics", handleMetricsList(db))
 	route("GET /api/sentry/service-map", handleServiceMap(db))
 	route("GET /api/sentry/service-map/edge", handleServiceMapEdge(db))
-	route("GET /api/sentry/flow", handleFlow(db))
 	route("GET /api/sentry/traces/{traceId}/sequence", handleTraceSequence(db))
 	route("GET /api/sentry/counts", handleCounts(db))
 	route("DELETE /api/sentry/all", handleClearAll(db))

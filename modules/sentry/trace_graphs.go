@@ -11,8 +11,8 @@ import (
 	httpserver "github.com/buggregator/server/v2/internal/server/http"
 )
 
-// Shared parts of the trace graphs: the service map over a period, the
-// request flow and a trace's call sequence. Rows are read once per request
+// Shared parts of the trace graphs: the service map over a period and a
+// trace's call sequence. Rows are read once per request
 // and aggregated here: SQLite has no percentile, and the same rows feed
 // counts, p95, time buckets and trace lists.
 

@@ -195,64 +195,6 @@ func TestServiceMapEdgeTraces(t *testing.T) {
 	}
 }
 
-func TestFlow(t *testing.T) {
-	_, mux := graphFixture(t)
-	var resp struct {
-		Total     int
-		Truncated bool
-		Services  []string
-		Buckets   []struct{ Count, Errors int }
-		Requests  []struct {
-			TraceID  string `json:"trace_id"`
-			Name     string
-			Duration int64  `json:"duration_ms"`
-			IsError  bool   `json:"is_error"`
-			StartTS  string `json:"start_ts"`
-			Services []struct {
-				Service string
-				StartTS string `json:"start_ts"`
-				EndTS   string `json:"end_ts"`
-				IsError bool   `json:"is_error"`
-			}
-		}
-	}
-	getJSON(t, mux, "/api/sentry/flow?project=shop&from=2026-11-16T11:30:00Z&to=2026-11-16T11:39:59Z", &resp)
-
-	if got := strings.Join(resp.Services, " "); got != "shop-web checkout-api payments-worker" {
-		t.Errorf("services = %s", got)
-	}
-	if resp.Total != 2 || resp.Truncated || len(resp.Requests) != 2 {
-		t.Fatalf("total %d truncated %v requests %d", resp.Total, resp.Truncated, len(resp.Requests))
-	}
-	newest, failed := resp.Requests[0], resp.Requests[1]
-	if newest.TraceID != "tr-ok" || failed.TraceID != "tr-err" {
-		t.Errorf("order = %s, %s", newest.TraceID, failed.TraceID)
-	}
-	if failed.Name != "POST /cart/checkout" || !failed.IsError || failed.Duration != 200 || len(failed.Services) != 3 {
-		t.Errorf("tr-err = %+v", failed)
-	}
-	// shop-web failed (its transaction and its call); checkout-api did not.
-	if s := failed.Services[0]; s.Service != "shop-web" || !s.IsError {
-		t.Errorf("tr-err shop-web = %+v", s)
-	}
-	if s := failed.Services[1]; s.Service != "checkout-api" || s.IsError || s.StartTS != "2026-11-16T11:30:00.02Z" || s.EndTS != "2026-11-16T11:30:00.16Z" {
-		t.Errorf("tr-err checkout-api = %+v", s)
-	}
-	sum, errs := 0, 0
-	for _, b := range resp.Buckets {
-		sum += b.Count
-		errs += b.Errors
-	}
-	if sum != 2 || errs != 1 {
-		t.Errorf("buckets sum %d errors %d", sum, errs)
-	}
-
-	getJSON(t, mux, "/api/sentry/flow?project=shop&window=all&limit=1", &resp)
-	if resp.Total != 3 || !resp.Truncated || len(resp.Requests) != 1 || resp.Requests[0].TraceID != "tr-ok" {
-		t.Errorf("all time, limit 1: total %d truncated %v %+v", resp.Total, resp.Truncated, resp.Requests)
-	}
-}
-
 func TestTraceSequence(t *testing.T) {
 	_, mux := graphFixture(t)
 	var resp struct {
@@ -341,6 +283,14 @@ func TestGraphPeriodAndBuckets(t *testing.T) {
 		}
 	}
 
+	// A reversed period: at least one bucket, and to after from.
+	if b := newBuckets(noon, noon.Add(-time.Hour)); b.n < 1 {
+		t.Errorf("reversed newBuckets: n = %d", b.n)
+	}
+	if from, to := resolveBounds(noon, noon.Add(-time.Hour), nil); !to.After(from) {
+		t.Errorf("reversed resolveBounds: %v..%v", from, to)
+	}
+
 	s := stats{}
 	b := newBuckets(noon.Add(-time.Hour), noon)
 	for i := 1; i <= 100; i++ {
@@ -401,7 +351,7 @@ func TestTraceGraphs_LargeDBStaysFast(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, target := range []string{"/api/sentry/service-map?window=all", "/api/sentry/flow?window=all"} {
+	for _, target := range []string{"/api/sentry/service-map?window=all"} {
 		start := time.Now()
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, httptest.NewRequest("GET", target, nil))
@@ -421,8 +371,6 @@ func TestTraceGraphs_LargeDBStaysFast(t *testing.T) {
 func TestTraceGraphs_ReversedPeriod(t *testing.T) {
 	_, mux := graphFixture(t)
 	for _, target := range []string{
-		"/api/sentry/flow?from=2026-11-16T12:00:00Z&to=2026-11-16T11:00:00Z",
-		"/api/sentry/flow?from=2099-01-01",
 		"/api/sentry/service-map?from=2026-11-16T12:00:00Z&to=2026-11-16T11:00:00Z",
 		"/api/sentry/service-map?from=2099-01-01",
 	} {
