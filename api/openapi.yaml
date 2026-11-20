@@ -1637,8 +1637,7 @@ paths:
       tags:
       - Sentry
       operationId: sentryListTraces
-      summary: List transactions with their trace stats, newest first.
-      description: One row per stored transaction, so a trace with several transactions appears several times.
+      summary: List traces, newest first, one row per trace (its root transaction).
       security:
       - authToken: []
       parameters:
@@ -1655,6 +1654,20 @@ paths:
       - name: release
         in: query
         description: Exact transaction release.
+        schema:
+          type: string
+      - name: source
+        in: query
+        description: Only traces with a transaction or span from this source.
+        schema:
+          type: string
+          enum:
+          - sentry
+          - otel
+      - name: service
+        in: query
+        description: Only traces a service took part in — any transaction or span with this `service_name`, not only the
+          root.
         schema:
           type: string
       - name: from
