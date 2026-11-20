@@ -409,8 +409,9 @@ func TestOTLP_MixedTraceSources(t *testing.T) {
 	// Detail: every service's entry span is in spans, so they form one tree:
 	// Sentry root → checkout-api server span → its children.
 	_, body = apiGet(t, db, "/api/sentry/traces/"+otlpTraceID)
-	if txn := body["transaction"].(map[string]any); txn["transaction_name"] != "/checkout" || txn["span_id"] != "00f067aa0ba902b7" {
-		t.Errorf("detail transaction %v span %v, want the root", txn["transaction_name"], txn["span_id"])
+	if txn := body["transaction"].(map[string]any); txn["transaction_name"] != "/checkout" || txn["span_id"] != "00f067aa0ba902b7" ||
+		txn["source"] != "sentry" || txn["service_name"] != "shop-web" {
+		t.Errorf("detail transaction %v, want the Sentry root of shop-web", txn)
 	}
 	parents := map[string]any{}
 	byID := map[string]map[string]any{}

@@ -147,11 +147,13 @@ func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 			op, status     sql.NullString
 			startTS, endTS sql.NullString
 			durationMS     sql.NullInt64
+			txnSource      string
+			txnService     sql.NullString
 		)
 		err := db.QueryRow(
-			`SELECT id, transaction_name, op, status, start_ts, end_ts, duration_ms
+			`SELECT id, transaction_name, op, status, start_ts, end_ts, duration_ms, source, service_name
 			FROM sentry_transactions r WHERE trace_id = ?`+pc+` ORDER BY `+rootOrder+` LIMIT 1`, targs...,
-		).Scan(&txnID, &txnName, &op, &status, &startTS, &endTS, &durationMS)
+		).Scan(&txnID, &txnName, &op, &status, &startTS, &endTS, &durationMS, &txnSource, &txnService)
 		if err == sql.ErrNoRows {
 			apiError(w, "trace not found", http.StatusNotFound)
 			return
@@ -184,6 +186,8 @@ func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 				"duration_ms":      scanNullInt(durationMS),
 				"sources":          sources,
 				"span_id":          nullIfEmpty(rootSpanID),
+				"source":           txnSource,
+				"service_name":     scanNullString(txnService),
 			},
 			"spans":             spans,
 			"related_errors":    relatedErrors,
