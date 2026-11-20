@@ -420,6 +420,29 @@ func TestSpanClassifier(t *testing.T) {
 			wantAddress: "api.example.com:8080",
 		},
 		{
+			name:        "http.client OTel url.full",
+			span:        RawSpan{Op: "http.client", Data: SpanData{"url.full": "https://payments.example/charge", "server.address": "ignored"}},
+			wantType:    "http",
+			wantAddress: "payments.example",
+		},
+		{
+			name:        "http.client OTel server.address and port",
+			span:        RawSpan{Op: "http.client", Description: "HTTP POST", Data: SpanData{"server.address": "checkout-api", "server.port": "8080"}},
+			wantType:    "http",
+			wantAddress: "checkout-api:8080",
+		},
+		{
+			name:        "http.client URL only in description",
+			span:        RawSpan{Op: "http.client", Description: "POST http://checkout-api/orders", Data: SpanData{"http.response.status_code": "502"}},
+			wantType:    "http",
+			wantAddress: "checkout-api",
+		},
+		{
+			name:     "http.client without any address",
+			span:     RawSpan{Op: "http.client", Description: "HTTP POST"},
+			wantType: "http",
+		},
+		{
 			name:        "cache.get",
 			span:        RawSpan{Op: "cache.get", Data: SpanData{"server.address": "redis.local"}},
 			wantType:    "cache",
