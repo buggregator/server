@@ -261,6 +261,7 @@ type Contexts struct {
 type TraceContext struct {
 	TraceID string `json:"trace_id"`
 	SpanID  string `json:"span_id"`
+	ParentSpanID string `json:"parent_span_id"`
 	Op      string `json:"op"`
 	Status  string `json:"status"`
 	Data    map[string]any `json:"data"`

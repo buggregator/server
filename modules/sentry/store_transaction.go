@@ -79,11 +79,15 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage, pro
 	}
 
 	txnService := transactionService(txn)
+	parentSpanID := ""
+	if txn.Contexts != nil && txn.Contexts.Trace != nil {
+		parentSpanID = txn.Contexts.Trace.ParentSpanID
+	}
 
 	_, err = dbTx.Exec(
 		`INSERT INTO sentry_transactions
-			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload, project_id, service_name)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload, project_id, service_name, parent_span_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		txnID,
 		txn.EventID,
 		traceID,
@@ -99,6 +103,7 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage, pro
 		string(payload),
 		project,
 		nullIfEmpty(txnService),
+		nullIfEmpty(parentSpanID),
 	)
 	if err != nil {
 		return "", fmt.Errorf("insert sentry_transactions: %w", err)
@@ -314,8 +319,8 @@ func storeSegment(dbTx *sql.Tx, traceID string, span RawSpan, project string) er
 	}{span, span.Attrs})
 	_, err := dbTx.Exec(
 		`INSERT OR IGNORE INTO sentry_transactions
-			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload, project_id, source, service_name)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?)`,
+			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload, project_id, source, service_name, parent_span_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)`,
 		event.GenerateUUID(),
 		traceID+"-"+span.SpanID,
 		traceID,
@@ -331,6 +336,7 @@ func storeSegment(dbTx *sql.Tx, traceID string, span RawSpan, project string) er
 		project,
 		spanSource(span.Source),
 		nullIfEmpty(extractServiceName(span, nil)),
+		nullIfEmpty(span.ParentSpanID),
 	)
 	if err != nil {
 		return fmt.Errorf("insert segment transaction: %w", err)

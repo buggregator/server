@@ -11,12 +11,8 @@ import (
 )
 
 // rootOrder sorts a trace's transactions (alias r) root first: the one with
-// no parent span (Sentry: contexts.trace.parent_span_id, a segment:
-// parent_span_id), then the earliest.
-const rootOrder = `CASE WHEN json_valid(r.payload) AND COALESCE(
-		NULLIF(json_extract(r.payload, '$.contexts.trace.parent_span_id'), ''),
-		NULLIF(json_extract(r.payload, '$.parent_span_id'), '')) IS NOT NULL THEN 1 ELSE 0 END,
-	r.start_ts, r.id`
+// no parent span, then the earliest. idx_sentry_txn_trace_root covers it.
+const rootOrder = `(r.parent_span_id IS NOT NULL), r.start_ts, r.id`
 
 func handleTracesList(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -37,24 +33,16 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 			LIMIT 1)`}
 		args := append([]any{}, rootArgs...)
 
-		// The filters match a trace when any of its transactions matches.
-		// Period: start_ts of a transaction is in ISO form, index idx_sentry_txn_start.
-		var filters []string
-		var filterArgs []any
-		filters, filterArgs = appendTimeConditions(filters, filterArgs, r, "f.start_ts", true)
-		filters, filterArgs = appendProject(filters, filterArgs, r, "f.project_id")
+		// Filters apply to the root row, so the period uses idx_sentry_txn_start.
+		conditions, args = appendTimeConditions(conditions, args, r, "t.start_ts", true)
+		conditions, args = appendProject(conditions, args, r, "t.project_id")
 		if v := r.URL.Query().Get("environment"); v != "" {
-			filters = append(filters, "f.environment = ?")
-			filterArgs = append(filterArgs, v)
+			conditions = append(conditions, "t.environment = ?")
+			args = append(args, v)
 		}
 		if v := r.URL.Query().Get("release"); v != "" {
-			filters = append(filters, "f.release = ?")
-			filterArgs = append(filterArgs, v)
-		}
-		if len(filters) > 0 {
-			conditions = append(conditions, `EXISTS (SELECT 1 FROM sentry_transactions f
-				WHERE f.trace_id = t.trace_id AND `+strings.Join(filters, " AND ")+`)`)
-			args = append(args, filterArgs...)
+			conditions = append(conditions, "t.release = ?")
+			args = append(args, v)
 		}
 		// A trace matches a source when any of its transactions or spans
 		// came from it: a mixed Sentry + OTel trace matches both.
@@ -65,8 +53,17 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 		}
 		where := " WHERE " + strings.Join(conditions, " AND ")
 
+		// total: distinct traces under the same filters, without the root
+		// pick (a scalar subquery per row would cost a full scan). It is what
+		// /api/sentry/counts reports, and equals the rows listed unless a
+		// trace's root and another of its transactions sit on either side of
+		// a period edge.
 		var total int
-		db.QueryRow(`SELECT COUNT(*) FROM sentry_transactions t`+where, args...).Scan(&total)
+		countWhere := ""
+		if len(conditions) > 1 {
+			countWhere = " WHERE " + strings.Join(conditions[1:], " AND ")
+		}
+		db.QueryRow(`SELECT COUNT(DISTINCT t.trace_id) FROM sentry_transactions t`+countWhere, args[len(rootArgs):]...).Scan(&total)
 
 		queryArgs := append(append([]any{}, args...), limit, offset)
 		rows, err := db.Query(
