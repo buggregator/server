@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	pathpkg "path"
+	"runtime/debug"
 	"strings"
 )
 
@@ -83,7 +85,12 @@ func (h *MuxRPCHandler) HandleRPC(method, uri string, data json.RawMessage) (jso
 	}
 
 	rec := httptest.NewRecorder()
-	h.mux.ServeHTTP(rec, req)
+	if !serveRecovered(h.mux, rec, req) {
+		return json.Marshal(map[string]any{
+			"code": http.StatusInternalServerError,
+			"data": map[string]any{"message": "internal server error", "code": http.StatusInternalServerError},
+		})
+	}
 
 	resp := rec.Result()
 	respBody, _ := io.ReadAll(resp.Body)
@@ -99,6 +106,20 @@ func (h *MuxRPCHandler) HandleRPC(method, uri string, data json.RawMessage) (jso
 	}
 
 	return json.Marshal(result)
+}
+
+// serveRecovered runs the request and reports false when a handler panicked.
+// net/http recovers a handler panic per connection; here the call runs on the
+// hub's goroutine, where an unrecovered panic would stop the whole server.
+func serveRecovered(h http.Handler, w http.ResponseWriter, r *http.Request) (ok bool) {
+	defer func() {
+		if p := recover(); p != nil {
+			ok = false
+			slog.Error("ws rpc: handler panic", "method", r.Method, "path", r.URL.Path, "panic", p, "stack", string(debug.Stack()))
+		}
+	}()
+	h.ServeHTTP(w, r)
+	return true
 }
 
 func toString(v any) string {
