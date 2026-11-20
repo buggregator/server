@@ -10,6 +10,14 @@ import (
 	"time"
 )
 
+// rootOrder sorts a trace's transactions (alias r) root first: the one with
+// no parent span (Sentry: contexts.trace.parent_span_id, a segment:
+// parent_span_id), then the earliest.
+const rootOrder = `CASE WHEN json_valid(r.payload) AND COALESCE(
+		NULLIF(json_extract(r.payload, '$.contexts.trace.parent_span_id'), ''),
+		NULLIF(json_extract(r.payload, '$.parent_span_id'), '')) IS NOT NULL THEN 1 ELSE 0 END,
+	r.start_ts, r.id`
+
 func handleTracesList(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		limit, offset := pagination(r, 50)
@@ -19,20 +27,34 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// One row per trace: its root transaction, the one with no parent span
+		// (Sentry: contexts.trace.parent_span_id, a segment: parent_span_id),
+		// else the earliest. A trace through three services is one row.
+		rootClause, rootArgs := projectClause(r, "r.project_id")
+		conditions := []string{`t.id = (SELECT r.id FROM sentry_transactions r
+			WHERE r.trace_id = t.trace_id` + rootClause + `
+			ORDER BY ` + rootOrder + `
+			LIMIT 1)`}
+		args := append([]any{}, rootArgs...)
+
+		// The filters match a trace when any of its transactions matches.
 		// Period: start_ts of a transaction is in ISO form, index idx_sentry_txn_start.
-		// Plus environment and release filters: both columns are populated but had
-		// no reader.
-		var conditions []string
-		var args []any
-		conditions, args = appendTimeConditions(conditions, args, r, "t.start_ts", true)
-		conditions, args = appendProject(conditions, args, r, "t.project_id")
+		var filters []string
+		var filterArgs []any
+		filters, filterArgs = appendTimeConditions(filters, filterArgs, r, "f.start_ts", true)
+		filters, filterArgs = appendProject(filters, filterArgs, r, "f.project_id")
 		if v := r.URL.Query().Get("environment"); v != "" {
-			conditions = append(conditions, "t.environment = ?")
-			args = append(args, v)
+			filters = append(filters, "f.environment = ?")
+			filterArgs = append(filterArgs, v)
 		}
 		if v := r.URL.Query().Get("release"); v != "" {
-			conditions = append(conditions, "t.release = ?")
-			args = append(args, v)
+			filters = append(filters, "f.release = ?")
+			filterArgs = append(filterArgs, v)
+		}
+		if len(filters) > 0 {
+			conditions = append(conditions, `EXISTS (SELECT 1 FROM sentry_transactions f
+				WHERE f.trace_id = t.trace_id AND `+strings.Join(filters, " AND ")+`)`)
+			args = append(args, filterArgs...)
 		}
 		// A trace matches a source when any of its transactions or spans
 		// came from it: a mixed Sentry + OTel trace matches both.
@@ -41,10 +63,7 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 				OR EXISTS (SELECT 1 FROM sentry_spans s WHERE s.trace_id = t.trace_id AND s.source = ?))`)
 			args = append(args, source, source)
 		}
-		where := ""
-		if len(conditions) > 0 {
-			where = " WHERE " + strings.Join(conditions, " AND ")
-		}
+		where := " WHERE " + strings.Join(conditions, " AND ")
 
 		var total int
 		db.QueryRow(`SELECT COUNT(*) FROM sentry_transactions t`+where, args...).Scan(&total)
@@ -131,7 +150,7 @@ func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 		)
 		err := db.QueryRow(
 			`SELECT id, transaction_name, op, status, start_ts, end_ts, duration_ms
-			FROM sentry_transactions WHERE trace_id = ?`+pc+` ORDER BY start_ts LIMIT 1`, targs...,
+			FROM sentry_transactions r WHERE trace_id = ?`+pc+` ORDER BY `+rootOrder+` LIMIT 1`, targs...,
 		).Scan(&txnID, &txnName, &op, &status, &startTS, &endTS, &durationMS)
 		if err == sql.ErrNoRows {
 			apiError(w, "trace not found", http.StatusNotFound)
@@ -143,7 +162,7 @@ func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 		}
 
 		// Load all spans.
-		spans := loadAllSpans(db, traceID, startTS, pc, pa)
+		spans, rootSpanID := loadAllSpans(db, traceID, txnID, startTS, pc, pa)
 		sources, _ := traceSourcesServices(db, traceID, pc, pa)
 
 		// Load related errors.
@@ -164,6 +183,7 @@ func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 				"end_ts":           scanNullString(endTS),
 				"duration_ms":      scanNullInt(durationMS),
 				"sources":          sources,
+				"span_id":          nullIfEmpty(rootSpanID),
 			},
 			"spans":             spans,
 			"related_errors":    relatedErrors,
@@ -174,14 +194,16 @@ func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func loadAllSpans(db *sql.DB, traceID string, txnStartTS sql.NullString, projectClause string, projectArgs []any) []map[string]any {
+// loadAllSpans returns the trace's spans and the span id of the root
+// transaction rootTxnID (shown as the header, not listed as a span).
+func loadAllSpans(db *sql.DB, traceID, rootTxnID string, txnStartTS sql.NullString, projectClause string, projectArgs []any) ([]map[string]any, string) {
 	rows, err := db.Query(
 		`SELECT span_id, parent_span_id, op, description, status, start_ts, duration_ms,
 			peer_type, peer_address, is_error, source, service_name, attributes
 		FROM sentry_spans WHERE trace_id = ?`+projectClause+` ORDER BY start_ts`, append([]any{traceID}, projectArgs...)...,
 	)
 	if err != nil {
-		return []map[string]any{}
+		return []map[string]any{}, ""
 	}
 	defer rows.Close()
 
@@ -225,8 +247,103 @@ func loadAllSpans(db *sql.DB, traceID string, txnStartTS sql.NullString, project
 		})
 	}
 
+	// Every other transaction is the span where a request entered another
+	// service: list it too, so the spans form one tree under the root
+	// (the header). A span row with the same id wins.
+	seen := make(map[string]bool, len(result))
+	for _, s := range result {
+		seen[s["span_id"].(string)] = true
+	}
+	rootSpanID := ""
+	for _, s := range loadTransactionSpans(db, traceID, txnStartTS, projectClause, projectArgs) {
+		if s["transaction_id"] == rootTxnID {
+			rootSpanID = s["span_id"].(string)
+			continue
+		}
+		if !seen[s["span_id"].(string)] {
+			result = append(result, s)
+		}
+	}
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i]["start_offset_ms"].(int) < result[j]["start_offset_ms"].(int)
+	})
+
 	if result == nil {
 		result = []map[string]any{}
+	}
+	return result, rootSpanID
+}
+
+// loadTransactionSpans returns a trace's transactions as span entries, in
+// the shape loadAllSpans uses, marked is_transaction.
+func loadTransactionSpans(db *sql.DB, traceID string, txnStartTS sql.NullString, projectClause string, projectArgs []any) []map[string]any {
+	rows, err := db.Query(
+		`SELECT id, transaction_name, op, status, start_ts, duration_ms, source, service_name, payload
+		FROM sentry_transactions WHERE trace_id = ?`+projectClause, append([]any{traceID}, projectArgs...)...,
+	)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var result []map[string]any
+	for rows.Next() {
+		var (
+			id, name, src, payload string
+			op, status, startTS    sql.NullString
+			serviceName            sql.NullString
+			durationMS             sql.NullInt64
+		)
+		if err := rows.Scan(&id, &name, &op, &status, &startTS, &durationMS, &src, &serviceName, &payload); err != nil {
+			continue
+		}
+		// A segment's payload is the span (span_id, parent_span_id; OTel
+		// attributes, or Sentry data); a Sentry transaction keeps them in
+		// contexts.trace.
+		var p struct {
+			SpanID       string         `json:"span_id"`
+			ParentSpanID string         `json:"parent_span_id"`
+			Attributes   map[string]any `json:"attributes"`
+			Data         map[string]any `json:"data"`
+			Contexts     struct {
+				Trace struct {
+					SpanID       string         `json:"span_id"`
+					ParentSpanID string         `json:"parent_span_id"`
+					Data         map[string]any `json:"data"`
+				} `json:"trace"`
+			} `json:"contexts"`
+		}
+		_ = json.Unmarshal([]byte(payload), &p)
+		spanID := firstNonEmpty(p.SpanID, p.Contexts.Trace.SpanID)
+		if spanID == "" {
+			continue
+		}
+		var attrs any
+		switch {
+		case p.Attributes != nil:
+			attrs = p.Attributes
+		case p.Data != nil:
+			attrs = p.Data
+		case p.Contexts.Trace.Data != nil:
+			attrs = p.Contexts.Trace.Data
+		}
+		result = append(result, map[string]any{
+			"span_id":         spanID,
+			"parent_span_id":  nullIfEmpty(firstNonEmpty(p.ParentSpanID, p.Contexts.Trace.ParentSpanID)),
+			"op":              scanNullString(op),
+			"description":     name,
+			"status":          scanNullString(status),
+			"start_offset_ms": computeOffsetMS(txnStartTS, startTS),
+			"duration_ms":     scanNullInt(durationMS),
+			"peer_type":       nil,
+			"peer_address":    nil,
+			"is_error":        isErrorStatus(status.String),
+			"source":          src,
+			"service_name":    scanNullString(serviceName),
+			"attributes":      attrs,
+			"is_transaction":  true,
+			"transaction_id":  id,
+		})
 	}
 	return result
 }

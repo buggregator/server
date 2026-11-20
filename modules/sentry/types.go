@@ -263,6 +263,7 @@ type TraceContext struct {
 	SpanID  string `json:"span_id"`
 	Op      string `json:"op"`
 	Status  string `json:"status"`
+	Data    map[string]any `json:"data"`
 }
 
 type SDK struct {
@@ -284,6 +285,7 @@ type Transaction struct {
 	Spans        []RawSpan       `json:"spans"`
 	Measurements json.RawMessage `json:"measurements"`
 	SDK          *SDK            `json:"sdk"`
+	ServerName   string          `json:"server_name"`
 
 	// Root span fields
 	Op     string `json:"op,omitempty"`

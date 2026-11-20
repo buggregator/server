@@ -182,8 +182,9 @@ func handleCounts(db *sql.DB) http.HandlerFunc {
 
 		db.QueryRow(`SELECT COUNT(*) FROM sentry_error_events`+whereOf(errConds), errArgs...).Scan(&exceptions)
 		// Counted over sentry_transactions rather than sentry_traces: that is what
-		// the traces list shows, and it is the table carrying a timestamp to filter on.
-		db.QueryRow(`SELECT COUNT(*) FROM sentry_transactions`+whereOf(txnConds), txnArgs...).Scan(&traces)
+		// the traces list shows (one row per trace), and it is the table carrying
+		// a timestamp to filter on.
+		db.QueryRow(`SELECT COUNT(DISTINCT trace_id) FROM sentry_transactions`+whereOf(txnConds), txnArgs...).Scan(&traces)
 		db.QueryRow(`SELECT COUNT(*) FROM sentry_logs`+whereOf(logConds), logArgs...).Scan(&logs)
 		db.QueryRow(`SELECT COUNT(*) FROM sentry_metrics`+whereOf(metricConds), metricArgs...).Scan(&metrics)
 

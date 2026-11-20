@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -386,20 +387,48 @@ func TestOTLP_MixedTraceSources(t *testing.T) {
 	}
 	serveOTLP(t, h, otlpRequest(t, "/v1/traces", "application/x-protobuf", "gzip", "otelgo_traces.pb.gz"))
 
+	// One row per trace, named by its root (the Sentry pageload, no parent).
 	_, body := apiGet(t, db, "/api/sentry/traces")
 	items := listData(t, body)
-	if len(items) != 2 {
-		t.Fatalf("%d transactions, want 2 (Sentry root + OTel service entry)", len(items))
+	if len(items) != 1 {
+		t.Fatalf("%d rows, want 1 per trace", len(items))
 	}
-	for _, it := range items {
-		if !reflect.DeepEqual(it["sources"], []any{"sentry", "otel"}) || !reflect.DeepEqual(it["services"], []any{"shop-web", "checkout-api"}) {
-			t.Errorf("sources %v services %v", it["sources"], it["services"])
-		}
+	it := items[0]
+	if it["transaction_name"] != "/checkout" || !reflect.DeepEqual(it["sources"], []any{"sentry", "otel"}) || !reflect.DeepEqual(it["services"], []any{"shop-web", "checkout-api"}) {
+		t.Errorf("row %v sources %v services %v", it["transaction_name"], it["sources"], it["services"])
 	}
 	for _, f := range []string{"sentry", "otel"} {
-		if _, body := apiGet(t, db, "/api/sentry/traces?source="+f); len(listData(t, body)) != 2 {
+		if _, body := apiGet(t, db, "/api/sentry/traces?source="+f); len(listData(t, body)) != 1 {
 			t.Errorf("?source=%s does not match the mixed trace", f)
 		}
+	}
+	if _, body := apiGet(t, db, "/api/sentry/counts"); body["traces"] != float64(1) {
+		t.Errorf("counts traces %v, want 1", body["traces"])
+	}
+
+	// Detail: every service's entry span is in spans, so they form one tree:
+	// Sentry root → checkout-api server span → its children.
+	_, body = apiGet(t, db, "/api/sentry/traces/"+otlpTraceID)
+	if txn := body["transaction"].(map[string]any); txn["transaction_name"] != "/checkout" || txn["span_id"] != "00f067aa0ba902b7" {
+		t.Errorf("detail transaction %v span %v, want the root", txn["transaction_name"], txn["span_id"])
+	}
+	parents := map[string]any{}
+	byID := map[string]map[string]any{}
+	for _, s := range body["spans"].([]any) {
+		s := s.(map[string]any)
+		parents[s["description"].(string)] = s["parent_span_id"]
+		byID[s["span_id"].(string)] = s
+	}
+	if _, listed := parents["/checkout"]; listed {
+		t.Error("the root is the header, not a span")
+	}
+	server := byID[fmt.Sprint(parents["SELECT orders"])]
+	if server == nil || server["description"] != "POST /checkout" || server["parent_span_id"] != "00f067aa0ba902b7" ||
+		server["source"] != "otel" || server["service_name"] != "checkout-api" || server["is_error"] != true {
+		t.Errorf("OTel entry span %v", server)
+	}
+	if attrs, _ := server["attributes"].(map[string]any); attrs["otel.kind"] != "server" {
+		t.Errorf("OTel entry span attributes %v", server["attributes"])
 	}
 }
 
@@ -438,5 +467,60 @@ func TestOTLPLevel(t *testing.T) {
 		if got := otlpLevel(otlpSeverity(tt.num), tt.text); got != tt.want {
 			t.Errorf("otlpLevel(%d, %q) = %q, want %q", tt.num, tt.text, got, tt.want)
 		}
+	}
+}
+
+// Sentry data names its service like OTel does, so a mixed trace reads
+// shop-web → checkout-api, not sentry.php → checkout-api.
+func TestSentryServiceNames(t *testing.T) {
+	txns := []struct {
+		name string
+		txn  Transaction
+		want string
+	}{
+		{"trace data service.name", Transaction{Contexts: &Contexts{Trace: &TraceContext{Data: map[string]any{"service.name": "api"}}}, ServerName: "web-1", SDK: &SDK{Name: "sentry.php"}}, "api"},
+		{"server_name", Transaction{ServerName: "shop-web", SDK: &SDK{Name: "sentry.php"}}, "shop-web"},
+		{"SDK name last", Transaction{SDK: &SDK{Name: "sentry.php"}}, "sentry.php"},
+		{"nothing", Transaction{}, ""},
+	}
+	for _, tt := range txns {
+		if got := transactionService(&tt.txn); got != tt.want {
+			t.Errorf("transactionService(%s) = %q, want %q", tt.name, got, tt.want)
+		}
+	}
+
+	logs := []struct {
+		attrs map[string]any
+		want  string
+	}{
+		{map[string]any{"server.address": map[string]any{"value": "shop-web", "type": "string"}}, "shop-web"},
+		{map[string]any{"sentry.server.address": map[string]any{"value": "go-01", "type": "string"}}, "go-01"},
+		{map[string]any{"service.name": "api", "server.address": "web-1"}, "api"},
+		{map[string]any{"sentry.sdk.name": "sentry.php"}, ""},
+	}
+	for _, tt := range logs {
+		if got := sentryLogService(tt.attrs); got != tt.want {
+			t.Errorf("sentryLogService(%v) = %q, want %q", tt.attrs, got, tt.want)
+		}
+	}
+
+	// Stored: a PHP transaction with server_name, its spans, and a log.
+	db := setupTestDB(t)
+	h := &handler{db: db}
+	body := `{"event_id":"e1"}
+{"type":"transaction"}
+{"event_id":"e1","type":"transaction","transaction":"POST /cart","server_name":"shop-web","sdk":{"name":"sentry.php"},"start_timestamp":1795195095.9,"timestamp":1795195096.0,"contexts":{"trace":{"trace_id":"` + otlpTraceID + `","span_id":"00f067aa0ba902b7","op":"http.server"}},"spans":[{"span_id":"3333333333333333","parent_span_id":"00f067aa0ba902b7","trace_id":"` + otlpTraceID + `","op":"db","start_timestamp":1795195095.91,"timestamp":1795195095.95}]}
+{"type":"log"}
+{"items":[{"level":"info","body":"hi","timestamp":1795195095.92,"attributes":{"server.address":{"value":"shop-web","type":"string"}}}]}
+`
+	if _, err := h.handleEnvelope([]byte(body), ""); err != nil {
+		t.Fatal(err)
+	}
+	var txnSvc, spanSvc, logSvc string
+	db.QueryRow(`SELECT service_name FROM sentry_transactions`).Scan(&txnSvc)
+	db.QueryRow(`SELECT service_name FROM sentry_spans`).Scan(&spanSvc)
+	db.QueryRow(`SELECT service_name FROM sentry_logs`).Scan(&logSvc)
+	if txnSvc != "shop-web" || spanSvc != "shop-web" || logSvc != "shop-web" {
+		t.Errorf("service names: transaction %q span %q log %q, want shop-web", txnSvc, spanSvc, logSvc)
 	}
 }
