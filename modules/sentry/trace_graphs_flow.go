@@ -341,6 +341,8 @@ func handleTraceSequence(db *sql.DB) http.HandlerFunc {
 			to := s.peerAddr
 			if callee != nil {
 				to = callee["service"].(string)
+				// A span-only callee (span v2, no transaction) needs its lane too.
+				note(to, parseTS(callee["start_ts"].(string)))
 			}
 			opType := s.peerType
 			if opType == "" {

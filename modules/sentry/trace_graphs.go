@@ -101,6 +101,11 @@ func resolveBounds(from, to time.Time, seen []time.Time) (time.Time, time.Time) 
 			from = to.Add(-time.Hour)
 		}
 	}
+	// A reversed or empty period (from=2099-01-01, from > to) is one
+	// minute from its start: no rows, but never a negative bucket count.
+	if !from.Before(to) {
+		to = from.Add(time.Minute)
+	}
 	return from, to
 }
 
@@ -130,7 +135,7 @@ func newBuckets(from, to time.Time) buckets {
 		}
 	}
 	start := from.Truncate(step)
-	n := int(to.Sub(start)/step) + 1
+	n := max(int(to.Sub(start)/step)+1, 1)
 	if n > maxBuckets+1 {
 		n = maxBuckets + 1
 	}
@@ -516,7 +521,7 @@ func handleServiceMap(db *sql.DB) http.HandlerFunc {
 func handleServiceMapEdge(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		source, target := q.Get("source"), q.Get("target")
+		source, target, opType := q.Get("source"), q.Get("target"), q.Get("op_type")
 		if source == "" || target == "" {
 			apiError(w, "source and target are required", http.StatusBadRequest)
 			return
@@ -535,7 +540,9 @@ func handleServiceMapEdge(db *sql.DB) http.HandlerFunc {
 		}
 		var mine []graphCall
 		for _, c := range calls {
-			if c.source == source && c.target == target {
+			// op_type is optional: two edges between the same pair (http
+			// and queue) are told apart by it.
+			if c.source == source && c.target == target && (opType == "" || c.opType == opType) {
 				mine = append(mine, c)
 			}
 		}

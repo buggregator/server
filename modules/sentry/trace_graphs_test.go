@@ -182,6 +182,11 @@ func TestServiceMapEdgeTraces(t *testing.T) {
 	if resp.Total != 2 || len(resp.Traces) != 1 || resp.Traces[0].TraceID != "tr-ok" {
 		t.Errorf("page 2 = %+v", resp)
 	}
+	q.Set("op_type", "queue")
+	getJSON(t, mux, "/api/sentry/service-map/edge?"+q.Encode(), &resp)
+	if resp.Total != 0 {
+		t.Errorf("op_type=queue: total = %d, want 0", resp.Total)
+	}
 
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, httptest.NewRequest("GET", "/api/sentry/service-map/edge?source=a", nil))
@@ -408,5 +413,50 @@ func TestTraceGraphs_LargeDBStaysFast(t *testing.T) {
 		if took > time.Second {
 			t.Errorf("%s took %v", target, took)
 		}
+	}
+}
+
+// A reversed period, or one starting in the future, is empty, never a panic
+// (the WebSocket RPC bridge has no recover).
+func TestTraceGraphs_ReversedPeriod(t *testing.T) {
+	_, mux := graphFixture(t)
+	for _, target := range []string{
+		"/api/sentry/flow?from=2026-11-16T12:00:00Z&to=2026-11-16T11:00:00Z",
+		"/api/sentry/flow?from=2099-01-01",
+		"/api/sentry/service-map?from=2026-11-16T12:00:00Z&to=2026-11-16T11:00:00Z",
+		"/api/sentry/service-map?from=2099-01-01",
+	} {
+		var resp struct {
+			Buckets []any
+			Nodes   []any
+		}
+		getJSON(t, mux, target, &resp)
+		if len(resp.Nodes) != 0 {
+			t.Errorf("%s: nodes = %v", target, resp.Nodes)
+		}
+	}
+}
+
+// A callee that only sends span v2 (no transaction) and calls nobody still
+// gets a lane in the sequence.
+func TestTraceSequence_SpanOnlyCallee(t *testing.T) {
+	db, mux := graphFixture(t)
+	if _, err := db.Exec(`INSERT INTO sentry_spans (id, span_id, trace_id, parent_span_id, service_name, start_ts, end_ts, duration_ms, project_id)
+		VALUES ('leaf', 'leaf', 'tr-err', 'web-1-call', 'leaf-svc', '2026-11-16T11:30:00.015Z', '2026-11-16T11:30:00.05Z', 35, 'shop')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`DELETE FROM sentry_transactions WHERE id = 'co-1'`); err != nil {
+		t.Fatal(err)
+	}
+	var resp struct {
+		Services []string
+		Calls    []struct{ From, To string }
+	}
+	getJSON(t, mux, "/api/sentry/traces/tr-err/sequence", &resp)
+	if len(resp.Calls) == 0 || resp.Calls[0].To != "leaf-svc" {
+		t.Fatalf("calls = %+v", resp.Calls)
+	}
+	if !strings.Contains(" "+strings.Join(resp.Services, " ")+" ", " leaf-svc ") {
+		t.Errorf("services = %v, want leaf-svc", resp.Services)
 	}
 }
