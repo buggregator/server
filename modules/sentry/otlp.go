@@ -75,24 +75,29 @@ func otlpSignalOf(path string) otlpSignal {
 func isOTLPPath(path string) bool { return otlpSignalOf(path) != otlpNone }
 
 // otlpProject: the path's project segment (/api/{project}/integration/otlp/…),
-// else the detected project, else the X-Buggregator-Project header, else the DSN public key
-// of x-sentry-auth when it names a project; empty means default.
+// else the detected project, else the X-Buggregator-Project header, else the
+// DSN public key of x-sentry-auth. Each counts only when it names an existing
+// project, as for the DSN key (#430): an unknown name lands in default and
+// creates no project the UI cannot list.
 func (h *handler) otlpProject(r *http.Request) string {
+	var candidates []string
 	if rest, ok := strings.CutPrefix(r.URL.Path, "/api/"); ok {
 		segment, _, _ := strings.Cut(rest, "/")
-		if p := resolveProject(segment); p != "" {
+		candidates = append(candidates, resolveProject(segment))
+	}
+	candidates = append(candidates,
+		r.Header.Get(httpserver.HeaderDetectedProject),
+		// OTLP exporters take extra headers (OTEL_EXPORTER_OTLP_HEADERS,
+		// otlphttp headers:), so the project header alone is enough here.
+		strings.TrimSpace(r.Header.Get("X-Buggregator-Project")),
+		publicKey(r),
+	)
+	for _, c := range candidates {
+		if p := h.projectByKey(c); p != "" {
 			return p
 		}
 	}
-	if p := r.Header.Get(httpserver.HeaderDetectedProject); p != "" {
-		return p
-	}
-	// OTLP exporters take extra headers (OTEL_EXPORTER_OTLP_HEADERS,
-	// otlphttp headers:), so the project header alone is enough here.
-	if p := strings.TrimSpace(r.Header.Get("X-Buggregator-Project")); p != "" {
-		return p
-	}
-	return h.projectByKey(publicKey(r))
+	return ""
 }
 
 func isOTLPJSON(r *http.Request) bool {

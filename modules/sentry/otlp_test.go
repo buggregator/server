@@ -86,7 +86,7 @@ func TestOTLP_Traces(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db := setupTestDB(t)
+			db := setupProjectsDB(t, "shop")
 			var announced []string
 			h := &handler{db: db, notifyStored: func(project string, kinds []string) {
 				announced = append(announced, project+":"+strings.Join(kinds, ","))
@@ -342,17 +342,32 @@ func TestOTLP_ProjectByKey(t *testing.T) {
 }
 
 // OTEL_EXPORTER_OTLP_HEADERS=X-Buggregator-Project=billing names the project.
+// An unknown project name (path or header) lands in default, as an unknown
+// DSN key does (#430).
 func TestOTLP_ProjectHeader(t *testing.T) {
-	db := setupTestDB(t)
-	h := &handler{db: db}
-	r := otlpRequest(t, "/v1/logs", "application/x-protobuf", "", "otelgo_logs.pb")
-	r.Header.Set("X-Buggregator-Project", "billing")
-	serveOTLP(t, h, r)
+	tests := []struct{ name, path, header, want string }{
+		{"known header", "/v1/logs", "billing", "billing"},
+		{"unknown header", "/v1/logs", "nope", "default"},
+		{"known path", "/api/billing/integration/otlp/v1/logs", "", "billing"},
+		{"unknown path", "/api/nope/integration/otlp/v1/logs", "", "default"},
+		{"unknown path, known header", "/api/nope/integration/otlp/v1/logs", "billing", "billing"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := setupProjectsDB(t, "billing")
+			h := &handler{db: db}
+			r := otlpRequest(t, tt.path, "application/x-protobuf", "", "otelgo_logs.pb")
+			if tt.header != "" {
+				r.Header.Set("X-Buggregator-Project", tt.header)
+			}
+			serveOTLP(t, h, r)
 
-	var n int
-	db.QueryRow(`SELECT COUNT(*) FROM sentry_logs WHERE project_id = 'billing'`).Scan(&n)
-	if n != 2 {
-		t.Errorf("%d logs in project billing, want 2", n)
+			var n int
+			db.QueryRow(`SELECT COUNT(*) FROM sentry_logs WHERE project_id = ?`, tt.want).Scan(&n)
+			if n != 2 {
+				t.Errorf("%d logs in project %s, want 2", n, tt.want)
+			}
+		})
 	}
 }
 
