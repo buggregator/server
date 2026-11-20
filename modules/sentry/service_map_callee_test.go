@@ -12,7 +12,7 @@ import (
 
 // An outgoing HTTP call is drawn to the service that received it, found by
 // the callee naming the call's span as its parent: a transaction
-// (contexts.trace.parent_span_id) or a span v2 (parent_span_id). A call
+// (its parent_span_id column) or a span v2 (parent_span_id). A call
 // nobody reports, and databases, keep their address.
 func TestServiceMapCallToKnownService(t *testing.T) {
 	db := setupTestDB(t)
@@ -44,9 +44,10 @@ func TestServiceMapCallToKnownService(t *testing.T) {
 
 	// storefront → shop-api.test: shop-api's transaction names the call as parent.
 	span("sf-call", "", "sf-root", "storefront", "shop-api.test", "http")
-	exec(`INSERT INTO sentry_transactions (id, event_id, trace_id, transaction_name, start_ts, payload)
+	// No service_name (a row from before migration 000036): its spans name it.
+	exec(`INSERT INTO sentry_transactions (id, event_id, trace_id, transaction_name, start_ts, payload, parent_span_id)
 		VALUES ('shop-txn', 'e1', 'tr', 'POST /api/checkout', '2026-11-16T11:30:00Z',
-			'{"contexts":{"trace":{"span_id":"shop-root","parent_span_id":"sf-call"}}}')`)
+			'{"contexts":{"trace":{"span_id":"shop-root","parent_span_id":"sf-call"}}}', 'sf-call')`)
 	span("shop-sql", "shop-txn", "shop-root", "shop-api", "mysql:3306", "db")
 	// A child of the call in storefront itself (a retry) is not the callee.
 	span("sf-retry", "", "sf-call", "storefront", "", "")
