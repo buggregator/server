@@ -62,12 +62,18 @@ func (h *handler) Match(r *http.Request) bool {
 	if r.Header.Get("X-Sentry-Auth") != "" {
 		return true
 	}
+	if isOTLPPath(r.URL.Path) {
+		return true
+	}
 	path := strings.TrimRight(r.URL.Path, "/")
 	isSentryStore := strings.HasSuffix(path, "/store") && !strings.Contains(path, "/profiler/")
 	return isSentryStore || strings.HasSuffix(path, "/envelope")
 }
 
 func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
+	if isOTLPPath(r.URL.Path) {
+		return h.handleOTLP(r)
+	}
 	body, err := readCapped(r.Body)
 	if err != nil {
 		return nil, err
@@ -622,10 +628,13 @@ func publicKey(r *http.Request) string {
 	if auth == "" {
 		auth = r.Header.Get("Authorization")
 	}
-	fields, ok := strings.CutPrefix(strings.TrimSpace(auth), "Sentry ")
-	if !ok {
+	// The OTel Collector sentry exporter writes "sentry sentry_key=…" in
+	// lower case.
+	auth = strings.TrimSpace(auth)
+	if len(auth) < 7 || !strings.EqualFold(auth[:7], "Sentry ") {
 		return ""
 	}
+	fields := auth[7:]
 	for _, field := range strings.Split(fields, ",") {
 		if name, value, ok := strings.Cut(strings.TrimSpace(field), "="); ok && name == "sentry_key" {
 			return strings.TrimSpace(value)

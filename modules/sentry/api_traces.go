@@ -2,8 +2,10 @@ package sentry
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 )
@@ -11,6 +13,11 @@ import (
 func handleTracesList(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		limit, offset := pagination(r, 50)
+		source, ok := sourceParam(r)
+		if !ok {
+			apiError(w, "source must be sentry or otel", http.StatusBadRequest)
+			return
+		}
 
 		// Period: start_ts of a transaction is in ISO form, index idx_sentry_txn_start.
 		// Plus environment and release filters: both columns are populated but had
@@ -26,6 +33,13 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 		if v := r.URL.Query().Get("release"); v != "" {
 			conditions = append(conditions, "t.release = ?")
 			args = append(args, v)
+		}
+		// A trace matches a source when any of its transactions or spans
+		// came from it: a mixed Sentry + OTel trace matches both.
+		if source != "" {
+			conditions = append(conditions, `(EXISTS (SELECT 1 FROM sentry_transactions t2 WHERE t2.trace_id = t.trace_id AND t2.source = ?)
+				OR EXISTS (SELECT 1 FROM sentry_spans s WHERE s.trace_id = t.trace_id AND s.source = ?))`)
+			args = append(args, source, source)
 		}
 		where := ""
 		if len(conditions) > 0 {
@@ -74,6 +88,7 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 		var data []map[string]any
 		for _, tr := range traceRows {
 			previewSpans := loadPreviewSpans(db, tr.traceID, tr.startTS, 3, pc, pa)
+			sources, services := traceSourcesServices(db, tr.traceID, pc, pa)
 
 			data = append(data, map[string]any{
 				"trace_id":         tr.traceID,
@@ -86,6 +101,8 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 				"error_count":      tr.errorCount,
 				"received_at":      scanNullString(tr.startTS),
 				"preview_spans":    previewSpans,
+				"sources":          sources,
+				"services":         services,
 			})
 		}
 
@@ -127,6 +144,7 @@ func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 
 		// Load all spans.
 		spans := loadAllSpans(db, traceID, startTS, pc, pa)
+		sources, _ := traceSourcesServices(db, traceID, pc, pa)
 
 		// Load related errors.
 		relatedErrors := loadRelatedErrors(db, traceID, pc, pa)
@@ -145,6 +163,7 @@ func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 				"start_ts":         scanNullString(startTS),
 				"end_ts":           scanNullString(endTS),
 				"duration_ms":      scanNullInt(durationMS),
+				"sources":          sources,
 			},
 			"spans":             spans,
 			"related_errors":    relatedErrors,
@@ -158,7 +177,7 @@ func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 func loadAllSpans(db *sql.DB, traceID string, txnStartTS sql.NullString, projectClause string, projectArgs []any) []map[string]any {
 	rows, err := db.Query(
 		`SELECT span_id, parent_span_id, op, description, status, start_ts, duration_ms,
-			peer_type, peer_address, is_error
+			peer_type, peer_address, is_error, source, service_name, attributes
 		FROM sentry_spans WHERE trace_id = ?`+projectClause+` ORDER BY start_ts`, append([]any{traceID}, projectArgs...)...,
 	)
 	if err != nil {
@@ -176,9 +195,15 @@ func loadAllSpans(db *sql.DB, traceID string, txnStartTS sql.NullString, project
 			durationMS                        sql.NullInt64
 			peerType, peerAddress             sql.NullString
 			isError                           int
+			spanSrc                           string
+			serviceName, attrsStr             sql.NullString
 		)
-		if err := rows.Scan(&spanID, &parentSpanID, &op, &description, &status, &sStartTS, &durationMS, &peerType, &peerAddress, &isError); err != nil {
+		if err := rows.Scan(&spanID, &parentSpanID, &op, &description, &status, &sStartTS, &durationMS, &peerType, &peerAddress, &isError, &spanSrc, &serviceName, &attrsStr); err != nil {
 			continue
+		}
+		var attrs any
+		if attrsStr.Valid {
+			_ = json.Unmarshal([]byte(attrsStr.String), &attrs)
 		}
 
 		startOffsetMS := computeOffsetMS(txnStartTS, sStartTS)
@@ -194,6 +219,9 @@ func loadAllSpans(db *sql.DB, traceID string, txnStartTS sql.NullString, project
 			"peer_type":       scanNullString(peerType),
 			"peer_address":    scanNullString(peerAddress),
 			"is_error":        isError != 0,
+			"source":          spanSrc,
+			"service_name":    scanNullString(serviceName),
+			"attributes":      attrs,
 		})
 	}
 
@@ -201,6 +229,52 @@ func loadAllSpans(db *sql.DB, traceID string, txnStartTS sql.NullString, project
 		result = []map[string]any{}
 	}
 	return result
+}
+
+// traceSourcesServices lists where a trace's data came from ("sentry",
+// "otel"; Sentry first) and its services in order of their first span.
+func traceSourcesServices(db *sql.DB, traceID string, projectClause string, projectArgs []any) ([]string, []string) {
+	args := append(append(append([]any{traceID}, projectArgs...), traceID), projectArgs...)
+
+	sources := []string{}
+	if rows, err := db.Query(
+		`SELECT DISTINCT source FROM (
+			SELECT source FROM sentry_transactions WHERE trace_id = ?`+projectClause+`
+			UNION ALL
+			SELECT source FROM sentry_spans WHERE trace_id = ?`+projectClause+`)`, args...,
+	); err == nil {
+		for rows.Next() {
+			var s string
+			if rows.Scan(&s) == nil {
+				sources = append(sources, s)
+			}
+		}
+		rows.Close()
+	}
+	sort.Slice(sources, func(i, j int) bool {
+		if (sources[i] == sourceSentry) != (sources[j] == sourceSentry) {
+			return sources[i] == sourceSentry
+		}
+		return sources[i] < sources[j]
+	})
+
+	services := []string{}
+	if rows, err := db.Query(
+		`SELECT service_name FROM (
+			SELECT service_name, start_ts FROM sentry_transactions WHERE trace_id = ? AND service_name IS NOT NULL`+projectClause+`
+			UNION ALL
+			SELECT service_name, start_ts FROM sentry_spans WHERE trace_id = ? AND service_name IS NOT NULL`+projectClause+`)
+		GROUP BY service_name ORDER BY MIN(start_ts), service_name`, args...,
+	); err == nil {
+		for rows.Next() {
+			var s string
+			if rows.Scan(&s) == nil {
+				services = append(services, s)
+			}
+		}
+		rows.Close()
+	}
+	return sources, services
 }
 
 func loadRelatedErrors(db *sql.DB, traceID string, projectClause string, projectArgs []any) []map[string]any {

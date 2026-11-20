@@ -24,8 +24,8 @@ func storeLogs(db *sql.DB, logs []LogRecord, project string) error {
 
 	stmt, err := tx.Prepare(
 		`INSERT INTO sentry_logs
-			(id, trace_id, span_id, level, severity_number, body, attributes, log_ts, project_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, trace_id, span_id, level, severity_number, body, attributes, log_ts, project_id, source, service_name)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 	)
 	if err != nil {
 		return fmt.Errorf("prepare sentry_logs: %w", err)
@@ -60,6 +60,8 @@ func storeLogs(db *sql.DB, logs []LogRecord, project string) error {
 			attrs,
 			logTS,
 			project,
+			spanSource(log.Source),
+			nullIfEmpty(log.ServiceName),
 		)
 		if err != nil {
 			return fmt.Errorf("insert sentry_logs: %w", err)

@@ -84,6 +84,15 @@ func (p *IngestionPipeline) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
+			if incoming.NoEvent {
+				if incoming.Respond != nil {
+					incoming.Respond(w)
+				} else {
+					writeIngestionResponse(w, incoming.Type, "")
+				}
+				return
+			}
+
 			if incoming.Project == "" {
 				incoming.Project = r.Header.Get(HeaderDetectedProject)
 			}

@@ -34,6 +34,11 @@ type Incoming struct {
 	// instead of the default acknowledgement (a provider API the client
 	// expects to answer in its own shape, e.g. Twilio's 201 with a sid).
 	Respond func(w http.ResponseWriter)
+
+	// NoEvent: the handler already stored what it needed (e.g. OTLP spans
+	// and logs in their own tables) and wants no events row; the pipeline
+	// only answers, with Respond when set.
+	NoEvent bool
 }
 
 // ErrNotFound: the event is not stored (e.g. deleted meanwhile).
