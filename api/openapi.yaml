@@ -1465,19 +1465,29 @@ paths:
       tags:
       - Sentry
       operationId: sentryGetServiceMap
-      summary: Build a service graph from spans that have a peer address.
+      summary: Services and the calls between them over a period, with rates, errors, p95 and time buckets.
+      description: A service node counts its entry transactions; an external node (database, cache, queue, a host
+        nobody reports from) counts the calls into it. An outgoing call is drawn to the service that received it when
+        that service reports too.
       security:
       - authToken: []
       parameters:
+      - name: from
+        in: query
+        description: Lower time bound. Unix seconds or ISO, UTC.
+        schema:
+          type: string
+      - name: to
+        in: query
+        description: Upper time bound, same formats as `from`. A reversed period is empty.
+        schema:
+          type: string
       - name: window
         in: query
-        description: Look-back period in whole minutes, 1..10080. Invalid values fall back to 60. Unlike other endpoints this
-          is not a duration string.
+        description: Used when `from` and `to` are both absent. A duration (`15m`, `24h`, `7d`), whole minutes 1..10080
+          (the old form), or `all` for no bound. Absent too, the last 60 minutes.
         schema:
-          type: integer
-          minimum: 1
-          maximum: 10080
-          default: 60
+          type: string
       - name: project
         in: query
         description: Project key. Without it every project is read.
@@ -1490,6 +1500,134 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SentryServiceMap'
+        '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/service-map/edge:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryGetServiceMapEdge
+      summary: Traces through one service map edge, errors first, then newest.
+      security:
+      - authToken: []
+      parameters:
+      - name: source
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: target
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: op_type
+        in: query
+        description: Tells apart two edges of the same pair (`http`, `db`, `cache`, `queue`).
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+          maximum: 500
+      - name: page
+        in: query
+        schema:
+          type: integer
+          default: 1
+      - name: from
+        in: query
+        description: Lower time bound. Unix seconds or ISO, UTC.
+        schema:
+          type: string
+      - name: to
+        in: query
+        description: Upper time bound, same formats as `from`. A reversed period is empty.
+        schema:
+          type: string
+      - name: window
+        in: query
+        description: Used when `from` and `to` are both absent. A duration (`15m`, `24h`, `7d`), whole minutes 1..10080
+          (the old form), or `all` for no bound. Absent too, the last 60 minutes.
+        schema:
+          type: string
+      - name: project
+        in: query
+        description: Project key. Without it every project is read.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The edge's traces.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - total
+                - traces
+                properties:
+                  total:
+                    type: integer
+                  traces:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SentryEdgeTrace'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/flow:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryGetFlow
+      summary: The period's requests as rows across services, newest first, with time buckets of all of them.
+      description: A request is a trace with at least one transaction in the period.
+      security:
+      - authToken: []
+      parameters:
+      - name: limit
+        in: query
+        description: Requests listed; `total` and `buckets` count all.
+        schema:
+          type: integer
+          default: 500
+          maximum: 5000
+      - name: from
+        in: query
+        description: Lower time bound. Unix seconds or ISO, UTC.
+        schema:
+          type: string
+      - name: to
+        in: query
+        description: Upper time bound, same formats as `from`. A reversed period is empty.
+        schema:
+          type: string
+      - name: window
+        in: query
+        description: Used when `from` and `to` are both absent. A duration (`15m`, `24h`, `7d`), whole minutes 1..10080
+          (the old form), or `all` for no bound. Absent too, the last 60 minutes.
+        schema:
+          type: string
+      - name: project
+        in: query
+        description: Project key. Without it every project is read.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryFlow'
         '401':
           $ref: '#/components/responses/Error'
         '500':
@@ -1557,6 +1695,38 @@ paths:
               schema:
                 $ref: '#/components/schemas/SentryTraceList'
         '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/traces/{traceId}/sequence:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryGetTraceSequence
+      summary: A trace's calls in time order, with the callee's own span and how late it finished.
+      security:
+      - authToken: []
+      parameters:
+      - name: traceId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: project
+        in: query
+        description: Only this project's part of the trace.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The call sequence.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryTraceSequence'
+        '401':
+          $ref: '#/components/responses/Error'
+        '404':
           $ref: '#/components/responses/Error'
         '500':
           $ref: '#/components/responses/Error'
@@ -4669,10 +4839,25 @@ components:
     SentryServiceMap:
       type: object
       required:
+      - from
+      - to
+      - bucket_seconds
+      - window_minutes
       - nodes
       - edges
-      - window_minutes
       properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        bucket_seconds:
+          type: integer
+          description: Step of every `buckets` list; at most 61 buckets.
+        window_minutes:
+          type: integer
+          description: Length of the period in minutes.
         nodes:
           type: array
           items:
@@ -4681,17 +4866,34 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SentryServiceEdge'
-        window_minutes:
+    SentryGraphBucket:
+      type: object
+      required:
+      - t
+      - count
+      - errors
+      properties:
+        t:
+          type: string
+          format: date-time
+          description: Bucket start.
+        count:
           type: integer
-          description: Look-back window that was applied.
+        errors:
+          type: integer
     SentryServiceNode:
       type: object
       required:
       - id
       - label
+      - kind
       - request_count
       - error_count
+      - error_rate
+      - rpm
       - avg_duration_ms
+      - p95_duration_ms
+      - buckets
       properties:
         id:
           type: string
@@ -4699,42 +4901,273 @@ components:
         label:
           type: string
           description: Display label, prefixed `DB:`, `Cache:` or `Queue:` for such peers.
+        kind:
+          type: string
+          enum:
+          - service
+          - external
         request_count:
           type: integer
         error_count:
           type: integer
+        error_rate:
+          type: number
+          description: error_count / request_count, 0..1.
+        rpm:
+          type: number
+          description: Requests per minute over the period.
         avg_duration_ms:
           type:
           - integer
           - 'null'
-          description: Weighted average of incoming calls; null for nodes with no incoming durations.
+        p95_duration_ms:
+          type:
+          - integer
+          - 'null'
+        buckets:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentryGraphBucket'
     SentryServiceEdge:
       type: object
       required:
       - source
       - target
       - op_type
+      - trace_count
+      - traces
       - request_count
       - error_count
+      - error_rate
+      - rpm
       - avg_duration_ms
+      - p95_duration_ms
+      - buckets
       properties:
         source:
           type: string
           description: Calling service name, `unknown` when not set.
         target:
           type: string
-          description: Peer address.
+          description: The service that received the call, else the peer address.
         op_type:
           type: string
           description: Peer type of the spans.
+        trace_count:
+          type: integer
+        traces:
+          type: array
+          description: Up to 20, errors first, then newest; the rest via /api/sentry/service-map/edge.
+          items:
+            $ref: '#/components/schemas/SentryEdgeTrace'
         request_count:
           type: integer
         error_count:
           type: integer
+        error_rate:
+          type: number
+          description: error_count / request_count, 0..1.
+        rpm:
+          type: number
+          description: Requests per minute over the period.
         avg_duration_ms:
           type:
           - integer
           - 'null'
+        p95_duration_ms:
+          type:
+          - integer
+          - 'null'
+        buckets:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentryGraphBucket'
+    SentryEdgeTrace:
+      type: object
+      required:
+      - trace_id
+      - start_ts
+      - duration_ms
+      - is_error
+      properties:
+        trace_id:
+          type: string
+        start_ts:
+          type: string
+          format: date-time
+        duration_ms:
+          type: integer
+          description: Longest call of the edge in this trace.
+        is_error:
+          type: boolean
+    SentryFlow:
+      type: object
+      required:
+      - from
+      - to
+      - bucket_seconds
+      - total
+      - truncated
+      - services
+      - buckets
+      - requests
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        bucket_seconds:
+          type: integer
+        total:
+          type: integer
+        truncated:
+          type: boolean
+        services:
+          type: array
+          description: Callers before callees.
+          items:
+            type: string
+        buckets:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentryGraphBucket'
+        requests:
+          type: array
+          items:
+            type: object
+            required:
+            - trace_id
+            - name
+            - start_ts
+            - end_ts
+            - duration_ms
+            - is_error
+            - services
+            properties:
+              trace_id:
+                type: string
+              name:
+                type: string
+                description: Root transaction name.
+              start_ts:
+                type: string
+                format: date-time
+              end_ts:
+                type: string
+                format: date-time
+              duration_ms:
+                type: integer
+              is_error:
+                type: boolean
+              services:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - service
+                  - start_ts
+                  - end_ts
+                  - is_error
+                  properties:
+                    service:
+                      type: string
+                    start_ts:
+                      type: string
+                      format: date-time
+                    end_ts:
+                      type: string
+                      format: date-time
+                    is_error:
+                      type: boolean
+    SentryTraceSequence:
+      type: object
+      required:
+      - trace_id
+      - services
+      - calls
+      properties:
+        trace_id:
+          type: string
+        services:
+          type: array
+          description: In order of first activity.
+          items:
+            type: string
+        calls:
+          type: array
+          items:
+            type: object
+            required:
+            - span_id
+            - from
+            - to
+            - op_type
+            - description
+            - start_ts
+            - end_ts
+            - duration_ms
+            - is_error
+            - status
+            - callee
+            - late_ms
+            properties:
+              span_id:
+                type: string
+              from:
+                type: string
+              to:
+                type: string
+                description: Callee service, else the peer address.
+              op_type:
+                type: string
+              description:
+                type: string
+              start_ts:
+                type: string
+                format: date-time
+              end_ts:
+                type: string
+                format: date-time
+              duration_ms:
+                type:
+                - integer
+                - 'null'
+              is_error:
+                type: boolean
+              status:
+                type: string
+              callee:
+                description: The receiving service's own span; null for external calls.
+                type:
+                - object
+                - 'null'
+                properties:
+                  service:
+                    type: string
+                  start_ts:
+                    type: string
+                    format: date-time
+                  end_ts:
+                    type: string
+                    format: date-time
+                  duration_ms:
+                    type:
+                    - integer
+                    - 'null'
+                  is_error:
+                    type: boolean
+                  transaction_id:
+                    type:
+                    - string
+                    - 'null'
+              late_ms:
+                type:
+                - integer
+                - 'null'
+                description: Callee end minus call end; above 0 the callee was still working after the caller stopped
+                  waiting.
     SentryCounts:
       type: object
       required:
