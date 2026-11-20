@@ -50,7 +50,8 @@ func TestSentryReads_FilterByProject(t *testing.T) {
 		path               string
 		all, shop, billing int
 	}{
-		{"/api/sentry/traces", 3, 1, 2},
+		// One row per trace: trace-shared spans both projects.
+		{"/api/sentry/traces", 2, 1, 2},
 		{"/api/sentry/logs", 3, 1, 2},
 		{"/api/sentry/metrics", 3, 1, 2},
 	}
@@ -68,6 +69,10 @@ func TestSentryReads_FilterByProject(t *testing.T) {
 		for q, want := range map[string]float64{"": 3, "?project=shop": 1, "?project=billing": 2} {
 			_, body := get(t, "/api/sentry/counts"+q)
 			for _, k := range []string{"exceptions", "traces", "logs", "metrics"} {
+				want := want
+				if k == "traces" && q == "" {
+					want = 2 // traces are counted per trace, as listed
+				}
 				if body[k] != want {
 					t.Errorf("counts%s %s = %v, want %v", q, k, body[k], want)
 				}
@@ -85,8 +90,10 @@ func TestSentryReads_FilterByProject(t *testing.T) {
 			return len(s)
 		}
 		// seedProject: 2 transaction spans + 1 v2 span; db spans: shop 1, billing 2.
-		if got := spans(""); got != 9 {
-			t.Errorf("all spans = %d, want 9", got)
+		// Unfiltered, the other project's transaction is listed as the span
+		// where the trace entered it: 9 + 1.
+		if got := spans(""); got != 10 {
+			t.Errorf("all spans = %d, want 10", got)
 		}
 		if got := spans("?project=shop"); got != 4 {
 			t.Errorf("shop spans = %d, want 4", got)

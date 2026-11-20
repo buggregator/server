@@ -78,10 +78,16 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage, pro
 		measurements = &s
 	}
 
+	txnService := transactionService(txn)
+	parentSpanID := ""
+	if txn.Contexts != nil && txn.Contexts.Trace != nil {
+		parentSpanID = txn.Contexts.Trace.ParentSpanID
+	}
+
 	_, err = dbTx.Exec(
 		`INSERT INTO sentry_transactions
-			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload, project_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload, project_id, service_name, parent_span_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		txnID,
 		txn.EventID,
 		traceID,
@@ -96,6 +102,8 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage, pro
 		measurements,
 		string(payload),
 		project,
+		nullIfEmpty(txnService),
+		nullIfEmpty(parentSpanID),
 	)
 	if err != nil {
 		return "", fmt.Errorf("insert sentry_transactions: %w", err)
@@ -117,7 +125,7 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage, pro
 		for _, span := range txn.Spans {
 			spanUUID := event.GenerateUUID()
 			peerType, peerAddress := classifySpan(span)
-			serviceName := extractServiceName(span, txn.SDK)
+			serviceName := firstNonEmpty(span.Data["service.name"], txnService)
 			sStartTS := parseTimestamp(span.StartTimestamp.Number())
 			sEndTS := parseTimestamp(span.Timestamp.Number())
 			sDuration := computeDurationMS(span.StartTimestamp.Number(), span.Timestamp.Number())
@@ -196,8 +204,8 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK, project string) error {
 
 	stmt, err := dbTx.Prepare(
 		`INSERT INTO sentry_spans
-			(id, span_id, transaction_id, trace_id, parent_span_id, op, description, status, start_ts, end_ts, duration_ms, service_name, peer_address, peer_type, is_error, attributes, project_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, span_id, transaction_id, trace_id, parent_span_id, op, description, status, start_ts, end_ts, duration_ms, service_name, peer_address, peer_type, is_error, attributes, project_id, source)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 	)
 	if err != nil {
 		return fmt.Errorf("prepare sentry_spans: %w", err)
@@ -251,7 +259,11 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK, project string) error {
 			}
 
 			var attrs *string
-			if span.Data != nil {
+			if span.Attrs != nil {
+				b, _ := json.Marshal(span.Attrs)
+				s := string(b)
+				attrs = &s
+			} else if span.Data != nil {
 				b, _ := json.Marshal(span.Data)
 				s := string(b)
 				attrs = &s
@@ -275,6 +287,7 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK, project string) error {
 				isError,
 				attrs,
 				project,
+				spanSource(span.Source),
 			)
 			if err != nil {
 				return fmt.Errorf("insert sentry_spans: %w", err)
@@ -298,11 +311,16 @@ func storeSpansV2(db *sql.DB, spans []RawSpan, sdk *SDK, project string) error {
 // storeSegment stores a segment span as a transaction. Its event_id is made
 // from the trace and span ids, so a segment sent twice is stored once.
 func storeSegment(dbTx *sql.Tx, traceID string, span RawSpan, project string) error {
-	payload, _ := json.Marshal(span)
+	// An OTel segment keeps its structured attributes in the payload, for
+	// the trace detail.
+	payload, _ := json.Marshal(struct {
+		RawSpan
+		Attributes map[string]any `json:"attributes,omitempty"`
+	}{span, span.Attrs})
 	_, err := dbTx.Exec(
 		`INSERT OR IGNORE INTO sentry_transactions
-			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload, project_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload, project_id, source, service_name, parent_span_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)`,
 		event.GenerateUUID(),
 		traceID+"-"+span.SpanID,
 		traceID,
@@ -316,11 +334,41 @@ func storeSegment(dbTx *sql.Tx, traceID string, span RawSpan, project string) er
 		nullIfEmpty(span.Data["sentry.release"]),
 		string(payload),
 		project,
+		spanSource(span.Source),
+		nullIfEmpty(extractServiceName(span, nil)),
+		nullIfEmpty(span.ParentSpanID),
 	)
 	if err != nil {
 		return fmt.Errorf("insert segment transaction: %w", err)
 	}
 	return nil
+}
+
+// transactionService names the service a Sentry transaction came from:
+// contexts.trace.data service.name, else server_name, else the SDK name
+// (sentry.php), so the service map still has a node for SDKs that set neither.
+func transactionService(txn *Transaction) string {
+	if txn.Contexts != nil && txn.Contexts.Trace != nil {
+		if name, ok := txn.Contexts.Trace.Data["service.name"].(string); ok && name != "" {
+			return name
+		}
+	}
+	if txn.ServerName != "" {
+		return txn.ServerName
+	}
+	if txn.SDK != nil {
+		return txn.SDK.Name
+	}
+	return ""
+}
+
+// spanSource is the source column value: "sentry" unless the OTLP receiver
+// marked the row.
+func spanSource(source string) string {
+	if source == "" {
+		return sourceSentry
+	}
+	return source
 }
 
 // isErrorStatus reports whether a span status means failure: the v1 span

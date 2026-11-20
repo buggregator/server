@@ -261,8 +261,10 @@ type Contexts struct {
 type TraceContext struct {
 	TraceID string `json:"trace_id"`
 	SpanID  string `json:"span_id"`
+	ParentSpanID string `json:"parent_span_id"`
 	Op      string `json:"op"`
 	Status  string `json:"status"`
+	Data    map[string]any `json:"data"`
 }
 
 type SDK struct {
@@ -284,6 +286,7 @@ type Transaction struct {
 	Spans        []RawSpan       `json:"spans"`
 	Measurements json.RawMessage `json:"measurements"`
 	SDK          *SDK            `json:"sdk"`
+	ServerName   string          `json:"server_name"`
 
 	// Root span fields
 	Op     string `json:"op,omitempty"`
@@ -302,6 +305,12 @@ type RawSpan struct {
 	Timestamp      FlexibleTS `json:"timestamp"`
 	IsSegment      bool       `json:"is_segment"`
 	Data           SpanData   `json:"data"`
+
+	// Set by the OTLP receiver only. Source is "otel" (empty = "sentry");
+	// Attrs, when set, is stored as the span's attributes instead of Data,
+	// so nested values (otel.events, otel.links, ...) stay JSON, not strings.
+	Source string         `json:"-"`
+	Attrs  map[string]any `json:"-"`
 }
 
 // UnmarshalJSON also accepts the Span v2 format (SDK v4 "span" items):
@@ -371,6 +380,11 @@ type LogRecord struct {
 	Body           string         `json:"body"`
 	Timestamp      FlexibleTS     `json:"timestamp"`
 	Attributes     map[string]any `json:"attributes"`
+
+	// Set by the OTLP receiver only: "otel" (empty = "sentry") and the
+	// resource service.name.
+	Source      string `json:"-"`
+	ServiceName string `json:"-"`
 }
 
 // MetricEnvelope represents a Sentry "trace_metric" envelope item body.

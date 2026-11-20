@@ -201,6 +201,16 @@ func appendProject(conditions []string, args []any, r *http.Request, column stri
 	return conditions, args
 }
 
+// sourceParam reads ?source: "", "sentry" or "otel"; ok is false for any
+// other value.
+func sourceParam(r *http.Request) (string, bool) {
+	switch v := strings.TrimSpace(r.URL.Query().Get("source")); v {
+	case "", sourceSentry, sourceOTel:
+		return v, true
+	}
+	return "", false
+}
+
 // projectClause is " AND <column> = ?" with its argument for ?project, or nothing.
 func projectClause(r *http.Request, column string) (string, []any) {
 	conds, args := appendProject(nil, nil, r, column)

@@ -13,7 +13,13 @@ func handleLogsList(db *sql.DB) http.HandlerFunc {
 		q := r.URL.Query()
 
 		// LEFT JOIN sentry_traces to check if the referenced trace actually exists.
-		query := `SELECT l.id, l.trace_id, l.span_id, l.level, l.severity_number, l.body, l.attributes, l.log_ts,
+		source, ok := sourceParam(r)
+		if !ok {
+			apiError(w, "source must be sentry or otel", http.StatusBadRequest)
+			return
+		}
+
+		query := `SELECT l.id, l.trace_id, l.span_id, l.level, l.severity_number, l.body, l.attributes, l.log_ts, l.source, l.service_name,
 			CASE WHEN t.trace_id IS NOT NULL THEN 1 ELSE 0 END AS trace_exists
 			FROM sentry_logs l
 			LEFT JOIN sentry_traces t ON t.trace_id = l.trace_id`
@@ -40,6 +46,10 @@ func handleLogsList(db *sql.DB) http.HandlerFunc {
 		// Period: log_ts is stored in ISO form and covered by idx_sentry_logs_ts.
 		conditions, args = appendTimeConditions(conditions, args, r, "l.log_ts", true)
 		conditions, args = appendProject(conditions, args, r, "l.project_id")
+		if source != "" {
+			conditions = append(conditions, "l.source = ?")
+			args = append(args, source)
+		}
 
 		where := ""
 		if len(conditions) > 0 {
@@ -68,9 +78,11 @@ func handleLogsList(db *sql.DB) http.HandlerFunc {
 				sevNum          sql.NullInt64
 				attrsStr        sql.NullString
 				logTS           sql.NullString
+				logSource       string
+				serviceName     sql.NullString
 				traceExists     int
 			)
-			if err := rows.Scan(&id, &traceID, &spanID, &level, &sevNum, &body, &attrsStr, &logTS, &traceExists); err != nil {
+			if err := rows.Scan(&id, &traceID, &spanID, &level, &sevNum, &body, &attrsStr, &logTS, &logSource, &serviceName, &traceExists); err != nil {
 				apiError(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -90,6 +102,8 @@ func handleLogsList(db *sql.DB) http.HandlerFunc {
 				"log_ts":          scanNullString(logTS),
 				"attributes":      attrs,
 				"trace_exists":    traceExists != 0,
+				"source":          logSource,
+				"service_name":    scanNullString(serviceName),
 			})
 		}
 

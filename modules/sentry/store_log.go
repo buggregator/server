@@ -24,8 +24,8 @@ func storeLogs(db *sql.DB, logs []LogRecord, project string) error {
 
 	stmt, err := tx.Prepare(
 		`INSERT INTO sentry_logs
-			(id, trace_id, span_id, level, severity_number, body, attributes, log_ts, project_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, trace_id, span_id, level, severity_number, body, attributes, log_ts, project_id, source, service_name)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 	)
 	if err != nil {
 		return fmt.Errorf("prepare sentry_logs: %w", err)
@@ -60,6 +60,8 @@ func storeLogs(db *sql.DB, logs []LogRecord, project string) error {
 			attrs,
 			logTS,
 			project,
+			spanSource(log.Source),
+			nullIfEmpty(firstNonEmpty(log.ServiceName, sentryLogService(log.Attributes))),
 		)
 		if err != nil {
 			return fmt.Errorf("insert sentry_logs: %w", err)
@@ -82,4 +84,20 @@ func parseLogTimestamp(ts json.Number) *string {
 
 	s := string(ts)
 	return &s
+}
+
+// sentryLogService names the service of a Sentry SDK log from its attributes:
+// service.name, else the server name (server.address, sentry.server.address).
+// Attribute values come plain or typed ({"value": …, "type": "string"}).
+func sentryLogService(attrs map[string]any) string {
+	for _, key := range []string{"service.name", "server.address", "sentry.server.address"} {
+		v := attrs[key]
+		if typed, ok := v.(map[string]any); ok {
+			v = typed["value"]
+		}
+		if s, ok := v.(string); ok && s != "" {
+			return s
+		}
+	}
+	return ""
 }

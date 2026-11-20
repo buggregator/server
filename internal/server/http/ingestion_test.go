@@ -932,3 +932,36 @@ func TestPipeline_ClientDetectedHeadersIgnored(t *testing.T) {
 		t.Errorf("project = %q, want shop from X-Buggregator-Project", p)
 	}
 }
+
+// OTLP/HTTP (issue #459): stored as Sentry spans/logs, answered in OTLP shape,
+// no event card and no HTTP dump, even with no Sentry header or DSN.
+func TestPipeline_OTLP_NoCanonicalEvent_NoDumpLeak(t *testing.T) {
+	tests := []struct {
+		name, path, body string
+	}{
+		{"traces", "/v1/traces", `{"resourceSpans":[{"scopeSpans":[{"spans":[{"traceId":"4bf92f3577b34da6a3ce929d0e0e4736","spanId":"1111111111111111","name":"GET /","kind":2,"startTimeUnixNano":"1795195095949113701","endTimeUnixNano":"1795195095952323846"}]}]}]}`},
+		{"logs, Sentry-style path", "/api/1/integration/otlp/v1/logs/", `{"resourceLogs":[{"scopeLogs":[{"logRecords":[{"severityNumber":9,"body":{"stringValue":"hello"}}]}]}]}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pipeline, store, spies := buildPipeline(t)
+			r := httptest.NewRequest("POST", "http://localhost"+tt.path, strings.NewReader(tt.body))
+			r.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			pipeline.ServeHTTP(w, r)
+
+			if w.Code != 200 || w.Header().Get("Content-Type") != "application/json" || strings.TrimSpace(w.Body.String()) != "{}" {
+				t.Fatalf("answer %d %q %q", w.Code, w.Header().Get("Content-Type"), w.Body.String())
+			}
+			if !findSpy(spies, "sentry").handled {
+				t.Error("Sentry handler should have handled OTLP")
+			}
+			if findSpy(spies, "http-dump").handled {
+				t.Error("HTTP Dump should NOT capture OTLP")
+			}
+			if n := len(store.storedEvents()); n != 0 {
+				t.Errorf("%d canonical events, want 0", n)
+			}
+		})
+	}
+}
