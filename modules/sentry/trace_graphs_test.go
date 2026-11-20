@@ -283,6 +283,14 @@ func TestGraphPeriodAndBuckets(t *testing.T) {
 		}
 	}
 
+	// A reversed period: at least one bucket, and to after from.
+	if b := newBuckets(noon, noon.Add(-time.Hour)); b.n < 1 {
+		t.Errorf("reversed newBuckets: n = %d", b.n)
+	}
+	if from, to := resolveBounds(noon, noon.Add(-time.Hour), nil); !to.After(from) {
+		t.Errorf("reversed resolveBounds: %v..%v", from, to)
+	}
+
 	s := stats{}
 	b := newBuckets(noon.Add(-time.Hour), noon)
 	for i := 1; i <= 100; i++ {
