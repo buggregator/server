@@ -51,6 +51,15 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 				OR EXISTS (SELECT 1 FROM sentry_spans s WHERE s.trace_id = t.trace_id AND s.source = ?))`)
 			args = append(args, source, source)
 		}
+		// A trace matches a service when any of its transactions or spans
+		// came from it: ?service=payments-worker finds the traces it took
+		// part in, also when it was not the root. Both look-ups go by
+		// trace_id (idx_sentry_txn_trace, idx_sentry_spans_trace).
+		if service := strings.TrimSpace(r.URL.Query().Get("service")); service != "" {
+			conditions = append(conditions, `(EXISTS (SELECT 1 FROM sentry_transactions t3 WHERE t3.trace_id = t.trace_id AND t3.service_name = ?)
+				OR EXISTS (SELECT 1 FROM sentry_spans s3 WHERE s3.trace_id = t.trace_id AND s3.service_name = ?))`)
+			args = append(args, service, service)
+		}
 		where := " WHERE " + strings.Join(conditions, " AND ")
 
 		// total: distinct traces under the same filters, without the root

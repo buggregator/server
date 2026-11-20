@@ -460,3 +460,44 @@ func TestTraceSequence_SpanOnlyCallee(t *testing.T) {
 		t.Errorf("services = %v, want leaf-svc", resp.Services)
 	}
 }
+
+// ?service lists the traces a service took part in, by transaction or span,
+// with the other filters.
+func TestTracesList_ServiceFilter(t *testing.T) {
+	db, mux := graphFixture(t)
+	// leaf-svc sends span v2 only, in tr-ok.
+	if _, err := db.Exec(`INSERT INTO sentry_spans (id, span_id, trace_id, service_name, start_ts, project_id)
+		VALUES ('leaf', 'leaf', 'tr-ok', 'leaf-svc', '2026-11-16T11:31:30.1Z', 'shop')`); err != nil {
+		t.Fatal(err)
+	}
+	ids := func(target string) string {
+		t.Helper()
+		var resp struct {
+			Data []struct {
+				TraceID string `json:"trace_id"`
+			}
+			Meta struct{ Total int }
+		}
+		getJSON(t, mux, target, &resp)
+		var out []string
+		for _, d := range resp.Data {
+			out = append(out, d.TraceID)
+		}
+		return fmt.Sprintf("%s total=%d", strings.Join(out, ","), resp.Meta.Total)
+	}
+	for target, want := range map[string]string{
+		"/api/sentry/traces?service=payments-worker":                                            "tr-ok,tr-err total=2",
+		"/api/sentry/traces?service=shop-web":                                                   "tr-ok,tr-err,tr-old total=3",
+		"/api/sentry/traces?service=leaf-svc":                                                   "tr-ok total=1",
+		"/api/sentry/traces?service=shop-web&from=2026-11-16T11:00:00Z&project=shop":            "tr-ok,tr-err total=2",
+		"/api/sentry/traces?service=shop-web&from=2026-11-16T11:31:00Z&to=2026-11-16T11:59:00Z": "tr-ok total=1",
+		"/api/sentry/traces?service=shop-web&project=other":                                     " total=0",
+		"/api/sentry/traces?service=payments-worker&source=otel":                                " total=0",
+		"/api/sentry/traces?service=payments-worker&source=sentry":                              "tr-ok,tr-err total=2",
+		"/api/sentry/traces?service=nobody":                                                     " total=0",
+	} {
+		if got := ids(target); got != want {
+			t.Errorf("%s: %s, want %s", target, got, want)
+		}
+	}
+}
