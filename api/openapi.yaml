@@ -39,6 +39,8 @@ servers:
 - url: http://127.0.0.1:8000
   description: Default local server
 tags:
+- name: Crons
+  description: Scheduled job monitoring - Sentry check-ins and the ping URL
 - name: Server
   description: Version, settings, health
 - name: Events
@@ -1452,6 +1454,297 @@ paths:
         '401':
           $ref: '#/components/responses/Error'
         '500':
+          $ref: '#/components/responses/Error'
+  /ping/{slug}:
+    get:
+      tags:
+      - Crons
+      operationId: cronPing
+      x-ingestion: true
+      summary: Ping URL - the job finished well (ok).
+      description: |-
+        For any script or crontab line: `curl http://buggregator:8000/ping/backup-db`. The first ping creates the monitor (at most 500 per project, then 429). POST works the same; its body (the job's output) is kept, its last 10 KB: `./backup.sh 2>&1 | curl --data-binary @- http://buggregator:8000/ping/backup-db`. A ping after `/start` closes that run. No auth, like SDK ingestion. Every check-in sends `sentry.stored` with kind `cron` on the project's channel.
+      parameters:
+      - $ref: '#/components/parameters/CronSlug'
+      - $ref: '#/components/parameters/CronProject'
+      - name: schedule
+        in: query
+        description: Crontab (5 fields or `@daily`, `@hourly`...). With a schedule the server looks for missed runs.
+        schema:
+          type: string
+        example: 0 3 * * *
+      - name: tz
+        in: query
+        description: Time zone of the schedule, IANA name. Default UTC.
+        schema:
+          type: string
+      - name: margin
+        in: query
+        description: Minutes a run may be late before it is missed. Default 1.
+        schema:
+          type: integer
+          minimum: 0
+      - name: max_runtime
+        in: query
+        description: Minutes a run may stay in progress before it is timeout. Default 30.
+        schema:
+          type: integer
+          minimum: 1
+      - name: check_in_id
+        in: query
+        description: Run to close; without it the newest open ping run of the monitor.
+        schema:
+          type: string
+      - name: environment
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Stored. Plain text `OK`; header `X-Check-In-Id` names the run.
+        '400':
+          description: Bad slug (letters, digits, `.`, `_`, `-`, up to 128) or bad schedule, time zone, margin.
+        '429':
+          description: The project has 500 monitors.
+    post:
+      tags:
+      - Crons
+      operationId: cronPingPost
+      x-ingestion: true
+      summary: Ping URL with the job's output as the body (ok).
+      description: Same as GET; the body's last 10 KB are kept with the run.
+      parameters:
+      - $ref: '#/components/parameters/CronSlug'
+      - $ref: '#/components/parameters/CronProject'
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: Stored.
+  /ping/{slug}/{action}:
+    get:
+      tags:
+      - Crons
+      operationId: cronPingAction
+      x-ingestion: true
+      summary: Ping URL - the job started (`start`) or failed (`fail`).
+      description: '`start` opens a run (in_progress), `fail` records an error (closing the open run, if any). Same query parameters as `/ping/{slug}`; POST works the same.'
+      parameters:
+      - $ref: '#/components/parameters/CronSlug'
+      - name: action
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+          - start
+          - fail
+      - $ref: '#/components/parameters/CronProject'
+      responses:
+        '200':
+          description: Stored.
+        '404':
+          description: Unknown action.
+  /api/{project}/cron/{slug}/{key}/:
+    get:
+      tags:
+      - Crons
+      operationId: sentryCronCheckIn
+      x-ingestion: true
+      summary: Sentry's cron HTTP check-in endpoint.
+      description: |-
+        As in Sentry's docs: `curl "http://buggregator:8000/api/1/cron/backup-db/<key>/?status=in_progress"`. A numeric project is the SDK's own id and lands in the default project (else the DSN key names an existing project). POST takes the same fields as a JSON body (`status`, `check_in_id`, `environment`, `duration`, `monitor_config`). SDKs send the same check-in as a `check_in` envelope item, stored the same way. No auth.
+      parameters:
+      - name: project
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/CronSlug'
+      - name: key
+        in: path
+        required: true
+        description: DSN public key.
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - in_progress
+          - ok
+          - error
+      - name: check_in_id
+        in: query
+        description: The run to close (from the in_progress answer).
+        schema:
+          type: string
+      - name: environment
+        in: query
+        schema:
+          type: string
+      - name: duration
+        in: query
+        description: Run time in seconds.
+        schema:
+          type: number
+      responses:
+        '202':
+          description: Stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: check_in_id of the run.
+        '400':
+          description: Bad slug, status or JSON.
+        '429':
+          description: The project has 500 monitors.
+  /api/crons:
+    get:
+      tags:
+      - Crons
+      operationId: cronListMonitors
+      summary: Cron monitors with their status and last 20 runs.
+      security:
+      - authToken: []
+      parameters:
+      - name: project
+        in: query
+        description: Project key. Without it every project is read.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Monitors, by project and slug.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CronMonitor'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/crons/{slug}/checkins:
+    get:
+      tags:
+      - Crons
+      operationId: cronListCheckIns
+      summary: Runs of one monitor, newest first.
+      security:
+      - authToken: []
+      parameters:
+      - $ref: '#/components/parameters/CronSlug'
+      - $ref: '#/components/parameters/CronProject'
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: limit
+        in: query
+        description: Page size, 1..500.
+        schema:
+          type: integer
+          default: 50
+      responses:
+        '200':
+          description: A page of runs.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CronCheckIn'
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/Error'
+  /api/crons/{slug}:
+    put:
+      tags:
+      - Crons
+      operationId: cronUpdateMonitor
+      summary: Set a monitor's schedule, time zone, margin, max runtime.
+      description: >-
+        Absent fields keep their value; `"schedule": null` removes the schedule (no missed runs then). The next expected run counts from now. A Sentry SDK sends its own config with each in_progress check-in and overwrites these.
+      security:
+      - authToken: []
+      parameters:
+      - $ref: '#/components/parameters/CronSlug'
+      - $ref: '#/components/parameters/CronProject'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                schedule:
+                  nullable: true
+                  allOf:
+                  - $ref: '#/components/schemas/CronSchedule'
+                timezone:
+                  type: string
+                checkin_margin:
+                  type: integer
+                  minimum: 0
+                max_runtime:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: The monitor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CronMonitor'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - Crons
+      operationId: cronDeleteMonitor
+      summary: Delete a monitor and its runs. Its next check-in creates it again.
+      security:
+      - authToken: []
+      parameters:
+      - $ref: '#/components/parameters/CronSlug'
+      - $ref: '#/components/parameters/CronProject'
+      responses:
+        '200':
+          description: Deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
           $ref: '#/components/responses/Error'
   /api/sentry/feedback:
     get:
@@ -4119,6 +4412,20 @@ components:
       name: X-Auth-Token
       description: JWT from the SSO login. Needed only when auth is on.
   parameters:
+    CronSlug:
+      name: slug
+      in: path
+      required: true
+      description: Monitor slug, unique in its project.
+      schema:
+        type: string
+        pattern: ^[A-Za-z0-9._-]{1,128}$
+    CronProject:
+      name: project
+      in: query
+      description: Project key (a ping may use the X-Buggregator-Project header instead). Default `default`.
+      schema:
+        type: string
     EventUUID:
       name: uuid
       in: path
@@ -4218,6 +4525,129 @@ components:
                 type: string
                 description: The event id (empty for envelopes without one)
   schemas:
+    CronSchedule:
+      type: object
+      required:
+      - type
+      - value
+      properties:
+        type:
+          type: string
+          enum:
+          - crontab
+          - interval
+        value:
+          type: string
+          description: Crontab (`0 3 * * *`, `@daily`) or the interval count (`10`).
+        unit:
+          type: string
+          description: Interval unit.
+          enum:
+          - minute
+          - hour
+          - day
+          - week
+          - month
+          - year
+    CronMonitor:
+      type: object
+      properties:
+        project:
+          type: string
+        slug:
+          type: string
+        source:
+          type: string
+          enum:
+          - sentry
+          - ping
+          description: How its first check-in came.
+        schedule:
+          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/CronSchedule'
+        timezone:
+          type: string
+        checkin_margin:
+          type: integer
+          description: Minutes.
+        max_runtime:
+          type: integer
+          description: Minutes.
+        last_status:
+          $ref: '#/components/schemas/CronStatus'
+        last_checkin_at:
+          type: string
+          format: date-time
+          nullable: true
+        next_expected_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: The next slot; null without a schedule.
+        created_at:
+          type: string
+          format: date-time
+        recent:
+          type: array
+          description: Last 20 runs, newest first.
+          items:
+            type: object
+            properties:
+              status:
+                $ref: '#/components/schemas/CronStatus'
+              started_at:
+                type: string
+                format: date-time
+    CronStatus:
+      type: string
+      description: in_progress, ok, error come from the job. The server writes missed (no check-in by slot + margin), timeout (in progress longer than max_runtime) and unknown (the slot fell while Buggregator was down). Empty for a monitor with no runs.
+      enum:
+      - ''
+      - in_progress
+      - ok
+      - error
+      - missed
+      - timeout
+      - unknown
+    CronCheckIn:
+      type: object
+      properties:
+        id:
+          type: string
+          description: check_in_id.
+        status:
+          $ref: '#/components/schemas/CronStatus'
+        started_at:
+          type: string
+          format: date-time
+          description: For missed and unknown, the slot.
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        duration_ms:
+          type: integer
+          nullable: true
+        environment:
+          type: string
+        trace_id:
+          type: string
+          description: Links the run to errors, traces and logs of the same trace.
+        source:
+          type: string
+          enum:
+          - sentry
+          - ping
+        body:
+          type: string
+          description: Ping body tail, up to 10 KB.
+        server_made:
+          type: boolean
+        expected_at:
+          type: string
+          format: date-time
+          nullable: true
     SMTPRelayInfo:
       type: object
       required:

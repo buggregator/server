@@ -206,6 +206,11 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 				kinds.add("metric")
 			}
 
+		case "check_in":
+			if h.handleCheckInItem(item, envHeader, project) {
+				kinds.add("cron")
+			}
+
 		case "user_report", "feedback":
 			if h.handleFeedbackItem(item, envHeader.EventID, project) {
 				kinds.add("feedback")

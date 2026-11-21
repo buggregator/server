@@ -12,6 +12,7 @@ require (
 	github.com/modelcontextprotocol/go-sdk v1.4.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
+	github.com/robfig/cron/v3 v3.0.1
 	go.opentelemetry.io/proto/otlp v1.11.1
 	golang.org/x/oauth2 v0.35.0
 	golang.org/x/text v0.42.0

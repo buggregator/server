@@ -149,6 +149,11 @@ type EnvelopeHeader struct {
 	EventID string `json:"event_id"`
 	SentAt  string `json:"sent_at"`
 	DSN     string `json:"dsn"`
+	// Trace is the dynamic sampling context. @sentry/node puts the
+	// environment only here, not in a check_in item.
+	Trace struct {
+		Environment string `json:"environment"`
+	} `json:"trace"`
 }
 
 // ItemHeader is the header line before each item body.
