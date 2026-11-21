@@ -119,8 +119,8 @@ func TestIndex_ResolvesCalls(t *testing.T) {
 	if st.State != StateReady || st.Error != "" {
 		t.Fatalf("status %+v", st)
 	}
-	if st.Files != 6 { // 3 PHP + 3 Go; vendor/ excluded by default
-		t.Fatalf("files = %d, want 6", st.Files)
+	if st.Files != 8 { // 4 PHP + 4 Go; vendor/ excluded by default
+		t.Fatalf("files = %d, want 8", st.Files)
 	}
 
 	tests := []struct {
@@ -245,8 +245,8 @@ func TestIndex_Incremental(t *testing.T) {
 		t.Fatal(err)
 	}
 	st := run()
-	if st.Files != 5 {
-		t.Fatalf("files = %d after delete, want 5", st.Files)
+	if st.Files != 7 {
+		t.Fatalf("files = %d after delete, want 7", st.Files)
 	}
 	if _, err := m.graphs.Lookup(`App\Repo\UserRepo`, ""); err == nil {
 		t.Error("symbol of a deleted file still found")
@@ -403,9 +403,13 @@ func TestAPI(t *testing.T) {
 	get("POST", "/api/code/roots/app/reindex", 202)
 	m.ix.Wait()
 
+	if top := get("GET", "/api/code/top", 200); len(top["symbols"].([]any)) == 0 {
+		t.Errorf("top: %v", top)
+	}
+	get("GET", "/api/code/graph?expand=ns:App%5CService&expand=s:1", 200)
 	res := get("GET", "/api/code/search?q=UserRepo&kind=class", 200)
 	syms := res["symbols"].([]any)
-	if len(syms) != 1 {
+	if len(syms) == 0 || syms[0].(map[string]any)["fqn"] != `App\Repo\UserRepo` {
 		t.Fatalf("search: %v", res)
 	}
 	id := int64(syms[0].(map[string]any)["id"].(float64))
@@ -518,7 +522,7 @@ func TestIndex_BrokenFileStopsAtTimeout(t *testing.T) {
 		t.Fatalf("indexing took %v", took)
 	}
 	st, _ := m.ix.Status("app")
-	if st.State != StateReady || st.Files != 8 || st.ParseErrors != 1 {
+	if st.State != StateReady || st.Files != 10 || st.ParseErrors != 1 {
 		t.Fatalf("status %+v", st)
 	}
 	var perr, syms int
@@ -580,4 +584,83 @@ func TestSubgraph_CacheAcrossFastRuns(t *testing.T) {
 		}
 	}
 	t.Errorf("node of the re-parsed UserRepo::find (id %d) missing: stale cache", find.ID)
+}
+
+func TestTop(t *testing.T) {
+	m, _ := setup(t, Config{})
+	top, err := m.graphs.Top("app", 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]int{}
+	for i, s := range top {
+		got[s.FQN] = s.Callers
+		if s.Kind != KindFunction && s.Kind != KindMethod {
+			t.Errorf("%s: kind %s", s.FQN, s.Kind)
+		}
+		if i > 0 && top[i-1].Callers < s.Callers {
+			t.Errorf("not ordered: %v", top)
+		}
+	}
+	// Calls from tests do not count; test symbols never appear.
+	if got[`App\Repo\UserRepo::find`] != 1 || got["example.com/app/internal/repo.New"] != 1 {
+		t.Errorf("counts: %v", got)
+	}
+	for _, name := range []string{`App\Tests\helperInTest`, `App\Tests\UserRepoTest::testFind`, "example.com/app/internal/repo.TestNew"} {
+		if _, ok := got[name]; ok {
+			t.Errorf("test symbol %s listed", name)
+		}
+	}
+}
+
+func TestSubgraph_Expand(t *testing.T) {
+	m, _ := setup(t, Config{})
+	byID := func(g *Graph) map[string]GraphNode {
+		out := map[string]GraphNode{}
+		for _, n := range g.Nodes {
+			out[n.ID] = n
+		}
+		return out
+	}
+	g, err := m.graphs.Subgraph(GraphQuery{Root: "app"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	nodes := byID(g)
+	// App\Service: Saver, save, T, t, Kind, label, UserService + 4 methods, top, Base, boot, helper2.
+	if n := nodes[`ns:App\Service`]; n.Size != 15 {
+		t.Errorf("App\\Service size = %d, want 15", n.Size)
+	}
+	svc := mustLookup(t, m, `App\Service\UserService`)
+	sid := "s:" + itoa(svc.ID)
+	g, err = m.graphs.Subgraph(GraphQuery{Root: "app", Expand: map[string]bool{`ns:App\Service`: true, sid: true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	nodes = byID(g)
+	if _, ok := nodes[`ns:App\Service`]; ok {
+		t.Error("expanded namespace still a node")
+	}
+	if n := nodes["s:"+itoa(mustLookup(t, m, `App\Service\Base`).ID)]; n.Group != `ns:App\Service` || n.Size != 2 {
+		t.Errorf("Base: %+v", n)
+	}
+	save := nodes["s:"+itoa(mustLookup(t, m, `App\Service\UserService::save`).ID)]
+	if save.Group != sid {
+		t.Errorf("save not expanded under its class: %+v", save)
+	}
+	if _, ok := nodes[sid]; ok {
+		t.Error("expanded class still a node")
+	}
+	if _, ok := nodes[`ns:App\Repo`]; !ok {
+		t.Error("other namespaces must stay folded")
+	}
+	found := false
+	for _, e := range g.Edges {
+		if e.From == save.ID && e.To == `ns:App\Repo` && e.Kind == EdgeCalls {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("save -> ns:App\\Repo call edge missing: %+v", g.Edges)
+	}
 }
