@@ -52,6 +52,8 @@ tags:
 - name: Mocks
 - name: Xdebug
 - name: Xdebug traces
+- name: Code graph
+  description: Graph of the source folders named in code_graph.roots (off without roots)
 - name: Profiler
 - name: Ingestion
   description: Where SDKs send events (matched by the event handlers)
@@ -3884,6 +3886,539 @@ paths:
       responses:
         '101':
           description: Switching protocols
+  /api/code/roots:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphRoots
+      summary: List the code graph roots and their index state.
+      description: 'The source folders from `code_graph.roots` (source `config`, read-only) and the ones added in the UI
+        inside `code_graph.base_dir` (source `ui`), with index state, counts and progress, and the folder picker''s state.
+        With no roots and no base dir the feature is off: this route answers `enabled: false` with no roots and all other
+        /api/code routes are absent.'
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Roots.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeGraphRoots'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+      - Code graph
+      operationId: codeGraphAddRoot
+      summary: Add a folder inside the base dir as a root and index it.
+      description: 'The path is relative to `code_graph.base_dir`; it must resolve, symlinks followed, to a folder inside
+        it. The root is stored and comes back after a restart. Only from this server''s own page; with auth on only users
+        in `code_graph.admins`.'
+      security:
+      - authToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeAddRoot'
+      responses:
+        '201':
+          description: Root added; indexing started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeRootStatus'
+        '400':
+          $ref: '#/components/responses/CodeFolderBadRequest'
+        '403':
+          $ref: '#/components/responses/CodeFolderForbidden'
+        '404':
+          $ref: '#/components/responses/CodeFolderNotFound'
+        '409':
+          $ref: '#/components/responses/CodeRootConflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/code/folders:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphFolders
+      summary: List the folders one level below a folder of the base dir.
+      description: 'Folders only. Symlinks are listed only when they resolve to a folder inside `code_graph.base_dir`; their
+        `path` is the real one. Only from this server''s own page; with auth on only users in `code_graph.admins`.'
+      parameters:
+      - name: path
+        in: query
+        description: Folder relative to the base dir; empty = the base dir.
+        schema:
+          type: string
+        example: projects/shop
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Folders.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeFolders'
+        '400':
+          $ref: '#/components/responses/CodeFolderBadRequest'
+        '403':
+          $ref: '#/components/responses/CodeFolderForbidden'
+        '404':
+          $ref: '#/components/responses/CodeFolderNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/code/roots/{name}:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphRootStatus
+      summary: Index state of one root.
+      parameters:
+      - $ref: '#/components/parameters/CodeRootName'
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Root status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeRootStatus'
+        '404':
+          $ref: '#/components/responses/CodeGraphNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags:
+      - Code graph
+      operationId: codeGraphRemoveRoot
+      summary: Remove a root added in the UI and its graph.
+      description: 'Roots from `code_graph.roots` cannot be removed here (`code: config_root`). A run in progress is
+        stopped. Only from this server''s own page; with auth on only users in `code_graph.admins`.'
+      parameters:
+      - $ref: '#/components/parameters/CodeRootName'
+      security:
+      - authToken: []
+      responses:
+        '204':
+          description: Removed.
+        '403':
+          $ref: '#/components/responses/CodeFolderForbidden'
+        '404':
+          $ref: '#/components/responses/CodeFolderNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/code/roots/{name}/reindex:
+    post:
+      tags:
+      - Code graph
+      operationId: codeGraphReindex
+      summary: Re-index a root in the background.
+      description: Only files whose size, modification time and content changed are parsed again; files gone from disk are
+        dropped. A run already in progress finishes and one more follows it. Poll GET /api/code/roots/{name} for progress.
+      parameters:
+      - $ref: '#/components/parameters/CodeRootName'
+      security:
+      - authToken: []
+      responses:
+        '202':
+          description: Run started (or queued after the current one).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeRootStatus'
+        '404':
+          $ref: '#/components/responses/CodeGraphNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/code/search:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphSearch
+      summary: Find symbols by name or part of the full name.
+      description: Exact name matches first, then name prefixes, then full-name substrings. Namespaces and packages appear
+        once per name.
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        example: UserService
+      - name: kind
+        in: query
+        description: Comma-separated kinds (class, interface, trait, enum, struct, type, function, method, namespace, package).
+        schema:
+          type: string
+      - $ref: '#/components/parameters/CodeRootQuery'
+      - name: limit
+        in: query
+        description: Default 50, at most 500.
+        schema:
+          type: integer
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Matching symbols.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - symbols
+                properties:
+                  symbols:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CodeSymbol'
+        '404':
+          $ref: '#/components/responses/CodeGraphNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/code/top:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphTop
+      summary: Functions and methods called most often.
+      description: Ordered by exact incoming calls. Test files (*_test.go, *Test.php, files under test/ or tests/) are left
+        out both as targets and as callers.
+      parameters:
+      - $ref: '#/components/parameters/CodeRootQuery'
+      - name: limit
+        in: query
+        description: Default 20, at most 200.
+        schema:
+          type: integer
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Symbols with their call counts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - root
+                - symbols
+                properties:
+                  root:
+                    type: string
+                  symbols:
+                    type: array
+                    items:
+                      allOf:
+                      - $ref: '#/components/schemas/CodeSymbol'
+                      - type: object
+                        required:
+                        - callers
+                        properties:
+                          callers:
+                            type: integer
+        '400':
+          $ref: '#/components/responses/CodeGraphBadRequest'
+        '404':
+          $ref: '#/components/responses/CodeGraphNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/code/symbols/{id}:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphSymbol
+      summary: One symbol with its members, relations and call counts.
+      description: '`source` (the symbol''s lines, at most 400) is present only with `code_graph.snippets: true`. Symbol ids
+        change when the file is parsed again; keep the full name to find a symbol later.'
+      parameters:
+      - $ref: '#/components/parameters/CodeSymbolID'
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The symbol.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSymbolDetail'
+        '400':
+          $ref: '#/components/responses/CodeGraphBadRequest'
+        '404':
+          $ref: '#/components/responses/CodeGraphNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/code/symbols/{id}/callers:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphCallers
+      summary: Who calls or instantiates a symbol.
+      description: 'Incoming `calls` and `instantiates` edges, followed `depth` levels. For a method, calls on a value of unknown
+        type that match only by method name are included with `confidence: name`. Code outside any function is a `file` node.'
+      parameters:
+      - $ref: '#/components/parameters/CodeSymbolID'
+      - $ref: '#/components/parameters/CodeDepth'
+      - $ref: '#/components/parameters/CodeLimit'
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Call graph; the symbol itself is the node with depth 0.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeGraph'
+        '400':
+          $ref: '#/components/responses/CodeGraphBadRequest'
+        '404':
+          $ref: '#/components/responses/CodeGraphNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/code/symbols/{id}/callees:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphCallees
+      summary: What a symbol calls or instantiates.
+      description: 'Outgoing `calls` and `instantiates` edges, followed `depth` levels. Targets outside the indexed code are
+        `external` nodes; method calls with an unknown receiver type have `confidence: name`.'
+      parameters:
+      - $ref: '#/components/parameters/CodeSymbolID'
+      - $ref: '#/components/parameters/CodeDepth'
+      - $ref: '#/components/parameters/CodeLimit'
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Call graph; the symbol itself is the node with depth 0.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeGraph'
+        '400':
+          $ref: '#/components/responses/CodeGraphBadRequest'
+        '404':
+          $ref: '#/components/responses/CodeGraphNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/code/files:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphFiles
+      summary: Indexed directories and files directly under a path.
+      parameters:
+      - $ref: '#/components/parameters/CodeRootQuery'
+      - name: path
+        in: query
+        description: Directory relative to the root; empty for the root itself.
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Directories first, then files.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - root
+                - entries
+                properties:
+                  root:
+                    type: string
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CodeFileEntry'
+        '400':
+          $ref: '#/components/responses/CodeGraphBadRequest'
+        '404':
+          $ref: '#/components/responses/CodeGraphNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/code/files/outline:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphOutline
+      summary: The symbols of one file as a tree.
+      parameters:
+      - $ref: '#/components/parameters/CodeRootQuery'
+      - name: path
+        in: query
+        required: true
+        description: File path relative to the root.
+        schema:
+          type: string
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Outline.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - root
+                - path
+                - symbols
+                properties:
+                  root:
+                    type: string
+                  path:
+                    type: string
+                  symbols:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CodeOutlineItem'
+        '400':
+          $ref: '#/components/responses/CodeGraphBadRequest'
+        '404':
+          $ref: '#/components/responses/CodeGraphNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/code/graph:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphSubgraph
+      summary: A graph of the code for drawing, folded to a level.
+      description: 'Resolved edges (imports, extends, implements, uses, calls, instantiates) around a `target` symbol or a
+        `file`, followed `depth` levels in `direction`; with neither, the whole root. `level` folds nodes: `symbol` keeps
+        functions, methods and types, `class` folds methods into their class or type, `package` folds everything into its
+        namespace or package (default without a target); `expand` opens chosen nodes one level finer. Without a target the
+        whole root is shown, nodes with no edges too. Edges between the same nodes are merged with a `count`. Above
+        `limit` nodes the start nodes and the most connected ones are kept and `truncated` is true.'
+      parameters:
+      - $ref: '#/components/parameters/CodeRootQuery'
+      - name: level
+        in: query
+        schema:
+          type: string
+          enum:
+          - symbol
+          - class
+          - package
+      - name: target
+        in: query
+        description: Symbol id or full name; its members are included.
+        schema:
+          type: string
+      - name: file
+        in: query
+        description: File path relative to the root; all its symbols are the start.
+        schema:
+          type: string
+      - $ref: '#/components/parameters/CodeDepth'
+      - name: direction
+        in: query
+        schema:
+          type: string
+          enum:
+          - out
+          - in
+          - both
+          default: both
+      - name: expand
+        in: query
+        description: 'Node ids to show one level finer (repeat it or comma-separate): ns:<namespace or package> becomes
+          its types and functions, s:<type id> its methods. An expanded node is not in the answer (nor its own edges);
+          nodes from it carry its id in `group`. Typical whole-project view: no target, level package, expand what the
+          user opens.'
+        style: form
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+      - name: kinds
+        in: query
+        description: Comma-separated edge kinds to keep.
+        schema:
+          type: string
+      - name: tests
+        in: query
+        description: '`true` keeps test code in the whole-root graph; by default Go `*_test.go` files, PHP `*Test.php` files and
+          `test/` or `tests/` folders are left out. A graph around a `target` or `file` always includes them.'
+        schema:
+          type: boolean
+      - name: confidence
+        in: query
+        description: '`exact` (default): resolved edges only. `all`: the whole-root graph also has method calls matched by
+          the method name only (`confidence: name` on the edge, counted apart from exact ones), when the name points at no
+          more than 3 methods of the root. Ignored with `target` or `file`.'
+        schema:
+          type: string
+          enum:
+          - exact
+          - all
+      - name: limit
+        in: query
+        description: Max nodes, default 300, at most 2000.
+        schema:
+          type: integer
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Nodes and edges.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeGraph'
+        '400':
+          $ref: '#/components/responses/CodeGraphBadRequest'
+        '404':
+          $ref: '#/components/responses/CodeGraphNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/code/resolve:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphResolve
+      summary: The innermost function, method or type at a file and line.
+      description: For linking stack frames and profiles to the graph. `file` may be absolute (`code_graph.path_map` is applied
+        first, then it must lie inside a root) or relative to a root.
+      parameters:
+      - name: file
+        in: query
+        required: true
+        schema:
+          type: string
+        example: /var/www/html/src/Service/UserService.php
+      - name: line
+        in: query
+        required: true
+        schema:
+          type: integer
+      - $ref: '#/components/parameters/CodeRootQuery'
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: The symbol.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSymbol'
+        '400':
+          $ref: '#/components/responses/CodeGraphBadRequest'
+        '404':
+          $ref: '#/components/responses/CodeGraphNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 components:
   securitySchemes:
     authToken:
@@ -3892,6 +4427,38 @@ components:
       name: X-Auth-Token
       description: JWT from the SSO login. Needed only when auth is on.
   parameters:
+    CodeRootName:
+      name: name
+      in: path
+      required: true
+      description: Root name from `code_graph.roots`.
+      schema:
+        type: string
+    CodeRootQuery:
+      name: root
+      in: query
+      description: Root name; may be left out when only one root is configured (search and resolve look in every root).
+      schema:
+        type: string
+    CodeSymbolID:
+      name: id
+      in: path
+      required: true
+      description: Symbol id.
+      schema:
+        type: integer
+    CodeDepth:
+      name: depth
+      in: query
+      description: Levels to follow, 1-5 (default 1).
+      schema:
+        type: integer
+    CodeLimit:
+      name: limit
+      in: query
+      description: Max nodes, default 200, at most 2000.
+      schema:
+        type: integer
     EventUUID:
       name: uuid
       in: path
@@ -3958,6 +4525,43 @@ components:
       schema:
         type: string
   responses:
+    CodeGraphNotFound:
+      description: 'No such root, symbol or file (`code: unknown_root` or `not_found`).'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CodeGraphError'
+    CodeFolderBadRequest:
+      description: 'Bad folder or name (`code: outside_base`, `not_dir`, `bad_name`, `bad_json`).'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CodeGraphError'
+    CodeFolderForbidden:
+      description: 'Not allowed (`code: cross_origin`, `host`, `not_admin`, `config_root`, `unreadable`).'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CodeGraphError'
+    CodeFolderNotFound:
+      description: 'Folder picker off (`code: picker_off`, the message says how to turn it on), no such folder
+        (`no_such_folder`) or root (`unknown_root`).'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CodeGraphError'
+    CodeRootConflict:
+      description: 'A root with this name or folder exists (`code: root_exists`) or is still being removed (`root_busy`).'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CodeGraphError'
+    CodeGraphBadRequest:
+      description: 'Bad parameter (`code: bad_id`, `bad_level`, `bad_direction`, `root_required`, `path_required`, `file_and_line_required`).'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CodeGraphError'
     Error:
       description: Error
       content:
@@ -3991,6 +4595,399 @@ components:
                 type: string
                 description: The event id (empty for envelopes without one)
   schemas:
+    CodeGraphError:
+      type: object
+      required:
+      - code
+      - error
+      description: Error body of the /api/code routes.
+      properties:
+        code:
+          type: string
+        error:
+          type: string
+    CodeGraphRoots:
+      type: object
+      required:
+      - enabled
+      - snippets
+      - roots
+      properties:
+        enabled:
+          type: boolean
+          description: False when `code_graph.roots` is empty and there is no base dir.
+        snippets:
+          type: boolean
+          description: Symbol answers carry source lines (`code_graph.snippets`).
+        roots:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeRootStatus'
+        picker:
+          $ref: '#/components/schemas/CodePicker'
+    CodePicker:
+      type: object
+      required:
+      - enabled
+      - can_manage
+      properties:
+        enabled:
+          type: boolean
+          description: '`code_graph.base_dir` is set and is a folder.'
+        base_dir:
+          type: string
+          description: Absolute, symlinks resolved.
+        can_manage:
+          type: boolean
+          description: This user may browse and add or remove roots (always with auth off; users in `code_graph.admins` with it on).
+        hint:
+          type: string
+          description: How to turn the picker on, when it is off.
+    CodeAddRoot:
+      type: object
+      required:
+      - path
+      properties:
+        path:
+          type: string
+          description: Folder relative to the base dir.
+          example: projects/shop
+        name:
+          type: string
+          description: Root name, 1 to 100 characters without slashes. Default the folder's name.
+    CodeFolders:
+      type: object
+      required:
+      - base_dir
+      - path
+      - parent
+      - folders
+      properties:
+        base_dir:
+          type: string
+        path:
+          type: string
+          description: This folder relative to the base dir; empty = the base dir.
+        parent:
+          type:
+          - string
+          - 'null'
+          description: The parent's path; null at the base dir.
+        root:
+          type: string
+          description: Name of the root this folder already is.
+        folders:
+          type: array
+          items:
+            type: object
+            required:
+            - name
+            - path
+            - hidden
+            - excluded
+            properties:
+              name:
+                type: string
+              path:
+                type: string
+                description: Relative to the base dir; pass it as `path` to browse or add.
+              hidden:
+                type: boolean
+                description: A dot folder.
+              excluded:
+                type: boolean
+                description: Matches `code_graph.exclude` (vendor, node_modules, .git); never indexed inside a root.
+              root:
+                type: string
+                description: Name of the root this folder already is.
+    CodeRootStatus:
+      type: object
+      required:
+      - name
+      - path
+      - state
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+          description: Absolute folder, symlinks resolved.
+        source:
+          type: string
+          enum:
+          - config
+          - ui
+          description: '`config`: from `code_graph.roots`, read-only in the UI; `ui`: added in the UI, removable.'
+        state:
+          type: string
+          enum:
+          - pending
+          - indexing
+          - ready
+          - error
+        files:
+          type: integer
+        symbols:
+          type: integer
+        edges:
+          type: integer
+        parse_errors:
+          type: integer
+          description: Files with syntax errors; what parsed is still in the graph.
+        files_seen:
+          type: integer
+          description: Progress of the current or last run.
+        files_parsed:
+          type: integer
+          description: Files parsed by the current or last run (new or changed).
+        files_skipped:
+          type: integer
+          description: Files over `code_graph.max_file_size` or unreadable.
+        truncated:
+          type: boolean
+          description: '`code_graph.max_files` was reached.'
+        started_at:
+          type: string
+          format: date-time
+        indexed_at:
+          type: string
+          format: date-time
+        duration_ms:
+          type: integer
+        error:
+          type: string
+    CodeSymbol:
+      type: object
+      required:
+      - id
+      - root
+      - kind
+      - name
+      - fqn
+      - file
+      - line_start
+      - line_end
+      properties:
+        id:
+          type: integer
+        root:
+          type: string
+        kind:
+          type: string
+          enum:
+          - namespace
+          - package
+          - class
+          - interface
+          - trait
+          - enum
+          - struct
+          - type
+          - function
+          - method
+        name:
+          type: string
+        fqn:
+          type: string
+          description: 'Full name: App\Service\UserService::save (PHP), example.com/app/svc.S.Save (Go).'
+        file:
+          type: string
+          description: Path relative to the root.
+        line_start:
+          type: integer
+        line_end:
+          type: integer
+        signature:
+          type: string
+        parent_id:
+          type: integer
+          description: Enclosing namespace, package, class or type.
+    CodeRelation:
+      type: object
+      required:
+      - kind
+      - fqn
+      - line
+      properties:
+        kind:
+          type: string
+          enum:
+          - imports
+          - extends
+          - implements
+          - uses
+        fqn:
+          type: string
+        symbol:
+          $ref: '#/components/schemas/CodeSymbol'
+          description: Absent when the target is outside the indexed code.
+        line:
+          type: integer
+    CodeSymbolDetail:
+      allOf:
+      - $ref: '#/components/schemas/CodeSymbol'
+      - type: object
+        required:
+        - members
+        - relations
+        - incoming
+        - callers
+        - callees
+        properties:
+          parent:
+            $ref: '#/components/schemas/CodeSymbol'
+          members:
+            type: array
+            items:
+              $ref: '#/components/schemas/CodeSymbol'
+          relations:
+            type: array
+            description: What this symbol imports, extends, implements, uses.
+            items:
+              $ref: '#/components/schemas/CodeRelation'
+          incoming:
+            type: array
+            description: Who extends, implements or uses this symbol.
+            items:
+              $ref: '#/components/schemas/CodeRelation'
+          callers:
+            type: integer
+            description: Exact incoming calls and instantiations.
+          name_calls:
+            type: integer
+            description: Method calls that match this method by name only.
+          callees:
+            type: integer
+          source:
+            type: string
+            description: Only with `code_graph.snippets` on.
+          source_from:
+            type: integer
+            description: Line number of the first source line.
+    CodeGraphNode:
+      type: object
+      required:
+      - id
+      - kind
+      - name
+      - fqn
+      - depth
+      properties:
+        id:
+          type: string
+          description: 's:<symbol id>, ns:<namespace or package> (level package), x:<name> (outside the index), f:<file>.'
+        symbol_id:
+          type: integer
+        kind:
+          type: string
+          description: A symbol kind, or external, file.
+        name:
+          type: string
+        fqn:
+          type: string
+        file:
+          type: string
+        line:
+          type: integer
+        external:
+          type: boolean
+        depth:
+          type: integer
+          description: Hops from the start; 0 for the start nodes.
+        size:
+          type: integer
+          description: Types, functions and methods folded into this node.
+        group:
+          type: string
+          description: Id of the expanded node this node came from.
+    CodeGraphEdge:
+      type: object
+      required:
+      - from
+      - to
+      - kind
+      - confidence
+      - count
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        kind:
+          type: string
+          enum:
+          - imports
+          - extends
+          - implements
+          - uses
+          - calls
+          - instantiates
+        confidence:
+          type: string
+          enum:
+          - exact
+          - name
+          description: 'exact: target named in the source; name: method call on a value of unknown type, matched by name.'
+        line:
+          type: integer
+          description: Line of the first reference.
+        count:
+          type: integer
+          description: References merged into this edge.
+    CodeGraph:
+      type: object
+      required:
+      - nodes
+      - edges
+      - truncated
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeGraphNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeGraphEdge'
+        truncated:
+          type: boolean
+    CodeFileEntry:
+      type: object
+      required:
+      - name
+      - path
+      - dir
+      - symbols
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+        dir:
+          type: boolean
+        files:
+          type: integer
+          description: Directories only.
+        lang:
+          type: string
+          enum:
+          - php
+          - go
+        symbols:
+          type: integer
+        parse_error:
+          type: boolean
+    CodeOutlineItem:
+      allOf:
+      - $ref: '#/components/schemas/CodeSymbol'
+      - type: object
+        required:
+        - members
+        properties:
+          members:
+            type: array
+            items:
+              $ref: '#/components/schemas/CodeOutlineItem'
     UpdateState:
       type: object
       description: Progress of an update; also the payload of the update.progress WebSocket event.

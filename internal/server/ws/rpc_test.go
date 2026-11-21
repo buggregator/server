@@ -50,3 +50,26 @@ func TestHandleRPC_RecoversHandlerPanic(t *testing.T) {
 		t.Errorf("next call = %s", raw)
 	}
 }
+
+// The code graph may carry source lines; any page can open the socket, so the
+// bridge never forwards /api/code (the UI uses fetch).
+func TestHandleRPC_RefusesCodeGraph(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/code/roots", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte(`{}`)) })
+	mux.HandleFunc("GET /api/codex", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte(`{}`)) })
+	h := NewMuxRPCHandler(mux)
+	for _, tc := range []struct {
+		uri  string
+		code int
+	}{{"api/code/roots", 403}, {"api/code/symbols/1", 403}, {"api/codex", 200}} {
+		raw, err := h.HandleRPC("GET", tc.uri, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var resp struct{ Code int }
+		_ = json.Unmarshal(raw, &resp)
+		if resp.Code != tc.code {
+			t.Errorf("%s: %s, want code %d", tc.uri, raw, tc.code)
+		}
+	}
+}
