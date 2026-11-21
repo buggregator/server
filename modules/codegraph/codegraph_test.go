@@ -651,6 +651,34 @@ func TestSubgraph_Expand(t *testing.T) {
 	if _, ok := nodes[sid]; ok {
 		t.Error("expanded class still a node")
 	}
+	for _, n := range g.Nodes {
+		if n.Group != "" && (n.Kind == KindNamespace || n.Kind == KindPackage) {
+			t.Errorf("namespace row shown inside an expansion: %+v", n)
+		}
+	}
+	for _, e := range g.Edges {
+		if e.Kind == EdgeImports && (nodes[e.From].Group != "" || nodes[e.To].Group != "") {
+			t.Errorf("expanded namespace kept its imports edge: %+v", e)
+		}
+	}
+	// Go: an expanded package must not show its package row either.
+	gg, err := m.graphs.Subgraph(GraphQuery{Root: "app", Expand: map[string]bool{"ns:example.com/app/internal/repo": true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range gg.Nodes {
+		if n.Kind == KindPackage && n.Group != "" {
+			t.Errorf("package row shown inside an expansion: %+v", n)
+		}
+	}
+	// No level finer than symbol: the expand is ignored, the node stays.
+	sg, err := m.graphs.Subgraph(GraphQuery{Root: "app", Level: LevelSymbol, Expand: map[string]bool{sid: true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := byID(sg)[sid]; !ok {
+		t.Error("expand at symbol level dropped the node")
+	}
 	if _, ok := nodes[`ns:App\Repo`]; !ok {
 		t.Error("other namespaces must stay folded")
 	}

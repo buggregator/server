@@ -666,12 +666,14 @@ func (x *symbolIndex) fold(id int64, level string, expand map[string]bool) (key,
 	for expand[key] {
 		next, ok := finer[level]
 		if !ok {
-			return "", "", nil
+			// Nothing finer to show: the expand is ignored.
+			return key, group, s
 		}
 		k, ns := x.rollup(id, next)
-		if k == key {
-			// The expanded node's own symbol (the namespace or the class
-			// itself): an expanded node is never shown, its own edges go.
+		if k == key || ns.kind == KindNamespace || ns.kind == KindPackage {
+			// The expanded node's own symbol (the class itself, or one of
+			// the namespace's per-file rows): an expanded node is never
+			// shown, its own edges go.
 			return "", "", nil
 		}
 		group, key, s, level = key, k, ns, next
