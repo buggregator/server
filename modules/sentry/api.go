@@ -61,11 +61,16 @@ func clearSentry(db *sql.DB, project string, keepPinned bool) error {
 		for _, t := range []string{
 			"sentry_breadcrumbs", "sentry_exceptions", "sentry_error_events",
 			"sentry_spans", "sentry_transactions", "sentry_traces",
-			"sentry_logs", "sentry_metrics", "sentry_feedback",
+			"sentry_logs", "sentry_metrics", "sentry_feedback", "cron_checkins",
 		} {
 			if _, err := tx.Exec("DELETE FROM " + t); err != nil {
 				return err
 			}
+		}
+		// Monitors stay with their settings: a ping monitor's schedule was
+		// set by hand. They lose the runs, so they lose the last status too.
+		if _, err := tx.Exec(`UPDATE cron_monitors SET last_status = '', last_checkin_at = NULL`); err != nil {
+			return err
 		}
 		return tx.Commit()
 	}
@@ -112,6 +117,8 @@ func clearSentry(db *sql.DB, project string, keepPinned bool) error {
 		`DELETE FROM sentry_logs` + where,
 		`DELETE FROM sentry_metrics` + where,
 		`DELETE FROM sentry_feedback` + fbWhere,
+		`DELETE FROM cron_checkins WHERE monitor_id IN (SELECT id FROM cron_monitors` + where + `)`,
+		`UPDATE cron_monitors SET last_status = '', last_checkin_at = NULL` + where,
 	}
 	stmts = append(stmts, tidyTracesStmts...)
 	for _, st := range stmts {

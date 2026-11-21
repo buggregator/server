@@ -14,6 +14,7 @@ type Module struct {
 	db          *sql.DB
 	broadcaster module.Broadcaster
 	fetchSource sourceFetcher
+	crons       *cronChecker
 }
 
 // SetSourceFetch sets where source code of JS frames may be fetched from:
@@ -53,7 +54,18 @@ func (m *Module) RegisterMigrations(migrator *storage.Migrator) error {
 
 func (m *Module) OnInit(db *sql.DB) error {
 	m.db = db
+	m.crons = &cronChecker{db: db, notify: m.notifyStored}
+	go m.crons.run()
 	return nil
+}
+
+// RegisterRoutes adds the open cron check-in routes: /ping/{slug} and
+// Sentry's /api/{project}/cron/{slug}/{key}/. Like SDK ingestion they need
+// no API auth.
+func (m *Module) RegisterRoutes(mux *http.ServeMux, _ event.Store) {
+	if m.db != nil {
+		(&cronHTTP{db: m.db, notify: m.notifyStored}).register(mux)
+	}
 }
 
 // RegisterProtectedRoutes adds the Sentry UI API behind the API auth. SDK
@@ -61,6 +73,7 @@ func (m *Module) OnInit(db *sql.DB) error {
 func (m *Module) RegisterProtectedRoutes(mux *http.ServeMux, protect func(http.Handler) http.Handler) {
 	if m.db != nil {
 		registerAPI(mux, m.db, protect)
+		registerCronAPI(mux, m.db, protect, m.notifyStored)
 	}
 }
 

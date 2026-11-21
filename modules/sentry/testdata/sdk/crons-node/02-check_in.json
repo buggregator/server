@@ -1,0 +1,8 @@
+{
+ "method": "POST",
+ "path": "/api/42/envelope/?sentry_version=7&sentry_key=publickey&sentry_client=sentry.javascript.node%2F11.11.0",
+ "headers": {
+  "user-agent": "sentry.javascript.node/11.11.0"
+ },
+ "body": "{\"sent_at\":\"2026-11-21T16:58:45.798Z\",\"sdk\":{\"name\":\"sentry.javascript.node\",\"version\":\"11.11.0\"},\"trace\":{\"environment\":\"production\",\"release\":\"shop@1.2.3\",\"public_key\":\"publickey\",\"trace_id\":\"2316f61fd5854730865e222a998d6a7b\"}}\n{\"type\":\"check_in\"}\n{\"check_in_id\":\"05f9273b6a344509bc375d6ef115660b\",\"monitor_slug\":\"nightly-report\",\"status\":\"ok\",\"release\":\"shop@1.2.3\",\"duration\":0.003846406936645508,\"contexts\":{\"trace\":{\"trace_id\":\"2316f61fd5854730865e222a998d6a7b\",\"span_id\":\"848436c423270d5b\"}}}\n"
+}

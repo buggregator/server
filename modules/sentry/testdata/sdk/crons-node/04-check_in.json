@@ -1,0 +1,8 @@
+{
+ "method": "POST",
+ "path": "/api/42/envelope/?sentry_version=7&sentry_key=publickey&sentry_client=sentry.javascript.node%2F11.11.0",
+ "headers": {
+  "user-agent": "sentry.javascript.node/11.11.0"
+ },
+ "body": "{\"sent_at\":\"2026-11-21T16:58:45.799Z\",\"sdk\":{\"name\":\"sentry.javascript.node\",\"version\":\"11.11.0\"},\"trace\":{\"environment\":\"production\",\"release\":\"shop@1.2.3\",\"public_key\":\"publickey\",\"trace_id\":\"2316f61fd5854730865e222a998d6a7b\"}}\n{\"type\":\"check_in\"}\n{\"check_in_id\":\"e97a84c3c6da4ded84d941efaebe334e\",\"monitor_slug\":\"sync-users\",\"status\":\"error\",\"release\":\"shop@1.2.3\",\"duration\":1.5,\"contexts\":{\"trace\":{\"trace_id\":\"2316f61fd5854730865e222a998d6a7b\",\"span_id\":\"9c3eccd792e3a579\"}}}\n"
+}
