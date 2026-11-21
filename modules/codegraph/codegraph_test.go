@@ -692,3 +692,51 @@ func TestSubgraph_Expand(t *testing.T) {
 		t.Errorf("save -> ns:App\\Repo call edge missing: %+v", g.Edges)
 	}
 }
+
+func TestSubgraph_NameCalls(t *testing.T) {
+	m, _ := setup(t, Config{})
+	save := "s:" + itoa(mustLookup(t, m, `App\Service\UserService::save`).ID)
+	persist := "s:" + itoa(mustLookup(t, m, `App\Repo\UserRepo::persist`).ID)
+	has := func(g *Graph, from, to, conf string) bool {
+		for _, e := range g.Edges {
+			if e.From == from && e.To == to && e.Kind == EdgeCalls && e.Confidence == conf {
+				return true
+			}
+		}
+		return false
+	}
+	q := GraphQuery{Root: "app", Level: LevelSymbol, Limit: 2000}
+	g, err := m.graphs.Subgraph(q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if has(g, save, persist, ConfName) {
+		t.Error("name-only call shown without NameCalls")
+	}
+	q.NameCalls = true
+	g, err = m.graphs.Subgraph(q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !has(g, save, persist, ConfName) {
+		t.Errorf("$this->repo->persist() missing as a name call: %+v", g.Edges)
+	}
+	// Folded: kept apart from the exact calls between the same namespaces.
+	g, err = m.graphs.Subgraph(GraphQuery{Root: "app", NameCalls: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !has(g, `ns:App\Service`, `ns:App\Repo`, ConfName) || !has(g, `ns:App\Service`, `ns:App\Repo`, ConfExact) {
+		t.Errorf("folded name and exact calls: %+v", g.Edges)
+	}
+	// kinds without calls: none.
+	g, err = m.graphs.Subgraph(GraphQuery{Root: "app", Level: LevelSymbol, NameCalls: true, Kinds: []string{EdgeInstantiates}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range g.Edges {
+		if e.Confidence == ConfName {
+			t.Errorf("name call with kinds=instantiates: %+v", e)
+		}
+	}
+}

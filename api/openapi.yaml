@@ -4260,6 +4260,16 @@ paths:
         description: Comma-separated edge kinds to keep.
         schema:
           type: string
+      - name: confidence
+        in: query
+        description: '`exact` (default): resolved edges only. `all`: the whole-root graph also has calls matched by the method
+          or function name only (`confidence: name` on the edge, counted apart from exact ones), when the name points at
+          no more than 3 symbols of the root. Ignored with `target` or `file`.'
+        schema:
+          type: string
+          enum:
+          - exact
+          - all
       - name: limit
         in: query
         description: Max nodes, default 300, at most 2000.
