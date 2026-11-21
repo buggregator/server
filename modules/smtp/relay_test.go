@@ -164,9 +164,17 @@ func relayAPI(t *testing.T, cfg RelayConfig) *http.ServeMux {
 
 func release(mux *http.ServeMux, uuid, body string, hdr ...string) (int, map[string]any) {
 	req := httptest.NewRequest("POST", "http://127.0.0.1:8000/api/smtp/release/"+uuid, strings.NewReader(body))
+	req.RemoteAddr = "127.0.0.1:41000" // this machine, unless a test says otherwise
 	req.Header.Set("Content-Type", "application/json")
 	for i := 0; i+1 < len(hdr); i += 2 {
-		req.Header.Set(hdr[i], hdr[i+1])
+		switch hdr[i] {
+		case "RemoteAddr":
+			req.RemoteAddr = hdr[i+1]
+		case "Host":
+			req.Host = hdr[i+1]
+		default:
+			req.Header.Set(hdr[i], hdr[i+1])
+		}
 	}
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
@@ -203,7 +211,9 @@ func TestRelease_Sends(t *testing.T) {
 		{"auth on loopback without TLS", "relay-user", false, "none", false, "", "noreply@shop.test", false,
 			"To: Customer <customer@example.com>,", false, "me@example.com"},
 		{"STARTTLS + auth, rewrite To, own From", "relay-user", true, "starttls", true, "qa@company.test", "qa@company.test", true,
-			"To: me@example.com, two@example.com\r\n", true, "Me <ME@example.com>, two@example.com"},
+			"To: Me@example.com, two@example.com\r\n", true, "Me <Me@EXAMPLE.com>, two@example.com"},
+		{"login is an address: it is the sender", "bot@relay.test", true, "starttls", false, "", "bot@relay.test", true,
+			"To: Customer <customer@example.com>,", false, "me@example.com"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := startFakeRelay(t, tc.user, "s3cret", tc.withTLS)
@@ -224,7 +234,7 @@ func TestRelease_Sends(t *testing.T) {
 			if m.from != tc.wantFrom || m.user != tc.user || f.tlsd != tc.wantTLS {
 				t.Errorf("from %q user %q tls %v", m.from, m.user, f.tlsd)
 			}
-			wantRcpt := strings.Split(strings.ToLower(strings.NewReplacer("Me <", "", ">", "", " ", "").Replace(tc.recipient)), ",")
+			wantRcpt := strings.Split(strings.NewReplacer("Me <", "", ">", "", " ", "", "EXAMPLE", "example").Replace(tc.recipient), ",")
 			if strings.Join(m.to, ",") != strings.Join(wantRcpt, ",") {
 				t.Errorf("rcpt = %v, want %v", m.to, wantRcpt)
 			}
@@ -266,6 +276,11 @@ func TestRelease_Guards(t *testing.T) {
 		{"too many", nil, "m1", `{"to":["` + manyAddrs(21) + `"]}`, nil, 422},
 		{"unknown message", nil, "nope", ok, nil, 404},
 		{"password over plain to a remote host", func(c *RelayConfig) { c.Host = "smtp.example.com"; c.Username = "u" }, "m1", ok, nil, 502},
+		{"no auth: LAN peer", nil, "m1", ok, []string{"RemoteAddr", "192.168.1.50:41000", "Host", "192.168.1.20:8000"}, 403},
+		{"no auth: Docker bridge", nil, "m1", ok, []string{"RemoteAddr", "172.17.0.1:41000", "Host", "localhost:8000"}, 403},
+		{"no auth: local proxy with X-Forwarded-For", nil, "m1", ok, []string{"X-Forwarded-For", "203.0.113.9"}, 403},
+		{"no auth: DNS rebinding Host", nil, "m1", ok, []string{"Host", "evil.example:8000"}, 403},
+		{"auth on: LAN peer", func(c *RelayConfig) { c.AuthOn = true }, "m1", ok, []string{"RemoteAddr", "192.168.1.50:41000", "Host", "192.168.1.20:8000"}, 200},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := relayCfg(f, "none")
@@ -288,13 +303,53 @@ func TestRelease_Guards(t *testing.T) {
 			if code != tc.code {
 				t.Errorf("code = %d, want %d: %v", code, tc.code, resp)
 			}
-			if cfg.Host == "smtp.example.com" && !strings.Contains(resp["message"].(string), "unencrypted") {
+			if cfg.Host == "smtp.example.com" && !strings.Contains(fmtMsg(resp), "unencrypted") {
 				t.Errorf("message = %v, want the unencrypted refusal", resp["message"])
 			}
 		})
 	}
-	if n := len(f.mails()); n != 1 { // only "allowed" went out
-		t.Errorf("relay got %d mails, want 1", n)
+	if n := len(f.mails()); n != 2 { // only "allowed" and "auth on: LAN peer" went out
+		t.Errorf("relay got %d mails, want 2", n)
+	}
+}
+
+func fmtMsg(resp map[string]any) string {
+	m, _ := resp["message"].(string)
+	return m
+}
+
+// Without auth (the default, listening on every interface) a request from
+// another machine must never send: Buggregator would be an open relay
+// through the owner's mail account. Found in review of #476.
+func TestRelease_FromLANWithoutAuth(t *testing.T) {
+	f := startFakeRelay(t, "", "", false)
+	mux := relayAPI(t, relayCfg(f, "none"))
+	req := httptest.NewRequest("POST", "http://192.168.1.20:8000/api/smtp/release/m1", strings.NewReader(`{"to":["victim@anywhere.test"]}`))
+	req.RemoteAddr = "192.168.1.50:41000"
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code == 200 || len(f.mails()) > 0 {
+		t.Fatalf("LAN request without auth released the message: status %d, relayed %d", w.Code, len(f.mails()))
+	}
+}
+
+// A login with insecure_skip_verify goes only to a relay on this machine.
+func TestRelease_InsecureSkipVerifyRemote(t *testing.T) {
+	f := startFakeRelay(t, "u", "p", true)
+	_, store, mod := setupAPITest(t)
+	cfg := relayCfg(f, "starttls")
+	cfg.Host = "smtp.example.com"
+	mod.SetRelay(cfg)
+	mod.relay.dial = func(ctx context.Context, n, _ string) (net.Conn, error) {
+		return (&net.Dialer{}).DialContext(ctx, n, f.addr)
+	}
+	mux := http.NewServeMux()
+	mod.RegisterProtectedRoutes(mux, func(next http.Handler) http.Handler { return next })
+	storeSMTPEvent(t, store, "m1", ParsedEmail{Raw: caughtRaw}, 1, "default")
+	code, resp := release(mux, "m1", `{"to":["me@example.com"]}`)
+	if code != 502 || !strings.Contains(fmtMsg(resp), "insecure_skip_verify") || len(f.mails()) != 0 {
+		t.Errorf("code %d %v, relayed %d", code, resp, len(f.mails()))
 	}
 }
 
@@ -341,9 +396,9 @@ func TestRelayInfo(t *testing.T) {
 	}{
 		{RelayConfig{}, `{"enabled":false}`},
 		{RelayConfig{Host: "smtp.example.com", Username: "u", Password: "s3cret-pass"},
-			`{"allowed_recipients":[],"auth":true,"enabled":true,"from":"","host":"smtp.example.com","max_recipients":20,"port":587,"tls":"starttls"}`},
-		{RelayConfig{Host: "mailpit", TLS: "none", AllowedRecipients: []string{"*@company.test"}},
-			`{"allowed_recipients":["*@company.test"],"auth":false,"enabled":true,"from":"","host":"mailpit","max_recipients":20,"port":25,"tls":"none"}`},
+			`{"allowed_recipients":[],"auth":true,"enabled":true,"from":"","host":"smtp.example.com","local_only":true,"max_recipients":20,"port":587,"tls":"starttls"}`},
+		{RelayConfig{Host: "mailpit", TLS: "none", AllowedRecipients: []string{"*@company.test"}, AuthOn: true},
+			`{"allowed_recipients":["*@company.test"],"auth":false,"enabled":true,"from":"","host":"mailpit","local_only":false,"max_recipients":20,"port":25,"tls":"none"}`},
 	} {
 		_, _, mod := setupAPITest(t)
 		mod.SetRelay(tc.cfg)

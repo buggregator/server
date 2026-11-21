@@ -34,6 +34,7 @@ func handleRelayInfo(rl *relay) http.HandlerFunc {
 			"from":               c.From,
 			"allowed_recipients": allowed,
 			"max_recipients":     relayMaxRecipients,
+			"local_only":         !c.AuthOn, // without auth only this machine may release
 		})
 	}
 }
@@ -50,6 +51,12 @@ func handleRelease(store event.Store, rl *relay) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !sameorigin.Check(r) {
 			smtpError(w, "only the Buggregator UI itself can release a message", http.StatusForbidden)
+			return
+		}
+		// Without auth anyone who reaches the port could send mail through
+		// the owner's account: only this machine may release then.
+		if !rl.cfg.AuthOn && !sameorigin.Local(r) {
+			smtpError(w, "without auth, release works only from this machine (localhost); Docker, another machine or a proxy need auth on", http.StatusForbidden)
 			return
 		}
 		if !rl.cfg.Enabled() {

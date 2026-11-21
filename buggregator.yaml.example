@@ -37,15 +37,18 @@ sentry:
   source_fetch: ${SENTRY_SOURCE_FETCH:private}  # private | any | off
 
 # Release a caught email to a real inbox (button on an SMTP message). Off while
-# host is empty. Messages are sent only when someone clicks; nothing is
-# forwarded automatically. Keep the password in SMTP_RELAY_PASSWORD or a file.
+# host is empty. Nothing is forwarded on its own: a message goes out only on a
+# release request. Without auth, release works only from this machine
+# (localhost); in Docker, from another machine or behind a proxy turn auth on,
+# or anyone who reaches the port could send mail through this account.
+# Keep the password in SMTP_RELAY_PASSWORD or a file.
 smtp_relay:
   host: ${SMTP_RELAY_HOST:}                       # e.g. smtp.gmail.com, or mailpit for a local test
   port: ${SMTP_RELAY_PORT:0}                      # 0 = 587 for starttls, 465 for tls, 25 for none
   tls: ${SMTP_RELAY_TLS:starttls}                 # starttls | tls | none
   username: ${SMTP_RELAY_USERNAME:}               # empty = no login
   password_file: ${SMTP_RELAY_PASSWORD_FILE:}     # or set SMTP_RELAY_PASSWORD
-  from: ${SMTP_RELAY_FROM:}                       # envelope sender; empty = the message's From
+  from: ${SMTP_RELAY_FROM:}                       # envelope sender; empty = username when it is an address (Gmail, SES want the account), else the message's From
   allowed_recipients: []                          # e.g. ["*@mycompany.com"]; env SMTP_RELAY_ALLOWED_RECIPIENTS (comma list); empty = any
 
 # UI event lists: how much /api/events and /api/events/preview return

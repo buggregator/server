@@ -2289,8 +2289,11 @@ paths:
       description: >-
         The message goes as captured (raw RFC 822); `rewrite_to` replaces its To header with the
         recipients and drops Cc. Only the Buggregator UI itself may call it (same origin; another
-        page and the WebSocket RPC bridge are refused). At most 10 messages a minute and 20
-        recipients a message; recipients must match `smtp_relay.allowed_recipients` when set.
+        page and the WebSocket RPC bridge are refused). Without auth only a request from this
+        machine is taken (loopback peer and Host, no forwarding headers); Docker, another machine
+        or a proxy need auth on. At most 10 messages a minute and 20 recipients a message;
+        recipients must match `smtp_relay.allowed_recipients` when set. The envelope sender is
+        `smtp_relay.from`, else the login when it is an address, else the message's From.
       security:
       - authToken: []
       parameters:
@@ -4173,6 +4176,9 @@ components:
             type: string
         max_recipients:
           type: integer
+        local_only:
+          type: boolean
+          description: Auth is off, so release works only from this machine (localhost).
     UpdateState:
       type: object
       description: Progress of an update; also the payload of the update.progress WebSocket event.

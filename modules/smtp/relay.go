@@ -26,9 +26,13 @@ type RelayConfig struct {
 	TLS                string // "starttls" (default), "tls" (implicit, port 465) or "none"
 	Username           string // empty: no AUTH
 	Password           string
-	From               string   // MAIL FROM; empty: the message's own From
+	From               string   // MAIL FROM; empty: Username when it is an address, else the message's From
 	AllowedRecipients  []string // address patterns like "*@example.com"; empty: any
 	InsecureSkipVerify bool     // accept any TLS certificate (a local test relay)
+
+	// AuthOn is the server's API auth, not a relay setting: without it a
+	// release is taken only from this machine.
+	AuthOn bool
 }
 
 // Enabled reports whether a relay is configured.
@@ -119,7 +123,7 @@ func (r *relay) recipients(in []string) ([]string, error) {
 			if err != nil {
 				return nil, fmt.Errorf("not an email address: %q", part)
 			}
-			addr := strings.ToLower(a.Address)
+			addr := normalizeAddress(a.Address)
 			if !r.recipientAllowed(addr) {
 				return nil, fmt.Errorf("%s is not in the allowed recipients", addr)
 			}
@@ -138,10 +142,21 @@ func (r *relay) recipients(in []string) ([]string, error) {
 	return out, nil
 }
 
+// normalizeAddress lowercases the domain only: the local part is case
+// sensitive by RFC 5321.
+func normalizeAddress(addr string) string {
+	if i := strings.LastIndex(addr, "@"); i >= 0 {
+		return addr[:i] + strings.ToLower(addr[i:])
+	}
+	return addr
+}
+
+// recipientAllowed matches the patterns ignoring case.
 func (r *relay) recipientAllowed(addr string) bool {
 	if len(r.cfg.AllowedRecipients) == 0 {
 		return true
 	}
+	addr = strings.ToLower(addr)
 	for _, p := range r.cfg.AllowedRecipients {
 		p = strings.ToLower(strings.TrimSpace(p))
 		if p == "" {
@@ -154,15 +169,27 @@ func (r *relay) recipientAllowed(addr string) bool {
 	return false
 }
 
-// send delivers raw to the recipients. from is the envelope sender when the
-// config names none.
+// envelopeFrom is the MAIL FROM: the configured From, else the login when it
+// is an address (real relays like Gmail or SES reject a sender that is not
+// the account), else the captured message's From.
+func (c RelayConfig) envelopeFrom(captured string) string {
+	if f := strings.TrimSpace(c.From); f != "" {
+		return f
+	}
+	if u := strings.TrimSpace(c.Username); strings.Contains(u, "@") {
+		if a, err := mail.ParseAddress(u); err == nil {
+			return a.Address
+		}
+	}
+	return captured
+}
+
+// send delivers raw to the recipients. from is the captured message's From.
 func (r *relay) send(ctx context.Context, from string, to []string, raw []byte) error {
 	if !r.cfg.Enabled() {
 		return errRelayOff
 	}
-	if f := strings.TrimSpace(r.cfg.From); f != "" {
-		from = f
-	}
+	from = r.cfg.envelopeFrom(from)
 
 	ctx, cancel := context.WithTimeout(ctx, relayTimeout)
 	defer cancel()
@@ -192,9 +219,13 @@ func (r *relay) send(ctx context.Context, from string, to []string, raw []byte) 
 	defer c.Close()
 
 	if r.cfg.Username != "" {
-		// The password goes in clear text only to a relay on this machine.
+		// The password goes in clear text, or over TLS with an unchecked
+		// certificate, only to a relay on this machine.
 		if _, encrypted := c.TLSConnectionState(); !encrypted && !isLoopbackHost(host) {
 			return errors.New("refusing to send the password over an unencrypted connection: set tls to starttls or tls")
+		}
+		if r.cfg.InsecureSkipVerify && !isLoopbackHost(host) {
+			return errors.New("refusing to send the password with insecure_skip_verify to a remote relay: anyone in between could take it")
 		}
 		if err := c.Auth(sasl.NewPlainClient("", r.cfg.Username, r.cfg.Password)); err != nil {
 			return fmt.Errorf("login to %s: %w", addr, err)

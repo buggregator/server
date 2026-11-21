@@ -112,6 +112,7 @@ func run() {
 		From:               cfg.SMTPRelay.From,
 		AllowedRecipients:  cfg.SMTPRelay.AllowedRecipients,
 		InsecureSkipVerify: cfg.SMTPRelay.InsecureSkipVerify,
+		AuthOn:             cfg.Auth.Enabled,
 	})
 	vardumperMod := vardumper.New(cfg.VarDumperAddr)
 	proxyMod := proxy.New(cfg.ProxyAddr)
