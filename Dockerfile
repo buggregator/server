@@ -53,7 +53,7 @@ COPY --from=php-builder /php/vardumper-parser modules/vardumper/bin/vardumper-pa
 COPY --from=frontend /frontend/ internal/frontend/dist/
 
 ARG VERSION=dev
-RUN CGO_ENABLED=0 go build -tags "grammar_subset grammar_subset_php grammar_subset_go" -ldflags="-s -w -X main.version=${VERSION}" -o buggregator ./cmd/buggregator
+RUN CGO_ENABLED=0 go build -ldflags="-s -w -X main.version=${VERSION}" -o buggregator ./cmd/buggregator
 
 # Stage 4: Final minimal image
 FROM alpine:3.20

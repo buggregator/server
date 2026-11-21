@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"time"
 
 	"github.com/buggregator/server/v2/internal/app"
@@ -17,7 +16,6 @@ import (
 	httpserver "github.com/buggregator/server/v2/internal/server/http"
 	"github.com/buggregator/server/v2/internal/server/ws"
 	"github.com/buggregator/server/v2/internal/storage"
-	"github.com/buggregator/server/v2/modules/codegraph"
 	"github.com/buggregator/server/v2/modules/httpdumps"
 	"github.com/buggregator/server/v2/modules/inspector"
 	"github.com/buggregator/server/v2/modules/monolog"
@@ -194,35 +192,6 @@ func run() {
 		xdebugMod.SetBroadcaster(hub)
 		hub.AddServerChannel(xdebug.Channel)
 		registry.Register(xdebugMod)
-	}
-	// Code graph — off unless code_graph.roots names folders or base_dir (the
-	// UI's folder picker) is usable; indexes the roots in the background and
-	// adds the /api/code routes and code_* MCP tools.
-	if cfg.CodeGraph.Enabled() {
-		cgCfg := codegraph.Config{
-			Exclude:     cfg.CodeGraph.Exclude,
-			MaxFileSize: cfg.CodeGraph.MaxFileSizeBytes,
-			MaxFiles:    cfg.CodeGraph.MaxFiles,
-			Snippets:    cfg.CodeGraph.Snippets,
-			BaseDir:     cfg.CodeGraph.BaseDir,
-			AuthOn:      cfg.Auth.Enabled,
-			Admins:      cfg.CodeGraph.Admins,
-		}
-		for _, r := range cfg.CodeGraph.Roots {
-			cgCfg.Roots = append(cgCfg.Roots, codegraph.Root{Name: r.Name, Path: r.Path})
-		}
-		for from, to := range cfg.CodeGraph.PathMap {
-			cgCfg.PathMap = append(cgCfg.PathMap, codegraph.PathMap{From: from, To: to})
-		}
-		// Longest prefix first.
-		sort.Slice(cgCfg.PathMap, func(i, j int) bool { return len(cgCfg.PathMap[i].From) > len(cgCfg.PathMap[j].From) })
-		if cg := codegraph.New(cgCfg); cg.Usable() {
-			registry.Register(cg)
-		} else {
-			slog.Warn("code graph: no usable root in code_graph.roots and no usable base_dir; feature off")
-			cfg.CodeGraph.Roots = nil
-			cfg.CodeGraph.BaseDir = ""
-		}
 	}
 	// HTTP proxy — stores events as http-dump with response data.
 	registry.Register(proxyMod)

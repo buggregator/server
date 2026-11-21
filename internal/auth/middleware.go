@@ -41,9 +41,3 @@ func UserFromContext(ctx context.Context) *User {
 	u, _ := ctx.Value(userContextKey).(*User)
 	return u
 }
-
-// WithUser returns ctx carrying the user, as Middleware does (tests, other
-// entry points).
-func WithUser(ctx context.Context, u *User) context.Context {
-	return context.WithValue(ctx, userContextKey, u)
-}

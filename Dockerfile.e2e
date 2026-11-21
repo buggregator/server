@@ -18,7 +18,7 @@ RUN mkdir -p modules/vardumper/bin && \
     echo 'placeholder' > modules/vardumper/bin/vardumper-parser-linux-amd64 && \
     echo 'placeholder' > modules/vardumper/bin/vardumper-parser-linux-arm64
 
-RUN CGO_ENABLED=0 go build -tags "grammar_subset grammar_subset_php grammar_subset_go" -o buggregator ./cmd/buggregator
+RUN CGO_ENABLED=0 go build -o buggregator ./cmd/buggregator
 
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates
