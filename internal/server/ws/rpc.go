@@ -16,9 +16,8 @@ import (
 // rpcRefused are paths the RPC bridge never forwards. Any page can open the
 // WebSocket (no CORS there) and the bridged request carries no Origin, so a
 // same-origin check in the handler cannot tell it from curl. The UI calls the
-// update and code graph APIs over fetch only; the code graph may carry source
-// lines (code_graph.snippets).
-var rpcRefused = []string{"/api/update", "/api/code"}
+// update API over fetch only.
+var rpcRefused = []string{"/api/update"}
 
 // MuxRPCHandler routes Centrifugo RPC calls to the HTTP mux.
 type MuxRPCHandler struct {
