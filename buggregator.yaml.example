@@ -53,6 +53,18 @@ smtp_relay:
   from: ${SMTP_RELAY_FROM:}                       # envelope sender; empty = username when it is an address (Gmail, SES want the account), else the message's From
   allowed_recipients: []                          # e.g. ["*@mycompany.com", "me@gmail.com"]; env SMTP_RELAY_ALLOWED_RECIPIENTS (comma list); required without auth, empty with auth = any
 
+# Broadcast events (module broadcast): Buggregator answers the Pusher HTTP API
+# (POST /apps/{app_id}/events, /batch_events) that Laravel Reverb, Pusher and
+# soketi clients call. Point REVERB_HOST/REVERB_PORT (or PUSHER_HOST/PUSHER_PORT)
+# at Buggregator; each event becomes a card. Without upstream the app gets {}
+# and browsers get nothing; with upstream the same request also goes to the
+# real server and the app gets its answer.
+broadcast:
+  upstream: ${BROADCAST_UPSTREAM:}                # e.g. http://127.0.0.1:8080 (Reverb). Empty = capture only
+  # apps:                                         # check request signatures; env BROADCAST_APPS="key:secret,..."
+  #   - key: app-key
+  #     secret: app-secret
+
 # UI event lists: how much /api/events and /api/events/preview return
 ui:
   default_limit: ${UI_DEFAULT_LIMIT:}       # Events returned when the request has no limit param. Empty or 0 = unlimited
@@ -162,6 +174,7 @@ modules:
   monolog: true
   smtp: true
   sms: true
+  broadcast: true
   http-dump: true
   profiler: true
   xdebug-trace: true

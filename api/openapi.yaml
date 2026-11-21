@@ -893,6 +893,74 @@ paths:
           $ref: '#/components/responses/Error'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /apps/{app_id}/events:
+    post:
+      tags:
+      - Ingestion
+      operationId: ingestBroadcastEvent
+      summary: Pusher HTTP API event (Laravel Reverb, Pusher, soketi clients)
+      description: Matched only when signed (`auth_key`, `auth_signature` in the query); a path prefix before `/apps/` is allowed.
+        Each event is stored as a `broadcast` event with its channels, data and warnings. With `broadcast.upstream` set the
+        request is also forwarded unchanged and the upstream's status and body are returned (502 when it cannot be reached);
+        without it the answer is `{}`. The signature is checked only for app keys in `broadcast.apps`.
+      x-ingestion: true
+      security: []
+      parameters:
+      - name: app_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                data:
+                  type: string
+                channel:
+                  type: string
+                channels:
+                  type: array
+                  items:
+                    type: string
+                socket_id:
+                  type: string
+      responses:
+        '200':
+          description: '`{}`, or the upstream''s answer when forwarding'
+        '502':
+          description: The upstream could not be reached; the event is stored anyway
+  /apps/{app_id}/batch_events:
+    post:
+      tags:
+      - Ingestion
+      operationId: ingestBroadcastBatch
+      summary: Pusher HTTP API batch (up to 10 events), one `broadcast` event each, sharing a `batch_id`
+      x-ingestion: true
+      security: []
+      parameters:
+      - name: app_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                batch:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: '`{}`, or the upstream''s answer when forwarding'
   /api/profiler/store:
     post:
       tags:
@@ -4061,7 +4129,7 @@ components:
       name: type
       in: query
       description: Only events of this type (`sentry`, `smtp`, `monolog`, `var-dump`, `ray`, `inspector`, `profiler`, `http-dump`,
-        `sms`, ...)
+        `sms`, `broadcast`, ...)
       schema:
         type: string
     Project:

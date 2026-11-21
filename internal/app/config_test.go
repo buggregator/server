@@ -52,8 +52,8 @@ func TestModulesConfig_EnabledTypes(t *testing.T) {
 	t.Run("all enabled by default", func(t *testing.T) {
 		cfg := ModulesConfig{}
 		types := cfg.EnabledTypes()
-		if len(types) != 11 {
-			t.Errorf("len = %d, want 11", len(types))
+		if len(types) != 12 {
+			t.Errorf("len = %d, want 12", len(types))
 		}
 	})
 
@@ -61,8 +61,8 @@ func TestModulesConfig_EnabledTypes(t *testing.T) {
 		f := false
 		cfg := ModulesConfig{Sentry: &f, SMTP: &f}
 		types := cfg.EnabledTypes()
-		if len(types) != 9 {
-			t.Errorf("len = %d, want 9", len(types))
+		if len(types) != 10 {
+			t.Errorf("len = %d, want 10", len(types))
 		}
 		for _, typ := range types {
 			if typ == "sentry" || typ == "smtp" {
@@ -300,6 +300,19 @@ func TestModulesConfig_XdebugTrace(t *testing.T) {
 	}
 }
 
+func TestBroadcastConfig(t *testing.T) {
+	t.Setenv("BROADCAST_UPSTREAM", "http://127.0.0.1:8080")
+	t.Setenv("BROADCAST_APPS", "app-key:app-secret, bad ,k2:s:with:colons")
+	c := broadcastConfig(BroadcastConfig{Upstream: "http://file", Apps: []BroadcastAppConfig{{Key: "file", Secret: "x"}}})
+	if c.Upstream != "http://127.0.0.1:8080" {
+		t.Errorf("upstream = %q", c.Upstream)
+	}
+	sec := c.Secrets()
+	if len(sec) != 2 || sec["app-key"] != "app-secret" || sec["k2"] != "s:with:colons" {
+		t.Errorf("secrets = %v", sec)
+	}
+}
+
 func TestModulesConfig_Disable(t *testing.T) {
 	cfg := Config{}
 	cfg.Modules.Disable("xdebug-trace")
@@ -308,7 +321,7 @@ func TestModulesConfig_Disable(t *testing.T) {
 		t.Error("xdebug-trace should be disabled")
 	}
 	types := cfg.Modules.EnabledTypes()
-	if strings.Contains(strings.Join(types, ","), "xdebug-trace") || len(types) != 10 {
+	if strings.Contains(strings.Join(types, ","), "xdebug-trace") || len(types) != 11 {
 		t.Errorf("EnabledTypes = %v", types)
 	}
 }
