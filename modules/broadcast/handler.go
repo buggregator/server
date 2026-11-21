@@ -12,6 +12,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -306,6 +307,11 @@ func (h *handler) forward(r *http.Request, body []byte, up *Upstream) (int, []by
 			}
 			return resp.StatusCode, b
 		}
+	}
+	// The request URL carries the signature: keep only the cause.
+	var uerr *url.Error
+	if errors.As(err, &uerr) {
+		err = uerr.Err
 	}
 	up.TimeMs, up.Error = time.Since(start).Milliseconds(), err.Error()
 	slog.Warn("broadcast: forward to upstream failed", "upstream", h.cfg.Upstream, "err", err)

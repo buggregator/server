@@ -275,6 +275,9 @@ func TestForward_UpstreamDown(t *testing.T) {
 	if w.Code != http.StatusBadGateway || !strings.Contains(w.Body.String(), "upstream") {
 		t.Errorf("answer %d %s", w.Code, w.Body.String())
 	}
+	if strings.Contains(w.Body.String(), "auth_signature") || strings.Contains(ev[0].Upstream.Error, "auth_signature") {
+		t.Errorf("error shows the signed URL: %s", ev[0].Upstream.Error)
+	}
 	if len(ev) != 1 || ev[0].Upstream == nil || ev[0].Upstream.Error == "" {
 		t.Errorf("%+v", ev)
 	}
