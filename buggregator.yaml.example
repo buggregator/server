@@ -158,7 +158,8 @@ tcp:
 #   base_dir: ~/projects          # the UI may add roots from folders inside it (env CODE_GRAPH_BASE_DIR)
 #                                 # default: your home, but only when listening on 127.0.0.1 or with auth on;
 #                                 # none in Docker (mount a volume and set it); off = none.
-#                                 # Without auth, folders can be browsed/added only from this machine (localhost).
+#                                 # Without auth, folders can be browsed/added only from this machine talking to
+#                                 # Buggregator directly (not in Docker, not behind a proxy); there turn on auth + admins.
 #   admins: [alice, bob@example.com] # with auth on, only these users may add/remove roots (env CODE_GRAPH_ADMINS)
 
 # Enable/disable modules. All enabled by default.

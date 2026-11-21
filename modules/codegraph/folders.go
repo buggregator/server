@@ -26,10 +26,10 @@ var (
 )
 
 // PickerHint says how to turn the folder picker on when it is off.
-const PickerHint = "Set code_graph.base_dir (env CODE_GRAPH_BASE_DIR) to the folder Buggregator may add code from. It defaults to your home only when Buggregator listens on 127.0.0.1 or auth is on. In Docker, mount it first: -v ~/projects:/code -e CODE_GRAPH_BASE_DIR=/code"
+const PickerHint = "Set code_graph.base_dir (env CODE_GRAPH_BASE_DIR) to the folder Buggregator may add code from. It defaults to your home only when Buggregator listens on 127.0.0.1 or auth is on. In Docker, mount it (-v ~/projects:/code -e CODE_GRAPH_BASE_DIR=/code) and turn on auth with your user in code_graph.admins: without auth the picker works only for Buggregator running directly on this computer. Or list the folders in code_graph.roots."
 
 // LocalOnlyHint says why the picker refuses a request without auth.
-const LocalOnlyHint = "Without auth, code graph folders can be browsed and changed only from this computer: open the UI as http://127.0.0.1 or http://localhost. From another machine, turn on auth and list yourself in code_graph.admins."
+const LocalOnlyHint = "Without auth, code graph folders can be browsed and changed only from this computer, talking to Buggregator directly: open the UI as http://127.0.0.1 or http://localhost. In Docker, behind a proxy or from another machine, turn on auth and list yourself in code_graph.admins, or list the folders in code_graph.roots."
 
 // Picker is the folder picker's state in GET /api/code/roots.
 type Picker struct {
@@ -210,9 +210,16 @@ func (m *Module) canManage(r *http.Request) bool {
 	return false
 }
 
-// localRequest: the peer is a loopback address and the Host names this
-// machine (a DNS-rebound page has a foreign Host).
+// localRequest: the peer is a loopback address, the Host names this machine
+// (a DNS-rebound page has a foreign Host) and no proxy forwarded it (a proxy
+// on this host makes every outside request look local). In Docker the peer is
+// the bridge gateway, never loopback: there the picker needs auth.
 func localRequest(r *http.Request) bool {
+	for _, h := range []string{"Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "X-Real-IP"} {
+		if r.Header.Get(h) != "" {
+			return false
+		}
+	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		host = r.RemoteAddr

@@ -301,6 +301,12 @@ func TestFolders_Guards(t *testing.T) {
 	p.want(p.do("GET", "/api/code/folders", "", nil, rebind), 403, "not_local")
 	p.want(p.do("POST", "/api/code/roots", `{"path":"proj"}`, nil, rebind), 403, "not_local")
 	p.want(p.do("GET", "/api/code/folders", "", nil, map[string]string{"RemoteAddr": "[::1]:5000", "Host": "[::1]:8000"}), 200, "")
+	// Docker: the peer is the bridge gateway even for a browser on this machine.
+	p.want(p.do("GET", "/api/code/folders", "", nil, map[string]string{"RemoteAddr": "172.17.0.1:40000", "Host": "127.0.0.1:18097"}), 403, "not_local")
+	// A proxy on this host (nginx proxy_pass without Host): loopback peer and Host, but forwarded.
+	for _, h := range []string{"Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "X-Real-IP"} {
+		p.want(p.do("POST", "/api/code/roots", `{"path":"proj"}`, nil, map[string]string{"Host": "127.0.0.1:8000", h: "203.0.113.9"}), 403, "not_local")
+	}
 	_ = json.Unmarshal(p.do("GET", "/api/code/roots", "", nil, lan).Body.Bytes(), &roots)
 	if !roots.Picker.Enabled || roots.Picker.CanManage || roots.Picker.BaseDir != "" || roots.Picker.Hint != LocalOnlyHint {
 		t.Errorf("LAN picker: %+v", roots.Picker)
