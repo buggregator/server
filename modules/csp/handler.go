@@ -98,6 +98,11 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 	if rest, ok := strings.CutPrefix(r.URL.Path, "/csp/"); ok {
 		project = strings.Trim(rest, "/")
 	}
+	// A proxy or a report collector may name the project with the header
+	// alone (no X-Buggregator-Event): /csp/<project> wins.
+	if project == "" {
+		project = strings.TrimSpace(r.Header.Get("X-Buggregator-Project"))
+	}
 	return &event.Incoming{Type: "csp", Payload: raw, Project: project}, nil
 }
 

@@ -366,3 +366,37 @@ func TestPreview(t *testing.T) {
 		t.Errorf("search text %q", txt[:40])
 	}
 }
+
+// X-Buggregator-Project alone picks the project; detection (header with
+// X-Buggregator-Event, userinfo, Basic Auth) wins over it.
+func TestHandle_ProjectHeader(t *testing.T) {
+	f := fixtures(t)["trigger"]
+	for _, tc := range []struct{ header, detected, want string }{
+		{"", "", ""},
+		{"shop", "", "shop"},
+		{" shop ", "", "shop"},
+		{"shop", "billing", "billing"},
+	} {
+		r := request(f)
+		if tc.header != "" {
+			r.Header.Set("X-Buggregator-Project", tc.header)
+		}
+		if tc.detected != "" {
+			r.Header.Set("X-Buggregator-Detected-Project", tc.detected)
+		}
+		m := New(secrets)
+		st := &fakeStore{}
+		m.SetEventService(st)
+		if _, err := m.HTTPHandler().Handle(r); err != nil {
+			t.Fatal(err)
+		}
+		if len(st.got) == 0 {
+			t.Fatal("no event stored")
+		}
+		for _, in := range st.got {
+			if in.Project != tc.want {
+				t.Errorf("header %q detected %q: project %q, want %q", tc.header, tc.detected, in.Project, tc.want)
+			}
+		}
+	}
+}

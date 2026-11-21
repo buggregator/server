@@ -149,7 +149,13 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 		status, answer = h.forward(r, body, up)
 	}
 
+	// The project: what detection found (X-Buggregator-Event with
+	// X-Buggregator-Project, userinfo, Basic Auth), else X-Buggregator-Project
+	// alone - a Pusher client sends no event type of ours.
 	project := r.Header.Get("X-Buggregator-Detected-Project")
+	if project == "" {
+		project = strings.TrimSpace(r.Header.Get("X-Buggregator-Project"))
+	}
 	for _, e := range events {
 		e.Upstream = up
 		raw, err := json.Marshal(e)
