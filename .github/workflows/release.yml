@@ -131,7 +131,7 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           VERSION=${GITHUB_REF_NAME#v}
-          go build -ldflags="-s -w -X main.version=${VERSION}" -o buggregator-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/buggregator
+          go build -tags "grammar_subset grammar_subset_php grammar_subset_go" -ldflags="-s -w -X main.version=${VERSION}" -o buggregator-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/buggregator
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -199,7 +199,7 @@ jobs:
           if [ -z "$VERSION" ] || [ "$VERSION" = "$GITHUB_REF_NAME" ]; then
             VERSION="dev"
           fi
-          go build -ldflags="-s -w -X main.version=${VERSION}" -o buggregator-${{ matrix.goos }}-${{ matrix.goarch }}.exe ./cmd/buggregator
+          go build -tags "grammar_subset grammar_subset_php grammar_subset_go" -ldflags="-s -w -X main.version=${VERSION}" -o buggregator-${{ matrix.goos }}-${{ matrix.goarch }}.exe ./cmd/buggregator
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

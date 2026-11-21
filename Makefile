@@ -4,6 +4,8 @@ FRONTEND_DIR = internal/frontend/dist
 BINARY = buggregator
 VERSION ?= dev
 LDFLAGS = -s -w -X main.version=$(VERSION)
+# Embed only the tree-sitter grammars the code graph uses (PHP, Go).
+GOTAGS = grammar_subset grammar_subset_php grammar_subset_go
 
 # PHP VarDumper binary build
 PHP_DIR = php/vardumper
@@ -115,7 +117,7 @@ deps:
 build: deps
 	@if [ ! -f $(FRONTEND_DIR)/index.html ]; then $(MAKE) frontend; fi
 	@if [ -z "$$(ls $(PHP_BIN_DIR)/vardumper-parser-* 2>/dev/null)" ]; then $(MAKE) vardumper-php; fi
-	go build -ldflags="$(LDFLAGS)" -o $(BINARY) ./cmd/buggregator
+	go build -tags "$(GOTAGS)" -ldflags="$(LDFLAGS)" -o $(BINARY) ./cmd/buggregator
 	@echo "Built $(BINARY) ($$(du -h $(BINARY) | cut -f1))"
 
 # Cross-compile for a specific platform
@@ -123,16 +125,16 @@ build: deps
 build-cross: deps
 	@if [ ! -f $(FRONTEND_DIR)/index.html ]; then $(MAKE) frontend; fi
 	@if [ ! -f $(PHP_BIN_DIR)/vardumper-parser-$(GOOS)-$(GOARCH) ]; then $(MAKE) vardumper-$(GOOS)-$(GOARCH); fi
-	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags="$(LDFLAGS)" -o $(BINARY)-$(GOOS)-$(GOARCH) ./cmd/buggregator
+	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -tags "$(GOTAGS)" -ldflags="$(LDFLAGS)" -o $(BINARY)-$(GOOS)-$(GOARCH) ./cmd/buggregator
 	@echo "Built $(BINARY)-$(GOOS)-$(GOARCH) ($$(du -h $(BINARY)-$(GOOS)-$(GOARCH) | cut -f1))"
 
 # Build all platforms
 release: deps frontend vardumper-all
-	GOOS=linux GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o $(BINARY)-linux-amd64 ./cmd/buggregator
-	GOOS=linux GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o $(BINARY)-linux-arm64 ./cmd/buggregator
-	GOOS=darwin GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o $(BINARY)-darwin-amd64 ./cmd/buggregator
-	GOOS=darwin GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o $(BINARY)-darwin-arm64 ./cmd/buggregator
-	GOOS=windows GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o $(BINARY)-windows-amd64.exe ./cmd/buggregator
+	GOOS=linux GOARCH=amd64 go build -tags "$(GOTAGS)" -ldflags="$(LDFLAGS)" -o $(BINARY)-linux-amd64 ./cmd/buggregator
+	GOOS=linux GOARCH=arm64 go build -tags "$(GOTAGS)" -ldflags="$(LDFLAGS)" -o $(BINARY)-linux-arm64 ./cmd/buggregator
+	GOOS=darwin GOARCH=amd64 go build -tags "$(GOTAGS)" -ldflags="$(LDFLAGS)" -o $(BINARY)-darwin-amd64 ./cmd/buggregator
+	GOOS=darwin GOARCH=arm64 go build -tags "$(GOTAGS)" -ldflags="$(LDFLAGS)" -o $(BINARY)-darwin-arm64 ./cmd/buggregator
+	GOOS=windows GOARCH=amd64 go build -tags "$(GOTAGS)" -ldflags="$(LDFLAGS)" -o $(BINARY)-windows-amd64.exe ./cmd/buggregator
 	@echo "Release binaries built."
 
 run: build

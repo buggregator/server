@@ -29,14 +29,14 @@ jobs:
           echo 'placeholder' > modules/vardumper/bin/vardumper-parser-windows-amd64.exe
 
       - name: Build
-        run: go build ./cmd/buggregator
+        run: go build -tags "grammar_subset grammar_subset_php grammar_subset_go" ./cmd/buggregator
 
       - name: Build (windows/amd64)
         env:
           GOOS: windows
           GOARCH: amd64
           CGO_ENABLED: "0"
-        run: go build ./cmd/buggregator
+        run: go build -tags "grammar_subset grammar_subset_php grammar_subset_go" ./cmd/buggregator
 
       - name: Vet
         run: go vet ./...

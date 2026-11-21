@@ -182,6 +182,14 @@ func (a *App) Run() {
 		})))
 	}
 
+	if !a.cfg.CodeGraph.Enabled() {
+		// The code graph page asks this first; with no roots it shows how to turn it on.
+		mux.Handle("GET /api/code/roots", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{"enabled": false, "snippets": false, "roots": []any{}})
+		})))
+	}
+
 	// Register attachment API endpoints.
 	httpserver.RegisterAttachmentAPI(mux, a.db, a.attachments, authMiddleware)
 
