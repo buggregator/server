@@ -68,6 +68,8 @@ type Config struct {
 	XdebugTrace XdebugTraceConfig `yaml:"xdebug_trace"`
 	// Retention deletes old events in the background; unset keeps everything.
 	Retention RetentionConfig `yaml:"retention"`
+	// CodeGraph indexes source folders into a code graph (off with no roots).
+	CodeGraph CodeGraphConfig `yaml:"code_graph"`
 	Version   string          `yaml:"-"`
 
 	// Shortcuts.
@@ -107,6 +109,82 @@ type XdebugConfig struct {
 	IdleTimeout      string `yaml:"idle_timeout"`        // Release a session paused here after this long without a command. Default: 10m; 0 = never
 
 	IdleTimeoutDur time.Duration `yaml:"-"` // parsed IdleTimeout: 0 = default, <0 = never
+}
+
+// CodeGraphConfig names the source folders Buggregator parses into a code
+// graph (REST /api/code, MCP code_* tools). No roots: the feature is off.
+// Only these folders and the files below them are ever read.
+type CodeGraphConfig struct {
+	Roots       []CodeRootDef     `yaml:"roots"`
+	Exclude     []string          `yaml:"exclude"`       // names or root-relative paths; default .git, node_modules, vendor
+	MaxFileSize string            `yaml:"max_file_size"` // larger files are skipped. Default 1MB
+	MaxFiles    int               `yaml:"max_files"`     // per root. Default 50000
+	Snippets    bool              `yaml:"snippets"`      // serve source fragments over REST/MCP (default false)
+	PathMap     map[string]string `yaml:"path_map"`      // app path prefix -> path here: /var/www/html: /code
+
+	MaxFileSizeBytes int64 `yaml:"-"`
+}
+
+// CodeRootDef is one indexed folder.
+type CodeRootDef struct {
+	Name string `yaml:"name"` // default: the folder name
+	Path string `yaml:"path"`
+}
+
+// Enabled reports whether any root is configured.
+func (c CodeGraphConfig) Enabled() bool { return len(c.Roots) > 0 }
+
+// parseCodeRoots reads "name=/path,/other" (name optional).
+func parseCodeRoots(s string) []CodeRootDef {
+	var out []CodeRootDef
+	for _, part := range strings.Split(s, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		name, p, ok := strings.Cut(part, "=")
+		if !ok {
+			name, p = "", part
+		}
+		out = append(out, CodeRootDef{Name: strings.TrimSpace(name), Path: strings.TrimSpace(p)})
+	}
+	return out
+}
+
+// resolveCodeGraph merges the code_graph section: flag > env > file.
+func resolveCodeGraph(file CodeGraphConfig, flagRoots string, getenv func(string) string) CodeGraphConfig {
+	cfg := file
+	if v := coalesce(flagRoots, getenv("CODE_GRAPH_ROOTS")); v != "" {
+		cfg.Roots = parseCodeRoots(v)
+	}
+	if v := getenv("CODE_GRAPH_EXCLUDE"); v != "" {
+		cfg.Exclude = nil
+		for _, p := range strings.Split(v, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				cfg.Exclude = append(cfg.Exclude, p)
+			}
+		}
+	}
+	if v := strings.TrimSpace(getenv("CODE_GRAPH_SNIPPETS")); v != "" {
+		cfg.Snippets = v == "true" || v == "1"
+	}
+	if v := strings.TrimSpace(getenv("CODE_GRAPH_MAX_FILES")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.MaxFiles = n
+		}
+	}
+	cfg.MaxFileSize = coalesce(getenv("CODE_GRAPH_MAX_FILE_SIZE"), cfg.MaxFileSize, "1MB")
+	cfg.MaxFileSizeBytes = sizeOr("code_graph.max_file_size", cfg.MaxFileSize, 1<<20)
+	if v := getenv("CODE_GRAPH_PATH_MAP"); v != "" {
+		cfg.PathMap = map[string]string{}
+		for _, part := range strings.Split(v, ",") {
+			from, to, ok := strings.Cut(strings.TrimSpace(part), "=")
+			if ok && strings.TrimSpace(from) != "" && strings.TrimSpace(to) != "" {
+				cfg.PathMap[strings.TrimSpace(from)] = strings.TrimSpace(to)
+			}
+		}
+	}
+	return cfg
 }
 
 // WebhookDef defines a webhook from config.
@@ -373,6 +451,8 @@ func LoadConfig() Config {
 	flag.StringVar(&retentionMaxEvents, "retention-max-events", "", "Keep at most this many events (0 = no cap)")
 	flag.StringVar(&cfg.Update.SelfUpdate, "update-self", "", "Update from the UI: auto (default), on, off")
 	flag.StringVar(&cfg.Sentry.SourceFetch, "sentry-source-fetch", "", "Fetch JS frame sources from: private (default), any, off")
+	var codeGraphRoots string
+	flag.StringVar(&codeGraphRoots, "code-graph-roots", "", "Source folders for the code graph: name=/path,/other/path")
 	flag.Parse()
 
 	fileCfg := loadConfigFile(configFile)
@@ -462,6 +542,8 @@ func LoadConfig() Config {
 	cfg.Xdebug.PauseOnFirstLine = envBool("XDEBUG_PROXY_PAUSE_ON_FIRST_LINE", fileCfg.Xdebug.PauseOnFirstLine)
 	cfg.Xdebug.IdleTimeout = coalesce(os.Getenv("XDEBUG_PROXY_IDLE_TIMEOUT"), fileCfg.Xdebug.IdleTimeout, "10m")
 	cfg.Xdebug.IdleTimeoutDur = parseIdleTimeout(cfg.Xdebug.IdleTimeout)
+
+	cfg.CodeGraph = resolveCodeGraph(fileCfg.CodeGraph, codeGraphRoots, os.Getenv)
 
 	// Auth.
 	cfg.Auth.Enabled = fileCfg.Auth.Enabled || os.Getenv("AUTH_ENABLED") == "true"

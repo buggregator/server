@@ -400,3 +400,45 @@ func TestConfig_ListenPorts(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveCodeGraph(t *testing.T) {
+	file := CodeGraphConfig{Roots: []CodeRootDef{{Name: "file", Path: "/from/file"}}, Exclude: []string{".git"}, MaxFiles: 10}
+	tests := []struct {
+		name  string
+		flag  string
+		env   map[string]string
+		check func(t *testing.T, c CodeGraphConfig)
+	}{
+		{"file only, defaults", "", nil, func(t *testing.T, c CodeGraphConfig) {
+			if len(c.Roots) != 1 || c.Roots[0].Name != "file" || c.MaxFiles != 10 || c.MaxFileSizeBytes != 1<<20 || c.Snippets {
+				t.Errorf("%+v", c)
+			}
+		}},
+		{"env replaces roots", "", map[string]string{"CODE_GRAPH_ROOTS": "app=/code, /other", "CODE_GRAPH_SNIPPETS": "true", "CODE_GRAPH_MAX_FILE_SIZE": "2MB", "CODE_GRAPH_PATH_MAP": "/var/www/html=/code", "CODE_GRAPH_EXCLUDE": "vendor, tmp"}, func(t *testing.T, c CodeGraphConfig) {
+			want := []CodeRootDef{{Name: "app", Path: "/code"}, {Name: "", Path: "/other"}}
+			if len(c.Roots) != 2 || c.Roots[0] != want[0] || c.Roots[1] != want[1] {
+				t.Errorf("roots %+v", c.Roots)
+			}
+			if !c.Snippets || c.MaxFileSizeBytes != 2<<20 || c.PathMap["/var/www/html"] != "/code" || len(c.Exclude) != 2 || c.Exclude[1] != "tmp" {
+				t.Errorf("%+v", c)
+			}
+		}},
+		{"flag beats env", "flag=/f", map[string]string{"CODE_GRAPH_ROOTS": "/env"}, func(t *testing.T, c CodeGraphConfig) {
+			if len(c.Roots) != 1 || c.Roots[0].Name != "flag" || c.Roots[0].Path != "/f" {
+				t.Errorf("roots %+v", c.Roots)
+			}
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c := resolveCodeGraph(file, tc.flag, func(k string) string { return tc.env[k] })
+			tc.check(t, c)
+			if !c.Enabled() {
+				t.Error("not enabled with roots")
+			}
+		})
+	}
+	if (CodeGraphConfig{}).Enabled() {
+		t.Error("enabled without roots")
+	}
+}
