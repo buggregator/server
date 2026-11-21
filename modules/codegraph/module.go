@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -65,7 +66,7 @@ func (c Config) Normalize() Config {
 		if p == "" {
 			continue
 		}
-		abs, err := filepath.Abs(p)
+		abs, err := filepath.Abs(expandHome(p))
 		if err == nil {
 			abs, err = filepath.EvalSymlinks(abs)
 		}
@@ -95,6 +96,19 @@ func (c Config) Normalize() Config {
 		out.MaxFiles = 50000
 	}
 	return out
+}
+
+// expandHome turns a leading ~ (alone or ~/...) into the user's home, as a
+// shell would; ~user is left as is.
+func expandHome(p string) string {
+	if p != "~" && !strings.HasPrefix(p, "~/") && !strings.HasPrefix(p, `~\`) {
+		return p
+	}
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return p
+	}
+	return filepath.Join(home, p[1:])
 }
 
 // Module serves the code graph.

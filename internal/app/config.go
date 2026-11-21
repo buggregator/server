@@ -650,7 +650,7 @@ func LoadConfig() Config {
 	cfg.VarDumperAddr = cfg.TCP.VarDumper.Addr
 	cfg.ProxyAddr = cfg.TCP.Proxy.Addr
 
-	// Code graph last: the default base_dir depends on the listen address and auth.
+	// Code graph last: the default base_dir depends on auth.
 	cfg.CodeGraph = resolveCodeGraph(fileCfg.CodeGraph, codeGraphRoots, codeGraphBase, codeGraphDefaultBase(cfg.Auth.Enabled, defaultCodeBaseDir), os.Getenv)
 
 	return cfg

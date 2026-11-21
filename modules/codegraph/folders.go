@@ -74,7 +74,7 @@ func resolveBase(p string) string {
 	if p == "" {
 		return ""
 	}
-	abs, err := filepath.Abs(p)
+	abs, err := filepath.Abs(expandHome(p))
 	if err == nil {
 		abs, err = filepath.EvalSymlinks(abs)
 	}
