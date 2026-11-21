@@ -39,6 +39,7 @@ type RootsResponse struct {
 	Enabled  bool     `json:"enabled"`
 	Snippets bool     `json:"snippets"`
 	Roots    []Status `json:"roots"`
+	Picker   Picker   `json:"picker"`
 }
 
 func (m *Module) registerAPI(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {
@@ -46,7 +47,10 @@ func (m *Module) registerAPI(mux *http.ServeMux, wrap func(http.Handler) http.Ha
 		mux.Handle(pattern, wrap(fn))
 	}
 	h("GET /api/code/roots", m.handleRoots)
+	h("POST /api/code/roots", m.handleAddRoot)
 	h("GET /api/code/roots/{name}", m.handleRoot)
+	h("DELETE /api/code/roots/{name}", m.handleRemoveRoot)
+	h("GET /api/code/folders", m.handleFolders)
 	h("POST /api/code/roots/{name}/reindex", m.handleReindex)
 	h("GET /api/code/search", m.handleSearch)
 	h("GET /api/code/top", m.handleTop)
@@ -59,8 +63,8 @@ func (m *Module) registerAPI(mux *http.ServeMux, wrap func(http.Handler) http.Ha
 	h("GET /api/code/resolve", m.handleResolve)
 }
 
-func (m *Module) handleRoots(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, RootsResponse{Enabled: true, Snippets: m.cfg.Snippets, Roots: m.ix.Statuses()})
+func (m *Module) handleRoots(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, RootsResponse{Enabled: true, Snippets: m.cfg.Snippets, Roots: m.ix.Statuses(), Picker: m.picker(r)})
 }
 
 func (m *Module) handleRoot(w http.ResponseWriter, r *http.Request) {
@@ -92,8 +96,8 @@ func (m *Module) rootParam(w http.ResponseWriter, r *http.Request, required bool
 	name := strings.TrimSpace(r.URL.Query().Get("root"))
 	if name == "" {
 		if required {
-			if len(m.cfg.Roots) == 1 {
-				return m.cfg.Roots[0].Name, true
+			if roots := m.ix.Roots(); len(roots) == 1 {
+				return roots[0].Name, true
 			}
 			writeErr(w, http.StatusBadRequest, "root_required", "root is required when more than one root is configured")
 			return "", false

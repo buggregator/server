@@ -41,6 +41,16 @@ type Config struct {
 	PathMap     []PathMap
 	// ParseTimeout bounds one file's parse; 0 = 2s.
 	ParseTimeout time.Duration
+	// BaseDir is the folder the UI may browse and add roots from; "" = the
+	// folder picker is off. Normalize resolves it.
+	BaseDir string
+	// AuthOn and Admins: with auth on only these users (username or email)
+	// may browse and change the roots.
+	AuthOn bool
+	Admins []string
+	// HTTPAddr is the listen address: on a loopback-only server without auth
+	// the picker refuses a Host that is not this machine (DNS rebinding).
+	HTTPAddr string
 }
 
 // DefaultExclude is used when the config names no exclude list.
@@ -77,6 +87,7 @@ func (c Config) Normalize() Config {
 		names[name] = true
 		out.Roots = append(out.Roots, Root{Name: name, Path: abs})
 	}
+	out.BaseDir = resolveBase(c.BaseDir)
 	if c.Exclude == nil {
 		out.Exclude = DefaultExclude
 	}
@@ -105,19 +116,26 @@ func New(cfg Config) *Module {
 func (m *Module) Name() string { return "Code graph" }
 func (m *Module) Type() string { return "code-graph" }
 
-// Roots returns the roots that passed normalization.
+// Roots returns the config roots that passed normalization.
 func (m *Module) Roots() []Root { return m.cfg.Roots }
+
+// Usable reports whether the module has anything to serve: a config root or
+// a base dir the UI can add roots from.
+func (m *Module) Usable() bool { return len(m.cfg.Roots) > 0 || m.cfg.BaseDir != "" }
 
 // RegisterMigrations adds the code_* tables.
 func (m *Module) RegisterMigrations(migrator *storage.Migrator) error {
 	return migrator.AddFromFS("code-graph", migrations, "migrations")
 }
 
-// OnInit drops data of roots no longer configured and starts indexing every
-// root in the background.
+// OnInit adds the roots stored from the UI, drops data of roots no longer
+// there and starts indexing every root in the background.
 func (m *Module) OnInit(db *sql.DB) error {
 	m.ix = newIndexer(db, m.cfg)
 	m.graphs = &Graphs{db: db, ix: m.ix, snippets: m.cfg.Snippets, pathMap: m.cfg.PathMap}
+	if err := m.loadUIRoots(); err != nil {
+		return fmt.Errorf("code graph: %w", err)
+	}
 	if err := m.ix.prepare(); err != nil {
 		return fmt.Errorf("code graph: %w", err)
 	}

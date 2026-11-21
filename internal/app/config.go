@@ -112,10 +112,18 @@ type XdebugConfig struct {
 }
 
 // CodeGraphConfig names the source folders Buggregator parses into a code
-// graph (REST /api/code, MCP code_* tools). No roots: the feature is off.
-// Only these folders and the files below them are ever read.
+// graph (REST /api/code, MCP code_* tools). No roots and no base dir: the
+// feature is off. Only these folders (and folders the UI adds inside base_dir)
+// and the files below them are ever read.
 type CodeGraphConfig struct {
-	Roots       []CodeRootDef     `yaml:"roots"`
+	Roots []CodeRootDef `yaml:"roots"`
+	// BaseDir is the folder the UI may browse and add roots from. Default: the
+	// user's home outside a container, none inside one (mount a volume and set
+	// it). "off" turns the folder picker off.
+	BaseDir string `yaml:"base_dir"`
+	// Admins may browse base_dir and add or remove roots when auth is on:
+	// usernames or emails. Auth on and no admins: nobody may.
+	Admins      []string          `yaml:"admins"`
 	Exclude     []string          `yaml:"exclude"`       // names or root-relative paths; default .git, node_modules, vendor
 	MaxFileSize string            `yaml:"max_file_size"` // larger files are skipped. Default 1MB
 	MaxFiles    int               `yaml:"max_files"`     // per root. Default 50000
@@ -131,8 +139,23 @@ type CodeRootDef struct {
 	Path string `yaml:"path"`
 }
 
-// Enabled reports whether any root is configured.
-func (c CodeGraphConfig) Enabled() bool { return len(c.Roots) > 0 }
+// Enabled reports whether any root or a base dir is configured.
+func (c CodeGraphConfig) Enabled() bool { return len(c.Roots) > 0 || c.BaseDir != "" }
+
+// defaultCodeBaseDir is the user's home, or none inside a container (there
+// the home is the image's, not the user's code).
+func defaultCodeBaseDir() string {
+	for _, f := range []string{"/.dockerenv", "/run/.containerenv"} {
+		if _, err := os.Stat(f); err == nil {
+			return ""
+		}
+	}
+	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
+		return ""
+	}
+	home, _ := os.UserHomeDir()
+	return home
+}
 
 // parseCodeRoots reads "name=/path,/other" (name optional).
 func parseCodeRoots(s string) []CodeRootDef {
@@ -151,11 +174,24 @@ func parseCodeRoots(s string) []CodeRootDef {
 	return out
 }
 
-// resolveCodeGraph merges the code_graph section: flag > env > file.
-func resolveCodeGraph(file CodeGraphConfig, flagRoots string, getenv func(string) string) CodeGraphConfig {
+// resolveCodeGraph merges the code_graph section: flag > env > file >
+// defaultBase (for base_dir).
+func resolveCodeGraph(file CodeGraphConfig, flagRoots, flagBase, defaultBase string, getenv func(string) string) CodeGraphConfig {
 	cfg := file
 	if v := coalesce(flagRoots, getenv("CODE_GRAPH_ROOTS")); v != "" {
 		cfg.Roots = parseCodeRoots(v)
+	}
+	cfg.BaseDir = strings.TrimSpace(coalesce(flagBase, getenv("CODE_GRAPH_BASE_DIR"), file.BaseDir, defaultBase))
+	if strings.EqualFold(cfg.BaseDir, "off") {
+		cfg.BaseDir = ""
+	}
+	if v := getenv("CODE_GRAPH_ADMINS"); v != "" {
+		cfg.Admins = nil
+		for _, a := range strings.Split(v, ",") {
+			if a = strings.TrimSpace(a); a != "" {
+				cfg.Admins = append(cfg.Admins, a)
+			}
+		}
 	}
 	if v := getenv("CODE_GRAPH_EXCLUDE"); v != "" {
 		cfg.Exclude = nil
@@ -453,6 +489,8 @@ func LoadConfig() Config {
 	flag.StringVar(&cfg.Sentry.SourceFetch, "sentry-source-fetch", "", "Fetch JS frame sources from: private (default), any, off")
 	var codeGraphRoots string
 	flag.StringVar(&codeGraphRoots, "code-graph-roots", "", "Source folders for the code graph: name=/path,/other/path")
+	var codeGraphBase string
+	flag.StringVar(&codeGraphBase, "code-graph-base-dir", "", "Folder the UI may add code graph roots from (default: home; off = none)")
 	flag.Parse()
 
 	fileCfg := loadConfigFile(configFile)
@@ -543,7 +581,7 @@ func LoadConfig() Config {
 	cfg.Xdebug.IdleTimeout = coalesce(os.Getenv("XDEBUG_PROXY_IDLE_TIMEOUT"), fileCfg.Xdebug.IdleTimeout, "10m")
 	cfg.Xdebug.IdleTimeoutDur = parseIdleTimeout(cfg.Xdebug.IdleTimeout)
 
-	cfg.CodeGraph = resolveCodeGraph(fileCfg.CodeGraph, codeGraphRoots, os.Getenv)
+	cfg.CodeGraph = resolveCodeGraph(fileCfg.CodeGraph, codeGraphRoots, codeGraphBase, defaultCodeBaseDir(), os.Getenv)
 
 	// Auth.
 	cfg.Auth.Enabled = fileCfg.Auth.Enabled || os.Getenv("AUTH_ENABLED") == "true"

@@ -155,6 +155,9 @@ tcp:
 #   snippets: false               # true = symbol answers include source lines
 #   path_map:                     # paths in errors/profiles -> paths here
 #     /var/www/html: /code
+#   base_dir: ~/projects          # the UI may add roots from folders inside it (env CODE_GRAPH_BASE_DIR)
+#                                 # default: your home; none in Docker (mount a volume and set it); off = none
+#   admins: [alice, bob@example.com] # with auth on, only these users may add/remove roots (env CODE_GRAPH_ADMINS)
 
 # Enable/disable modules. All enabled by default.
 # Set to false to disable a module entirely (TCP port won't bind, events ignored).

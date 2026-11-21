@@ -3892,8 +3892,10 @@ paths:
       - Code graph
       operationId: codeGraphRoots
       summary: List the code graph roots and their index state.
-      description: 'The source folders from `code_graph.roots` with index state, counts and progress. With no roots configured
-        the feature is off: this route answers `enabled: false` with no roots and all other /api/code routes are absent.'
+      description: 'The source folders from `code_graph.roots` (source `config`, read-only) and the ones added in the UI
+        inside `code_graph.base_dir` (source `ui`), with index state, counts and progress, and the folder picker''s state.
+        With no roots and no base dir the feature is off: this route answers `enabled: false` with no roots and all other
+        /api/code routes are absent.'
       security:
       - authToken: []
       responses:
@@ -3903,6 +3905,71 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CodeGraphRoots'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+      - Code graph
+      operationId: codeGraphAddRoot
+      summary: Add a folder inside the base dir as a root and index it.
+      description: 'The path is relative to `code_graph.base_dir`; it must resolve, symlinks followed, to a folder inside
+        it. The root is stored and comes back after a restart. Only from this server''s own page; with auth on only users
+        in `code_graph.admins`.'
+      security:
+      - authToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeAddRoot'
+      responses:
+        '201':
+          description: Root added; indexing started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeRootStatus'
+        '400':
+          $ref: '#/components/responses/CodeFolderBadRequest'
+        '403':
+          $ref: '#/components/responses/CodeFolderForbidden'
+        '404':
+          $ref: '#/components/responses/CodeFolderNotFound'
+        '409':
+          $ref: '#/components/responses/CodeRootConflict'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/code/folders:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphFolders
+      summary: List the folders one level below a folder of the base dir.
+      description: 'Folders only. Symlinks are listed only when they resolve to a folder inside `code_graph.base_dir`; their
+        `path` is the real one. Only from this server''s own page; with auth on only users in `code_graph.admins`.'
+      parameters:
+      - name: path
+        in: query
+        description: Folder relative to the base dir; empty = the base dir.
+        schema:
+          type: string
+        example: projects/shop
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Folders.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeFolders'
+        '400':
+          $ref: '#/components/responses/CodeFolderBadRequest'
+        '403':
+          $ref: '#/components/responses/CodeFolderForbidden'
+        '404':
+          $ref: '#/components/responses/CodeFolderNotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /api/code/roots/{name}:
@@ -3924,6 +3991,26 @@ paths:
                 $ref: '#/components/schemas/CodeRootStatus'
         '404':
           $ref: '#/components/responses/CodeGraphNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags:
+      - Code graph
+      operationId: codeGraphRemoveRoot
+      summary: Remove a root added in the UI and its graph.
+      description: 'Roots from `code_graph.roots` cannot be removed here (`code: config_root`). A run in progress is
+        stopped. Only from this server''s own page; with auth on only users in `code_graph.admins`.'
+      parameters:
+      - $ref: '#/components/parameters/CodeRootName'
+      security:
+      - authToken: []
+      responses:
+        '204':
+          description: Removed.
+        '403':
+          $ref: '#/components/responses/CodeFolderForbidden'
+        '404':
+          $ref: '#/components/responses/CodeFolderNotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /api/code/roots/{name}/reindex:
@@ -4428,6 +4515,31 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/CodeGraphError'
+    CodeFolderBadRequest:
+      description: 'Bad folder or name (`code: outside_base`, `not_dir`, `bad_name`, `bad_json`).'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CodeGraphError'
+    CodeFolderForbidden:
+      description: 'Not allowed (`code: cross_origin`, `host`, `not_admin`, `config_root`, `unreadable`).'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CodeGraphError'
+    CodeFolderNotFound:
+      description: 'Folder picker off (`code: picker_off`, the message says how to turn it on), no such folder
+        (`no_such_folder`) or root (`unknown_root`).'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CodeGraphError'
+    CodeRootConflict:
+      description: 'A root with this name or folder exists (`code: root_exists`) or is still being removed (`root_busy`).'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CodeGraphError'
     CodeGraphBadRequest:
       description: 'Bad parameter (`code: bad_id`, `bad_level`, `bad_direction`, `root_required`, `path_required`, `file_and_line_required`).'
       content:
@@ -4487,7 +4599,7 @@ components:
       properties:
         enabled:
           type: boolean
-          description: False when `code_graph.roots` is empty.
+          description: False when `code_graph.roots` is empty and there is no base dir.
         snippets:
           type: boolean
           description: Symbol answers carry source lines (`code_graph.snippets`).
@@ -4495,6 +4607,83 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CodeRootStatus'
+        picker:
+          $ref: '#/components/schemas/CodePicker'
+    CodePicker:
+      type: object
+      required:
+      - enabled
+      - can_manage
+      properties:
+        enabled:
+          type: boolean
+          description: '`code_graph.base_dir` is set and is a folder.'
+        base_dir:
+          type: string
+          description: Absolute, symlinks resolved.
+        can_manage:
+          type: boolean
+          description: This user may browse and add or remove roots (always with auth off; users in `code_graph.admins` with it on).
+        hint:
+          type: string
+          description: How to turn the picker on, when it is off.
+    CodeAddRoot:
+      type: object
+      required:
+      - path
+      properties:
+        path:
+          type: string
+          description: Folder relative to the base dir.
+          example: projects/shop
+        name:
+          type: string
+          description: Root name, 1 to 100 characters without slashes. Default the folder's name.
+    CodeFolders:
+      type: object
+      required:
+      - base_dir
+      - path
+      - parent
+      - folders
+      properties:
+        base_dir:
+          type: string
+        path:
+          type: string
+          description: This folder relative to the base dir; empty = the base dir.
+        parent:
+          type:
+          - string
+          - 'null'
+          description: The parent's path; null at the base dir.
+        root:
+          type: string
+          description: Name of the root this folder already is.
+        folders:
+          type: array
+          items:
+            type: object
+            required:
+            - name
+            - path
+            - hidden
+            - excluded
+            properties:
+              name:
+                type: string
+              path:
+                type: string
+                description: Relative to the base dir; pass it as `path` to browse or add.
+              hidden:
+                type: boolean
+                description: A dot folder.
+              excluded:
+                type: boolean
+                description: Matches `code_graph.exclude` (vendor, node_modules, .git); never indexed inside a root.
+              root:
+                type: string
+                description: Name of the root this folder already is.
     CodeRootStatus:
       type: object
       required:
@@ -4507,6 +4696,12 @@ components:
         path:
           type: string
           description: Absolute folder, symlinks resolved.
+        source:
+          type: string
+          enum:
+          - config
+          - ui
+          description: '`config`: from `code_graph.roots`, read-only in the UI; `ui`: added in the UI, removable.'
         state:
           type: string
           enum:

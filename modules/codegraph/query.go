@@ -137,6 +137,14 @@ func clampInt(v, def, lo, hi int) int {
 
 // Search finds symbols by name or full name. Namespaces and packages appear
 // once per name, not once per file.
+// forget drops the cached symbols of a root (removed; a root added again
+// under the same name starts its run counter at 0).
+func (g *Graphs) forget(root string) {
+	g.mu.Lock()
+	delete(g.cache, root)
+	g.mu.Unlock()
+}
+
 func (g *Graphs) Search(q, kind, root string, limit int) ([]SymbolRef, error) {
 	limit = clampInt(limit, 50, 1, 500)
 	q = strings.TrimSpace(q)
