@@ -1,0 +1,44 @@
+[
+ {
+  "name": "trigger",
+  "method": "POST",
+  "path": "/apps/app-1/events?auth_key=app-key&auth_timestamp=1795279473&auth_version=1.0&body_md5=3e4f719bc7fc726a7512698f096f0a5c&auth_signature=94002bffc6ed9d7c3bae45d6f13fa6a2e4a156c723ad3e2d9c0771f608bdada3",
+  "library": "pusher-http-php 7.3.0",
+  "body": "{\"name\":\"OrderShipped\",\"data\":\"{\\\"id\\\":42,\\\"total\\\":9.5}\",\"channel\":\"orders\"}"
+ },
+ {
+  "name": "trigger_multi",
+  "method": "POST",
+  "path": "/apps/app-1/events?auth_key=app-key&auth_timestamp=1795279473&auth_version=1.0&body_md5=b7d6f7aa408be68f47408b3bd0be67a2&auth_signature=d7dae64e493349564641f87911780671787325c531470796b51777b6a240d20f",
+  "library": "pusher-http-php 7.3.0",
+  "body": "{\"name\":\"App\\\\Events\\\\Ping\",\"data\":\"{\\\"x\\\":1}\",\"channels\":[\"private-orders.42\",\"presence-room.1\"],\"socket_id\":\"123.456\",\"info\":\"subscription_count\"}"
+ },
+ {
+  "name": "batch",
+  "method": "POST",
+  "path": "/apps/app-1/batch_events?auth_key=app-key&auth_timestamp=1795279473&auth_version=1.0&body_md5=3d97aab33f0e9bf755dca84168ed9d8a&auth_signature=63de24cc25085c57ff40dbcd2c59eee47a15222949238d6124596a45a0bf92f5",
+  "library": "pusher-http-php 7.3.0",
+  "body": "{\"batch\":[{\"name\":\"A\",\"data\":\"{\\\"n\\\":1}\",\"channel\":\"orders\"},{\"name\":\"B\",\"data\":\"\\\"plain text\\\"\",\"channel\":\"private-user.7\"}]}"
+ },
+ {
+  "name": "send_to_user",
+  "method": "POST",
+  "path": "/apps/app-1/events?auth_key=app-key&auth_timestamp=1795279473&auth_version=1.0&body_md5=518393b029304c08dca2c284e5055621&auth_signature=7a53412c3f542890607d5ba70d0b518c4256a84dd2c10434b07b0e81747314d6",
+  "library": "pusher-http-php 7.3.0",
+  "body": "{\"name\":\"Notify\",\"data\":\"{\\\"msg\\\":\\\"hi\\\"}\",\"channel\":\"#server-to-user-7\"}"
+ },
+ {
+  "name": "encrypted",
+  "method": "POST",
+  "path": "/apps/app-1/events?auth_key=app-key&auth_timestamp=1795279473&auth_version=1.0&body_md5=909decda53fe236903e8bf01d96ce641&auth_signature=3f22fbae9fb19b5cdc0a57c8a9029aa0fa9be8e14d34e6575f11ff22c8626d73",
+  "library": "pusher-http-php 7.3.0",
+  "body": "{\"name\":\"Hidden\",\"data\":\"{\\\"nonce\\\":\\\"uU1XQZCMGfKCSVBcgfUgukco+vFu3L6y\\\",\\\"ciphertext\\\":\\\"AUfrv8\\\\\\/UWMxplGhU\\\\\\/FY44I1t0uUEdVxwh\\\\\\/BIfIvfBg==\\\"}\",\"channel\":\"private-encrypted-secret\"}"
+ },
+ {
+  "name": "terminate",
+  "method": "POST",
+  "path": "/apps/app-1/users/7/terminate_connections?auth_key=app-key&auth_timestamp=1795279473&auth_version=1.0&body_md5=99914b932bd37a50b983c5e7c90ae93b&auth_signature=0e25427f6a7cd0ac187de806a629e46c29d18d8a403d5bb151c7a3ef10c2bfbd",
+  "library": "pusher-http-php 7.3.0",
+  "body": "{}"
+ }
+]

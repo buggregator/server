@@ -71,6 +71,9 @@ type Config struct {
 	// SMTPRelay is the outgoing SMTP server a caught email can be released
 	// to from the UI; off while host is empty.
 	SMTPRelay SMTPRelayConfig `yaml:"smtp_relay"`
+	// Broadcast is the Pusher-compatible events catcher (Laravel Reverb,
+	// Pusher, soketi): an optional upstream to forward to, app secrets.
+	Broadcast BroadcastConfig `yaml:"broadcast"`
 	Version   string          `yaml:"-"`
 
 	// Shortcuts.
@@ -193,6 +196,30 @@ type SMTPRelayConfig struct {
 	InsecureSkipVerify bool     `yaml:"insecure_skip_verify"` // accept any TLS certificate
 }
 
+// BroadcastConfig is the module broadcast. Without an upstream events are
+// only captured; with one, the request also goes to the real server.
+type BroadcastConfig struct {
+	Upstream string               `yaml:"upstream"` // e.g. http://127.0.0.1:8080 (Reverb); empty = capture only
+	Apps     []BroadcastAppConfig `yaml:"apps"`     // secrets to check signatures; none = not checked
+}
+
+// BroadcastAppConfig is one app's key and secret.
+type BroadcastAppConfig struct {
+	Key    string `yaml:"key"`
+	Secret string `yaml:"secret"`
+}
+
+// Secrets maps each app key to its secret.
+func (b BroadcastConfig) Secrets() map[string]string {
+	m := map[string]string{}
+	for _, a := range b.Apps {
+		if k := strings.TrimSpace(a.Key); k != "" {
+			m[k] = a.Secret
+		}
+	}
+	return m
+}
+
 // RetentionConfig is the optional auto-cleanup. Pinned events are never
 // deleted and do not count towards max_events.
 type RetentionConfig struct {
@@ -261,7 +288,8 @@ type ModulesConfig struct {
 	Monolog   *bool `yaml:"monolog"`
 	SMTP      *bool `yaml:"smtp"`
 	SMS       *bool `yaml:"sms"`
-	CSP       *bool `yaml:"csp"` // browser CSP / Reporting API reports
+	CSP       *bool `yaml:"csp"`       // browser CSP / Reporting API reports
+	Broadcast *bool `yaml:"broadcast"` // Pusher HTTP API events (Laravel Reverb, Pusher)
 	HttpDump  *bool `yaml:"http-dump"`
 	Profiler  *bool `yaml:"profiler"`
 	// XdebugTrace is the Xdebug function trace upload (type xdebug-trace).
@@ -287,6 +315,8 @@ func (m *ModulesConfig) field(moduleType string) **bool {
 		return &m.SMS
 	case "csp":
 		return &m.CSP
+	case "broadcast":
+		return &m.Broadcast
 	case "http-dump":
 		return &m.HttpDump
 	case "profiler":
@@ -317,7 +347,7 @@ func (m *ModulesConfig) Disable(moduleType string) {
 
 // EnabledTypes returns a list of enabled module type strings.
 func (m ModulesConfig) EnabledTypes() []string {
-	all := []string{"sentry", "ray", "var-dump", "inspector", "monolog", "smtp", "sms", "csp", "http-dump", "profiler", "xdebug-trace"}
+	all := []string{"sentry", "ray", "var-dump", "inspector", "monolog", "smtp", "sms", "csp", "broadcast", "http-dump", "profiler", "xdebug-trace"}
 	var enabled []string
 	for _, t := range all {
 		if m.IsEnabled(t) {
@@ -514,6 +544,7 @@ func LoadConfig() Config {
 		cfg.Retention.MaxEvents = 0
 	}
 	cfg.SMTPRelay = smtpRelayConfig(fileCfg.SMTPRelay)
+	cfg.Broadcast = broadcastConfig(fileCfg.Broadcast)
 	cfg.Sentry.SourceFetch = sourceFetchMode(coalesce(cfg.Sentry.SourceFetch, os.Getenv("SENTRY_SOURCE_FETCH"), fileCfg.Sentry.SourceFetch, "private"))
 
 	// CORS origins.
@@ -661,6 +692,7 @@ func modulesFromCSV(csv string) ModulesConfig {
 		SMTP:      boolPtr(enabled["smtp"], t, f),
 		SMS:       boolPtr(enabled["sms"], t, f),
 		CSP:       boolPtr(enabled["csp"], t, f),
+		Broadcast: boolPtr(enabled["broadcast"], t, f),
 		HttpDump:  boolPtr(enabled["http-dump"], t, f),
 		Profiler:  boolPtr(enabled["profiler"], t, f),
 
@@ -673,6 +705,25 @@ func boolPtr(cond bool, yes, no bool) *bool {
 		return &yes
 	}
 	return &no
+}
+
+// broadcastConfig fills the module from BROADCAST_UPSTREAM and
+// BROADCAST_APPS ("key:secret,key2:secret2") over the file.
+func broadcastConfig(file BroadcastConfig) BroadcastConfig {
+	c := file
+	c.Upstream = coalesce(os.Getenv("BROADCAST_UPSTREAM"), file.Upstream)
+	if v := os.Getenv("BROADCAST_APPS"); v != "" {
+		c.Apps = nil
+		for _, kv := range strings.Split(v, ",") {
+			k, sec, ok := strings.Cut(strings.TrimSpace(kv), ":")
+			if !ok || strings.TrimSpace(k) == "" {
+				slog.Warn("BROADCAST_APPS: want key:secret pairs, skipping one")
+				continue
+			}
+			c.Apps = append(c.Apps, BroadcastAppConfig{Key: strings.TrimSpace(k), Secret: sec})
+		}
+	}
+	return c
 }
 
 // smtpRelayConfig fills the relay from SMTP_RELAY_* env vars over the file.
