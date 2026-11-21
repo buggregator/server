@@ -1,9 +1,11 @@
 package broadcast
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -364,5 +366,75 @@ func TestPreview(t *testing.T) {
 	}
 	if txt := pm.ToSearchableText(raw); !strings.HasPrefix(txt, "Big 1 orders") {
 		t.Errorf("search text %q", txt[:40])
+	}
+}
+
+// X-Buggregator-Project alone picks the project; detection (header with
+// X-Buggregator-Event, userinfo, Basic Auth) wins over it.
+func TestHandle_ProjectHeader(t *testing.T) {
+	f := fixtures(t)["trigger"]
+	for _, tc := range []struct{ header, detected, want string }{
+		{"", "", ""},
+		{"shop", "", "shop"},
+		{" shop ", "", "shop"},
+		{"shop", "billing", "billing"},
+	} {
+		r := request(f)
+		if tc.header != "" {
+			r.Header.Set("X-Buggregator-Project", tc.header)
+		}
+		if tc.detected != "" {
+			r.Header.Set("X-Buggregator-Detected-Project", tc.detected)
+		}
+		m := New(secrets)
+		st := &fakeStore{}
+		m.SetEventService(st)
+		if _, err := m.HTTPHandler().Handle(r); err != nil {
+			t.Fatal(err)
+		}
+		if len(st.got) == 0 {
+			t.Fatal("no event stored")
+		}
+		for _, in := range st.got {
+			if in.Project != tc.want {
+				t.Errorf("header %q detected %q: project %q, want %q", tc.header, tc.detected, in.Project, tc.want)
+			}
+		}
+	}
+}
+
+// A failed forward never shows the upstream's user or password: not in the
+// log, the card or the answer to the client.
+func TestForward_RedactsCredentials(t *testing.T) {
+	up := httptest.NewServer(http.NotFoundHandler())
+	addr := strings.TrimPrefix(up.URL, "http://")
+	up.Close()
+	var logs bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	ev, w := run(t, Config{Upstream: "http://reverb-user:s3cr3t-pass@" + addr}, request(fixtures(t)["trigger"]))
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("answer %d", w.Code)
+	}
+	for where, text := range map[string]string{"log": logs.String(), "answer": w.Body.String(), "card": ev[0].Upstream.Error + " " + ev[0].Upstream.URL} {
+		if strings.Contains(text, "s3cr3t-pass") || strings.Contains(text, "reverb-user") {
+			t.Errorf("%s shows the credentials: %s", where, text)
+		}
+	}
+	if !strings.Contains(logs.String(), addr) {
+		t.Errorf("log lost the upstream address: %s", logs.String())
+	}
+
+	for _, tc := range []struct{ msg, up, want string }{
+		{"dial http://u:pw@h:1: refused", "http://u:pw@h:1", "dial http://h:1: refused"},
+		{"bad s3cret here", "http://u:s3cret@h:1", "bad *** here"},
+		{"plain", "http://h:1", "plain"},
+		{"a bad day", "http://u:a@h:1", "a bad day"},
+	} {
+		if got := redact(tc.msg, tc.up); got != tc.want {
+			t.Errorf("redact(%q) = %q, want %q", tc.msg, got, tc.want)
+		}
 	}
 }

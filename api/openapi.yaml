@@ -905,9 +905,16 @@ paths:
         Each event is stored as a `broadcast` event with its channels, data and warnings. With `broadcast.upstream` set the
         request is also forwarded unchanged and the upstream's status and body are returned (502 when it cannot be reached);
         without it the answer is `{}`. The signature is checked only for app keys in `broadcast.apps`.
+        The project is the `X-Buggregator-Project` header (no `X-Buggregator-Event` needed), else `default`.
       x-ingestion: true
       security: []
       parameters:
+      - name: X-Buggregator-Project
+        in: header
+        required: false
+        description: Project key for the stored events. Default `default`.
+        schema:
+          type: string
       - name: app_id
         in: path
         required: true
@@ -945,6 +952,12 @@ paths:
       x-ingestion: true
       security: []
       parameters:
+      - name: X-Buggregator-Project
+        in: header
+        required: false
+        description: Project key for the stored events. Default `default`.
+        schema:
+          type: string
       - name: app_id
         in: path
         required: true

@@ -149,7 +149,13 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 		status, answer = h.forward(r, body, up)
 	}
 
+	// The project: what detection found (X-Buggregator-Event with
+	// X-Buggregator-Project, userinfo, Basic Auth), else X-Buggregator-Project
+	// alone - a Pusher client sends no event type of ours.
 	project := r.Header.Get("X-Buggregator-Detected-Project")
+	if project == "" {
+		project = strings.TrimSpace(r.Header.Get("X-Buggregator-Project"))
+	}
 	for _, e := range events {
 		e.Upstream = up
 		raw, err := json.Marshal(e)
@@ -194,6 +200,23 @@ func safeURL(raw string) string {
 	}
 	u.User = nil
 	return u.String()
+}
+
+// redact removes the upstream's credentials from a message for the log, the
+// card and the client: the userinfo of broadcast.upstream, and the password
+// alone wherever it shows up.
+func redact(msg, upstream string) string {
+	u, err := url.Parse(upstream)
+	if err != nil || u.User == nil {
+		return msg
+	}
+	msg = strings.ReplaceAll(msg, u.User.String()+"@", "")
+	// A short password would turn every match into noise; the userinfo form
+	// above is gone already.
+	if p, ok := u.User.Password(); ok && len(p) >= 4 {
+		msg = strings.ReplaceAll(msg, p, "***")
+	}
+	return msg
 }
 
 // wireEvent is an event as the client sends it: one channel or several.
@@ -342,8 +365,9 @@ func (h *handler) forward(r *http.Request, body []byte, up *Upstream) (int, []by
 	if errors.As(err, &uerr) {
 		err = uerr.Err
 	}
-	up.TimeMs, up.Error = time.Since(start).Milliseconds(), err.Error()
-	slog.Warn("broadcast: forward to upstream failed", "upstream", h.cfg.Upstream, "err", err)
-	msg, _ := json.Marshal(map[string]string{"error": "Buggregator could not reach the broadcast upstream: " + err.Error()})
+	cause := redact(err.Error(), h.cfg.Upstream)
+	up.TimeMs, up.Error = time.Since(start).Milliseconds(), cause
+	slog.Warn("broadcast: forward to upstream failed", "upstream", safeURL(h.cfg.Upstream), "err", cause)
+	msg, _ := json.Marshal(map[string]string{"error": "Buggregator could not reach the broadcast upstream: " + cause})
 	return http.StatusBadGateway, msg
 }
