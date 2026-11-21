@@ -3995,6 +3995,53 @@ paths:
           $ref: '#/components/responses/CodeGraphNotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/code/top:
+    get:
+      tags:
+      - Code graph
+      operationId: codeGraphTop
+      summary: Functions and methods called most often.
+      description: Ordered by exact incoming calls. Test files (*_test.go, *Test.php, files under test/ or tests/) are left
+        out both as targets and as callers.
+      parameters:
+      - $ref: '#/components/parameters/CodeRootQuery'
+      - name: limit
+        in: query
+        description: Default 20, at most 200.
+        schema:
+          type: integer
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Symbols with their call counts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - root
+                - symbols
+                properties:
+                  root:
+                    type: string
+                  symbols:
+                    type: array
+                    items:
+                      allOf:
+                      - $ref: '#/components/schemas/CodeSymbol'
+                      - type: object
+                        required:
+                        - callers
+                        properties:
+                          callers:
+                            type: integer
+        '400':
+          $ref: '#/components/responses/CodeGraphBadRequest'
+        '404':
+          $ref: '#/components/responses/CodeGraphNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/code/symbols/{id}:
     get:
       tags:
@@ -4163,7 +4210,8 @@ paths:
       description: 'Resolved edges (imports, extends, implements, uses, calls, instantiates) around a `target` symbol or a
         `file`, followed `depth` levels in `direction`; with neither, the whole root. `level` folds nodes: `symbol` keeps
         functions, methods and types, `class` folds methods into their class or type, `package` folds everything into its
-        namespace or package (default without a target). Edges between the same nodes are merged with a `count`. Above
+        namespace or package (default without a target); `expand` opens chosen nodes one level finer. Without a target the
+        whole root is shown, nodes with no edges too. Edges between the same nodes are merged with a `count`. Above
         `limit` nodes the start nodes and the most connected ones are kept and `truncated` is true.'
       parameters:
       - $ref: '#/components/parameters/CodeRootQuery'
@@ -4195,6 +4243,18 @@ paths:
           - in
           - both
           default: both
+      - name: expand
+        in: query
+        description: 'Node ids to show one level finer (repeat it or comma-separate): ns:<namespace or package> becomes
+          its types and functions, s:<type id> its methods. An expanded node is not in the answer (nor its own edges);
+          nodes from it carry its id in `group`. Typical whole-project view: no target, level package, expand what the
+          user opens.'
+        style: form
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
       - name: kinds
         in: query
         description: Comma-separated edge kinds to keep.
@@ -4623,6 +4683,12 @@ components:
         depth:
           type: integer
           description: Hops from the start; 0 for the start nodes.
+        size:
+          type: integer
+          description: Types, functions and methods folded into this node.
+        group:
+          type: string
+          description: Id of the expanded node this node came from.
     CodeGraphEdge:
       type: object
       required:

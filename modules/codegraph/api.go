@@ -49,6 +49,7 @@ func (m *Module) registerAPI(mux *http.ServeMux, wrap func(http.Handler) http.Ha
 	h("GET /api/code/roots/{name}", m.handleRoot)
 	h("POST /api/code/roots/{name}/reindex", m.handleReindex)
 	h("GET /api/code/search", m.handleSearch)
+	h("GET /api/code/top", m.handleTop)
 	h("GET /api/code/symbols/{id}", m.withSymbol(m.handleSymbol))
 	h("GET /api/code/symbols/{id}/callers", m.withSymbol(m.handleCalls(true)))
 	h("GET /api/code/symbols/{id}/callees", m.withSymbol(m.handleCalls(false)))
@@ -118,6 +119,19 @@ func (m *Module) handleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"symbols": res})
+}
+
+func (m *Module) handleTop(w http.ResponseWriter, r *http.Request) {
+	root, ok := m.rootParam(w, r, true)
+	if !ok {
+		return
+	}
+	res, err := m.graphs.Top(root, intParam(r, "limit"))
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"root": root, "symbols": res})
 }
 
 func (m *Module) withSymbol(fn func(w http.ResponseWriter, r *http.Request, id int64)) http.HandlerFunc {
@@ -191,6 +205,16 @@ func (m *Module) handleGraph(w http.ResponseWriter, r *http.Request) {
 	gq := GraphQuery{Root: root, Level: q.Get("level"), File: q.Get("file"), Depth: intParam(r, "depth"), Direction: q.Get("direction"), Limit: intParam(r, "limit")}
 	if k := q.Get("kinds"); k != "" {
 		gq.Kinds = strings.Split(k, ",")
+	}
+	for _, e := range q["expand"] {
+		for _, id := range strings.Split(e, ",") {
+			if id = strings.TrimSpace(id); id != "" {
+				if gq.Expand == nil {
+					gq.Expand = map[string]bool{}
+				}
+				gq.Expand[id] = true
+			}
+		}
 	}
 	switch gq.Direction {
 	case "", "in", "out", "both":

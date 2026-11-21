@@ -60,6 +60,11 @@ type GraphNode struct {
 	Line     int    `json:"line,omitempty"`
 	External bool   `json:"external,omitempty"`
 	Depth    int    `json:"depth"`
+	// Size is the number of types, functions and methods folded into the
+	// node (graph answers only).
+	Size int `json:"size,omitempty"`
+	// Group is the node this one was expanded from (expand=).
+	Group string `json:"group,omitempty"`
 }
 
 // GraphEdge links two nodes. Count is the number of references it stands for.
@@ -402,6 +407,47 @@ func (g *Graphs) callRows(s SymbolRef, incoming bool) ([]callRow, error) {
 	return out, rows.Err()
 }
 
+// TopSymbol is a function or method with its exact incoming call count.
+type TopSymbol struct {
+	SymbolRef
+	Callers int `json:"callers"`
+}
+
+// testPath is an SQL condition: the file is a test (Go *_test.go, PHP
+// *Test.php, or under a test/ or tests/ directory).
+func testPath(col string) string {
+	return `(` + col + ` GLOB '*_test.go' OR ` + col + ` GLOB '*Test.php' OR lower('/' || ` + col + `) GLOB '*/test/*' OR lower('/' || ` + col + `) GLOB '*/tests/*')`
+}
+
+// Top lists the functions and methods of a root called most often (exact
+// calls only), leaving out tests and calls made from tests.
+func (g *Graphs) Top(root string, limit int) ([]TopSymbol, error) {
+	limit = clampInt(limit, 20, 1, 200)
+	rows, err := g.db.Query(`SELECT `+symbolCols+`, COUNT(*) AS callers
+		FROM code_edges e
+		JOIN code_symbols s ON s.id = e.to_id
+		JOIN code_files f ON f.id = s.file_id
+		JOIN code_files cf ON cf.id = e.file_id
+		WHERE e.root = ? AND e.kind = 'calls' AND s.kind IN ('function', 'method')
+			AND NOT `+testPath("f.path")+` AND NOT `+testPath("cf.path")+`
+		GROUP BY s.id
+		ORDER BY callers DESC, s.fqn
+		LIMIT ?`, root, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []TopSymbol{}
+	for rows.Next() {
+		var t TopSymbol
+		if err := rows.Scan(&t.ID, &t.Root, &t.Kind, &t.Name, &t.FQN, &t.File, &t.LineStart, &t.LineEnd, &t.Signature, &t.ParentID, &t.Callers); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
 // FileEntry is a directory or file in a root's tree.
 type FileEntry struct {
 	Name       string `json:"name"`
@@ -602,6 +648,37 @@ type GraphQuery struct {
 	Direction string // out, in, both
 	Kinds     []string
 	Limit     int
+	// Expand lists node ids to show one level finer: a namespace or package
+	// (ns:<fqn>) as its types and functions, a type (s:<id>) as its methods.
+	Expand map[string]bool
+}
+
+var finer = map[string]string{LevelPackage: LevelClass, LevelClass: LevelSymbol}
+
+// fold maps a symbol to its node at the query's level, one level finer for
+// each expanded node on the way. group is the expanded node it sits in. ""
+// for the symbol of an expanded node itself: that node is not shown.
+func (x *symbolIndex) fold(id int64, level string, expand map[string]bool) (key, group string, s *symInfo) {
+	key, s = x.rollup(id, level)
+	if s == nil {
+		return "", "", nil
+	}
+	for expand[key] {
+		next, ok := finer[level]
+		if !ok {
+			// Nothing finer to show: the expand is ignored.
+			return key, group, s
+		}
+		k, ns := x.rollup(id, next)
+		if k == key || ns.kind == KindNamespace || ns.kind == KindPackage {
+			// The expanded node's own symbol (the class itself, or one of
+			// the namespace's per-file rows): an expanded node is never
+			// shown, its own edges go.
+			return "", "", nil
+		}
+		group, key, s, level = key, k, ns, next
+	}
+	return key, group, s
 }
 
 func (x *symbolIndex) rollup(id int64, level string) (string, *symInfo) {
@@ -777,7 +854,7 @@ func (g *Graphs) Subgraph(q GraphQuery) (*Graph, error) {
 	edgeIdx := map[string]*GraphEdge{}
 	var edgeOrder []string
 	addNode := func(id int64) string {
-		key, s := idx.rollup(id, q.Level)
+		key, group, s := idx.fold(id, q.Level, q.Expand)
 		if s == nil {
 			return ""
 		}
@@ -787,7 +864,7 @@ func (g *Graphs) Subgraph(q GraphQuery) (*Graph, error) {
 			d = 0
 		}
 		if !ok {
-			n = &GraphNode{ID: key, Kind: s.kind, Name: s.name, FQN: s.fqn, Depth: d}
+			n = &GraphNode{ID: key, Kind: s.kind, Name: s.name, FQN: s.fqn, Depth: d, Group: group}
 			if strings.HasPrefix(key, "s:") {
 				n.SymbolID, _ = strconv.ParseInt(key[2:], 10, 64)
 				n.File, n.Line = s.file, s.line
@@ -798,8 +875,26 @@ func (g *Graphs) Subgraph(q GraphQuery) (*Graph, error) {
 		}
 		return key
 	}
+	whole := q.Target == 0 && q.File == ""
 	for _, id := range sortedKeys(depthOf) {
 		addNode(id)
+	}
+	// Sizes; the whole-root graph also shows nodes with no edges.
+	for _, id := range sortedSymbolIDs(idx) {
+		s := idx.syms[id]
+		if s.kind == KindNamespace || s.kind == KindPackage {
+			continue
+		}
+		key, _, _ := idx.fold(id, q.Level, q.Expand)
+		if key == "" {
+			continue
+		}
+		if _, ok := nodes[key]; !ok && whole {
+			addNode(id)
+		}
+		if n, ok := nodes[key]; ok {
+			n.Size++
+		}
 	}
 	for _, e := range raw {
 		from, to := addNode(e.from), addNode(e.to)
@@ -849,6 +944,15 @@ func (g *Graphs) Subgraph(q GraphQuery) (*Graph, error) {
 		}
 	}
 	return gr, nil
+}
+
+func sortedSymbolIDs(x *symbolIndex) []int64 {
+	out := make([]int64, 0, len(x.syms))
+	for k := range x.syms {
+		out = append(out, k)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	return out
 }
 
 func sortedKeys(m map[int64]int) []int64 {
