@@ -18,6 +18,7 @@ func TestPreview_LogentryMessage(t *testing.T) {
 		{"message wins", `{"level":"error","message":"Plain","logentry":{"formatted":"Other"}}`, "Plain"},
 		{"empty message falls back", `{"level":"error","message":"","logentry":{"formatted":"From logentry"}}`, "From logentry"},
 		{"neither", `{"level":"error"}`, nil},
+		{"object message", `{"level":"error","message":{"message":"Order %s failed","params":["7"],"formatted":"Order 7 failed"}}`, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			m := &previewMapper{}
@@ -28,6 +29,13 @@ func TestPreview_LogentryMessage(t *testing.T) {
 			var got map[string]any
 			if err := json.Unmarshal(b, &got); err != nil {
 				t.Fatal(err)
+			}
+			if tc.name == "object message" {
+				// The preview keeps the object (the UI reads it); search needs its text.
+				if txt := m.ToSearchableText(json.RawMessage(tc.payload)); !strings.Contains(txt, "Order 7 failed") {
+					t.Errorf("searchable text %q lacks the object message", txt)
+				}
+				return
 			}
 			if got["message"] != tc.want {
 				t.Errorf("preview message = %#v, want %#v", got["message"], tc.want)
