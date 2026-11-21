@@ -216,6 +216,14 @@ func (m *Module) handleGraph(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	switch c := q.Get("confidence"); c {
+	case "", ConfExact:
+	case "all":
+		gq.NameCalls = true
+	default:
+		writeErr(w, http.StatusBadRequest, "bad_confidence", "confidence must be exact or all")
+		return
+	}
 	switch gq.Direction {
 	case "", "in", "out", "both":
 	default:

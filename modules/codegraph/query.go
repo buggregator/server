@@ -651,7 +651,15 @@ type GraphQuery struct {
 	// Expand lists node ids to show one level finer: a namespace or package
 	// (ns:<fqn>) as its types and functions, a type (s:<id>) as its methods.
 	Expand map[string]bool
+	// NameCalls adds, to the whole-root graph, method calls matched by the
+	// method name only (confidence "name": $this->svc->save() with the type
+	// of svc unknown). A name with more than maxNameTargets methods is left
+	// out as too ambiguous.
+	NameCalls bool
 }
+
+// maxNameTargets bounds the methods one name-only call may point at.
+const maxNameTargets = 3
 
 var finer = map[string]string{LevelPackage: LevelClass, LevelClass: LevelSymbol}
 
@@ -739,6 +747,7 @@ func (g *Graphs) Subgraph(q GraphQuery) (*Graph, error) {
 		from, to int64
 		kind     string
 		line     int
+		conf     string
 	}
 	var raw []rawEdge
 	depthOf := map[int64]int{}
@@ -753,6 +762,7 @@ func (g *Graphs) Subgraph(q GraphQuery) (*Graph, error) {
 			if err := rows.Scan(&e.from, &e.to, &e.kind, &e.line); err != nil {
 				return err
 			}
+			e.conf = ConfExact
 			if len(kinds) > 0 && !kinds[e.kind] {
 				continue
 			}
@@ -764,6 +774,15 @@ func (g *Graphs) Subgraph(q GraphQuery) (*Graph, error) {
 	if q.Target == 0 && q.File == "" {
 		if err := load(`SELECT from_id, to_id, kind, line FROM code_edges WHERE root = ? AND from_id IS NOT NULL AND to_id IS NOT NULL`, q.Root); err != nil {
 			return nil, err
+		}
+		if q.NameCalls && (len(kinds) == 0 || kinds[EdgeCalls]) {
+			named, err := g.nameCalls(q.Root, idx)
+			if err != nil {
+				return nil, err
+			}
+			for _, e := range named {
+				raw = append(raw, rawEdge{from: e[0], to: e[1], kind: EdgeCalls, line: int(e[2]), conf: ConfName})
+			}
 		}
 	} else {
 		var seed []int64
@@ -901,12 +920,12 @@ func (g *Graphs) Subgraph(q GraphQuery) (*Graph, error) {
 		if from == "" || to == "" || from == to {
 			continue
 		}
-		k := from + "|" + to + "|" + e.kind
+		k := from + "|" + to + "|" + e.kind + "|" + e.conf
 		if ge, ok := edgeIdx[k]; ok {
 			ge.Count++
 			continue
 		}
-		edgeIdx[k] = &GraphEdge{From: from, To: to, Kind: e.kind, Confidence: ConfExact, Line: e.line, Count: 1}
+		edgeIdx[k] = &GraphEdge{From: from, To: to, Kind: e.kind, Confidence: e.conf, Line: e.line, Count: 1}
 		edgeOrder = append(edgeOrder, k)
 		degree[from]++
 		degree[to]++
@@ -944,6 +963,43 @@ func (g *Graphs) Subgraph(q GraphQuery) (*Graph, error) {
 		}
 	}
 	return gr, nil
+}
+
+// nameCalls returns [from, to, line] for the calls of a root matched by name
+// only, each name pointing at the root's methods of that name (at most
+// maxNameTargets of them). A name-only call always has an unknown receiver,
+// so it never reaches a plain function (as in Calls).
+func (g *Graphs) nameCalls(root string, idx *symbolIndex) ([][3]int64, error) {
+	byName := map[string][]int64{}
+	for _, id := range sortedSymbolIDs(idx) {
+		if s := idx.syms[id]; s.kind == KindMethod {
+			byName[s.name] = append(byName[s.name], id)
+		}
+	}
+	rows, err := g.db.Query(`SELECT from_id, to_name, line FROM code_edges
+		WHERE root = ? AND kind = 'calls' AND confidence = 'name' AND from_id IS NOT NULL AND to_id IS NULL`, root)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out [][3]int64
+	for rows.Next() {
+		var from, line int64
+		var name string
+		if err := rows.Scan(&from, &name, &line); err != nil {
+			return nil, err
+		}
+		targets := byName[name]
+		if len(targets) == 0 || len(targets) > maxNameTargets {
+			continue
+		}
+		for _, to := range targets {
+			if to != from {
+				out = append(out, [3]int64{from, to, line})
+			}
+		}
+	}
+	return out, rows.Err()
 }
 
 func sortedSymbolIDs(x *symbolIndex) []int64 {

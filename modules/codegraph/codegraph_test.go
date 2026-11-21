@@ -692,3 +692,78 @@ func TestSubgraph_Expand(t *testing.T) {
 		t.Errorf("save -> ns:App\\Repo call edge missing: %+v", g.Edges)
 	}
 }
+
+func TestSubgraph_NameCalls(t *testing.T) {
+	m, _ := setup(t, Config{})
+	save := "s:" + itoa(mustLookup(t, m, `App\Service\UserService::save`).ID)
+	persist := "s:" + itoa(mustLookup(t, m, `App\Repo\UserRepo::persist`).ID)
+	has := func(g *Graph, from, to, conf string) bool {
+		for _, e := range g.Edges {
+			if e.From == from && e.To == to && e.Kind == EdgeCalls && e.Confidence == conf {
+				return true
+			}
+		}
+		return false
+	}
+	q := GraphQuery{Root: "app", Level: LevelSymbol, Limit: 2000}
+	g, err := m.graphs.Subgraph(q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if has(g, save, persist, ConfName) {
+		t.Error("name-only call shown without NameCalls")
+	}
+	q.NameCalls = true
+	g, err = m.graphs.Subgraph(q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !has(g, save, persist, ConfName) {
+		t.Errorf("$this->repo->persist() missing as a name call: %+v", g.Edges)
+	}
+	// Folded: kept apart from the exact calls between the same namespaces.
+	g, err = m.graphs.Subgraph(GraphQuery{Root: "app", NameCalls: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !has(g, `ns:App\Service`, `ns:App\Repo`, ConfName) || !has(g, `ns:App\Service`, `ns:App\Repo`, ConfExact) {
+		t.Errorf("folded name and exact calls: %+v", g.Edges)
+	}
+	// kinds without calls: none.
+	g, err = m.graphs.Subgraph(GraphQuery{Root: "app", Level: LevelSymbol, NameCalls: true, Kinds: []string{EdgeInstantiates}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range g.Edges {
+		if e.Confidence == ConfName {
+			t.Errorf("name call with kinds=instantiates: %+v", e)
+		}
+	}
+}
+
+func TestSubgraph_NameCallsSkipFunctions(t *testing.T) {
+	dir := t.TempDir()
+	for name, body := range map[string]string{
+		"go.mod": "module example.com/x\n",
+		"a/a.go": "package a\n\nfunc Close() {}\n",
+		"b/b.go": "package b\n\nfunc Use(v interface{ Close() }) { v.Close() }\n",
+	} {
+		p := filepath.Join(dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	m, _ := setup(t, Config{Roots: []Root{{Name: "x", Path: dir}}})
+	g, err := m.graphs.Subgraph(GraphQuery{Root: "x", NameCalls: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range g.Edges {
+		if e.Kind == EdgeCalls {
+			t.Errorf("name call v.Close() matched the function a.Close: %+v", e)
+		}
+	}
+}
