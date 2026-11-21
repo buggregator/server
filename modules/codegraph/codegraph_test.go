@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -481,4 +482,102 @@ func TestMCPTools(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A syntax error that sends tree-sitter's recovery into minutes (a dropped
+// quote in sentry-php's Options.php, testdata/broken/; 2 min unbounded right
+// after the intact file went through the same parser) stops at the parse
+// timeout: the file is marked parse_error, keeps what the first pass found,
+// and the rest of the root indexes.
+func TestIndex_BrokenFileStopsAtTimeout(t *testing.T) {
+	dir := copyTree(t)
+	b, err := os.ReadFile("testdata/broken/Options.php")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "src/Options.php"), b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// The slow recovery shows when the same parser just parsed the intact
+	// file, as in a run over a tree: A_Options.php sorts right before it.
+	orig, err := os.ReadFile("testdata/broken/Options.orig.php")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "src/A_Options.php"), orig, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	db := openDB(t)
+	m := New(Config{Roots: []Root{{Name: "app", Path: dir}}, ParseTimeout: time.Second}) // the intact file takes ~20 ms, ~10x that with -race
+	started := time.Now()
+	if err := m.OnInit(db); err != nil {
+		t.Fatal(err)
+	}
+	m.Indexer().Wait()
+	if took := time.Since(started); took > 20*time.Second {
+		t.Fatalf("indexing took %v", took)
+	}
+	st, _ := m.ix.Status("app")
+	if st.State != StateReady || st.Files != 8 || st.ParseErrors != 1 {
+		t.Fatalf("status %+v", st)
+	}
+	var perr, syms int
+	_ = db.QueryRow(`SELECT parse_error, (SELECT COUNT(*) FROM code_symbols s WHERE s.file_id = f.id) FROM code_files f WHERE path = 'src/Options.php'`).Scan(&perr, &syms)
+	if perr != 1 || syms == 0 {
+		t.Errorf("broken file: parse_error=%d symbols=%d", perr, syms)
+	}
+	mustLookup(t, m, `App\Service\UserService::save`) // the rest is indexed
+}
+
+// A cancelled run stops a parse in progress at once.
+func TestParsers_Cancel(t *testing.T) {
+	b, err := os.ReadFile("testdata/broken/Options.php")
+	if err != nil {
+		t.Fatal(err)
+	}
+	orig, err := os.ReadFile("testdata/broken/Options.orig.php")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ps := newParsers(time.Minute)
+	if _, err := ps.parse("php", orig, ""); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer ps.watch(ctx)()
+	time.AfterFunc(100*time.Millisecond, cancel)
+	started := time.Now()
+	res, err := ps.parse("php", b, "")
+	if err != nil && !errors.Is(err, errParseStopped) {
+		t.Fatal(err)
+	}
+	if took := time.Since(started); took > 10*time.Second || (err == nil && res.Stopped != "cancelled") {
+		t.Fatalf("after %v: err=%v stopped=%q", took, err, res.Stopped)
+	}
+}
+
+// Two runs within one second: the whole-graph cache must not keep old ids.
+func TestSubgraph_CacheAcrossFastRuns(t *testing.T) {
+	m, dir := setup(t, Config{})
+	if _, err := m.graphs.Subgraph(GraphQuery{Root: "app", Level: LevelSymbol}); err != nil {
+		t.Fatal(err)
+	}
+	f := filepath.Join(dir, "src/Repo/UserRepo.php")
+	src, _ := os.ReadFile(f)
+	if err := os.WriteFile(f, []byte(strings.Replace(string(src), "class UserRepo", "class UserRepo\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m.ix.Reindex("app")
+	m.ix.Wait()
+	find := mustLookup(t, m, `App\Repo\UserRepo::find`)
+	g, err := m.graphs.Subgraph(GraphQuery{Root: "app", Level: LevelSymbol})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range g.Nodes {
+		if n.SymbolID == find.ID {
+			return
+		}
+	}
+	t.Errorf("node of the re-parsed UserRepo::find (id %d) missing: stale cache", find.ID)
 }

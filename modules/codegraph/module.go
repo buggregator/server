@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/buggregator/server/v2/internal/module"
 	"github.com/buggregator/server/v2/internal/storage"
@@ -38,6 +39,8 @@ type Config struct {
 	MaxFiles    int      // per root. Default 50000
 	Snippets    bool     // serve source fragments in symbol answers
 	PathMap     []PathMap
+	// ParseTimeout bounds one file's parse; 0 = 2s.
+	ParseTimeout time.Duration
 }
 
 // DefaultExclude is used when the config names no exclude list.

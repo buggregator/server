@@ -66,7 +66,8 @@ type run struct {
 	root    Root
 	status  Status
 	running bool
-	again   bool // a reindex was asked for while running
+	again   bool  // a reindex was asked for while running
+	gen     int64 // finished runs; caches key on it
 }
 
 func newIndexer(db *sql.DB, cfg Config) *Indexer {
@@ -88,6 +89,25 @@ func (ix *Indexer) root(name string) (Root, bool) {
 		return Root{}, false
 	}
 	return r.root, true
+}
+
+// generation returns the number of finished runs of a root and whether one
+// is in progress.
+func (ix *Indexer) generation(name string) (int64, bool) {
+	ix.mu.Lock()
+	defer ix.mu.Unlock()
+	r, ok := ix.runs[name]
+	if !ok {
+		return 0, false
+	}
+	return r.gen, r.running
+}
+
+func (ix *Indexer) parseTimeout() time.Duration {
+	if ix.cfg.ParseTimeout > 0 {
+		return ix.cfg.ParseTimeout
+	}
+	return parseTimeout
 }
 
 // Status returns the state of one root.
@@ -215,6 +235,7 @@ func (ix *Indexer) loop(r *run) {
 		}
 		ix.loadCounts(r.root.Name)
 		ix.mu.Lock()
+		r.gen++
 		if err != nil {
 			r.status.State, r.status.Error = StateError, err.Error()
 		} else {
@@ -414,7 +435,8 @@ func (ix *Indexer) index(ctx context.Context, root Root) error {
 	}
 	rows.Close()
 
-	ps := newParsers()
+	ps := newParsers(ix.parseTimeout())
+	defer ps.watch(ctx)()
 	var batch []parsedRow
 	var touched [][3]int64 // id, size, mtime: same content, new mtime
 	seen := make(map[string]bool, len(files))
@@ -439,8 +461,14 @@ func (ix *Indexer) index(ctx context.Context, root Root) error {
 			continue
 		}
 		res, err := ps.parse(f.lang, src, goPackage(root.Name, f.rel, modules))
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		if err != nil {
+			slog.Warn("code graph: file not parsed", "root", root.Name, "file", f.rel, "err", err)
 			res = &parsedFile{HasError: true}
+		} else if res.Stopped != "" {
+			slog.Warn("code graph: syntax error recovery stopped, file kept as parsed so far", "root", root.Name, "file", f.rel, "reason", res.Stopped)
 		}
 		batch = append(batch, parsedRow{disk: f, hash: hash, oldID: old.id, result: res})
 		if len(batch) >= writeBatch {

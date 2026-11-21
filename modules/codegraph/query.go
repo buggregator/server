@@ -543,14 +543,14 @@ type symInfo struct {
 }
 
 type symbolIndex struct {
-	indexedAt string
-	syms      map[int64]*symInfo
+	gen  int64
+	syms map[int64]*symInfo
 }
 
 func (g *Graphs) symbols(root string) (*symbolIndex, error) {
-	st, _ := g.ix.Status(root)
+	gen, running := g.ix.generation(root)
 	g.mu.Lock()
-	if c, ok := g.cache[root]; ok && c.indexedAt == st.IndexedAt && st.State != StateIndexing {
+	if c, ok := g.cache[root]; ok && c.gen == gen && !running {
 		g.mu.Unlock()
 		return c, nil
 	}
@@ -561,7 +561,7 @@ func (g *Graphs) symbols(root string) (*symbolIndex, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	idx := &symbolIndex{indexedAt: st.IndexedAt, syms: map[int64]*symInfo{}}
+	idx := &symbolIndex{gen: gen, syms: map[int64]*symInfo{}}
 	for rows.Next() {
 		var id int64
 		s := &symInfo{}
@@ -573,7 +573,7 @@ func (g *Graphs) symbols(root string) (*symbolIndex, error) {
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	if st.State != StateIndexing {
+	if !running {
 		g.mu.Lock()
 		if g.cache == nil {
 			g.cache = map[string]*symbolIndex{}
