@@ -4347,6 +4347,12 @@ paths:
         description: Comma-separated edge kinds to keep.
         schema:
           type: string
+      - name: tests
+        in: query
+        description: '`true` keeps test code in the whole-root graph; by default Go `*_test.go` files, PHP `*Test.php` files and
+          `test/` or `tests/` folders are left out. A graph around a `target` or `file` always includes them.'
+        schema:
+          type: boolean
       - name: confidence
         in: query
         description: '`exact` (default): resolved edges only. `all`: the whole-root graph also has method calls matched by

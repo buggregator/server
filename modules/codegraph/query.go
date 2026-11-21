@@ -421,6 +421,13 @@ type TopSymbol struct {
 	Callers int `json:"callers"`
 }
 
+// isTestFile is testPath in Go.
+func isTestFile(p string) bool {
+	low := "/" + strings.ToLower(p)
+	return strings.HasSuffix(p, "_test.go") || strings.HasSuffix(p, "Test.php") ||
+		strings.Contains(low, "/test/") || strings.Contains(low, "/tests/")
+}
+
 // testPath is an SQL condition: the file is a test (Go *_test.go, PHP
 // *Test.php, or under a test/ or tests/ directory).
 func testPath(col string) string {
@@ -664,6 +671,9 @@ type GraphQuery struct {
 	// of svc unknown). A name with more than maxNameTargets methods is left
 	// out as too ambiguous.
 	NameCalls bool
+	// Tests keeps test code in the whole-root graph (left out by default):
+	// Go *_test.go files, PHP *Test.php files and test/ or tests/ folders.
+	Tests bool
 }
 
 // maxNameTargets bounds the methods one name-only call may point at.
@@ -903,13 +913,21 @@ func (g *Graphs) Subgraph(q GraphQuery) (*Graph, error) {
 		return key
 	}
 	whole := q.Target == 0 && q.File == ""
+	// The whole-root graph leaves test code out unless asked.
+	skip := func(id int64) bool {
+		if !whole || q.Tests {
+			return false
+		}
+		s := idx.syms[id]
+		return s != nil && isTestFile(s.file)
+	}
 	for _, id := range sortedKeys(depthOf) {
 		addNode(id)
 	}
 	// Sizes; the whole-root graph also shows nodes with no edges.
 	for _, id := range sortedSymbolIDs(idx) {
 		s := idx.syms[id]
-		if s.kind == KindNamespace || s.kind == KindPackage {
+		if s.kind == KindNamespace || s.kind == KindPackage || skip(id) {
 			continue
 		}
 		key, _, _ := idx.fold(id, q.Level, q.Expand)
@@ -924,6 +942,9 @@ func (g *Graphs) Subgraph(q GraphQuery) (*Graph, error) {
 		}
 	}
 	for _, e := range raw {
+		if skip(e.from) || skip(e.to) {
+			continue
+		}
 		from, to := addNode(e.from), addNode(e.to)
 		if from == "" || to == "" || from == to {
 			continue

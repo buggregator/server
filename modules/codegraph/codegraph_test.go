@@ -767,3 +767,49 @@ func TestSubgraph_NameCallsSkipFunctions(t *testing.T) {
 		}
 	}
 }
+
+func TestSubgraph_HidesTests(t *testing.T) {
+	m, _ := setup(t, Config{})
+	testSyms := map[string]bool{
+		"s:" + itoa(mustLookup(t, m, `App\Tests\UserRepoTest`).ID):                true,
+		"s:" + itoa(mustLookup(t, m, `App\Tests\UserRepoTest::testFind`).ID):      true,
+		"s:" + itoa(mustLookup(t, m, `example.com/app/internal/repo.TestNew`).ID): true,
+	}
+	shown := func(g *Graph) (nodes, edges int) {
+		for _, n := range g.Nodes {
+			if testSyms[n.ID] || n.ID == `ns:App\Tests` {
+				nodes++
+			}
+		}
+		for _, e := range g.Edges {
+			if testSyms[e.From] || testSyms[e.To] || e.From == `ns:App\Tests` {
+				edges++
+			}
+		}
+		return
+	}
+	for _, level := range []string{LevelSymbol, LevelClass, LevelPackage} {
+		g, err := m.graphs.Subgraph(GraphQuery{Root: "app", Level: level, Limit: 2000})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n, e := shown(g); n != 0 || e != 0 {
+			t.Errorf("%s: test nodes %d, edges %d shown by default", level, n, e)
+		}
+		g, err = m.graphs.Subgraph(GraphQuery{Root: "app", Level: level, Limit: 2000, Tests: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n, e := shown(g); n == 0 || e == 0 {
+			t.Errorf("%s: tests=true shows no test code (%d nodes, %d edges)", level, n, e)
+		}
+	}
+	// A target graph still reaches tests: the caller asked for that symbol.
+	g, err := m.graphs.Subgraph(GraphQuery{Root: "app", Level: LevelSymbol, Target: mustLookup(t, m, `example.com/app/internal/repo.New`).ID, Depth: 1, Direction: "in", Limit: 300})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n, _ := shown(g); n == 0 {
+		t.Error("target graph lost the test caller")
+	}
+}

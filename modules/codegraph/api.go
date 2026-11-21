@@ -220,6 +220,7 @@ func (m *Module) handleGraph(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	gq.Tests = q.Get("tests") == "true" || q.Get("tests") == "1"
 	switch c := q.Get("confidence"); c {
 	case "", ConfExact:
 	case "all":
