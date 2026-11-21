@@ -243,6 +243,7 @@ type ModulesConfig struct {
 	Monolog   *bool `yaml:"monolog"`
 	SMTP      *bool `yaml:"smtp"`
 	SMS       *bool `yaml:"sms"`
+	CSP       *bool `yaml:"csp"` // browser CSP / Reporting API reports
 	HttpDump  *bool `yaml:"http-dump"`
 	Profiler  *bool `yaml:"profiler"`
 	// XdebugTrace is the Xdebug function trace upload (type xdebug-trace).
@@ -266,6 +267,8 @@ func (m *ModulesConfig) field(moduleType string) **bool {
 		return &m.SMTP
 	case "sms":
 		return &m.SMS
+	case "csp":
+		return &m.CSP
 	case "http-dump":
 		return &m.HttpDump
 	case "profiler":
@@ -296,7 +299,7 @@ func (m *ModulesConfig) Disable(moduleType string) {
 
 // EnabledTypes returns a list of enabled module type strings.
 func (m ModulesConfig) EnabledTypes() []string {
-	all := []string{"sentry", "ray", "var-dump", "inspector", "monolog", "smtp", "sms", "http-dump", "profiler", "xdebug-trace"}
+	all := []string{"sentry", "ray", "var-dump", "inspector", "monolog", "smtp", "sms", "csp", "http-dump", "profiler", "xdebug-trace"}
 	var enabled []string
 	for _, t := range all {
 		if m.IsEnabled(t) {
@@ -638,6 +641,7 @@ func modulesFromCSV(csv string) ModulesConfig {
 		Monolog:   boolPtr(enabled["monolog"], t, f),
 		SMTP:      boolPtr(enabled["smtp"], t, f),
 		SMS:       boolPtr(enabled["sms"], t, f),
+		CSP:       boolPtr(enabled["csp"], t, f),
 		HttpDump:  boolPtr(enabled["http-dump"], t, f),
 		Profiler:  boolPtr(enabled["profiler"], t, f),
 

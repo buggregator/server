@@ -56,6 +56,7 @@ var uiRoutes = []struct{ method, path string }{
 	{"GET", "/api/sentry/traces"},
 	{"GET", "/api/sentry/traces/abc"},
 	{"GET", "/api/sentry/logs"},
+	{"GET", "/api/sentry/feedback"},
 	{"GET", "/api/sentry/metrics"},
 	{"GET", "/api/sentry/service-map"},
 	{"GET", "/api/sentry/counts"},

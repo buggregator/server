@@ -206,6 +206,11 @@ func (h *handler) handleEnvelope(body []byte, project string) (*event.Incoming, 
 				kinds.add("metric")
 			}
 
+		case "user_report", "feedback":
+			if h.handleFeedbackItem(item, envHeader.EventID, project) {
+				kinds.add("feedback")
+			}
+
 		default:
 			// Known non-essential item types are silently discarded.
 			if !nonFeedItemTypes[item.Type] {
@@ -385,13 +390,39 @@ func (h *handler) handleMetricItem(item EnvelopeItem, project string) bool {
 	return true
 }
 
+// handleFeedbackItem stores a "user_report" or "feedback" item. It reports
+// whether the feedback was stored.
+func (h *handler) handleFeedbackItem(item EnvelopeItem, envelopeEventID, project string) bool {
+	if h.db == nil {
+		return false
+	}
+	var (
+		fb  *Feedback
+		err error
+	)
+	if item.Type == feedbackSourceUserReport {
+		fb, err = parseUserReport(item.Payload)
+	} else {
+		fb, err = parseFeedbackItem(item.Payload, envelopeEventID)
+	}
+	if err != nil {
+		slog.Warn("sentry: failed to parse feedback", "type", item.Type, "err", err)
+		return false
+	}
+	if err := storeFeedback(h.db, fb, project); err != nil {
+		slog.Warn("sentry: failed to store feedback", "err", err)
+		return false
+	}
+	return true
+}
+
 // nonFeedItemTypes are envelope item types that never become a card in the
 // event feed: they are stored in structured tables or discarded.
 var nonFeedItemTypes = map[string]bool{
 	"transaction": true, "spans": true, "span": true, "log": true, "trace_metric": true,
 	"session": true, "sessions": true, "client_report": true, "check_in": true,
 	"metric_buckets": true, "statsd": true,
-	"profile": true, "profile_chunk": true, "user_report": true, "attachment": true,
+	"profile": true, "profile_chunk": true, "user_report": true, "feedback": true, "attachment": true,
 	"replay_event": true, "replay_recording": true,
 }
 

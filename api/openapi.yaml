@@ -1171,7 +1171,7 @@ paths:
       tags:
       - Sentry
       operationId: sentryGetCounts
-      summary: Count error events, transactions, logs and metrics for the tab badges.
+      summary: Count error events, transactions, logs, metrics and user feedback for the tab badges.
       description: Database errors are not reported; a failed count comes back as 0.
       security:
       - authToken: []
@@ -1381,6 +1381,67 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SentryLogList'
+        '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/feedback:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryListFeedback
+      summary: List user feedback sent by Sentry SDKs, newest first.
+      description: Both the `feedback` envelope item (captureFeedback, the feedback widget) and the legacy `user_report` item. Feedback on an error carries its `event_id`; feedback on nothing has it empty. Deleting the error's card keeps its feedback until retention removes it by age.
+      security:
+      - authToken: []
+      parameters:
+      - name: event_id
+        in: query
+        description: Only feedback on this error. Dashes and case are ignored.
+        schema:
+          type: string
+      - name: project
+        in: query
+        description: Project key. Without it every project is read.
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: Lower bound on arrival time. Unix seconds or ISO, UTC.
+        schema:
+          type: string
+      - name: to
+        in: query
+        description: Upper bound on arrival time, same formats as `from`.
+        schema:
+          type: string
+      - name: window
+        in: query
+        description: Period back from now, like `15m`, `24h`, `7d`. Used only when `from` and `to` are both absent.
+        schema:
+          type: string
+      - name: page
+        in: query
+        description: Page number, starting at 1.
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: limit
+        in: query
+        description: Page size, 1..500. Out-of-range values fall back to the default.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+      responses:
+        '200':
+          description: A page of feedback.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryFeedbackList'
         '401':
           $ref: '#/components/responses/Error'
         '500':
@@ -4703,6 +4764,65 @@ components:
         received_at:
           type: string
           description: Receive time, ISO UTC.
+    SentryFeedbackList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentryFeedback'
+        meta:
+          $ref: '#/components/schemas/SentryListMeta'
+    SentryFeedback:
+      type: object
+      required:
+      - id
+      - project
+      - event_id
+      - feedback_id
+      - name
+      - email
+      - message
+      - url
+      - source
+      - received_at
+      - payload
+      properties:
+        id:
+          type: string
+        project:
+          type: string
+        event_id:
+          type: string
+          description: The error the feedback is about, as the SDK sent it. Empty when none.
+        feedback_id:
+          type: string
+          description: The feedback event's own id. Empty for `user_report`.
+        name:
+          type: string
+        email:
+          type: string
+        message:
+          type: string
+        url:
+          type: string
+          description: The page the feedback was sent from. Empty when the SDK did not send one.
+        source:
+          type: string
+          enum:
+          - feedback
+          - user_report
+        received_at:
+          type: string
+          format: date-time
+        payload:
+          description: The item as the SDK sent it.
+          type:
+          - object
+          - 'null'
     SentryLogList:
       type: object
       required:
@@ -5058,6 +5178,7 @@ components:
       - traces
       - logs
       - metrics
+      - feedback
       properties:
         exceptions:
           type: integer
@@ -5069,6 +5190,9 @@ components:
           type: integer
         metrics:
           type: integer
+        feedback:
+          type: integer
+          description: User feedback, counted by the time it arrived.
     SentryStatus:
       type: object
       required:

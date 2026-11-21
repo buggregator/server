@@ -1,0 +1,9 @@
+{
+ "method": "POST",
+ "path": "/api/42/envelope/?sentry_key=publickey&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.120.4",
+ "headers": {
+  "content-type": "text/plain;charset=UTF-8",
+  "user-agent": "Mozilla/5.0"
+ },
+ "body": "{\"event_id\":\"5a703817209e4d3ba2536058845f8b88\",\"sent_at\":\"2026-11-21T14:21:35.155Z\",\"sdk\":{\"name\":\"sentry.javascript.browser\",\"version\":\"7.120.4\"}}\n{\"type\":\"user_report\"}\n{\"event_id\":\"5a703817209e4d3ba2536058845f8b88\",\"name\":\"Jane Doe\",\"email\":\"jane@example.com\",\"comments\":\"It broke when I clicked pay\"}\n"
+}
