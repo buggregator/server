@@ -48,6 +48,12 @@ func registerSMTPAPI(mux *http.ServeMux, store event.Store, mod *Module, protect
 	route("GET /api/smtp/message/{uuid}/raw", handleRaw(store))
 	route("GET /api/smtp/message/{uuid}/links", handleLinks(store))
 	route("GET /api/smtp/message/{uuid}/codes", handleCodes(store))
+	rl := mod.relay
+	if rl == nil {
+		rl = newRelay(RelayConfig{})
+	}
+	route("GET /api/smtp/relay", handleRelayInfo(rl))
+	route("POST /api/smtp/release/{uuid}", handleRelease(store, rl))
 }
 
 // handleCursor returns the current server time as a cursor token.

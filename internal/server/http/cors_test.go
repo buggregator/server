@@ -22,6 +22,9 @@ func TestCORS_UpdateIsSameOriginOnly(t *testing.T) {
 		{"OPTIONS", "/api/update", http.StatusMethodNotAllowed, ""},
 		{"OPTIONS", "/api/update/check", http.StatusMethodNotAllowed, ""},
 		{"POST", "/api/update", http.StatusMethodNotAllowed, ""},
+		{"OPTIONS", "/api/smtp/release/m1", http.StatusMethodNotAllowed, ""},
+		{"POST", "/api/smtp/release/m1", http.StatusMethodNotAllowed, ""},
+		{"OPTIONS", "/api/smtp/relay", http.StatusNoContent, "*"},
 	}
 	for _, tt := range tests {
 		req := httptest.NewRequest(tt.method, "http://127.0.0.1:8000"+tt.path, nil)

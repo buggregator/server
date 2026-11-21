@@ -2201,6 +2201,98 @@ paths:
           $ref: '#/components/responses/Error'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/smtp/relay:
+    get:
+      tags:
+      - SMTP
+      operationId: smtpGetRelay
+      summary: Whether releasing a caught email to a real inbox is on, and where it goes
+      description: Release is on when `smtp_relay.host` is set. The password is never returned.
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Relay settings without secrets.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SMTPRelayInfo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/smtp/release/{uuid}:
+    post:
+      tags:
+      - SMTP
+      operationId: smtpReleaseMessage
+      summary: Send a caught email to real mailboxes through the outgoing SMTP relay
+      description: >-
+        The message goes as captured (raw RFC 822); `rewrite_to` replaces its To header with the
+        recipients and drops Cc. Only the Buggregator UI itself may call it (same origin; another
+        page and the WebSocket RPC bridge are refused). At most 10 messages a minute and 20
+        recipients a message; recipients must match `smtp_relay.allowed_recipients` when set.
+      security:
+      - authToken: []
+      parameters:
+      - name: uuid
+        in: path
+        required: true
+        description: UUID of the SMTP event.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - to
+              properties:
+                to:
+                  type: array
+                  description: Addresses; an item may also hold several, comma-separated.
+                  items:
+                    type: string
+                rewrite_to:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Accepted by the relay.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - status
+                - to
+                properties:
+                  status:
+                    type: boolean
+                  to:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '415':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '502':
+          $ref: '#/components/responses/Error'
   /api/smtp/stats:
     get:
       tags:
@@ -3991,6 +4083,35 @@ components:
                 type: string
                 description: The event id (empty for envelopes without one)
   schemas:
+    SMTPRelayInfo:
+      type: object
+      required:
+      - enabled
+      properties:
+        enabled:
+          type: boolean
+        host:
+          type: string
+        port:
+          type: integer
+        tls:
+          type: string
+          enum:
+          - starttls
+          - tls
+          - none
+        auth:
+          type: boolean
+          description: A username is set; the password is never shown.
+        from:
+          type: string
+          description: Envelope sender; empty means the message's own From.
+        allowed_recipients:
+          type: array
+          items:
+            type: string
+        max_recipients:
+          type: integer
     UpdateState:
       type: object
       description: Progress of an update; also the payload of the update.progress WebSocket event.

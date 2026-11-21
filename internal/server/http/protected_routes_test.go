@@ -68,6 +68,8 @@ var uiRoutes = []struct{ method, path string }{
 	{"GET", "/api/smtp/stats"},
 	{"DELETE", "/api/smtp/messages"},
 	{"GET", "/api/smtp/messages"},
+	{"GET", "/api/smtp/relay"},
+	{"POST", "/api/smtp/release/m1"},
 	{"GET", "/api/smtp/message/m1/raw"},
 	{"GET", "/api/smtp/message/m1/links"},
 	{"GET", "/api/smtp/message/m1/codes"},

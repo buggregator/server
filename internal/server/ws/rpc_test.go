@@ -50,3 +50,28 @@ func TestHandleRPC_RecoversHandlerPanic(t *testing.T) {
 		t.Errorf("next call = %s", raw)
 	}
 }
+
+// Any page can open the WebSocket: the bridge must not reach the release of
+// a caught email (sends to a real mailbox), however the path is spelled.
+func TestHandleRPC_RefusesRelease(t *testing.T) {
+	reached := false
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/smtp/release/{uuid}", func(http.ResponseWriter, *http.Request) { reached = true })
+	h := NewMuxRPCHandler(mux)
+	for _, uri := range []string{"api/smtp/release/m1", "/api/smtp/./release/m1", "/api/smtp/%72elease/m1"} {
+		raw, err := h.HandleRPC("POST", uri, json.RawMessage(`{"to":["a@example.com"]}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var resp struct {
+			Code int `json:"code"`
+		}
+		json.Unmarshal(raw, &resp)
+		if resp.Code != http.StatusForbidden {
+			t.Errorf("%s: code %d, want 403", uri, resp.Code)
+		}
+	}
+	if reached {
+		t.Error("the release handler was reached over RPC")
+	}
+}

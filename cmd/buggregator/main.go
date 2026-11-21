@@ -102,6 +102,16 @@ func run() {
 	// TCP modules.
 	monologMod := monolog.New(cfg.MonologAddr)
 	smtpMod := smtpmod.New(cfg.SMTPAddr, attachments, db)
+	smtpMod.SetRelay(smtpmod.RelayConfig{
+		Host:               cfg.SMTPRelay.Host,
+		Port:               cfg.SMTPRelay.Port,
+		TLS:                cfg.SMTPRelay.TLS,
+		Username:           cfg.SMTPRelay.Username,
+		Password:           cfg.SMTPRelay.Password,
+		From:               cfg.SMTPRelay.From,
+		AllowedRecipients:  cfg.SMTPRelay.AllowedRecipients,
+		InsecureSkipVerify: cfg.SMTPRelay.InsecureSkipVerify,
+	})
 	vardumperMod := vardumper.New(cfg.VarDumperAddr)
 	proxyMod := proxy.New(cfg.ProxyAddr)
 

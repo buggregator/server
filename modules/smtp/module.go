@@ -26,6 +26,7 @@ type Module struct {
 	attachments  *storage.AttachmentStore
 	db           *sql.DB
 	store        event.Store // set in RegisterRoutes, used by the protected API
+	relay        *relay      // outgoing SMTP for releasing a caught message
 
 	mu      sync.Mutex
 	waiters []*waiter
@@ -37,6 +38,12 @@ type EventStorer interface {
 
 func New(addr string, attachments *storage.AttachmentStore, db *sql.DB) *Module {
 	return &Module{addr: addr, attachments: attachments, db: db}
+}
+
+// SetRelay sets the outgoing SMTP server caught messages can be released to.
+// Without it release is off.
+func (m *Module) SetRelay(cfg RelayConfig) {
+	m.relay = newRelay(cfg)
 }
 
 func (m *Module) SetEventService(es EventStorer) {
