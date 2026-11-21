@@ -20,6 +20,7 @@ func registerAPI(mux *http.ServeMux, db *sql.DB, protect func(http.Handler) http
 	route("GET /api/sentry/traces/{traceId}", handleTraceDetail(db))
 	route("GET /api/sentry/logs", handleLogsList(db))
 	route("GET /api/sentry/metrics", handleMetricsList(db))
+	route("GET /api/sentry/feedback", handleFeedbackList(db))
 	route("GET /api/sentry/service-map", handleServiceMap(db))
 	route("GET /api/sentry/service-map/edge", handleServiceMapEdge(db))
 	route("GET /api/sentry/traces/{traceId}/sequence", handleTraceSequence(db))
@@ -60,7 +61,7 @@ func clearSentry(db *sql.DB, project string, keepPinned bool) error {
 		for _, t := range []string{
 			"sentry_breadcrumbs", "sentry_exceptions", "sentry_error_events",
 			"sentry_spans", "sentry_transactions", "sentry_traces",
-			"sentry_logs", "sentry_metrics",
+			"sentry_logs", "sentry_metrics", "sentry_feedback",
 		} {
 			if _, err := tx.Exec("DELETE FROM " + t); err != nil {
 				return err
@@ -85,6 +86,17 @@ func clearSentry(db *sql.DB, project string, keepPinned bool) error {
 		}
 	}
 
+	// Feedback on a pinned error is kept with it.
+	fbWhere := where
+	if keepPinned {
+		pinned := "(event_id = '' OR event_id NOT IN (SELECT uuid FROM events WHERE is_pinned = 1))"
+		if fbWhere == "" {
+			fbWhere = " WHERE " + pinned
+		} else {
+			fbWhere += " AND " + pinned
+		}
+	}
+
 	// Traces are shared by trace_id across projects: remember the ones this
 	// clear touches, then recount or drop them once their spans are gone.
 	stmts := []string{
@@ -99,6 +111,7 @@ func clearSentry(db *sql.DB, project string, keepPinned bool) error {
 		`DELETE FROM sentry_transactions` + where,
 		`DELETE FROM sentry_logs` + where,
 		`DELETE FROM sentry_metrics` + where,
+		`DELETE FROM sentry_feedback` + fbWhere,
 	}
 	stmts = append(stmts, tidyTracesStmts...)
 	for _, st := range stmts {

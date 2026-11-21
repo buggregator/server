@@ -73,6 +73,15 @@ func seedProject(t *testing.T, db *sql.DB, project, eventID, traceID string) {
 	if err := storeMetrics(db, []MetricRecord{{Name: "m", Type: "counter", Value: 1}}, project); err != nil {
 		t.Fatal(err)
 	}
+	// Feedback on the error, and feedback on nothing.
+	for _, fb := range []Feedback{
+		{EventID: eventID, Message: "on " + eventID, Source: feedbackSourceFeedback},
+		{Message: "alone", Source: feedbackSourceUserReport},
+	} {
+		if err := storeFeedback(db, &fb, project); err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 
 func countRows(t *testing.T, db *sql.DB, table, where string, args ...any) int {
@@ -96,6 +105,7 @@ func clear(t *testing.T, mux *http.ServeMux, query string) {
 var sentryTables = []string{
 	"sentry_error_events", "sentry_exceptions", "sentry_breadcrumbs",
 	"sentry_transactions", "sentry_spans", "sentry_logs", "sentry_metrics",
+	"sentry_feedback",
 }
 
 // Clearing one project used to wipe the Sentry tables of every project.
@@ -190,6 +200,14 @@ func TestClearSentry_KeepPinned(t *testing.T) {
 		if n := countRows(t, db, table, "WHERE project_id = 'shop'"); n != 0 {
 			t.Errorf("%s: %d shop rows left", table, n)
 		}
+	}
+	// Feedback on the pinned error stays with it; the rest of shop's goes.
+	if got := countRows(t, db, "sentry_feedback", "WHERE project_id = 'shop'"); got != 1 ||
+		countRows(t, db, "sentry_feedback", "WHERE event_id = 'e-pinned'") != 1 {
+		t.Errorf("shop feedback left = %d, want only the pinned error's", got)
+	}
+	if n := countRows(t, db, "sentry_feedback", "WHERE project_id = 'billing'"); n != 2 {
+		t.Errorf("billing feedback = %d, want 2", n)
 	}
 }
 

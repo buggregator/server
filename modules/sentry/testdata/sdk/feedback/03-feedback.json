@@ -1,0 +1,8 @@
+{
+ "method": "POST",
+ "path": "/api/42/envelope/?sentry_version=7&sentry_key=publickey&sentry_client=sentry.javascript.node%2F11.11.0",
+ "headers": {
+  "user-agent": "sentry.javascript.node/11.11.0"
+ },
+ "body": "{\"event_id\":\"dc5f21dd945841cab33c2ff6c32e6e6f\",\"sent_at\":\"2026-11-21T14:21:34.093Z\",\"sdk\":{\"name\":\"sentry.javascript.node\",\"version\":\"11.11.0\"},\"trace\":{\"environment\":\"production\",\"public_key\":\"publickey\",\"trace_id\":\"16bcda95214145f795ed71b9be9eb0fb\"}}\n{\"type\":\"feedback\"}\n{\"contexts\":{\"trace\":{\"trace_id\":\"16bcda95214145f795ed71b9be9eb0fb\",\"span_id\":\"9457e9261e3d1426\"},\"feedback\":{\"name\":\"Bob\",\"message\":\"Love the new dark mode\"},\"runtime\":{\"name\":\"node\",\"version\":\"v25.8.2\"}},\"type\":\"feedback\",\"level\":\"info\",\"platform\":\"node\",\"server_name\":\"host-01\",\"event_id\":\"dc5f21dd945841cab33c2ff6c32e6e6f\",\"timestamp\":1795270894.093,\"environment\":\"production\",\"sdk\":{\"integrations\":[\"SpanStreaming\"],\"name\":\"sentry.javascript.node\",\"version\":\"11.11.0\",\"packages\":[{\"name\":\"npm:@sentry/node\",\"version\":\"11.11.0\"}]}}\n"
+}

@@ -10,6 +10,7 @@ when compressed). `sdk_fixtures_test.go` replays them through the handler.
 | `python` | `sentry-python` 2.74.0 (Python 3.14) | `Content-Encoding: br` (sent when the `brotli` package is installed) |
 | `go` | `sentry-go` 0.50.0 | `"exception": [...]` (array, not `{"values": [...]}`) |
 | `browser` | `@sentry/browser` 11.11.0 in Chromium | cross-origin `text/plain` POST (no CORS preflight); streamed spans; pageload |
+| `feedback` | `@sentry/node` 11.11.0; `@sentry/browser` 7.120.4 | user feedback: an error, a `feedback` item on it, a `feedback` alone, a legacy `user_report` on the error |
 
 Each script sends: an exception with a breadcrumb, user and tag; a warning
 message; a transaction `GET /orders` with a DB span and an HTTP client span
@@ -28,6 +29,8 @@ NODE_PATH=<dir with @sentry/node> node recorder/node.js
 (cd <go module with sentry-go> && cp recorder/go-main.go.txt main.go && go run .)
 esbuild recorder/browser-entry.js --bundle --format=iife --outfile=out/static/app.js
 NODE_PATH=<dir with playwright-core> node recorder/browser-run.js   # serves out/static/index.html
+NODE_PATH=<dir with @sentry/node> node recorder/feedback.js
+NODE_PATH=<dir with @sentry/browser@7> node recorder/user-report.js <error event_id> > ur.txt  # POST ur.txt as text/plain
 ```
 
 Move `out/all` to `out/<sdk>` after each SDK, then
