@@ -39,8 +39,9 @@ sentry:
 # Release a caught email to a real inbox (button on an SMTP message). Off while
 # host is empty. Nothing is forwarded on its own: a message goes out only on a
 # release request. Without auth, release works only from this machine
-# (localhost) and only to allowed_recipients, which must then be set: a proxy
-# on this host makes outside requests look local. In Docker, from another
+# (localhost) and only to allowed_recipients, which must then be set, each
+# with an exact domain ("*@mycompany.com", not "*" or "*@*"): a proxy on this
+# host makes outside requests look local. In Docker, from another
 # machine or behind a proxy turn auth on (then the list is optional).
 # Keep the password in SMTP_RELAY_PASSWORD or a file.
 smtp_relay:

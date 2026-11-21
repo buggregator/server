@@ -285,6 +285,9 @@ func TestRelease_Guards(t *testing.T) {
 		{"no auth, no allowed_recipients", func(c *RelayConfig) { c.AllowedRecipients = nil }, "m1", ok, nil, 409},
 		{"no auth, only blank patterns", func(c *RelayConfig) { c.AllowedRecipients = []string{" "} }, "m1", ok, nil, 409},
 		{"auth on, no allowed_recipients", func(c *RelayConfig) { c.AuthOn = true; c.AllowedRecipients = nil }, "m1", `{"to":["anyone@anywhere.test"]}`, nil, 200},
+		{"no auth, match-all pattern", func(c *RelayConfig) { c.AllowedRecipients = []string{"*"} }, "m1", ok, nil, 409},
+		{"no auth, wildcard domain next to a good one", func(c *RelayConfig) { c.AllowedRecipients = []string{"*@example.com", "*@*"} }, "m1", ok, nil, 409},
+		{"auth on, match-all pattern", func(c *RelayConfig) { c.AuthOn = true; c.AllowedRecipients = []string{"*"} }, "m1", ok, nil, 200},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := relayCfg(f, "none")
@@ -312,8 +315,8 @@ func TestRelease_Guards(t *testing.T) {
 			}
 		})
 	}
-	if n := len(f.mails()); n != 3 { // "allowed", "auth on: LAN peer", "auth on, no allowed_recipients"
-		t.Errorf("relay got %d mails, want 3", n)
+	if n := len(f.mails()); n != 4 { // "allowed", "auth on: LAN peer", "auth on, no allowed_recipients", "auth on, match-all pattern"
+		t.Errorf("relay got %d mails, want 4", n)
 	}
 }
 
@@ -401,6 +404,8 @@ func TestRelayInfo(t *testing.T) {
 		{RelayConfig{}, `{"configured":false,"enabled":false}`},
 		{RelayConfig{Host: "smtp.example.com", Username: "u", Password: "s3cret-pass"},
 			`{"configured":true,"enabled":false,"reason":"without auth, release needs smtp_relay.allowed_recipients: your own addresses, like *@mycompany.com"}`},
+		{RelayConfig{Host: "smtp.example.com", AllowedRecipients: []string{"*"}},
+			`{"configured":true,"enabled":false,"reason":"without auth, smtp_relay.allowed_recipients cannot hold \"*\": it matches any domain. Use your own addresses, like *@mycompany.com, or turn auth on"}`},
 		{RelayConfig{Host: "smtp.example.com", Username: "u", Password: "s3cret-pass", AllowedRecipients: []string{"me@gmail.com"}},
 			`{"allowed_recipients":["me@gmail.com"],"auth":true,"configured":true,"enabled":true,"from":"","host":"smtp.example.com","local_only":true,"max_recipients":20,"port":587,"tls":"starttls"}`},
 		{RelayConfig{Host: "smtp.example.com", Username: "u", Password: "s3cret-pass", AuthOn: true},
@@ -417,6 +422,41 @@ func TestRelayInfo(t *testing.T) {
 		if got := strings.TrimSpace(w.Body.String()); got != tc.want {
 			t.Errorf("got  %s\nwant %s", got, tc.want)
 		}
+	}
+}
+
+// Without auth a pattern with a wildcard domain ("*", "*@*") would make
+// Buggregator an open relay again: release stays off and says why.
+// Found in review of #477.
+func TestNoAuthBlock(t *testing.T) {
+	for _, tc := range []struct {
+		allowed []string
+		auth    bool
+		off     bool
+	}{
+		{nil, false, true},
+		{[]string{" "}, false, true},
+		{[]string{"*"}, false, true},
+		{[]string{"*@*"}, false, true},
+		{[]string{"*@*.com"}, false, true},
+		{[]string{"me@gmail.?om"}, false, true},
+		{[]string{"*@[a-z]*"}, false, true},
+		{[]string{"*@"}, false, true},
+		{[]string{"*@mycompany.com", "*"}, false, true},
+		{[]string{"*@mycompany.com"}, false, false},
+		{[]string{"me@gmail.com", " "}, false, false},
+		{[]string{"qa+*@example.com"}, false, false},
+		{[]string{"*"}, true, false},
+		{nil, true, false},
+	} {
+		why := RelayConfig{Host: "smtp.example.com", AllowedRecipients: tc.allowed, AuthOn: tc.auth}.noAuthBlock()
+		if (why != "") != tc.off {
+			t.Errorf("%q auth=%v: block %q, want off=%v", tc.allowed, tc.auth, why, tc.off)
+		}
+	}
+	why := RelayConfig{AllowedRecipients: []string{"*@*"}}.noAuthBlock()
+	if !strings.Contains(why, `"*@*"`) || !strings.Contains(why, "auth") {
+		t.Errorf("reason %q should name the pattern and the way out", why)
 	}
 }
 
