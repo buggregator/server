@@ -27,10 +27,13 @@ type cronChecker struct {
 	mu        sync.Mutex
 	downtimes []cronWindow
 	notify    func(project string, kinds []string)
+	started   bool // a tick ran in this process
 }
 
-// run ticks until the process exits.
+// run ticks once at start, so a restart's downtime ends at the start, then
+// every cronTick until the process exits.
 func (c *cronChecker) run() {
+	c.tick(time.Now())
 	t := time.NewTicker(cronTick)
 	defer t.Stop()
 	for now := range t.C {
@@ -47,7 +50,10 @@ func (c *cronChecker) tick(now time.Time) {
 	var alive string
 	err := c.db.QueryRow(`SELECT alive_at FROM cron_heartbeat WHERE id = 1`).Scan(&alive)
 	if err == nil {
-		if last := parseCronTime(alive); !last.IsZero() && now.Sub(last) > cronDownGap {
+		// The first tick of a process: the server was down since the last
+		// heartbeat, however short the restart. Later ticks: only a gap
+		// longer than a slow tick (the machine slept) is a downtime.
+		if last := parseCronTime(alive); !last.IsZero() && (!c.started || now.Sub(last) > cronDownGap) {
 			c.downtimes = append(c.downtimes, cronWindow{From: last, To: now})
 			if len(c.downtimes) > 20 {
 				c.downtimes = c.downtimes[len(c.downtimes)-20:]
@@ -58,6 +64,7 @@ func (c *cronChecker) tick(now time.Time) {
 		return
 	}
 
+	c.started = true
 	projects, err := checkCrons(c.db, now, c.downtimes)
 	if err != nil {
 		slog.Warn("cron: check failed", "err", err)

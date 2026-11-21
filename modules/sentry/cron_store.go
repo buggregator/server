@@ -31,8 +31,10 @@ const (
 )
 
 const (
-	// maxCronMonitors caps auto-created monitors per project, so a script
-	// pinging random slugs cannot fill the database.
+	// maxCronMonitors caps auto-created monitors per project: a script that
+	// puts a run id or a date into the slug stops at 500 monitors instead of
+	// growing the list without end. Ingestion is open, so it is no limit on
+	// a client that varies the project too.
 	maxCronMonitors = 500
 	// maxPingBody is how much of a ping body (the job's output) is kept: its tail.
 	maxPingBody = 10 << 10
@@ -288,7 +290,8 @@ func durationMS(sec *float64) *int64 {
 	if sec == nil || *sec < 0 || math.IsNaN(*sec) || math.IsInf(*sec, 0) {
 		return nil
 	}
-	ms := int64(math.Round(*sec * 1000))
+	// Clamp to a year: a huge value would overflow int64 milliseconds.
+	ms := int64(math.Round(math.Min(*sec, 365*24*3600) * 1000))
 	return &ms
 }
 
