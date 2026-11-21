@@ -740,3 +740,30 @@ func TestSubgraph_NameCalls(t *testing.T) {
 		}
 	}
 }
+
+func TestSubgraph_NameCallsSkipFunctions(t *testing.T) {
+	dir := t.TempDir()
+	for name, body := range map[string]string{
+		"go.mod": "module example.com/x\n",
+		"a/a.go": "package a\n\nfunc Close() {}\n",
+		"b/b.go": "package b\n\nfunc Use(v interface{ Close() }) { v.Close() }\n",
+	} {
+		p := filepath.Join(dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	m, _ := setup(t, Config{Roots: []Root{{Name: "x", Path: dir}}})
+	g, err := m.graphs.Subgraph(GraphQuery{Root: "x", NameCalls: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range g.Edges {
+		if e.Kind == EdgeCalls {
+			t.Errorf("name call v.Close() matched the function a.Close: %+v", e)
+		}
+	}
+}

@@ -651,14 +651,14 @@ type GraphQuery struct {
 	// Expand lists node ids to show one level finer: a namespace or package
 	// (ns:<fqn>) as its types and functions, a type (s:<id>) as its methods.
 	Expand map[string]bool
-	// NameCalls adds, to the whole-root graph, calls matched by the method or
-	// function name only (confidence "name": $this->svc->save() with the
-	// type of svc unknown). A name with more than maxNameTargets symbols is
-	// left out as too ambiguous.
+	// NameCalls adds, to the whole-root graph, method calls matched by the
+	// method name only (confidence "name": $this->svc->save() with the type
+	// of svc unknown). A name with more than maxNameTargets methods is left
+	// out as too ambiguous.
 	NameCalls bool
 }
 
-// maxNameTargets bounds the symbols one name-only call may point at.
+// maxNameTargets bounds the methods one name-only call may point at.
 const maxNameTargets = 3
 
 var finer = map[string]string{LevelPackage: LevelClass, LevelClass: LevelSymbol}
@@ -966,12 +966,13 @@ func (g *Graphs) Subgraph(q GraphQuery) (*Graph, error) {
 }
 
 // nameCalls returns [from, to, line] for the calls of a root matched by name
-// only, each name pointing at the root's methods and functions of that name
-// (at most maxNameTargets of them).
+// only, each name pointing at the root's methods of that name (at most
+// maxNameTargets of them). A name-only call always has an unknown receiver,
+// so it never reaches a plain function (as in Calls).
 func (g *Graphs) nameCalls(root string, idx *symbolIndex) ([][3]int64, error) {
 	byName := map[string][]int64{}
 	for _, id := range sortedSymbolIDs(idx) {
-		if s := idx.syms[id]; s.kind == KindMethod || s.kind == KindFunction {
+		if s := idx.syms[id]; s.kind == KindMethod {
 			byName[s.name] = append(byName[s.name], id)
 		}
 	}
