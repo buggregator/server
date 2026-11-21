@@ -202,6 +202,21 @@ func safeURL(raw string) string {
 	return u.String()
 }
 
+// redact removes the upstream's credentials from a message for the log, the
+// card and the client: the userinfo of broadcast.upstream, and the password
+// alone wherever it shows up.
+func redact(msg, upstream string) string {
+	u, err := url.Parse(upstream)
+	if err != nil || u.User == nil {
+		return msg
+	}
+	msg = strings.ReplaceAll(msg, u.User.String()+"@", "")
+	if p, ok := u.User.Password(); ok && p != "" {
+		msg = strings.ReplaceAll(msg, p, "***")
+	}
+	return msg
+}
+
 // wireEvent is an event as the client sends it: one channel or several.
 type wireEvent struct {
 	Name     string   `json:"name"`
@@ -348,8 +363,9 @@ func (h *handler) forward(r *http.Request, body []byte, up *Upstream) (int, []by
 	if errors.As(err, &uerr) {
 		err = uerr.Err
 	}
-	up.TimeMs, up.Error = time.Since(start).Milliseconds(), err.Error()
-	slog.Warn("broadcast: forward to upstream failed", "upstream", h.cfg.Upstream, "err", err)
-	msg, _ := json.Marshal(map[string]string{"error": "Buggregator could not reach the broadcast upstream: " + err.Error()})
+	cause := redact(err.Error(), h.cfg.Upstream)
+	up.TimeMs, up.Error = time.Since(start).Milliseconds(), cause
+	slog.Warn("broadcast: forward to upstream failed", "upstream", safeURL(h.cfg.Upstream), "err", cause)
+	msg, _ := json.Marshal(map[string]string{"error": "Buggregator could not reach the broadcast upstream: " + cause})
 	return http.StatusBadGateway, msg
 }

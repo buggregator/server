@@ -1,9 +1,11 @@
 package broadcast
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -397,6 +399,41 @@ func TestHandle_ProjectHeader(t *testing.T) {
 			if in.Project != tc.want {
 				t.Errorf("header %q detected %q: project %q, want %q", tc.header, tc.detected, in.Project, tc.want)
 			}
+		}
+	}
+}
+
+// A failed forward never shows the upstream's user or password: not in the
+// log, the card or the answer to the client.
+func TestForward_RedactsCredentials(t *testing.T) {
+	up := httptest.NewServer(http.NotFoundHandler())
+	addr := strings.TrimPrefix(up.URL, "http://")
+	up.Close()
+	var logs bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	ev, w := run(t, Config{Upstream: "http://reverb-user:s3cr3t-pass@" + addr}, request(fixtures(t)["trigger"]))
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("answer %d", w.Code)
+	}
+	for where, text := range map[string]string{"log": logs.String(), "answer": w.Body.String(), "card": ev[0].Upstream.Error + " " + ev[0].Upstream.URL} {
+		if strings.Contains(text, "s3cr3t-pass") || strings.Contains(text, "reverb-user") {
+			t.Errorf("%s shows the credentials: %s", where, text)
+		}
+	}
+	if !strings.Contains(logs.String(), addr) {
+		t.Errorf("log lost the upstream address: %s", logs.String())
+	}
+
+	for _, tc := range []struct{ msg, up, want string }{
+		{"dial http://u:pw@h:1: refused", "http://u:pw@h:1", "dial http://h:1: refused"},
+		{"bad pw here", "http://u:pw@h:1", "bad *** here"},
+		{"plain", "http://h:1", "plain"},
+	} {
+		if got := redact(tc.msg, tc.up); got != tc.want {
+			t.Errorf("redact(%q) = %q, want %q", tc.msg, got, tc.want)
 		}
 	}
 }
