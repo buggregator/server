@@ -26,10 +26,10 @@ var (
 )
 
 // PickerHint says how to turn the folder picker on when it is off.
-const PickerHint = "Set code_graph.base_dir (env CODE_GRAPH_BASE_DIR) to the folder Buggregator may add code from. It defaults to your home only when Buggregator listens on 127.0.0.1 or auth is on. In Docker, mount it (-v ~/projects:/code -e CODE_GRAPH_BASE_DIR=/code) and turn on auth with your user in code_graph.admins: without auth the picker works only for Buggregator running directly on this computer. Or list the folders in code_graph.roots."
+const PickerHint = "Set code_graph.base_dir (env CODE_GRAPH_BASE_DIR) to the folder Buggregator may add code from; with auth on it defaults to your home. Without auth the picker works only for Buggregator running directly on this computer, opened as http://127.0.0.1 or http://localhost, with no proxy in front: a proxy on this host makes every request look local, so behind one turn on auth with your user in code_graph.admins. In Docker, mount the folder (-v ~/projects:/code -e CODE_GRAPH_BASE_DIR=/code) and turn on auth. Or list the folders in code_graph.roots."
 
 // LocalOnlyHint says why the picker refuses a request without auth.
-const LocalOnlyHint = "Without auth, code graph folders can be browsed and changed only from this computer, talking to Buggregator directly: open the UI as http://127.0.0.1 or http://localhost. In Docker, behind a proxy or from another machine, turn on auth and list yourself in code_graph.admins, or list the folders in code_graph.roots."
+const LocalOnlyHint = "Without auth, code graph folders can be browsed and changed only from this computer, talking to Buggregator directly: open the UI as http://127.0.0.1 or http://localhost. In Docker or from another machine, turn on auth and list yourself in code_graph.admins, or list the folders in code_graph.roots."
 
 // Picker is the folder picker's state in GET /api/code/roots.
 type Picker struct {
@@ -211,9 +211,11 @@ func (m *Module) canManage(r *http.Request) bool {
 }
 
 // localRequest: the peer is a loopback address, the Host names this machine
-// (a DNS-rebound page has a foreign Host) and no proxy forwarded it (a proxy
-// on this host makes every outside request look local). In Docker the peer is
-// the bridge gateway, never loopback: there the picker needs auth.
+// (a DNS-rebound page has a foreign Host) and no forwarding header is set. A
+// proxy on this host that adds none (plain nginx proxy_pass) still looks
+// local and cannot be told apart: that is why base_dir has no default without
+// auth and the texts say a proxy needs auth. In Docker the peer is the bridge
+// gateway, never loopback: there the picker needs auth.
 func localRequest(r *http.Request) bool {
 	for _, h := range []string{"Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "X-Real-IP"} {
 		if r.Header.Get(h) != "" {

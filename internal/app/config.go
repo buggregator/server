@@ -1,8 +1,6 @@
 package app
 
 import (
-	"github.com/buggregator/server/v2/internal/selfupdate"
-
 	"flag"
 	"fmt"
 	"log/slog"
@@ -119,9 +117,9 @@ type XdebugConfig struct {
 // and the files below them are ever read.
 type CodeGraphConfig struct {
 	Roots []CodeRootDef `yaml:"roots"`
-	// BaseDir is the folder the UI may browse and add roots from. Default: the
-	// user's home outside a container, none inside one (mount a volume and set
-	// it). "off" turns the folder picker off.
+	// BaseDir is the folder the UI may browse and add roots from. Default:
+	// with auth on the user's home outside a container; otherwise none (set it;
+	// in a container mount a volume first). "off" turns the folder picker off.
 	BaseDir string `yaml:"base_dir"`
 	// Admins may browse base_dir and add or remove roots when auth is on:
 	// usernames or emails. Auth on and no admins: nobody may.
@@ -145,11 +143,11 @@ type CodeRootDef struct {
 func (c CodeGraphConfig) Enabled() bool { return len(c.Roots) > 0 || c.BaseDir != "" }
 
 // codeGraphDefaultBase is the default base_dir: the home (home()) only when
-// the server listens on loopback only or auth is on. On an open port without
-// auth anyone who reaches the port could browse it, so the folder picker stays
-// off until base_dir is set explicitly.
-func codeGraphDefaultBase(httpAddr string, authOn bool, home func() string) string {
-	if !authOn && !selfupdate.LoopbackOnly(httpAddr) {
+// auth is on. Without auth even a loopback-only server can sit behind a proxy
+// on the same host that forwards outside requests unmarked, so the picker
+// stays off until base_dir is set explicitly.
+func codeGraphDefaultBase(authOn bool, home func() string) string {
+	if !authOn {
 		return ""
 	}
 	return home()
@@ -653,7 +651,7 @@ func LoadConfig() Config {
 	cfg.ProxyAddr = cfg.TCP.Proxy.Addr
 
 	// Code graph last: the default base_dir depends on the listen address and auth.
-	cfg.CodeGraph = resolveCodeGraph(fileCfg.CodeGraph, codeGraphRoots, codeGraphBase, codeGraphDefaultBase(cfg.HTTPAddr, cfg.Auth.Enabled, defaultCodeBaseDir), os.Getenv)
+	cfg.CodeGraph = resolveCodeGraph(fileCfg.CodeGraph, codeGraphRoots, codeGraphBase, codeGraphDefaultBase(cfg.Auth.Enabled, defaultCodeBaseDir), os.Getenv)
 
 	return cfg
 }
