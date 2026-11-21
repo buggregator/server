@@ -15,7 +15,7 @@ func (p *previewMapper) ToPreview(payload json.RawMessage) (json.RawMessage, err
 
 	// Match PHP Sentry EventTypeMapper::toPreview exactly.
 	preview := map[string]any{
-		"message":     data["message"],
+		"message":     previewMessage(data),
 		"exception":   limitExceptionFrames(data["exception"], 3),
 		"level":       data["level"],
 		"platform":    data["platform"],
@@ -35,7 +35,10 @@ func (p *previewMapper) ToSearchableText(payload json.RawMessage) string {
 	}
 
 	text := ""
-	for _, key := range []string{"message", "level", "environment", "server_name", "platform"} {
+	if m, ok := previewMessage(data).(string); ok && m != "" {
+		text += m + " "
+	}
+	for _, key := range []string{"level", "environment", "server_name", "platform"} {
 		if v, ok := data[key].(string); ok && v != "" {
 			text += v + " "
 		}
@@ -51,6 +54,23 @@ func (p *previewMapper) ToSearchableText(payload json.RawMessage) string {
 		}
 	}
 	return text
+}
+
+// previewMessage is the event's message, else its logentry text (formatted,
+// then the template): captureMessage in the Python and PHP SDKs sends only
+// logentry, and the feed card and desktop notification would show no text.
+func previewMessage(data map[string]any) any {
+	if m, ok := data["message"]; ok && m != nil && m != "" {
+		return m
+	}
+	if le, ok := data["logentry"].(map[string]any); ok {
+		for _, k := range []string{"formatted", "message"} {
+			if v, ok := le[k].(string); ok && v != "" {
+				return v
+			}
+		}
+	}
+	return data["message"]
 }
 
 func limitExceptionFrames(exc any, max int) any {
