@@ -283,6 +283,45 @@ func TestForward_UpstreamDown(t *testing.T) {
 	}
 }
 
+// broadcast.upstream pointing at Buggregator itself: the second hop answers
+// 508 instead of forwarding again, and stores nothing.
+func TestForward_Loop(t *testing.T) {
+	f := fixtures(t)["trigger"]
+	m := New(Config{})
+	st := &fakeStore{}
+	m.SetEventService(st)
+	self := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		in, err := m.HTTPHandler().Handle(r)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		in.Respond(w)
+	}))
+	defer self.Close()
+	m.h.cfg.Upstream = self.URL
+
+	in, err := m.HTTPHandler().Handle(request(f))
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	in.Respond(w)
+	ev := st.events(t)
+	if w.Code != http.StatusLoopDetected || len(ev) != 1 || ev[0].Upstream.Status != http.StatusLoopDetected {
+		t.Errorf("answer %d %s, %d events", w.Code, w.Body.String(), len(ev))
+	}
+}
+
+func TestSafeURL(t *testing.T) {
+	if got := safeURL("http://user:pass@reverb:8080/x"); got != "http://reverb:8080/x" {
+		t.Errorf("got %q", got)
+	}
+	if got := safeURL("http://reverb:8080"); got != "http://reverb:8080" {
+		t.Errorf("got %q", got)
+	}
+}
+
 func TestWarnings(t *testing.T) {
 	big := strings.Repeat("x", maxDataBytes)
 	chans := make([]string, 101)
