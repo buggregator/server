@@ -44,6 +44,9 @@ func New(addr string, attachments *storage.AttachmentStore, db *sql.DB) *Module 
 // Without it release is off.
 func (m *Module) SetRelay(cfg RelayConfig) {
 	m.relay = newRelay(cfg)
+	if cfg.Enabled() && cfg.needsAllowList() {
+		slog.Warn("smtp_relay: release is off: " + allowListHint)
+	}
 }
 
 func (m *Module) SetEventService(es EventStorer) {

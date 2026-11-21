@@ -18,7 +18,11 @@ func handleRelayInfo(rl *relay) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c := rl.cfg
 		if !c.Enabled() {
-			smtpJSON(w, map[string]any{"enabled": false})
+			smtpJSON(w, map[string]any{"enabled": false, "configured": false})
+			return
+		}
+		if c.needsAllowList() {
+			smtpJSON(w, map[string]any{"enabled": false, "configured": true, "reason": allowListHint})
 			return
 		}
 		allowed := c.AllowedRecipients
@@ -27,6 +31,7 @@ func handleRelayInfo(rl *relay) http.HandlerFunc {
 		}
 		smtpJSON(w, map[string]any{
 			"enabled":            true,
+			"configured":         true,
 			"host":               c.Host,
 			"port":               c.port(),
 			"tls":                c.tlsMode(),
@@ -61,6 +66,10 @@ func handleRelease(store event.Store, rl *relay) http.HandlerFunc {
 		}
 		if !rl.cfg.Enabled() {
 			smtpError(w, errRelayOff.Error(), http.StatusConflict)
+			return
+		}
+		if rl.cfg.needsAllowList() {
+			smtpError(w, allowListHint, http.StatusConflict)
 			return
 		}
 		if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
