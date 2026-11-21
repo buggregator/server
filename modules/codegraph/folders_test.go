@@ -331,3 +331,24 @@ func TestFolders_Guards(t *testing.T) {
 	none := newPicker(t, Config{BaseDir: base, AuthOn: true})
 	none.want(none.do("GET", "/api/code/folders", "", ann, nil), 403, "not_admin")
 }
+
+func TestExpandHome(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	if err := os.MkdirAll(filepath.Join(home, "projects", "shop"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	real, _ := filepath.EvalSymlinks(home)
+	for in, want := range map[string]string{"~": home, "~/projects": filepath.Join(home, "projects"), "/abs": "/abs", "~user/x": "~user/x", "a/~/b": "a/~/b"} {
+		if got := expandHome(in); got != want {
+			t.Errorf("expandHome(%q) = %q, want %q", in, got, want)
+		}
+	}
+	if got := resolveBase("~/projects"); got != filepath.Join(real, "projects") {
+		t.Errorf("resolveBase(~/projects) = %q", got)
+	}
+	c := Config{Roots: []Root{{Path: "~/projects/shop"}}}.Normalize()
+	if len(c.Roots) != 1 || c.Roots[0].Path != filepath.Join(real, "projects", "shop") || c.Roots[0].Name != "shop" {
+		t.Errorf("root with ~: %+v", c.Roots)
+	}
+}
