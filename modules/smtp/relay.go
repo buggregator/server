@@ -38,6 +38,23 @@ type RelayConfig struct {
 // Enabled reports whether a relay is configured.
 func (c RelayConfig) Enabled() bool { return strings.TrimSpace(c.Host) != "" }
 
+// needsAllowList: without auth a proxy on this host makes outside requests
+// look local, so release then also needs allowed_recipients, and mail can go
+// only to the owner's own addresses.
+func (c RelayConfig) needsAllowList() bool {
+	if c.AuthOn {
+		return false
+	}
+	for _, p := range c.AllowedRecipients {
+		if strings.TrimSpace(p) != "" {
+			return false
+		}
+	}
+	return true
+}
+
+const allowListHint = "without auth, release needs smtp_relay.allowed_recipients: your own addresses, like *@mycompany.com"
+
 func (c RelayConfig) tlsMode() string {
 	switch m := strings.ToLower(strings.TrimSpace(c.TLS)); m {
 	case "tls", "none":

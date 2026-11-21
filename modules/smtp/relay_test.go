@@ -189,7 +189,8 @@ func relayCfg(f *fakeRelay, tlsMode string) RelayConfig {
 	for _, c := range port {
 		p = p*10 + int(c-'0')
 	}
-	return RelayConfig{Host: host, Port: p, TLS: tlsMode, Username: f.user, Password: f.pass, InsecureSkipVerify: true}
+	return RelayConfig{Host: host, Port: p, TLS: tlsMode, Username: f.user, Password: f.pass, InsecureSkipVerify: true,
+		AllowedRecipients: []string{"*@example.com"}} // without auth release needs a list
 }
 
 func TestRelease_Sends(t *testing.T) {
@@ -281,6 +282,9 @@ func TestRelease_Guards(t *testing.T) {
 		{"no auth: local proxy with X-Forwarded-For", nil, "m1", ok, []string{"X-Forwarded-For", "203.0.113.9"}, 403},
 		{"no auth: DNS rebinding Host", nil, "m1", ok, []string{"Host", "evil.example:8000"}, 403},
 		{"auth on: LAN peer", func(c *RelayConfig) { c.AuthOn = true }, "m1", ok, []string{"RemoteAddr", "192.168.1.50:41000", "Host", "192.168.1.20:8000"}, 200},
+		{"no auth, no allowed_recipients", func(c *RelayConfig) { c.AllowedRecipients = nil }, "m1", ok, nil, 409},
+		{"no auth, only blank patterns", func(c *RelayConfig) { c.AllowedRecipients = []string{" "} }, "m1", ok, nil, 409},
+		{"auth on, no allowed_recipients", func(c *RelayConfig) { c.AuthOn = true; c.AllowedRecipients = nil }, "m1", `{"to":["anyone@anywhere.test"]}`, nil, 200},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := relayCfg(f, "none")
@@ -308,8 +312,8 @@ func TestRelease_Guards(t *testing.T) {
 			}
 		})
 	}
-	if n := len(f.mails()); n != 2 { // only "allowed" and "auth on: LAN peer" went out
-		t.Errorf("relay got %d mails, want 2", n)
+	if n := len(f.mails()); n != 3 { // "allowed", "auth on: LAN peer", "auth on, no allowed_recipients"
+		t.Errorf("relay got %d mails, want 3", n)
 	}
 }
 
@@ -324,7 +328,7 @@ func fmtMsg(resp map[string]any) string {
 func TestRelease_FromLANWithoutAuth(t *testing.T) {
 	f := startFakeRelay(t, "", "", false)
 	mux := relayAPI(t, relayCfg(f, "none"))
-	req := httptest.NewRequest("POST", "http://192.168.1.20:8000/api/smtp/release/m1", strings.NewReader(`{"to":["victim@anywhere.test"]}`))
+	req := httptest.NewRequest("POST", "http://192.168.1.20:8000/api/smtp/release/m1", strings.NewReader(`{"to":["victim@example.com"]}`)) // inside allowed_recipients: only the local guard stops it
 	req.RemoteAddr = "192.168.1.50:41000"
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -394,11 +398,15 @@ func TestRelayInfo(t *testing.T) {
 		cfg  RelayConfig
 		want string
 	}{
-		{RelayConfig{}, `{"enabled":false}`},
+		{RelayConfig{}, `{"configured":false,"enabled":false}`},
 		{RelayConfig{Host: "smtp.example.com", Username: "u", Password: "s3cret-pass"},
-			`{"allowed_recipients":[],"auth":true,"enabled":true,"from":"","host":"smtp.example.com","local_only":true,"max_recipients":20,"port":587,"tls":"starttls"}`},
+			`{"configured":true,"enabled":false,"reason":"without auth, release needs smtp_relay.allowed_recipients: your own addresses, like *@mycompany.com"}`},
+		{RelayConfig{Host: "smtp.example.com", Username: "u", Password: "s3cret-pass", AllowedRecipients: []string{"me@gmail.com"}},
+			`{"allowed_recipients":["me@gmail.com"],"auth":true,"configured":true,"enabled":true,"from":"","host":"smtp.example.com","local_only":true,"max_recipients":20,"port":587,"tls":"starttls"}`},
+		{RelayConfig{Host: "smtp.example.com", Username: "u", Password: "s3cret-pass", AuthOn: true},
+			`{"allowed_recipients":[],"auth":true,"configured":true,"enabled":true,"from":"","host":"smtp.example.com","local_only":false,"max_recipients":20,"port":587,"tls":"starttls"}`},
 		{RelayConfig{Host: "mailpit", TLS: "none", AllowedRecipients: []string{"*@company.test"}, AuthOn: true},
-			`{"allowed_recipients":["*@company.test"],"auth":false,"enabled":true,"from":"","host":"mailpit","local_only":false,"max_recipients":20,"port":25,"tls":"none"}`},
+			`{"allowed_recipients":["*@company.test"],"auth":false,"configured":true,"enabled":true,"from":"","host":"mailpit","local_only":false,"max_recipients":20,"port":25,"tls":"none"}`},
 	} {
 		_, _, mod := setupAPITest(t)
 		mod.SetRelay(tc.cfg)

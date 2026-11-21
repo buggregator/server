@@ -2268,7 +2268,7 @@ paths:
       - SMTP
       operationId: smtpGetRelay
       summary: Whether releasing a caught email to a real inbox is on, and where it goes
-      description: Release is on when `smtp_relay.host` is set. The password is never returned.
+      description: Release is on when `smtp_relay.host` is set and, without auth, `smtp_relay.allowed_recipients` too; `reason` says why a configured relay is off. The password is never returned.
       security:
       - authToken: []
       responses:
@@ -2290,9 +2290,11 @@ paths:
         The message goes as captured (raw RFC 822); `rewrite_to` replaces its To header with the
         recipients and drops Cc. Only the Buggregator UI itself may call it (same origin; another
         page and the WebSocket RPC bridge are refused). Without auth only a request from this
-        machine is taken (loopback peer and Host, no forwarding headers); Docker, another machine
-        or a proxy need auth on. At most 10 messages a minute and 20 recipients a message;
-        recipients must match `smtp_relay.allowed_recipients` when set. The envelope sender is
+        machine is taken (loopback peer and Host, no forwarding headers), and only when
+        `smtp_relay.allowed_recipients` is set (409 otherwise): a proxy on the same host makes
+        outside requests look local. Docker, another machine or a proxy need auth on. At most 10
+        messages a minute and 20 recipients a message; recipients must match
+        `smtp_relay.allowed_recipients` when set. The envelope sender is
         `smtp_relay.from`, else the login when it is an address, else the message's From.
       security:
       - authToken: []
@@ -4151,9 +4153,17 @@ components:
       type: object
       required:
       - enabled
+      - configured
       properties:
         enabled:
           type: boolean
+          description: Release works now.
+        configured:
+          type: boolean
+          description: A relay host is set.
+        reason:
+          type: string
+          description: Why a configured relay is off.
         host:
           type: string
         port:
