@@ -75,8 +75,17 @@ func pickerFor(t *testing.T, m *Module) *picker {
 func (p *picker) do(method, url, body string, user *auth.User, hdr map[string]string) *httptest.ResponseRecorder {
 	p.t.Helper()
 	req := httptest.NewRequest(method, url, strings.NewReader(body))
+	// From this machine unless the test says otherwise.
+	req.RemoteAddr, req.Host = "127.0.0.1:50000", "localhost:8000"
 	for k, v := range hdr {
-		req.Header.Set(k, v)
+		switch k {
+		case "RemoteAddr":
+			req.RemoteAddr = v
+		case "Host":
+			req.Host = v
+		default:
+			req.Header.Set(k, v)
+		}
 	}
 	if user != nil {
 		req = req.WithContext(auth.WithUser(req.Context(), user))
@@ -177,6 +186,8 @@ func TestFolders_AddRemoveRoot(t *testing.T) {
 	}
 	p.want(p.do("POST", "/api/code/roots", `{"path":"other"}`, nil, nil), 409, "root_exists")
 	p.want(p.do("POST", "/api/code/roots", `{"path":"proj","name":"a/b"}`, nil, nil), 400, "bad_name")
+	p.want(p.do("POST", "/api/code/roots", `{"path":""}`, nil, nil), 400, "base_root")
+	p.want(p.do("POST", "/api/code/roots", `{"path":"proj/.."}`, nil, nil), 400, "base_root")
 
 	rec := p.do("POST", "/api/code/roots", `{"path":"inlink","name":"proj"}`, nil, nil)
 	p.want(rec, 201, "")
@@ -280,10 +291,20 @@ func TestFolders_Guards(t *testing.T) {
 	p.want(p.do("GET", "/api/code/folders", "", nil, map[string]string{"Sec-Fetch-Site": "cross-site"}), 403, "cross_origin")
 	p.want(p.do("POST", "/api/code/roots", `{"path":"proj"}`, nil, map[string]string{"Origin": "http://evil.test"}), 403, "cross_origin")
 
-	// DNS rebinding on a loopback-only server without auth.
-	lp := newPicker(t, Config{BaseDir: base, HTTPAddr: "127.0.0.1:8000"})
-	rec := lp.do("GET", "/api/code/folders", "", nil, map[string]string{"Host": "evil.test:8000"})
-	lp.want(rec, 403, "host")
+	// Without auth: only from this machine, whatever the listen address.
+	lan := map[string]string{"RemoteAddr": "192.168.1.30:40000", "Host": "192.168.1.20:8000"}
+	p.want(p.do("GET", "/api/code/folders", "", nil, lan), 403, "not_local")
+	p.want(p.do("POST", "/api/code/roots", `{"path":"proj"}`, nil, lan), 403, "not_local")
+	p.want(p.do("DELETE", "/api/code/roots/x", "", nil, lan), 403, "not_local")
+	// DNS rebinding: loopback peer, foreign Host, the browser calls it same-origin.
+	rebind := map[string]string{"Host": "rebind.evil.test:8000", "Origin": "http://rebind.evil.test:8000", "Sec-Fetch-Site": "same-origin"}
+	p.want(p.do("GET", "/api/code/folders", "", nil, rebind), 403, "not_local")
+	p.want(p.do("POST", "/api/code/roots", `{"path":"proj"}`, nil, rebind), 403, "not_local")
+	p.want(p.do("GET", "/api/code/folders", "", nil, map[string]string{"RemoteAddr": "[::1]:5000", "Host": "[::1]:8000"}), 200, "")
+	_ = json.Unmarshal(p.do("GET", "/api/code/roots", "", nil, lan).Body.Bytes(), &roots)
+	if !roots.Picker.Enabled || roots.Picker.CanManage || roots.Picker.BaseDir != "" || roots.Picker.Hint != LocalOnlyHint {
+		t.Errorf("LAN picker: %+v", roots.Picker)
+	}
 
 	// Auth on: admins only.
 	ap := newPicker(t, Config{BaseDir: base, AuthOn: true, Admins: []string{"Ann", "bob@x.io"}})
@@ -293,6 +314,7 @@ func TestFolders_Guards(t *testing.T) {
 	ap.want(ap.do("GET", "/api/code/folders", "", eve, nil), 403, "not_admin")
 	ap.want(ap.do("POST", "/api/code/roots", `{"path":"proj"}`, eve, nil), 403, "not_admin")
 	ap.want(ap.do("GET", "/api/code/folders", "", ann, nil), 200, "")
+	ap.want(ap.do("GET", "/api/code/folders", "", ann, lan), 200, "") // with auth, an admin from another machine
 	ap.want(ap.do("POST", "/api/code/roots", `{"path":"proj"}`, bob, nil), 201, "")
 	ap.want(ap.do("DELETE", "/api/code/roots/proj", "", eve, nil), 403, "not_admin")
 	_ = json.Unmarshal(ap.do("GET", "/api/code/roots", "", eve, nil).Body.Bytes(), &roots)

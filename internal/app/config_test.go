@@ -467,6 +467,27 @@ func TestResolveCodeGraph_BaseDir(t *testing.T) {
 			}
 		})
 	}
+	home := func() string { return "/home/u" }
+	for _, tc := range []struct {
+		addr string
+		auth bool
+		want string
+	}{
+		{":8000", false, ""}, // open port, no auth: off until set explicitly
+		{"0.0.0.0:8000", false, ""},
+		{"127.0.0.1:8000", false, "/home/u"},
+		{"localhost:8000", false, "/home/u"},
+		{"[::1]:8000", false, "/home/u"},
+		{":8000", true, "/home/u"},
+	} {
+		if got := codeGraphDefaultBase(tc.addr, tc.auth, home); got != tc.want {
+			t.Errorf("default base (%s, auth %v) = %q, want %q", tc.addr, tc.auth, got, tc.want)
+		}
+	}
+	// An explicit base_dir on an open port without auth is kept.
+	if c := resolveCodeGraph(CodeGraphConfig{BaseDir: "/src"}, "", "", codeGraphDefaultBase(":8000", false, home), env(nil)); c.BaseDir != "/src" {
+		t.Errorf("explicit base on open port: %q", c.BaseDir)
+	}
 	c := resolveCodeGraph(CodeGraphConfig{Admins: []string{"file"}}, "", "", "", env(map[string]string{"CODE_GRAPH_ADMINS": "ann, bob@x.io"}))
 	if len(c.Admins) != 2 || c.Admins[1] != "bob@x.io" {
 		t.Errorf("admins %v", c.Admins)

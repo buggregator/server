@@ -1,6 +1,8 @@
 package app
 
 import (
+	"github.com/buggregator/server/v2/internal/selfupdate"
+
 	"flag"
 	"fmt"
 	"log/slog"
@@ -141,6 +143,17 @@ type CodeRootDef struct {
 
 // Enabled reports whether any root or a base dir is configured.
 func (c CodeGraphConfig) Enabled() bool { return len(c.Roots) > 0 || c.BaseDir != "" }
+
+// codeGraphDefaultBase is the default base_dir: the home (home()) only when
+// the server listens on loopback only or auth is on. On an open port without
+// auth anyone who reaches the port could browse it, so the folder picker stays
+// off until base_dir is set explicitly.
+func codeGraphDefaultBase(httpAddr string, authOn bool, home func() string) string {
+	if !authOn && !selfupdate.LoopbackOnly(httpAddr) {
+		return ""
+	}
+	return home()
+}
 
 // defaultCodeBaseDir is the user's home, or none inside a container (there
 // the home is the image's, not the user's code).
@@ -581,8 +594,6 @@ func LoadConfig() Config {
 	cfg.Xdebug.IdleTimeout = coalesce(os.Getenv("XDEBUG_PROXY_IDLE_TIMEOUT"), fileCfg.Xdebug.IdleTimeout, "10m")
 	cfg.Xdebug.IdleTimeoutDur = parseIdleTimeout(cfg.Xdebug.IdleTimeout)
 
-	cfg.CodeGraph = resolveCodeGraph(fileCfg.CodeGraph, codeGraphRoots, codeGraphBase, defaultCodeBaseDir(), os.Getenv)
-
 	// Auth.
 	cfg.Auth.Enabled = fileCfg.Auth.Enabled || os.Getenv("AUTH_ENABLED") == "true"
 	cfg.Auth.Provider = coalesce(os.Getenv("AUTH_PROVIDER"), fileCfg.Auth.Provider, "oidc")
@@ -640,6 +651,9 @@ func LoadConfig() Config {
 	cfg.MonologAddr = cfg.TCP.Monolog.Addr
 	cfg.VarDumperAddr = cfg.TCP.VarDumper.Addr
 	cfg.ProxyAddr = cfg.TCP.Proxy.Addr
+
+	// Code graph last: the default base_dir depends on the listen address and auth.
+	cfg.CodeGraph = resolveCodeGraph(fileCfg.CodeGraph, codeGraphRoots, codeGraphBase, codeGraphDefaultBase(cfg.HTTPAddr, cfg.Auth.Enabled, defaultCodeBaseDir), os.Getenv)
 
 	return cfg
 }

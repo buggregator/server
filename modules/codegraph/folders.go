@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -25,7 +26,10 @@ var (
 )
 
 // PickerHint says how to turn the folder picker on when it is off.
-const PickerHint = "Set code_graph.base_dir (env CODE_GRAPH_BASE_DIR) to the folder Buggregator may add code from. In Docker, mount it first: -v ~/projects:/code -e CODE_GRAPH_BASE_DIR=/code"
+const PickerHint = "Set code_graph.base_dir (env CODE_GRAPH_BASE_DIR) to the folder Buggregator may add code from. It defaults to your home only when Buggregator listens on 127.0.0.1 or auth is on. In Docker, mount it first: -v ~/projects:/code -e CODE_GRAPH_BASE_DIR=/code"
+
+// LocalOnlyHint says why the picker refuses a request without auth.
+const LocalOnlyHint = "Without auth, code graph folders can be browsed and changed only from this computer: open the UI as http://127.0.0.1 or http://localhost. From another machine, turn on auth and list yourself in code_graph.admins."
 
 // Picker is the folder picker's state in GET /api/code/roots.
 type Picker struct {
@@ -187,10 +191,12 @@ func (m *Module) browse(rel string) (*FoldersResponse, error) {
 }
 
 // canManage reports whether the request's user may browse and change the
-// roots: anyone with auth off, an admin from code_graph.admins with it on.
+// roots: with auth off only a request from this machine (loopback peer and
+// Host, whatever the listen address), with auth on an admin from
+// code_graph.admins.
 func (m *Module) canManage(r *http.Request) bool {
 	if !m.cfg.AuthOn {
-		return true
+		return localRequest(r)
 	}
 	u := auth.UserFromContext(r.Context())
 	if u == nil {
@@ -204,9 +210,20 @@ func (m *Module) canManage(r *http.Request) bool {
 	return false
 }
 
+// localRequest: the peer is a loopback address and the Host names this
+// machine (a DNS-rebound page has a foreign Host).
+func localRequest(r *http.Request) bool {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	ip := net.ParseIP(strings.Trim(host, "[]"))
+	return ip != nil && ip.IsLoopback() && selfupdate.LoopbackHost(r.Host)
+}
+
 // manage guards the picker routes: picker on, this server's own page (no
-// other origin, and no DNS-rebound Host on a loopback-only server without
-// auth), and an admin when auth is on.
+// other origin), and without auth a request from this machine only, with
+// auth an admin.
 func (m *Module) manage(w http.ResponseWriter, r *http.Request) bool {
 	if m.cfg.BaseDir == "" {
 		writeErr(w, http.StatusNotFound, "picker_off", PickerHint)
@@ -216,8 +233,8 @@ func (m *Module) manage(w http.ResponseWriter, r *http.Request) bool {
 		writeErr(w, http.StatusForbidden, "cross_origin", "only the Buggregator UI itself can browse or change code graph folders")
 		return false
 	}
-	if !m.cfg.AuthOn && selfupdate.LoopbackOnly(m.cfg.HTTPAddr) && !selfupdate.LoopbackHost(r.Host) {
-		writeErr(w, http.StatusForbidden, "host", "without auth, open the UI as localhost or 127.0.0.1 to change code graph folders")
+	if !m.cfg.AuthOn && !localRequest(r) {
+		writeErr(w, http.StatusForbidden, "not_local", LocalOnlyHint)
 		return false
 	}
 	if !m.canManage(r) {
@@ -231,7 +248,16 @@ func (m *Module) picker(r *http.Request) Picker {
 	if m.cfg.BaseDir == "" {
 		return Picker{Hint: PickerHint}
 	}
-	return Picker{Enabled: true, BaseDir: m.cfg.BaseDir, CanManage: m.canManage(r)}
+	p := Picker{Enabled: true, BaseDir: m.cfg.BaseDir, CanManage: m.canManage(r)}
+	if !p.CanManage {
+		p.BaseDir = "" // not shown to who may not browse it
+		if !m.cfg.AuthOn {
+			p.Hint = LocalOnlyHint
+		} else {
+			p.Hint = "Only users in code_graph.admins can add or remove code graph folders."
+		}
+	}
+	return p
 }
 
 func folderErr(w http.ResponseWriter, err error) {
@@ -281,6 +307,10 @@ func (m *Module) handleAddRoot(w http.ResponseWriter, r *http.Request) {
 	real, err := inBase(m.cfg.BaseDir, req.Path)
 	if err != nil {
 		folderErr(w, err)
+		return
+	}
+	if real == m.cfg.BaseDir {
+		writeErr(w, http.StatusBadRequest, "base_root", "pick a folder inside code_graph.base_dir, not the base dir itself")
 		return
 	}
 	name := strings.TrimSpace(req.Name)

@@ -214,22 +214,28 @@ func (ix *Indexer) RemoveRoot(name string) error {
 		return errConfigRoot
 	}
 	ix.forgetLocked(name)
+	// The name stays busy until its data is gone (here, or when the run
+	// in progress stops).
+	ix.removing[name] = true
 	running := r.running
 	if running {
 		r.removed = true
-		ix.removing[name] = true
 		if r.cancel != nil {
 			r.cancel()
 		}
 	}
 	ix.mu.Unlock()
-	if _, err := ix.db.Exec(`DELETE FROM code_ui_roots WHERE name = ?`, name); err != nil {
+	_, err := ix.db.Exec(`DELETE FROM code_ui_roots WHERE name = ?`, name)
+	if running {
 		return err
 	}
-	if running {
-		return nil
+	if err == nil {
+		err = ix.dropRoot(name)
 	}
-	return ix.dropRoot(name)
+	ix.mu.Lock()
+	delete(ix.removing, name)
+	ix.mu.Unlock()
+	return err
 }
 
 func (ix *Indexer) forgetLocked(name string) {

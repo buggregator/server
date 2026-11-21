@@ -48,9 +48,6 @@ type Config struct {
 	// may browse and change the roots.
 	AuthOn bool
 	Admins []string
-	// HTTPAddr is the listen address: on a loopback-only server without auth
-	// the picker refuses a Host that is not this machine (DNS rebinding).
-	HTTPAddr string
 }
 
 // DefaultExclude is used when the config names no exclude list.

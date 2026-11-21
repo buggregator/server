@@ -207,7 +207,6 @@ func run() {
 			BaseDir:     cfg.CodeGraph.BaseDir,
 			AuthOn:      cfg.Auth.Enabled,
 			Admins:      cfg.CodeGraph.Admins,
-			HTTPAddr:    cfg.HTTPAddr,
 		}
 		for _, r := range cfg.CodeGraph.Roots {
 			cgCfg.Roots = append(cgCfg.Roots, codegraph.Root{Name: r.Name, Path: r.Path})
