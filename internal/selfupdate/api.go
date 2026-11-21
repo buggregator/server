@@ -6,8 +6,8 @@ import (
 	"math"
 	"mime"
 	"net/http"
-	"net/url"
-	"strings"
+
+	"github.com/buggregator/server/v2/internal/server/sameorigin"
 )
 
 // Register adds GET /api/update, POST /api/update/check and POST
@@ -75,7 +75,7 @@ func (u *Updater) Register(mux *http.ServeMux, protect func(http.Handler) http.H
 // without auth the network can call the API anyway, so the Host proves nothing
 // there.
 func (u *Updater) sameSite(w http.ResponseWriter, r *http.Request) bool {
-	if !sameOrigin(r) {
+	if !sameorigin.Check(r) {
 		writeErr(w, http.StatusForbidden, "only the Buggregator UI itself can start or check an update")
 		return false
 	}
@@ -84,26 +84,6 @@ func (u *Updater) sameSite(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 	return true
-}
-
-// sameOrigin reports whether a request comes from this server's own page or
-// from no page at all (curl, scripts). "same-site" is refused too: another port
-// of localhost (a dev server on :5173) is the same site. A browser without
-// Sec-Fetch-* is judged by Origin, which must name this Host.
-func sameOrigin(r *http.Request) bool {
-	switch r.Header.Get("Sec-Fetch-Site") {
-	case "same-origin", "none":
-		return true
-	case "":
-	default:
-		return false
-	}
-	origin := r.Header.Get("Origin")
-	if origin == "" {
-		return true
-	}
-	o, err := url.Parse(origin)
-	return err == nil && o.Host != "" && strings.EqualFold(o.Host, r.Host)
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {

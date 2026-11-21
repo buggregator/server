@@ -7,8 +7,9 @@ import (
 
 // sameOriginOnly are paths no other origin may call, whatever cors.origins
 // says: no CORS headers, and a preflight is not answered (selfupdate's
-// /api/update and /api/update/check replace the binary and restart).
-var sameOriginOnly = []string{"/api/update"}
+// /api/update and /api/update/check replace the binary and restart;
+// /api/smtp/release sends a caught message to a real mailbox).
+var sameOriginOnly = []string{"/api/update", "/api/smtp/release"}
 
 // CORSMiddleware adds CORS headers based on allowed origins.
 // If origins contains "*", all origins are allowed.

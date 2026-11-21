@@ -68,6 +68,9 @@ type Config struct {
 	XdebugTrace XdebugTraceConfig `yaml:"xdebug_trace"`
 	// Retention deletes old events in the background; unset keeps everything.
 	Retention RetentionConfig `yaml:"retention"`
+	// SMTPRelay is the outgoing SMTP server a caught email can be released
+	// to from the UI; off while host is empty.
+	SMTPRelay SMTPRelayConfig `yaml:"smtp_relay"`
 	Version   string          `yaml:"-"`
 
 	// Shortcuts.
@@ -173,6 +176,21 @@ type UpdateConfig struct {
 	// ReleaseURL replaces the GitHub releases/latest API (a mirror); empty =
 	// GitHub. Downloads are still checked against the built-in release key.
 	ReleaseURL string `yaml:"release_url"`
+}
+
+// SMTPRelayConfig is the outgoing SMTP server for releasing a caught email
+// to a real inbox. The password comes from the env or a file, never back out
+// through the API.
+type SMTPRelayConfig struct {
+	Host               string   `yaml:"host"`                 // empty = release off
+	Port               int      `yaml:"port"`                 // default 587 (starttls), 465 (tls), 25 (none)
+	TLS                string   `yaml:"tls"`                  // starttls (default), tls or none
+	Username           string   `yaml:"username"`             // empty = no AUTH
+	Password           string   `yaml:"password"`             // prefer SMTP_RELAY_PASSWORD or password_file
+	PasswordFile       string   `yaml:"password_file"`        // file holding the password (a Docker/K8s secret)
+	From               string   `yaml:"from"`                 // MAIL FROM; empty = the message's From
+	AllowedRecipients  []string `yaml:"allowed_recipients"`   // patterns like "*@example.com"; empty = any
+	InsecureSkipVerify bool     `yaml:"insecure_skip_verify"` // accept any TLS certificate
 }
 
 // RetentionConfig is the optional auto-cleanup. Pinned events are never
@@ -495,6 +513,7 @@ func LoadConfig() Config {
 	if cfg.Retention.MaxEvents < 0 {
 		cfg.Retention.MaxEvents = 0
 	}
+	cfg.SMTPRelay = smtpRelayConfig(fileCfg.SMTPRelay)
 	cfg.Sentry.SourceFetch = sourceFetchMode(coalesce(cfg.Sentry.SourceFetch, os.Getenv("SENTRY_SOURCE_FETCH"), fileCfg.Sentry.SourceFetch, "private"))
 
 	// CORS origins.
@@ -654,6 +673,51 @@ func boolPtr(cond bool, yes, no bool) *bool {
 		return &yes
 	}
 	return &no
+}
+
+// smtpRelayConfig fills the relay from SMTP_RELAY_* env vars over the file.
+// The password: SMTP_RELAY_PASSWORD, else the file named by
+// SMTP_RELAY_PASSWORD_FILE or password_file, else the YAML value.
+func smtpRelayConfig(file SMTPRelayConfig) SMTPRelayConfig {
+	c := file
+	c.Host = coalesce(os.Getenv("SMTP_RELAY_HOST"), file.Host)
+	if v := strings.TrimSpace(os.Getenv("SMTP_RELAY_PORT")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n < 65536 {
+			c.Port = n
+		} else {
+			slog.Warn("SMTP_RELAY_PORT is not a port, using the default", "value", v)
+		}
+	}
+	c.TLS = strings.ToLower(coalesce(os.Getenv("SMTP_RELAY_TLS"), file.TLS, "starttls"))
+	switch c.TLS {
+	case "starttls", "tls", "none":
+	default:
+		slog.Warn("smtp_relay.tls must be starttls, tls or none; using starttls", "value", c.TLS)
+		c.TLS = "starttls"
+	}
+	c.Username = coalesce(os.Getenv("SMTP_RELAY_USERNAME"), file.Username)
+	c.From = coalesce(os.Getenv("SMTP_RELAY_FROM"), file.From)
+	if v := os.Getenv("SMTP_RELAY_ALLOWED_RECIPIENTS"); v != "" {
+		c.AllowedRecipients = nil
+		for _, p := range strings.Split(v, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				c.AllowedRecipients = append(c.AllowedRecipients, p)
+			}
+		}
+	}
+	c.InsecureSkipVerify = envBool("SMTP_RELAY_INSECURE_SKIP_VERIFY", file.InsecureSkipVerify)
+	c.PasswordFile = coalesce(os.Getenv("SMTP_RELAY_PASSWORD_FILE"), file.PasswordFile)
+	if v := os.Getenv("SMTP_RELAY_PASSWORD"); v != "" {
+		c.Password = v
+	} else if c.PasswordFile != "" {
+		b, err := os.ReadFile(c.PasswordFile)
+		if err != nil {
+			slog.Warn("smtp_relay: cannot read the password file", "file", c.PasswordFile, "err", err)
+		} else {
+			c.Password = strings.TrimRight(string(b), "\r\n")
+		}
+	}
+	return c
 }
 
 func loadConfigFile(path string) Config {

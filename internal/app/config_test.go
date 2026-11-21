@@ -2,6 +2,7 @@ package app
 
 import (
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -398,5 +399,58 @@ func TestConfig_ListenPorts(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestSMTPRelayConfig(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/buggregator.yaml"
+	os.WriteFile(path, []byte("smtp_relay:\n  host: smtp.file.test\n  port: 2525\n  tls: none\n  username: file-user\n  password: from-yaml\n  allowed_recipients: [\"*@company.test\"]\n"), 0o600)
+	secret := dir + "/relay-password"
+	os.WriteFile(secret, []byte("from-file\n"), 0o600)
+	file := loadConfigFile(path).SMTPRelay
+
+	for _, tc := range []struct {
+		name string
+		env  map[string]string
+		want SMTPRelayConfig
+	}{
+		{"file only", nil, SMTPRelayConfig{Host: "smtp.file.test", Port: 2525, TLS: "none", Username: "file-user",
+			Password: "from-yaml", AllowedRecipients: []string{"*@company.test"}}},
+		{"password file wins over yaml", map[string]string{"SMTP_RELAY_PASSWORD_FILE": secret},
+			SMTPRelayConfig{Host: "smtp.file.test", Port: 2525, TLS: "none", Username: "file-user",
+				Password: "from-file", PasswordFile: secret, AllowedRecipients: []string{"*@company.test"}}},
+		{"env over everything", map[string]string{
+			"SMTP_RELAY_HOST": "smtp.env.test", "SMTP_RELAY_PORT": "465", "SMTP_RELAY_TLS": "TLS",
+			"SMTP_RELAY_USERNAME": "env-user", "SMTP_RELAY_PASSWORD": "from-env", "SMTP_RELAY_PASSWORD_FILE": secret,
+			"SMTP_RELAY_FROM": "qa@company.test", "SMTP_RELAY_ALLOWED_RECIPIENTS": "*@a.test, b@b.test",
+			"SMTP_RELAY_INSECURE_SKIP_VERIFY": "true",
+		}, SMTPRelayConfig{Host: "smtp.env.test", Port: 465, TLS: "tls", Username: "env-user", Password: "from-env",
+			PasswordFile: secret, From: "qa@company.test", AllowedRecipients: []string{"*@a.test", "b@b.test"}, InsecureSkipVerify: true}},
+		{"bad port and tls fall back", map[string]string{"SMTP_RELAY_PORT": "99999", "SMTP_RELAY_TLS": "ssl"},
+			SMTPRelayConfig{Host: "smtp.file.test", Port: 2525, TLS: "starttls", Username: "file-user",
+				Password: "from-yaml", AllowedRecipients: []string{"*@company.test"}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for k, v := range tc.env {
+				t.Setenv(k, v)
+			}
+			got := smtpRelayConfig(file)
+			if strings.Join(got.AllowedRecipients, ",") != strings.Join(tc.want.AllowedRecipients, ",") {
+				t.Errorf("allowed = %v, want %v", got.AllowedRecipients, tc.want.AllowedRecipients)
+			}
+			got.AllowedRecipients, tc.want.AllowedRecipients = nil, nil
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("got  %+v\nwant %+v", got, tc.want)
+			}
+		})
+	}
+
+	// Off by default; the password never shows in the config summary.
+	if c := smtpRelayConfig(SMTPRelayConfig{}); c.Host != "" || c.TLS != "starttls" {
+		t.Errorf("default = %+v", c)
+	}
+	if s := (Config{SMTPRelay: SMTPRelayConfig{Host: "h", Password: "from-env"}}).String(); strings.Contains(s, "from-env") {
+		t.Errorf("String() shows the password: %s", s)
 	}
 }
