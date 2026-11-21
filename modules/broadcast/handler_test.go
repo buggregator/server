@@ -429,8 +429,9 @@ func TestForward_RedactsCredentials(t *testing.T) {
 
 	for _, tc := range []struct{ msg, up, want string }{
 		{"dial http://u:pw@h:1: refused", "http://u:pw@h:1", "dial http://h:1: refused"},
-		{"bad pw here", "http://u:pw@h:1", "bad *** here"},
+		{"bad s3cret here", "http://u:s3cret@h:1", "bad *** here"},
 		{"plain", "http://h:1", "plain"},
+		{"a bad day", "http://u:a@h:1", "a bad day"},
 	} {
 		if got := redact(tc.msg, tc.up); got != tc.want {
 			t.Errorf("redact(%q) = %q, want %q", tc.msg, got, tc.want)

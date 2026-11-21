@@ -98,8 +98,12 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 	if rest, ok := strings.CutPrefix(r.URL.Path, "/csp/"); ok {
 		project = strings.Trim(rest, "/")
 	}
-	// A proxy or a report collector may name the project with the header
-	// alone (no X-Buggregator-Event): /csp/<project> wins.
+	// Then what detection found (userinfo, Basic Auth, X-Buggregator-Event
+	// with X-Buggregator-Project), then X-Buggregator-Project alone - a
+	// report collector sends no event type of ours.
+	if project == "" {
+		project = r.Header.Get("X-Buggregator-Detected-Project")
+	}
 	if project == "" {
 		project = strings.TrimSpace(r.Header.Get("X-Buggregator-Project"))
 	}

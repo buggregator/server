@@ -211,7 +211,9 @@ func redact(msg, upstream string) string {
 		return msg
 	}
 	msg = strings.ReplaceAll(msg, u.User.String()+"@", "")
-	if p, ok := u.User.Password(); ok && p != "" {
+	// A short password would turn every match into noise; the userinfo form
+	// above is gone already.
+	if p, ok := u.User.Password(); ok && len(p) >= 4 {
 		msg = strings.ReplaceAll(msg, p, "***")
 	}
 	return msg

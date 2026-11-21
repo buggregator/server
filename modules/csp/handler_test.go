@@ -104,19 +104,25 @@ func mustJSON(t *testing.T, reports string) json.RawMessage {
 	return b
 }
 
-// X-Buggregator-Project alone picks the project; /csp/<project> wins.
+// X-Buggregator-Project alone picks the project; /csp/<project> and the
+// detected project win over it.
 func TestHandler_ProjectHeader(t *testing.T) {
 	h := &handler{}
-	for _, tc := range []struct{ path, header, want string }{
-		{"/csp", "shop", "shop"},
-		{"/some/report", " shop ", "shop"},
-		{"/csp/billing", "shop", "billing"},
-		{"/csp", "", ""},
+	for _, tc := range []struct{ path, header, detected, want string }{
+		{"/csp", "shop", "", "shop"},
+		{"/some/report", " shop ", "", "shop"},
+		{"/csp/billing", "shop", "", "billing"},
+		{"/csp", "other", "shop", "shop"},
+		{"/csp/billing", "other", "shop", "billing"},
+		{"/csp", "", "", ""},
 	} {
 		req := httptest.NewRequest("POST", tc.path, strings.NewReader(chromeCSPReport))
 		req.Header.Set("Content-Type", "application/csp-report")
 		if tc.header != "" {
 			req.Header.Set("X-Buggregator-Project", tc.header)
+		}
+		if tc.detected != "" {
+			req.Header.Set("X-Buggregator-Detected-Project", tc.detected)
 		}
 		in, err := h.Handle(req)
 		if err != nil {
