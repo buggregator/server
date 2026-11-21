@@ -74,6 +74,15 @@ func TestHandler(t *testing.T) {
 	if h.Match(httptest.NewRequest("GET", "/csp", nil)) {
 		t.Error("GET matched")
 	}
+	// A request typed for another module stays with it; typed csp is ours.
+	for detected, want := range map[string]bool{"http-dump": false, "sentry": false, "csp": true} {
+		req := httptest.NewRequest("POST", "/csp", strings.NewReader(chromeCSPReport))
+		req.Header.Set("Content-Type", "application/csp-report")
+		req.Header.Set("X-Buggregator-Detected-Type", detected)
+		if got := h.Match(req); got != want {
+			t.Errorf("detected %s: match = %v, want %v", detected, got, want)
+		}
+	}
 	for _, bad := range []string{`{"x":1}`, `[]`, `not json`} {
 		req := httptest.NewRequest("POST", "/csp", strings.NewReader(bad))
 		if _, err := h.Handle(req); err == nil {

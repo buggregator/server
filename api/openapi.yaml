@@ -1391,7 +1391,7 @@ paths:
       - Sentry
       operationId: sentryListFeedback
       summary: List user feedback sent by Sentry SDKs, newest first.
-      description: Both the `feedback` envelope item (captureFeedback, the feedback widget) and the legacy `user_report` item. Feedback on an error carries its `event_id`; feedback on nothing has it empty.
+      description: Both the `feedback` envelope item (captureFeedback, the feedback widget) and the legacy `user_report` item. Feedback on an error carries its `event_id`; feedback on nothing has it empty. Deleting the error's card keeps its feedback until retention removes it by age.
       security:
       - authToken: []
       parameters:

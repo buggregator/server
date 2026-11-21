@@ -95,7 +95,8 @@ func pruneBefore(ctx context.Context, db *sql.DB, cutoff time.Time) (int, error)
 			{`DELETE FROM sentry_transactions WHERE start_ts < ?`, iso, true},
 			{`DELETE FROM sentry_logs WHERE received_at < ?`, dt, true},
 			{`DELETE FROM sentry_metrics WHERE received_at < ?`, dt, true},
-			// Feedback on an error stays while that error's event is kept (pinned).
+			// Feedback on an error stays while that error's card exists (a pinned
+			// card is never pruned).
 			{`DELETE FROM sentry_feedback WHERE received_at < ? AND (event_id = '' OR event_id NOT IN (SELECT uuid FROM events))`, dt, true},
 			{`DELETE FROM sentry_breadcrumbs WHERE error_event_id IN (SELECT id FROM sentry_error_events WHERE ` + orphan + `)`, dt, false},
 			{`DELETE FROM sentry_exceptions WHERE error_event_id IN (SELECT id FROM sentry_error_events WHERE ` + orphan + `)`, dt, false},

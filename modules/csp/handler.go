@@ -59,12 +59,20 @@ func reportType(r *http.Request) string {
 	return ""
 }
 
-// Match: a POST with a report content type, or to /csp[/project].
+// Match: a POST with a report content type, or to /csp[/project]. A request
+// typed for another module (http-dump@host, X-Buggregator-Event) is left to it.
 func (h *handler) Match(r *http.Request) bool {
 	if r.Method != http.MethodPost {
 		return false
 	}
-	if r.Header.Get("X-Buggregator-Detected-Type") == "csp" || reportType(r) != "" {
+	switch r.Header.Get("X-Buggregator-Detected-Type") {
+	case "csp":
+		return true
+	case "":
+	default:
+		return false
+	}
+	if reportType(r) != "" {
 		return true
 	}
 	return r.URL.Path == "/csp" || strings.HasPrefix(r.URL.Path, "/csp/")
