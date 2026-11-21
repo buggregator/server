@@ -51,8 +51,8 @@ func TestModulesConfig_EnabledTypes(t *testing.T) {
 	t.Run("all enabled by default", func(t *testing.T) {
 		cfg := ModulesConfig{}
 		types := cfg.EnabledTypes()
-		if len(types) != 10 {
-			t.Errorf("len = %d, want 10", len(types))
+		if len(types) != 11 {
+			t.Errorf("len = %d, want 11", len(types))
 		}
 	})
 
@@ -60,8 +60,8 @@ func TestModulesConfig_EnabledTypes(t *testing.T) {
 		f := false
 		cfg := ModulesConfig{Sentry: &f, SMTP: &f}
 		types := cfg.EnabledTypes()
-		if len(types) != 8 {
-			t.Errorf("len = %d, want 8", len(types))
+		if len(types) != 9 {
+			t.Errorf("len = %d, want 9", len(types))
 		}
 		for _, typ := range types {
 			if typ == "sentry" || typ == "smtp" {
@@ -307,7 +307,7 @@ func TestModulesConfig_Disable(t *testing.T) {
 		t.Error("xdebug-trace should be disabled")
 	}
 	types := cfg.Modules.EnabledTypes()
-	if strings.Contains(strings.Join(types, ","), "xdebug-trace") || len(types) != 9 {
+	if strings.Contains(strings.Join(types, ","), "xdebug-trace") || len(types) != 10 {
 		t.Errorf("EnabledTypes = %v", types)
 	}
 }
