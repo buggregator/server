@@ -431,7 +431,7 @@ func TestResolveCodeGraph(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			c := resolveCodeGraph(file, tc.flag, func(k string) string { return tc.env[k] })
+			c := resolveCodeGraph(file, tc.flag, "", "", func(k string) string { return tc.env[k] })
 			tc.check(t, c)
 			if !c.Enabled() {
 				t.Error("not enabled with roots")
@@ -440,5 +440,48 @@ func TestResolveCodeGraph(t *testing.T) {
 	}
 	if (CodeGraphConfig{}).Enabled() {
 		t.Error("enabled without roots")
+	}
+}
+
+func TestResolveCodeGraph_BaseDir(t *testing.T) {
+	env := func(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
+	for _, tc := range []struct {
+		name, flag, def, want string
+		file                  CodeGraphConfig
+		env                   map[string]string
+	}{
+		{name: "default home", def: "/home/u", want: "/home/u"},
+		{name: "none in a container", def: "", want: ""},
+		{name: "file beats default", def: "/home/u", file: CodeGraphConfig{BaseDir: "/src"}, want: "/src"},
+		{name: "env beats file", file: CodeGraphConfig{BaseDir: "/src"}, env: map[string]string{"CODE_GRAPH_BASE_DIR": "/code"}, want: "/code"},
+		{name: "flag beats env", flag: "/f", env: map[string]string{"CODE_GRAPH_BASE_DIR": "/code"}, want: "/f"},
+		{name: "off", def: "/home/u", env: map[string]string{"CODE_GRAPH_BASE_DIR": "off"}, want: ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := resolveCodeGraph(tc.file, "", tc.flag, tc.def, env(tc.env))
+			if c.BaseDir != tc.want {
+				t.Errorf("base_dir = %q, want %q", c.BaseDir, tc.want)
+			}
+			if c.Enabled() != (tc.want != "") {
+				t.Errorf("enabled = %v", c.Enabled())
+			}
+		})
+	}
+	home := func() string { return "/home/u" }
+	// Without auth no default, loopback listen too (a same-host proxy can
+	// forward outside requests unmarked); with auth the home.
+	if got := codeGraphDefaultBase(false, home); got != "" {
+		t.Errorf("default base without auth = %q", got)
+	}
+	if got := codeGraphDefaultBase(true, home); got != "/home/u" {
+		t.Errorf("default base with auth = %q", got)
+	}
+	// An explicit base_dir without auth is kept.
+	if c := resolveCodeGraph(CodeGraphConfig{BaseDir: "/src"}, "", "", codeGraphDefaultBase(false, home), env(nil)); c.BaseDir != "/src" {
+		t.Errorf("explicit base on open port: %q", c.BaseDir)
+	}
+	c := resolveCodeGraph(CodeGraphConfig{Admins: []string{"file"}}, "", "", "", env(map[string]string{"CODE_GRAPH_ADMINS": "ann, bob@x.io"}))
+	if len(c.Admins) != 2 || c.Admins[1] != "bob@x.io" {
+		t.Errorf("admins %v", c.Admins)
 	}
 }

@@ -2,6 +2,7 @@ package selfupdate
 
 import (
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -188,3 +189,10 @@ func executable() (string, error) {
 	}
 	return exe, nil
 }
+
+// SameOrigin reports whether a request comes from this server's own page or
+// from no page at all (curl, scripts); for other modules' write routes.
+func SameOrigin(r *http.Request) bool { return sameOrigin(r) }
+
+// LoopbackHost reports whether a request's Host names this machine.
+func LoopbackHost(host string) bool { return loopbackHost(host) }

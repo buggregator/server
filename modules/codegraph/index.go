@@ -19,11 +19,20 @@ import (
 	"time"
 )
 
-// Root is a folder from the config whose code is indexed.
+// Root is a folder whose code is indexed.
 type Root struct {
 	Name string `json:"name"`
 	Path string `json:"path"` // absolute, symlinks resolved
+	// Source is where the root comes from: SourceConfig (read-only in the
+	// UI) or SourceUI (added from the UI, stored in SQLite).
+	Source string `json:"source"`
 }
+
+// Root sources.
+const (
+	SourceConfig = "config"
+	SourceUI     = "ui"
+)
 
 // Index states of a root.
 const (
@@ -37,6 +46,7 @@ const (
 type Status struct {
 	Name        string `json:"name"`
 	Path        string `json:"path"`
+	Source      string `json:"source"` // config or ui; only ui roots can be removed
 	State       string `json:"state"`
 	Files       int    `json:"files"`
 	Symbols     int    `json:"symbols"`
@@ -53,13 +63,18 @@ type Status struct {
 	Error       string `json:"error,omitempty"`
 }
 
-// Indexer keeps the code graph of the configured roots in SQLite.
+// Indexer keeps the code graph of its roots in SQLite. Roots come from the
+// config and, at run time, from the UI (AddRoot, RemoveRoot).
 type Indexer struct {
-	db   *sql.DB
-	cfg  Config
-	mu   sync.Mutex
-	runs map[string]*run
-	wg   sync.WaitGroup
+	db    *sql.DB
+	cfg   Config
+	mu    sync.Mutex
+	roots []Root // in order: config roots, then UI roots
+	runs  map[string]*run
+	// removing are roots removed while a run was still writing them: their
+	// data is dropped when that run ends, and the name is busy until then.
+	removing map[string]bool
+	wg       sync.WaitGroup
 }
 
 type run struct {
@@ -68,18 +83,32 @@ type run struct {
 	running bool
 	again   bool  // a reindex was asked for while running
 	gen     int64 // finished runs; caches key on it
+	removed bool
+	cancel  context.CancelFunc
 }
 
 func newIndexer(db *sql.DB, cfg Config) *Indexer {
-	ix := &Indexer{db: db, cfg: cfg, runs: map[string]*run{}}
+	ix := &Indexer{db: db, cfg: cfg, runs: map[string]*run{}, removing: map[string]bool{}}
 	for _, r := range cfg.Roots {
-		ix.runs[r.Name] = &run{root: r, status: Status{Name: r.Name, Path: r.Path, State: StatePending}}
+		ix.addLocked(r)
 	}
 	return ix
 }
 
-// Roots returns the configured roots in config order.
-func (ix *Indexer) Roots() []Root { return ix.cfg.Roots }
+func (ix *Indexer) addLocked(r Root) {
+	if r.Source == "" {
+		r.Source = SourceConfig
+	}
+	ix.roots = append(ix.roots, r)
+	ix.runs[r.Name] = &run{root: r, status: Status{Name: r.Name, Path: r.Path, Source: r.Source, State: StatePending}}
+}
+
+// Roots returns the roots: config ones first, then the ones added in the UI.
+func (ix *Indexer) Roots() []Root {
+	ix.mu.Lock()
+	defer ix.mu.Unlock()
+	return append([]Root(nil), ix.roots...)
+}
 
 func (ix *Indexer) root(name string) (Root, bool) {
 	ix.mu.Lock()
@@ -121,21 +150,133 @@ func (ix *Indexer) Status(name string) (Status, bool) {
 	return r.status, true
 }
 
-// Statuses returns the state of every root, in config order.
+// Statuses returns the state of every root, in Roots order.
 func (ix *Indexer) Statuses() []Status {
-	out := make([]Status, 0, len(ix.cfg.Roots))
-	for _, r := range ix.cfg.Roots {
-		s, _ := ix.Status(r.Name)
-		out = append(out, s)
+	ix.mu.Lock()
+	defer ix.mu.Unlock()
+	out := make([]Status, 0, len(ix.roots))
+	for _, r := range ix.roots {
+		out = append(out, ix.runs[r.Name].status)
 	}
 	return out
+}
+
+// Errors of AddRoot and RemoveRoot.
+var (
+	errRootExists = errors.New("a root with this name or folder already exists")
+	errRootBusy   = errors.New("this root is still being removed; try again in a moment")
+	errConfigRoot = errors.New("roots from code_graph.roots are read-only; change the config")
+)
+
+// AddRoot adds a root (from the UI), stores it in code_ui_roots and starts
+// indexing it. The caller has checked its path.
+func (ix *Indexer) AddRoot(r Root) (Status, error) {
+	r.Source = SourceUI
+	ix.mu.Lock()
+	if ix.removing[r.Name] {
+		ix.mu.Unlock()
+		return Status{}, errRootBusy
+	}
+	for _, have := range ix.roots {
+		if have.Name == r.Name || have.Path == r.Path {
+			ix.mu.Unlock()
+			return Status{}, errRootExists
+		}
+	}
+	ix.addLocked(r)
+	ix.mu.Unlock()
+	err := ix.storeRoot(r)
+	if err == nil {
+		_, err = ix.db.Exec(`INSERT INTO code_ui_roots (name, path, added_at) VALUES (?, ?, ?)`, r.Name, r.Path, time.Now().UTC().Format(time.RFC3339))
+	}
+	if err != nil {
+		ix.mu.Lock()
+		ix.forgetLocked(r.Name)
+		ix.mu.Unlock()
+		return Status{}, err
+	}
+	ix.Reindex(r.Name)
+	st, _ := ix.Status(r.Name)
+	return st, nil
+}
+
+// RemoveRoot removes a root added in the UI and its data. A run in progress
+// is cancelled; its data goes when it stops.
+func (ix *Indexer) RemoveRoot(name string) error {
+	ix.mu.Lock()
+	r, ok := ix.runs[name]
+	if !ok {
+		ix.mu.Unlock()
+		return errNotFound
+	}
+	if r.root.Source != SourceUI {
+		ix.mu.Unlock()
+		return errConfigRoot
+	}
+	ix.forgetLocked(name)
+	// The name stays busy until its data is gone (here, or when the run
+	// in progress stops).
+	ix.removing[name] = true
+	running := r.running
+	if running {
+		r.removed = true
+		if r.cancel != nil {
+			r.cancel()
+		}
+	}
+	ix.mu.Unlock()
+	_, err := ix.db.Exec(`DELETE FROM code_ui_roots WHERE name = ?`, name)
+	if running {
+		return err
+	}
+	if err == nil {
+		err = ix.dropRoot(name)
+	}
+	ix.mu.Lock()
+	delete(ix.removing, name)
+	ix.mu.Unlock()
+	return err
+}
+
+func (ix *Indexer) forgetLocked(name string) {
+	delete(ix.runs, name)
+	for i, have := range ix.roots {
+		if have.Name == name {
+			ix.roots = append(ix.roots[:i:i], ix.roots[i+1:]...)
+			break
+		}
+	}
+}
+
+// uiRoots reads the roots stored by AddRoot.
+func uiRoots(db *sql.DB) ([]Root, error) {
+	rows, err := db.Query(`SELECT name, path FROM code_ui_roots ORDER BY added_at, name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Root
+	for rows.Next() {
+		var r Root
+		if err := rows.Scan(&r.Name, &r.Path); err != nil {
+			return nil, err
+		}
+		r.Source = SourceUI
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+func (ix *Indexer) storeRoot(r Root) error {
+	_, err := ix.db.Exec(`INSERT INTO code_roots (name, path) VALUES (?, ?) ON CONFLICT(name) DO UPDATE SET path = excluded.path`, r.Name, r.Path)
+	return err
 }
 
 // prepare drops the data of roots no longer in the config and loads the
 // counts of the ones that are, so the status is right before the first run.
 func (ix *Indexer) prepare() error {
 	names := map[string]bool{}
-	for _, r := range ix.cfg.Roots {
+	for _, r := range ix.roots {
 		names[r.Name] = true
 	}
 	rows, err := ix.db.Query(`SELECT name FROM code_roots`)
@@ -155,8 +296,8 @@ func (ix *Indexer) prepare() error {
 			return err
 		}
 	}
-	for _, r := range ix.cfg.Roots {
-		if _, err := ix.db.Exec(`INSERT INTO code_roots (name, path) VALUES (?, ?) ON CONFLICT(name) DO UPDATE SET path = excluded.path`, r.Name, r.Path); err != nil {
+	for _, r := range ix.roots {
+		if err := ix.storeRoot(r); err != nil {
 			return err
 		}
 		var indexedAt string
@@ -191,7 +332,11 @@ func (ix *Indexer) loadCounts(name string) {
 	_ = ix.db.QueryRow(`SELECT COUNT(*) FROM code_edges WHERE root = ?`, name).Scan(&edges)
 	ix.mu.Lock()
 	defer ix.mu.Unlock()
-	st := &ix.runs[name].status
+	r, ok := ix.runs[name]
+	if !ok {
+		return
+	}
+	st := &r.status
 	st.Files, st.Symbols, st.Edges, st.ParseErrors = files, symbols, edges, perr
 }
 
@@ -218,7 +363,7 @@ func (ix *Indexer) Reindex(name string) bool {
 
 // ReindexAll starts a run for every root.
 func (ix *Indexer) ReindexAll() {
-	for _, r := range ix.cfg.Roots {
+	for _, r := range ix.Roots() {
 		ix.Reindex(r.Name)
 	}
 }
@@ -229,7 +374,29 @@ func (ix *Indexer) Wait() { ix.wg.Wait() }
 func (ix *Indexer) loop(r *run) {
 	defer ix.wg.Done()
 	for {
-		err := ix.index(context.Background(), r.root)
+		ctx, cancel := context.WithCancel(context.Background())
+		ix.mu.Lock()
+		r.cancel = cancel
+		removed := r.removed
+		ix.mu.Unlock()
+		var err error
+		if !removed {
+			err = ix.index(ctx, r.root)
+		}
+		cancel()
+		ix.mu.Lock()
+		removed = r.removed
+		ix.mu.Unlock()
+		if removed {
+			if err := ix.dropRoot(r.root.Name); err != nil {
+				slog.Warn("code graph: dropping a removed root failed", "root", r.root.Name, "err", err)
+			}
+			ix.mu.Lock()
+			delete(ix.removing, r.root.Name)
+			r.running = false
+			ix.mu.Unlock()
+			return
+		}
 		if err != nil {
 			slog.Warn("code graph: indexing failed", "root", r.root.Name, "err", err)
 		}
@@ -255,7 +422,9 @@ func (ix *Indexer) loop(r *run) {
 func (ix *Indexer) progress(name string, fn func(s *Status)) {
 	ix.mu.Lock()
 	defer ix.mu.Unlock()
-	fn(&ix.runs[name].status)
+	if r, ok := ix.runs[name]; ok {
+		fn(&r.status)
+	}
 }
 
 type diskFile struct {

@@ -186,7 +186,8 @@ func (a *App) Run() {
 		// The code graph page asks this first; with no roots it shows how to turn it on.
 		mux.Handle("GET /api/code/roots", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{"enabled": false, "snippets": false, "roots": []any{}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"enabled": false, "snippets": false, "roots": []any{},
+				"picker": map[string]any{"enabled": false, "can_manage": false, "hint": codeGraphPickerHint}})
 		})))
 	}
 
@@ -401,3 +402,7 @@ func seedProjects(db *sql.DB, projects []ProjectDef) {
 		}
 	}
 }
+
+// codeGraphPickerHint matches codegraph.PickerHint (the module is not
+// registered when the code graph is off).
+const codeGraphPickerHint = "Set code_graph.base_dir (env CODE_GRAPH_BASE_DIR) to the folder Buggregator may add code from. In Docker, mount it first: -v ~/projects:/code -e CODE_GRAPH_BASE_DIR=/code"
