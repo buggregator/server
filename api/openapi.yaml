@@ -2291,7 +2291,8 @@ paths:
         recipients and drops Cc. Only the Buggregator UI itself may call it (same origin; another
         page and the WebSocket RPC bridge are refused). Without auth only a request from this
         machine is taken (loopback peer and Host, no forwarding headers), and only when
-        `smtp_relay.allowed_recipients` is set (409 otherwise): a proxy on the same host makes
+        `smtp_relay.allowed_recipients` is set and every pattern has an exact domain (409 otherwise,
+        so `*` or `*@*` keep release off): a proxy on the same host makes
         outside requests look local. Docker, another machine or a proxy need auth on. At most 10
         messages a minute and 20 recipients a message; recipients must match
         `smtp_relay.allowed_recipients` when set. The envelope sender is

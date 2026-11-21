@@ -38,19 +38,41 @@ type RelayConfig struct {
 // Enabled reports whether a relay is configured.
 func (c RelayConfig) Enabled() bool { return strings.TrimSpace(c.Host) != "" }
 
-// needsAllowList: without auth a proxy on this host makes outside requests
-// look local, so release then also needs allowed_recipients, and mail can go
-// only to the owner's own addresses.
-func (c RelayConfig) needsAllowList() bool {
+// noAuthBlock is why release is off without auth, or "" when it may go.
+// Without auth a proxy on this host makes outside requests look local, so
+// mail may go only to the owner's own addresses: the list must have a
+// pattern, and every pattern a literal domain. A wildcard
+// domain ("*", "*@*", "*@*.com") would let mail go anywhere again.
+func (c RelayConfig) noAuthBlock() string {
 	if c.AuthOn {
+		return ""
+	}
+	any := false
+	for _, p := range c.AllowedRecipients {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if !literalDomain(p) {
+			return fmt.Sprintf("without auth, smtp_relay.allowed_recipients cannot hold %q: it matches any domain. Use your own addresses, like *@mycompany.com, or turn auth on", p)
+		}
+		any = true
+	}
+	if !any {
+		return allowListHint
+	}
+	return ""
+}
+
+// literalDomain: the pattern has a domain after its last @ with no glob
+// characters, so it cannot reach other domains.
+func literalDomain(p string) bool {
+	i := strings.LastIndex(p, "@")
+	if i < 0 {
 		return false
 	}
-	for _, p := range c.AllowedRecipients {
-		if strings.TrimSpace(p) != "" {
-			return false
-		}
-	}
-	return true
+	d := p[i+1:]
+	return d != "" && !strings.ContainsAny(d, "*?[]\\")
 }
 
 const allowListHint = "without auth, release needs smtp_relay.allowed_recipients: your own addresses, like *@mycompany.com"
