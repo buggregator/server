@@ -96,6 +96,12 @@ func (h *handler) Match(r *http.Request) bool {
 }
 
 func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
+	// broadcast.upstream points back at Buggregator: each hop would forward
+	// again until the app gives up. Stop at the second hop; the first one
+	// stores the event and shows this answer as the upstream's.
+	if r.Header.Get(forwardedHeader) != "" {
+		return respond(http.StatusLoopDetected, []byte(`{"error":"broadcast.upstream points at Buggregator itself: set it to the real Reverb/Pusher server"}`)), nil
+	}
 	body, err := io.ReadAll(io.LimitReader(r.Body, maxBody+1))
 	if err != nil {
 		return nil, err
@@ -139,7 +145,7 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 
 	status, answer, up := http.StatusOK, []byte("{}"), (*Upstream)(nil)
 	if h.cfg.Upstream != "" {
-		up = &Upstream{URL: h.cfg.Upstream}
+		up = &Upstream{URL: safeURL(h.cfg.Upstream)}
 		status, answer = h.forward(r, body, up)
 	}
 
@@ -154,18 +160,40 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 			return nil, errors.New("broadcast: no event service")
 		}
 		if err := h.es.HandleIncoming(r.Context(), &event.Incoming{Type: "broadcast", Payload: raw, Project: project}); err != nil {
-			return nil, err
+			if up == nil {
+				return nil, err
+			}
+			// The upstream already took it: answer the app as it did.
+			slog.Error("broadcast: storing a forwarded event failed", "err", err)
 		}
 	}
 
 	// The client wants 200 and JSON (Laravel throws BroadcastException
 	// otherwise): {} when we are the server, the upstream's own answer when
 	// forwarding, so a down Reverb fails the app as it would without us.
+	return respond(status, answer), nil
+}
+
+// forwardedHeader marks a request Buggregator forwarded, to catch a loop.
+const forwardedHeader = "X-Buggregator-Forwarded"
+
+// respond answers the client without storing anything more.
+func respond(status int, answer []byte) *event.Incoming {
 	return &event.Incoming{Type: "broadcast", NoEvent: true, Respond: func(w http.ResponseWriter) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(status)
 		_, _ = w.Write(answer)
-	}}, nil
+	}}
+}
+
+// safeURL is the upstream as shown on a card: without user:password.
+func safeURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.User == nil {
+		return raw
+	}
+	u.User = nil
+	return u.String()
 }
 
 // wireEvent is an event as the client sends it: one channel or several.
@@ -224,7 +252,7 @@ func (e *Event) annotate() {
 		e.Warnings = append(e.Warnings, "data is not JSON: Laravel Echo cannot parse it")
 	}
 	if e.Signature == "invalid" {
-		e.Warnings = append(e.Warnings, "signature does not match the configured secret: the app's secret differs")
+		e.Warnings = append(e.Warnings, "signature or body hash does not match the configured secret: the app's secret differs, or the body changed on the way")
 	}
 }
 
@@ -296,6 +324,7 @@ func (h *handler) forward(r *http.Request, body []byte, up *Upstream) (int, []by
 				req.Header.Set(k, v)
 			}
 		}
+		req.Header.Set(forwardedHeader, "1")
 		var resp *http.Response
 		resp, err = h.client.Do(req)
 		if err == nil {

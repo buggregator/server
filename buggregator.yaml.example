@@ -58,7 +58,10 @@ smtp_relay:
 # soketi clients call. Point REVERB_HOST/REVERB_PORT (or PUSHER_HOST/PUSHER_PORT)
 # at Buggregator; each event becomes a card. Without upstream the app gets {}
 # and browsers get nothing; with upstream the same request also goes to the
-# real server and the app gets its answer.
+# real server and the app gets its answer. Change only the server-side
+# REVERB_HOST/REVERB_PORT: keep VITE_REVERB_* (the browsers' WebSocket) on
+# Reverb, as Laravel's .env derives them from REVERB_HOST by default. Only
+# POSTs are caught: channel queries (GET /apps/{id}/channels) are not.
 broadcast:
   upstream: ${BROADCAST_UPSTREAM:}                # e.g. http://127.0.0.1:8080 (Reverb). Empty = capture only
   # apps:                                         # check request signatures; env BROADCAST_APPS="key:secret,..."
