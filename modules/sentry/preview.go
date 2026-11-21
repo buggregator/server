@@ -35,7 +35,7 @@ func (p *previewMapper) ToSearchableText(payload json.RawMessage) string {
 	}
 
 	text := ""
-	if m, ok := previewMessage(data).(string); ok && m != "" {
+	if m := messageText(previewMessage(data)); m != "" {
 		text += m + " "
 	}
 	for _, key := range []string{"level", "environment", "server_name", "platform"} {
@@ -57,7 +57,7 @@ func (p *previewMapper) ToSearchableText(payload json.RawMessage) string {
 }
 
 // previewMessage is the event's message, else its logentry text (formatted,
-// then the template): captureMessage in the Python and PHP SDKs sends only
+// then the template): older SDKs and Python's logging integration send only
 // logentry, and the feed card and desktop notification would show no text.
 func previewMessage(data map[string]any) any {
 	if m, ok := data["message"]; ok && m != nil && m != "" {
@@ -71,6 +71,22 @@ func previewMessage(data map[string]any) any {
 		}
 	}
 	return data["message"]
+}
+
+// messageText is the text of a message: a string, or the object form
+// {formatted, message, params} sentry-php sends when there are params.
+func messageText(m any) string {
+	switch v := m.(type) {
+	case string:
+		return v
+	case map[string]any:
+		for _, k := range []string{"formatted", "message"} {
+			if s, ok := v[k].(string); ok && s != "" {
+				return s
+			}
+		}
+	}
+	return ""
 }
 
 func limitExceptionFrames(exc any, max int) any {
