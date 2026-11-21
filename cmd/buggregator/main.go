@@ -16,6 +16,7 @@ import (
 	httpserver "github.com/buggregator/server/v2/internal/server/http"
 	"github.com/buggregator/server/v2/internal/server/ws"
 	"github.com/buggregator/server/v2/internal/storage"
+	"github.com/buggregator/server/v2/modules/csp"
 	"github.com/buggregator/server/v2/modules/httpdumps"
 	"github.com/buggregator/server/v2/modules/inspector"
 	"github.com/buggregator/server/v2/modules/monolog"
@@ -184,6 +185,9 @@ func run() {
 	}
 	if enabled.IsEnabled("sms") {
 		registry.Register(sms.New())
+	}
+	if enabled.IsEnabled("csp") {
+		registry.Register(csp.New())
 	}
 	// Xdebug proxy — off by default; forwards DBGp to the IDE, adds read-only
 	// MCP tools and the /api/xdebug routes + "xdebug" WebSocket channel for the UI.

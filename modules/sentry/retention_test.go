@@ -53,6 +53,7 @@ func TestPruneBefore(t *testing.T) {
 	for table, want := range map[string]int{
 		"sentry_transactions": 0, "sentry_spans": 2, "sentry_traces": 2,
 		"sentry_logs": 2, "sentry_metrics": 2, "sentry_error_events": 2,
+		"sentry_feedback": 4,
 	} {
 		if got := countRows(t, db, table, ""); got != want {
 			t.Errorf("after 1h cutoff %s = %d, want %d", table, got, want)
@@ -71,6 +72,7 @@ func TestPruneBefore(t *testing.T) {
 		"sentry_spans": 0, "sentry_traces": 0,
 		"sentry_logs": 0, "sentry_metrics": 0, "sentry_error_events": 1,
 		"sentry_exceptions": 1, "sentry_breadcrumbs": 1,
+		"sentry_feedback": 1, // the pinned card's
 	} {
 		if got := countRows(t, db, table, ""); got != want {
 			t.Errorf("after future cutoff %s = %d, want %d", table, got, want)

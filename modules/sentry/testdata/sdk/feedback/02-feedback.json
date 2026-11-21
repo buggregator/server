@@ -1,0 +1,8 @@
+{
+ "method": "POST",
+ "path": "/api/42/envelope/?sentry_version=7&sentry_key=publickey&sentry_client=sentry.javascript.node%2F11.11.0",
+ "headers": {
+  "user-agent": "sentry.javascript.node/11.11.0"
+ },
+ "body": "{\"event_id\":\"05703a9d468644178ef5a4d904a395c3\",\"sent_at\":\"2026-11-21T14:21:34.092Z\",\"sdk\":{\"name\":\"sentry.javascript.node\",\"version\":\"11.11.0\"},\"trace\":{\"environment\":\"production\",\"public_key\":\"publickey\",\"trace_id\":\"16bcda95214145f795ed71b9be9eb0fb\"}}\n{\"type\":\"feedback\"}\n{\"contexts\":{\"trace\":{\"trace_id\":\"16bcda95214145f795ed71b9be9eb0fb\",\"span_id\":\"b18200cb5ce244ca\"},\"feedback\":{\"contact_email\":\"jane@example.com\",\"name\":\"Jane Doe\",\"message\":\"The pay button did nothing\",\"url\":\"https://shop.test/cart\",\"associated_event_id\":\"5a703817209e4d3ba2536058845f8b88\"},\"runtime\":{\"name\":\"node\",\"version\":\"v25.8.2\"}},\"type\":\"feedback\",\"level\":\"info\",\"platform\":\"node\",\"server_name\":\"host-01\",\"event_id\":\"05703a9d468644178ef5a4d904a395c3\",\"timestamp\":1795270894.092,\"environment\":\"production\",\"sdk\":{\"integrations\":[\"SpanStreaming\"],\"name\":\"sentry.javascript.node\",\"version\":\"11.11.0\",\"packages\":[{\"name\":\"npm:@sentry/node\",\"version\":\"11.11.0\"}]}}\n"
+}
