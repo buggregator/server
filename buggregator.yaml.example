@@ -115,7 +115,7 @@ metrics:
 #   client_id: ${AUTH_CLIENT_ID:}                  # OAuth2 client ID
 #   client_secret: ${AUTH_CLIENT_SECRET:}          # OAuth2 client secret
 #   callback_url: ${AUTH_CALLBACK_URL:}            # Callback URL (e.g., http://localhost:8000/auth/sso/callback)
-#   scopes: ${AUTH_SCOPES:openid,email,profile}    # Comma-separated scopes
+#   scopes: ${AUTH_SCOPES:}                        # Comma-separated; empty = openid,email,profile (github: read:user,user:email)
 #   jwt_secret: ${AUTH_JWT_SECRET:}                # Secret for signing internal JWT tokens (required)
 #   # Who may sign in (the provider must confirm the email). Both empty = every
 #   # account the provider signs in, e.g. any Google account: set one when the
