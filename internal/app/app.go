@@ -148,6 +148,7 @@ func (a *App) Run() {
 
 		handlers := auth.NewHandlers(oauth, tokens, access)
 		handlers.SetStore(users, a.cfg.Auth.AdminEmails)
+		handlers.SetOnLogout(a.hub.RecheckTokens)
 		handlers.RegisterRoutes(mux)
 		handlers.RegisterProtectedRoutes(mux, authMiddleware)
 

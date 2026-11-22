@@ -68,8 +68,9 @@ paths:
       summary: The audit log, newest first (only when auth is on)
       description: 'Sign-ins (`login`, `login_denied`), `logout`, `settings.update` and every non-GET call of a protected
         route (`events.clear`, `event.delete`, `sentry.clear`, `smtp.clear`, else the route pattern such as `POST /api/mocks`).
-        Kept 90 days. Only for `auth.admin_emails`; none set: every signed-in user. The route exists only when auth
-        is on.'
+        A clear adds what it removed to `target` (`type=`, `project=`, `uuids=<count>`, `keep_pinned`). Kept 90 days.
+        Only for `auth.admin_emails`; none set: every signed-in user sees every entry, with emails and IPs. `ip` is
+        the TCP peer: behind a reverse proxy it is the proxy''s address. The route exists only when auth is on.'
       security:
       - authToken: []
       parameters:
@@ -120,6 +121,7 @@ paths:
                           description: HTTP status of the answer
                         ip:
                           type: string
+                          description: TCP peer of the request (a reverse proxy's address when behind one)
                   next_before:
                     type: integer
                     description: Pass as `before` for the next page; absent on an empty page
@@ -133,8 +135,8 @@ paths:
       - Auth
       operationId: logout
       summary: Sign out, revoking the token's session on the server (only when auth is on)
-      description: The token stops working at once for the API and for new WebSocket connections. Other sessions of the
-        same user stay. The route exists only when auth is on.
+      description: The token stops working at once for the API and the WebSocket; open sockets that connected with it
+        are closed (code 3500). Other sessions of the same user stay. The route exists only when auth is on.
       security:
       - authToken: []
       responses:

@@ -1,7 +1,9 @@
 package auth
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -76,6 +78,9 @@ func (h *Handlers) handleLogout(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.audit(r, AuditEntry{UserID: user.ID, UserLabel: labelOf(user), Action: "logout", Status: http.StatusNoContent})
+		if h.onLogout != nil {
+			h.onLogout()
+		}
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -124,26 +129,11 @@ func (h *Handlers) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	current, err := h.store.Settings(user.ID)
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "settings read failed")
-		return
-	}
-	n := len(current)
-	for k, v := range values {
-		_, had := current[k]
-		switch {
-		case string(v) == "null" && had:
-			n--
-		case string(v) != "null" && !had:
-			n++
+	if err := h.store.PutSettings(user.ID, values, maxSettingsKeys); err != nil {
+		if errors.Is(err, ErrTooManySettings) {
+			writeJSONError(w, http.StatusBadRequest, "at most 64 settings per user")
+			return
 		}
-	}
-	if n > maxSettingsKeys {
-		writeJSONError(w, http.StatusBadRequest, "at most 64 settings per user")
-		return
-	}
-	if err := h.store.PutSettings(user.ID, values); err != nil {
 		slog.Error("settings: write", "err", err)
 		writeJSONError(w, http.StatusInternalServerError, "settings write failed")
 		return
@@ -215,6 +205,10 @@ func AuditMiddleware(store *UserStore, authMiddleware func(http.Handler) http.Ha
 				next.ServeHTTP(w, r)
 				return
 			}
+			target := r.URL.RequestURI()
+			if r.Pattern == "DELETE /api/events" {
+				target += clearSummary(r)
+			}
 			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 			next.ServeHTTP(rec, r)
 			action := auditActions[r.Pattern]
@@ -224,7 +218,7 @@ func AuditMiddleware(store *UserStore, authMiddleware func(http.Handler) http.Ha
 			if action == "" {
 				action = r.Method + " " + r.URL.Path
 			}
-			e := AuditEntry{Action: action, Target: r.URL.RequestURI(), Status: rec.status}
+			e := AuditEntry{Action: action, Target: target, Status: rec.status}
 			if u := UserFromContext(r.Context()); u != nil {
 				e.UserID, e.UserLabel = u.ID, labelOf(u)
 			}
@@ -232,6 +226,44 @@ func AuditMiddleware(store *UserStore, authMiddleware func(http.Handler) http.Ha
 		})
 		return authMiddleware(inner)
 	}
+}
+
+// clearSummary describes what a clear removes, from its JSON body (type,
+// project, how many selected uuids, keep_pinned), and puts the body back for
+// the handler: " type=sentry uuids=3 keep_pinned". Empty for "clear all".
+func clearSummary(r *http.Request) string {
+	if r.Body == nil {
+		return ""
+	}
+	raw, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	r.Body.Close()
+	r.Body = io.NopCloser(bytes.NewReader(raw))
+	if err != nil {
+		return ""
+	}
+	var body struct {
+		Type       string   `json:"type"`
+		Project    string   `json:"project"`
+		UUIDs      []string `json:"uuids"`
+		KeepPinned bool     `json:"keep_pinned"`
+	}
+	if json.Unmarshal(raw, &body) != nil {
+		return ""
+	}
+	var b strings.Builder
+	if body.Type != "" {
+		b.WriteString(" type=" + body.Type)
+	}
+	if body.Project != "" {
+		b.WriteString(" project=" + body.Project)
+	}
+	if len(body.UUIDs) > 0 {
+		b.WriteString(" uuids=" + strconv.Itoa(len(body.UUIDs)))
+	}
+	if body.KeepPinned {
+		b.WriteString(" keep_pinned")
+	}
+	return b.String()
 }
 
 // PruneLoop deletes audit entries older than 90 days and closed sessions,

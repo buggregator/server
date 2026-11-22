@@ -35,6 +35,14 @@ type Handlers struct {
 	store *UserStore
 	// admins may read the audit log; empty: every signed-in user.
 	admins map[string]bool
+	// onLogout runs after a session is revoked (the hub closes its sockets).
+	onLogout func()
+}
+
+// SetOnLogout sets a function run after a logout revoked a session, e.g.
+// closing the WebSocket connections whose token stopped working.
+func (h *Handlers) SetOnLogout(f func()) {
+	h.onLogout = f
 }
 
 // NewHandlers creates auth HTTP handlers. access limits who may sign in;

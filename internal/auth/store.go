@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -95,16 +96,13 @@ func (s *UserStore) Settings(userID string) (map[string]json.RawMessage, error) 
 	return out, rows.Err()
 }
 
-// SettingsCount returns how many keys the user has stored.
-func (s *UserStore) SettingsCount(userID string) (int, error) {
-	var n int
-	err := s.db.QueryRow(`SELECT COUNT(*) FROM user_settings WHERE user_id = ?`, userID).Scan(&n)
-	return n, err
-}
+// ErrTooManySettings: the change would leave the user more keys than allowed.
+var ErrTooManySettings = errors.New("too many settings")
 
 // PutSettings merges values into the user's settings; a JSON null removes
-// the key.
-func (s *UserStore) PutSettings(userID string, values map[string]json.RawMessage) error {
+// the key. With maxKeys > 0 a change that would leave more keys is refused
+// (ErrTooManySettings), checked in the same transaction.
+func (s *UserStore) PutSettings(userID string, values map[string]json.RawMessage, maxKeys int) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
@@ -121,6 +119,15 @@ func (s *UserStore) PutSettings(userID string, values map[string]json.RawMessage
 		}
 		if err != nil {
 			return err
+		}
+	}
+	if maxKeys > 0 {
+		var n int
+		if err := tx.QueryRow(`SELECT COUNT(*) FROM user_settings WHERE user_id = ?`, userID).Scan(&n); err != nil {
+			return err
+		}
+		if n > maxKeys {
+			return ErrTooManySettings
 		}
 	}
 	return tx.Commit()

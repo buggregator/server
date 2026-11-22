@@ -69,10 +69,10 @@ func TestUserStore(t *testing.T) {
 		t.Fatalf("revoked session valid (err %v)", err)
 	}
 
-	if err := s.PutSettings(id1, map[string]json.RawMessage{"theme": json.RawMessage(`"dark"`), "cols": json.RawMessage(`[1,2]`)}); err != nil {
+	if err := s.PutSettings(id1, map[string]json.RawMessage{"theme": json.RawMessage(`"dark"`), "cols": json.RawMessage(`[1,2]`)}, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.PutSettings(id1, map[string]json.RawMessage{"theme": json.RawMessage(`null`), "x": json.RawMessage(`{"a":1}`)}); err != nil {
+	if err := s.PutSettings(id1, map[string]json.RawMessage{"theme": json.RawMessage(`null`), "x": json.RawMessage(`{"a":1}`)}, 0); err != nil {
 		t.Fatal(err)
 	}
 	got, _ := s.Settings(id1)
@@ -332,5 +332,24 @@ func TestSkipAudit(t *testing.T) {
 		if got := skipAudit(r); got != want {
 			t.Errorf("%s: skip %v, want %v", pattern, got, want)
 		}
+	}
+}
+
+// The key cap is checked in the write's transaction: a change over it
+// writes nothing.
+func TestUserStore_SettingsCap(t *testing.T) {
+	s := newUserStore(t)
+	v := json.RawMessage(`1`)
+	if err := s.PutSettings("u", map[string]json.RawMessage{"a": v, "b": v}, 2); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.PutSettings("u", map[string]json.RawMessage{"c": v}, 2); err != ErrTooManySettings {
+		t.Fatalf("err %v, want ErrTooManySettings", err)
+	}
+	if err := s.PutSettings("u", map[string]json.RawMessage{"a": json.RawMessage(`null`), "c": v}, 2); err != nil {
+		t.Fatalf("swap within the cap: %v", err)
+	}
+	if got, _ := s.Settings("u"); len(got) != 2 || got["c"] == nil {
+		t.Errorf("settings %v", got)
 	}
 }

@@ -123,7 +123,10 @@ metrics:
 #   # the list, so setting one also signs out sessions that do not match it.
 #   allowed_emails: []                             # e.g. ["me@gmail.com"]; env AUTH_ALLOWED_EMAILS
 #   allowed_domains: []                            # e.g. ["mycompany.com"]; google: Workspace (hd) domain, others: email domain; env AUTH_ALLOWED_DOMAINS
-#   admin_emails: []                               # who may read the audit log (GET /api/audit); empty = every signed-in user; env AUTH_ADMIN_EMAILS
+#   # Audit log (GET /api/audit): sign-ins, logouts, clears, deletes, settings.
+#   # Empty admin_emails = every signed-in user sees it, with every user's email
+#   # and IP. The IP is the TCP peer: behind a reverse proxy, the proxy's.
+#   admin_emails: []                               # env AUTH_ADMIN_EMAILS
 
 # TCP servers
 tcp:
