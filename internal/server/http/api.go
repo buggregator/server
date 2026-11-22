@@ -90,7 +90,7 @@ func parseListOptions(r *http.Request, lim ListLimits) event.FindOptions {
 	}
 
 	opts.Filters = parseFacetFilters(q)
-	opts.Search = strings.TrimSpace(q.Get("q"))
+	opts.Search = strings.TrimSpace(strings.ReplaceAll(q.Get("q"), "\x00", ""))
 
 	return opts
 }

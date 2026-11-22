@@ -13,6 +13,7 @@ when compressed). `sdk_fixtures_test.go` replays them through the handler.
 | `feedback` | `@sentry/node` 11.11.0; `@sentry/browser` 7.120.4 | user feedback: an error, a `feedback` item on it, a `feedback` alone, a legacy `user_report` on the error |
 | `crons-node` | `@sentry/node` 11.11.0 | cron `check_in` items: `withMonitor` (crontab `monitor_config`, then `ok` with duration in seconds); `captureCheckIn` interval `in_progress` then `error`; no `environment` in the item (only in the envelope `trace`) |
 | `crons-php` | `sentry/sentry` 4.38.0 (PHP 8, Docker) | gzip; `check_in` item with `content_type`, `duration: null` on `in_progress`, `release: ""`, `unit: ""` on crontab, null thresholds; envelope has `dsn` and `event_id` |
+| `laravel-n1` | `sentry/sentry-laravel` 4.31.0 (Laravel 12, PHP 8.3, Docker; `buggregator/examples` app) | one gzip `transaction` for `GET /n1`: 30 posts, each lazy-loading its user and counting comments (N+1, 2×30 `db.sql.query` spans); `SENTRY_TRACE_SQL_ORIGIN_THRESHOLD_MS=0`, yet those spans carry no `code.*` (the SDK looks only 20 frames deep) |
 
 Each script sends: an exception with a breadcrumb, user and tag; a warning
 message; a transaction `GET /orders` with a DB span and an HTTP client span

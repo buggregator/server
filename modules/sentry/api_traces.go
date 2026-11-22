@@ -90,11 +90,11 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 
 		// Collect rows first to release the DB connection (SQLite single-writer).
 		type traceRow struct {
-			traceID, txnID, txnName    string
-			op, status                 sql.NullString
-			durationMS                 sql.NullInt64
-			spanCount, errorCount      int
-			startTS                    sql.NullString
+			traceID, txnID, txnName string
+			op, status              sql.NullString
+			durationMS              sql.NullInt64
+			spanCount, errorCount   int
+			startTS                 sql.NullString
 		}
 		var traceRows []traceRow
 		for rows.Next() {
@@ -198,6 +198,7 @@ func handleTraceDetail(db *sql.DB) http.HandlerFunc {
 			"spans":             spans,
 			"related_errors":    relatedErrors,
 			"related_log_count": relatedLogCount,
+			"n_plus_one":        loadNPlusOne(db, traceID, pc, pa),
 		}
 
 		apiJSON(w, result)
@@ -220,15 +221,15 @@ func loadAllSpans(db *sql.DB, traceID, rootTxnID string, txnStartTS sql.NullStri
 	var result []map[string]any
 	for rows.Next() {
 		var (
-			spanID                            string
-			parentSpanID, op, description     sql.NullString
-			status                            sql.NullString
-			sStartTS                          sql.NullString
-			durationMS                        sql.NullInt64
-			peerType, peerAddress             sql.NullString
-			isError                           int
-			spanSrc                           string
-			serviceName, attrsStr             sql.NullString
+			spanID                        string
+			parentSpanID, op, description sql.NullString
+			status                        sql.NullString
+			sStartTS                      sql.NullString
+			durationMS                    sql.NullInt64
+			peerType, peerAddress         sql.NullString
+			isError                       int
+			spanSrc                       string
+			serviceName, attrsStr         sql.NullString
 		)
 		if err := rows.Scan(&spanID, &parentSpanID, &op, &description, &status, &sStartTS, &durationMS, &peerType, &peerAddress, &isError, &spanSrc, &serviceName, &attrsStr); err != nil {
 			continue
@@ -407,7 +408,7 @@ func traceSourcesServices(db *sql.DB, traceID string, projectClause string, proj
 func loadRelatedErrors(db *sql.DB, traceID string, projectClause string, projectArgs []any) []map[string]any {
 	// Use a single query to avoid nested connection issues with SQLite.
 	rows, err := db.Query(
-		`SELECT e.event_id, se.exception_type, ` + tsUTC("e.received_at") + `
+		`SELECT e.event_id, se.exception_type, `+tsUTC("e.received_at")+`
 		FROM sentry_error_events e
 		LEFT JOIN sentry_exceptions se ON se.error_event_id = e.id AND se.position = 0
 		WHERE e.trace_id = ?`+strings.Replace(projectClause, "project_id", "e.project_id", 1)+` ORDER BY e.received_at DESC`, append([]any{traceID}, projectArgs...)...,

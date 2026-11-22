@@ -24,6 +24,11 @@ var facetParams = []string{
 // one parameter are OR-ed, different parameters AND-ed.
 //
 //	?host=web-1&host=web-2&env=staging&tag=feature:checkout&not.level=debug
+
+// maxHistogramBucketSec caps ?bucket= at 366 days: a larger width would
+// overflow the bucket arithmetic.
+const maxHistogramBucketSec = 366 * 24 * 3600
+
 func parseFacetFilters(q url.Values) []event.FacetFilter {
 	byKey := map[string]*event.FacetFilter{}
 	var order []string
@@ -118,8 +123,8 @@ func histogramHandler(store event.Store, lim ListLimits) http.HandlerFunc {
 		var bucket int64 = 60
 		if v := r.URL.Query().Get("bucket"); v != "" {
 			n, err := strconv.ParseInt(v, 10, 64)
-			if err != nil || n <= 0 {
-				writeError(w, "bucket: seconds, a positive integer", http.StatusBadRequest)
+			if err != nil || n <= 0 || n > maxHistogramBucketSec {
+				writeError(w, "bucket: seconds, a positive integer up to 31622400 (366 days)", http.StatusBadRequest)
 				return
 			}
 			bucket = n

@@ -185,9 +185,20 @@ func TestAPI_SearchAndHistogram(t *testing.T) {
 		t.Errorf("histogram q=cache bucket=10 = %d %+v", hist.Bucket, hist.Data)
 	}
 
-	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/events/histogram?bucket=0", nil))
-	if rec.Code != http.StatusBadRequest {
-		t.Errorf("bucket=0: status %d, want 400", rec.Code)
+	for _, b := range []string{"0", "9000000000000000000", "31622401"} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/events/histogram?bucket="+b, nil))
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("bucket=%s: status %d, want 400", b, rec.Code)
+		}
+	}
+
+	// NUL bytes in q are dropped, not passed to SQLite.
+	for _, path := range []string{"/api/events?q=%00%00%00", "/api/events?q=ord%00er", "/api/events/histogram?q=%00"} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusOK {
+			t.Errorf("%s: status %d, want 200: %s", path, rec.Code, rec.Body.String())
+		}
 	}
 }
