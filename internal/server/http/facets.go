@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 // facetParams are the query parameters of feed filters and the facet key
@@ -15,7 +17,7 @@ import (
 // excludes instead.
 var facetParams = []string{
 	event.FacetHost, event.FacetEnv, event.FacetUser,
-	event.FacetChannel, event.FacetLevel, event.FacetRelease,
+	event.FacetChannel, event.FacetLevel, event.FacetRelease, event.FacetTrace,
 }
 
 // parseFacetFilters reads feed filters from the query: repeated values of
@@ -94,5 +96,39 @@ func facetsHandler(store event.Store, lim ListLimits) http.HandlerFunc {
 		}
 		sort.Strings(keys)
 		writeJSON(w, map[string]any{"data": counts, "keys": keys})
+	}
+}
+
+// histogramer is the part of the store that counts events per time bucket.
+type histogramer interface {
+	Histogram(ctx context.Context, opts event.FindOptions, bucketSec int64) ([]storage.HistogramBucket, int64, error)
+}
+
+// histogramHandler answers GET /api/events/histogram: events per time
+// bucket (?bucket=seconds, default 60) split by level, under the same type,
+// project, window, filters and search as the feed.
+func histogramHandler(store event.Store, lim ListLimits) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		h, ok := store.(histogramer)
+		if !ok {
+			writeJSON(w, map[string]any{"bucket": 60, "data": []any{}})
+			return
+		}
+		opts := parseListOptions(r, lim)
+		var bucket int64 = 60
+		if v := r.URL.Query().Get("bucket"); v != "" {
+			n, err := strconv.ParseInt(v, 10, 64)
+			if err != nil || n <= 0 {
+				writeError(w, "bucket: seconds, a positive integer", http.StatusBadRequest)
+				return
+			}
+			bucket = n
+		}
+		data, used, err := h.Histogram(r.Context(), opts, bucket)
+		if err != nil {
+			writeError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, map[string]any{"bucket": used, "data": data})
 	}
 }

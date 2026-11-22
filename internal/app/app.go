@@ -89,6 +89,16 @@ func (a *App) Run() {
 				}
 			}()
 		}
+		// Full-text search (GET /api/events?q=): same cleanup and backfill.
+		if err := storage.InitSearch(ctx, a.db); err != nil {
+			slog.Error("search: create trigger", "err", err)
+		} else {
+			go func() {
+				if err := fs.BackfillSearch(ctx); err != nil && ctx.Err() == nil {
+					slog.Error("search: index stored events", "err", err)
+				}
+			}()
+		}
 	}
 
 	// Projects from the config file: after the migrations, which create the

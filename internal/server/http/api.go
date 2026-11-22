@@ -90,6 +90,7 @@ func parseListOptions(r *http.Request, lim ListLimits) event.FindOptions {
 	}
 
 	opts.Filters = parseFacetFilters(q)
+	opts.Search = strings.TrimSpace(q.Get("q"))
 
 	return opts
 }
@@ -194,6 +195,7 @@ func RegisterAPI(mux *http.ServeMux, store event.Store, previews *event.PreviewR
 
 	// Facet values with counts for feed filters.
 	protect("GET /api/events/facets", facetsHandler(store, listLimits))
+	protect("GET /api/events/histogram", histogramHandler(store, listLimits))
 
 	// List event previews.
 	protect("GET /api/events/preview", func(w http.ResponseWriter, r *http.Request) {

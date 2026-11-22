@@ -23,6 +23,10 @@ type FindOptions struct {
 
 	// Filters select events by their facets (machine, environment, tags…).
 	Filters []FacetFilter
+
+	// Search selects events whose indexed text (SearchTextExtractor)
+	// contains every word of it, case-insensitive. Empty: no search.
+	Search string
 }
 
 // DeleteOptions configures batch deletion.

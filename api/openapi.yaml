@@ -166,6 +166,8 @@ paths:
       - $ref: '#/components/parameters/FacetLevel'
       - $ref: '#/components/parameters/FacetRelease'
       - $ref: '#/components/parameters/FacetTag'
+      - $ref: '#/components/parameters/FacetTrace'
+      - $ref: '#/components/parameters/Search'
       responses:
         '200':
           description: Events and the limits that were applied
@@ -236,7 +238,7 @@ paths:
       - Events
       operationId: listEventFacets
       summary: Values events can be filtered by, with counts
-      description: 'For each facet key (`host`, `env`, `user`, `channel`, `level`, `release`, `tag:<name>`) its values
+      description: 'For each facet key (`host`, `env`, `user`, `channel`, `level`, `release`, `trace`, `tag:<name>`) its values
         with the number of events under the same type, project, window and filters as the feed, most frequent first,
         at most 50 per key. A key''s counts ignore the filter on that same key, so picking one host still lists the
         others.'
@@ -255,6 +257,8 @@ paths:
       - $ref: '#/components/parameters/FacetLevel'
       - $ref: '#/components/parameters/FacetRelease'
       - $ref: '#/components/parameters/FacetTag'
+      - $ref: '#/components/parameters/FacetTrace'
+      - $ref: '#/components/parameters/Search'
       responses:
         '200':
           description: Facet values with counts
@@ -281,6 +285,77 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/Error'
+  /api/events/histogram:
+    get:
+      tags:
+      - Events
+      operationId: eventsHistogram
+      summary: Events per time bucket, split by level
+      description: >-
+        Counts the events matching the same type, project, window, filters and search as the feed per time bucket.
+        Empty buckets are left out. A selection wider than 1440 buckets gets wider buckets: the reply's `bucket` is
+        the width used.
+      security:
+      - authToken: []
+      parameters:
+      - name: bucket
+        in: query
+        description: Bucket width in seconds (default 60)
+        schema:
+          type: integer
+          minimum: 1
+      - $ref: '#/components/parameters/EventType'
+      - $ref: '#/components/parameters/Project'
+      - $ref: '#/components/parameters/From'
+      - $ref: '#/components/parameters/To'
+      - $ref: '#/components/parameters/Window'
+      - $ref: '#/components/parameters/FacetHost'
+      - $ref: '#/components/parameters/FacetEnv'
+      - $ref: '#/components/parameters/FacetUser'
+      - $ref: '#/components/parameters/FacetChannel'
+      - $ref: '#/components/parameters/FacetLevel'
+      - $ref: '#/components/parameters/FacetRelease'
+      - $ref: '#/components/parameters/FacetTag'
+      - $ref: '#/components/parameters/FacetTrace'
+      - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Buckets, oldest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - bucket
+                - data
+                properties:
+                  bucket:
+                    type: integer
+                    description: Bucket width used, seconds
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - t
+                      - count
+                      - levels
+                      properties:
+                        t:
+                          type: integer
+                          description: Bucket start, unix seconds
+                        count:
+                          type: integer
+                          description: All events in the bucket, with or without a level
+                        levels:
+                          type: object
+                          description: Events per level facet (lower case), e.g. {"error":2,"info":5}
+                          additionalProperties:
+                            type: integer
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/events/preview:
     get:
       tags:
@@ -305,6 +380,8 @@ paths:
       - $ref: '#/components/parameters/FacetLevel'
       - $ref: '#/components/parameters/FacetRelease'
       - $ref: '#/components/parameters/FacetTag'
+      - $ref: '#/components/parameters/FacetTrace'
+      - $ref: '#/components/parameters/Search'
       responses:
         '200':
           description: Previews and the limits that were applied
@@ -4595,6 +4672,25 @@ components:
         items:
           type: string
       explode: true
+    FacetTrace:
+      name: trace
+      in: query
+      description: Only events of these traces (Monolog `extra.trace_id` / `context.trace_id`, put there by a processor
+        in the app). Repeatable; `not.trace` excludes.
+      schema:
+        type: array
+        items:
+          type: string
+      explode: true
+    Search:
+      name: q
+      in: query
+      description: >-
+        Full-text search: events whose indexed text contains every word of q, as a substring, case-insensitive
+        (Monolog: message, channel, keys and values of context and extra, first 4 KB). Quotes and other characters
+        are literal. Types without indexed text never match.
+      schema:
+        type: string
     FacetChannel:
       name: channel
       in: query

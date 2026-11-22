@@ -27,7 +27,9 @@ type eventFilterInput struct {
 	Level       []string `json:"level,omitempty" jsonschema:"Only events of these levels (Monolog level name, Sentry level)"`
 	Release     []string `json:"release,omitempty" jsonschema:"Only events of these releases (Sentry release)"`
 	Tag         []string `json:"tag,omitempty" jsonschema:"Only events with these tags, each as name:value (Sentry and profiler tags)"`
+	Trace       []string `json:"trace,omitempty" jsonschema:"Only events of these trace ids (Monolog extra.trace_id or context.trace_id)"`
 	ExcludeHost []string `json:"exclude_host,omitempty" jsonschema:"Leave out events from these machines"`
+	Query       string   `json:"query,omitempty" jsonschema:"Full-text search: every word must occur as a substring, case-insensitive (Monolog message, channel, context, extra)"`
 }
 
 // filters converts the input to store filters.
@@ -44,6 +46,7 @@ func (in eventFilterInput) filters() []event.FacetFilter {
 	add(event.FacetChannel, in.Channel, false)
 	add(event.FacetLevel, in.Level, false)
 	add(event.FacetRelease, in.Release, false)
+	add(event.FacetTrace, in.Trace, false)
 	add(event.FacetHost, in.ExcludeHost, true)
 	byTag := map[string][]string{}
 	var names []string
@@ -95,6 +98,7 @@ func registerEventTools(server *sdkmcp.Server, store event.Store) {
 			Project: input.Project,
 			Limit:   limit,
 			Filters: input.filters(),
+			Search:  input.Query,
 		})
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to list events: %w", err)
@@ -139,6 +143,7 @@ func registerEventTools(server *sdkmcp.Server, store event.Store) {
 				Type:    input.Type,
 				Project: input.Project,
 				Filters: input.filters(),
+				Search:  input.Query,
 			}, 20)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to count facets: %w", err)

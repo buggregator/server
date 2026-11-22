@@ -15,6 +15,9 @@ const (
 	FacetChannel = "channel"
 	FacetLevel   = "level"
 	FacetRelease = "release"
+	// FacetTrace is the trace id of the request an event belongs to: links
+	// logs, dumps and mails to its Sentry trace.
+	FacetTrace = "trace"
 
 	FacetTagPrefix = "tag:"
 )
@@ -56,7 +59,7 @@ type FacetCount struct {
 // IsFacetKey reports whether key is a known facet key.
 func IsFacetKey(key string) bool {
 	switch key {
-	case FacetHost, FacetEnv, FacetUser, FacetChannel, FacetLevel, FacetRelease:
+	case FacetHost, FacetEnv, FacetUser, FacetChannel, FacetLevel, FacetRelease, FacetTrace:
 		return true
 	}
 	return strings.HasPrefix(key, FacetTagPrefix) && len(key) > len(FacetTagPrefix)
