@@ -138,13 +138,15 @@ func run() {
 	}
 
 	// Register enabled modules.
+	var rayMod *ray.Module
 	if enabled.IsEnabled("sentry") {
 		sentryMod := sentry.New()
 		sentryMod.SetSourceFetch(cfg.Sentry.SourceFetch)
 		registry.Register(sentryMod)
 	}
 	if enabled.IsEnabled("ray") {
-		registry.Register(ray.New())
+		rayMod = ray.New()
+		registry.Register(rayMod)
 	}
 	if enabled.IsEnabled("inspector") {
 		registry.Register(inspector.New())
@@ -279,6 +281,9 @@ func run() {
 		vardumperMod.SetEventService(eventService)
 	}
 	proxyMod.SetEventService(eventService)
+	if rayMod != nil {
+		rayMod.SetEventService(eventService)
+	}
 	if broadcastMod != nil {
 		broadcastMod.SetEventService(eventService)
 	}
