@@ -2,22 +2,36 @@ package auth
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"html"
 	"log/slog"
 	"net/http"
 	"strings"
 )
 
-// Handlers provides HTTP handlers for the auth flow.
-type Handlers struct {
-	oauth  *OAuthClient
-	tokens *TokenStore
+// stateCookie carries the OAuth state from login to callback; a callback
+// whose state differs from it is refused (login CSRF).
+const stateCookie = "bg_oauth_state"
+
+// oauthProvider is what the handlers need from the OAuth client.
+type oauthProvider interface {
+	AuthCodeURL(state string) string
+	Exchange(code string) (*User, error)
 }
 
-// NewHandlers creates auth HTTP handlers.
-func NewHandlers(oauth *OAuthClient, tokens *TokenStore) *Handlers {
-	return &Handlers{oauth: oauth, tokens: tokens}
+// Handlers provides HTTP handlers for the auth flow.
+type Handlers struct {
+	oauth  oauthProvider
+	tokens *TokenStore
+	access AccessPolicy
+}
+
+// NewHandlers creates auth HTTP handlers. access limits who may sign in;
+// an empty policy lets in everyone the provider lets in.
+func NewHandlers(oauth oauthProvider, tokens *TokenStore, access AccessPolicy) *Handlers {
+	return &Handlers{oauth: oauth, tokens: tokens, access: access}
 }
 
 // RegisterRoutes registers auth endpoints on the mux.
@@ -35,8 +49,15 @@ func (h *Handlers) RegisterProtectedRoutes(mux *http.ServeMux, authMiddleware fu
 // handleLogin redirects the user to the OAuth2 provider's login page.
 func (h *Handlers) handleLogin(w http.ResponseWriter, r *http.Request) {
 	state := generateState()
-	// In a production system you'd store state in a cookie/session for CSRF validation.
-	// For simplicity, we skip state validation here (the PHP backend also doesn't validate it).
+	http.SetCookie(w, &http.Cookie{
+		Name:     stateCookie,
+		Value:    state,
+		Path:     "/auth/sso",
+		MaxAge:   600,
+		HttpOnly: true,
+		Secure:   isHTTPS(r),
+		SameSite: http.SameSiteLaxMode,
+	})
 	url := h.oauth.AuthCodeURL(state)
 	http.Redirect(w, r, url, http.StatusFound)
 }
@@ -44,6 +65,14 @@ func (h *Handlers) handleLogin(w http.ResponseWriter, r *http.Request) {
 // handleCallback handles the OAuth2 callback, exchanges the code for tokens,
 // creates an internal JWT, and redirects to the frontend with the token.
 func (h *Handlers) handleCallback(w http.ResponseWriter, r *http.Request) {
+	// The state cookie is single-use: clear it whatever the outcome.
+	http.SetCookie(w, &http.Cookie{Name: stateCookie, Path: "/auth/sso", MaxAge: -1, HttpOnly: true, Secure: isHTTPS(r), SameSite: http.SameSiteLaxMode})
+	if !validState(r) {
+		slog.Warn("SSO callback refused: state mismatch", "remote", r.RemoteAddr)
+		authPage(w, http.StatusBadRequest, "Sign-in expired", "This sign-in link is not valid any more. Start the sign-in again.")
+		return
+	}
+
 	code := r.URL.Query().Get("code")
 	if code == "" {
 		http.Error(w, `{"message":"missing code parameter","code":400}`, http.StatusBadRequest)
@@ -54,6 +83,16 @@ func (h *Handlers) handleCallback(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("OAuth exchange failed", "err", err)
 		http.Error(w, `{"message":"authentication failed","code":500}`, http.StatusInternalServerError)
+		return
+	}
+
+	if !h.access.Allows(*user) {
+		slog.Warn("SSO sign-in refused: not on the allow-list", "email", user.Email, "verified", user.EmailVerified, "provider", user.Provider)
+		who := user.Email
+		if who == "" {
+			who = "This account"
+		}
+		authPage(w, http.StatusForbidden, "Access denied", who+" is not allowed to sign in to this Buggregator. Ask its administrator to add you, or sign in with another account.")
 		return
 	}
 
@@ -87,6 +126,33 @@ func (h *Handlers) handleMe(w http.ResponseWriter, r *http.Request) {
 			"logout_url": "",
 		},
 	})
+}
+
+// validState checks the callback's state against the login's cookie.
+func validState(r *http.Request) bool {
+	c, err := r.Cookie(stateCookie)
+	if err != nil || c.Value == "" {
+		return false
+	}
+	got := r.URL.Query().Get("state")
+	return subtle.ConstantTimeCompare([]byte(c.Value), []byte(got)) == 1
+}
+
+// isHTTPS reports whether the browser reached us over HTTPS (directly or
+// through a proxy that says so).
+func isHTTPS(r *http.Request) bool {
+	return r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+}
+
+// authPage writes a small HTML page for a refused sign-in.
+func authPage(w http.ResponseWriter, status int, title, text string) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	_, _ = w.Write([]byte(`<!doctype html><html><head><meta charset="utf-8"><title>` + html.EscapeString(title) +
+		`</title></head><body style="font-family:sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem">` +
+		`<h1>` + html.EscapeString(title) + `</h1><p>` + html.EscapeString(text) +
+		`</p><p><a href="/auth/sso/login">Sign in again</a></p></body></html>`))
 }
 
 // generateState creates a random state string for OAuth2 CSRF protection.

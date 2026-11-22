@@ -139,11 +139,16 @@ func (a *App) Run() {
 			selfupdate.Exit(1)
 		}
 
-		handlers := auth.NewHandlers(oauth, tokens)
+		access := auth.NewAccessPolicy(a.cfg.Auth.AllowedEmails, a.cfg.Auth.AllowedDomains)
+		handlers := auth.NewHandlers(oauth, tokens, access)
 		handlers.RegisterRoutes(mux)
 		handlers.RegisterProtectedRoutes(mux, authMiddleware)
 
-		slog.Info("authentication enabled", "provider", a.cfg.Auth.Provider)
+		slog.Info("authentication enabled", "provider", a.cfg.Auth.Provider,
+			"allowed_emails", len(a.cfg.Auth.AllowedEmails), "allowed_domains", a.cfg.Auth.AllowedDomains)
+		if !access.Restricted() {
+			slog.Warn("auth: no allowed_emails/allowed_domains set: every account the provider signs in gets access")
+		}
 	} else {
 		authMiddleware = func(next http.Handler) http.Handler { return next }
 	}

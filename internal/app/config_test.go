@@ -467,3 +467,14 @@ func TestSMTPRelayConfig(t *testing.T) {
 		t.Errorf("String() shows the password: %s", s)
 	}
 }
+
+func TestEnvList(t *testing.T) {
+	file := []string{"file.com"}
+	if got := envList("BUGGREGATOR_TEST_LIST", file); len(got) != 1 || got[0] != "file.com" {
+		t.Fatalf("no env: %v", got)
+	}
+	t.Setenv("BUGGREGATOR_TEST_LIST", " a@x.com, ,acme.com ")
+	if got := envList("BUGGREGATOR_TEST_LIST", file); len(got) != 2 || got[0] != "a@x.com" || got[1] != "acme.com" {
+		t.Fatalf("env: %v", got)
+	}
+}

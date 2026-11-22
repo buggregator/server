@@ -15,12 +15,15 @@ type ProviderEndpoints struct {
 	AuthURL     string
 	TokenURL    string
 	UserInfoURL string
+	// EmailsURL lists the user's emails with their verified flag (GitHub).
+	EmailsURL string
 }
 
 // OAuthClient wraps an oauth2.Config and provider-specific user mapping.
 type OAuthClient struct {
 	config      oauth2.Config
 	userInfoURL string
+	emailsURL   string
 	provider    string
 }
 
@@ -52,6 +55,7 @@ func NewOAuthClient(provider, providerURL, clientID, clientSecret, callbackURL, 
 	return &OAuthClient{
 		config:      cfg,
 		userInfoURL: endpoints.UserInfoURL,
+		emailsURL:   endpoints.EmailsURL,
 		provider:    provider,
 	}, nil
 }
@@ -89,7 +93,45 @@ func (c *OAuthClient) fetchUser(client *http.Client) (*User, error) {
 		return nil, fmt.Errorf("user info returned %d: %s", resp.StatusCode, body)
 	}
 
-	return c.mapUser(body)
+	u, err := c.mapUser(body)
+	if err != nil {
+		return nil, err
+	}
+	if c.emailsURL != "" {
+		c.fillVerifiedEmail(client, u)
+	}
+	return u, nil
+}
+
+// fillVerifiedEmail sets the user's primary verified email from the
+// provider's emails list (GitHub /user/emails, scope user:email). Without
+// that scope the list is refused: the public profile email is kept, which
+// GitHub only lets a user pick from their verified emails.
+func (c *OAuthClient) fillVerifiedEmail(client *http.Client, u *User) {
+	resp, err := client.Get(c.emailsURL)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return
+	}
+	var emails []struct {
+		Email    string `json:"email"`
+		Primary  bool   `json:"primary"`
+		Verified bool   `json:"verified"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
+		return
+	}
+	for _, e := range emails {
+		if e.Primary && e.Verified {
+			u.Email = e.Email
+			u.EmailVerified = true
+			return
+		}
+	}
+	u.EmailVerified = false
 }
 
 // mapUser parses provider-specific JSON into a User.
@@ -106,11 +148,14 @@ func (c *OAuthClient) mapUser(body []byte) (*User, error) {
 		u.Username, _ = raw["login"].(string)
 		u.Email, _ = raw["email"].(string)
 		u.Avatar, _ = raw["avatar_url"].(string)
+		u.EmailVerified = u.Email != ""
 	default:
 		// OIDC-compatible providers (Auth0, Google, Keycloak, Okta, Azure AD, GitLab).
 		u.Username = strOr(raw, "nickname", "preferred_username", "name", "login")
 		u.Email, _ = raw["email"].(string)
 		u.Avatar, _ = raw["picture"].(string)
+		u.EmailVerified = claimTrue(raw["email_verified"])
+		u.HostedDomain, _ = raw["hd"].(string)
 	}
 
 	return u, nil
@@ -126,6 +171,7 @@ func resolveEndpoints(provider, providerURL string) (*ProviderEndpoints, error) 
 			AuthURL:     "https://github.com/login/oauth/authorize",
 			TokenURL:    "https://github.com/login/oauth/access_token",
 			UserInfoURL: "https://api.github.com/user",
+			EmailsURL:   "https://api.github.com/user/emails",
 		}, nil
 	default:
 		// Try OIDC discovery for all other providers.
@@ -186,4 +232,15 @@ func strOr(m map[string]any, keys ...string) string {
 		}
 	}
 	return ""
+}
+
+// claimTrue reads a boolean claim; some providers send "true" as a string.
+func claimTrue(v any) bool {
+	switch b := v.(type) {
+	case bool:
+		return b
+	case string:
+		return strings.EqualFold(b, "true")
+	}
+	return false
 }
