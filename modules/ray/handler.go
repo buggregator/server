@@ -10,7 +10,9 @@ import (
 	"github.com/buggregator/server/v2/internal/event"
 )
 
-type handler struct{}
+type handler struct {
+	locks *locks // nil: pauses are not tracked
+}
 
 func (h *handler) Priority() int { return 20 }
 
@@ -38,6 +40,14 @@ func (h *handler) Handle(r *http.Request) (*event.Incoming, error) {
 	if json.Unmarshal(body, &parsed) == nil {
 		if id, ok := parsed["uuid"].(string); ok {
 			uuid = id
+		}
+	}
+
+	// ray()->pause(): remember the lock before answering, the client polls
+	// GET /locks/{name} right after.
+	if h.locks != nil && uuid != "" {
+		for _, name := range lockNames(body) {
+			h.locks.create(name, uuid)
 		}
 	}
 
