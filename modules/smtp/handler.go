@@ -249,6 +249,12 @@ type ParsedEmail struct {
 	Text    string         `json:"text"`
 	HTML    string         `json:"html"`
 	Raw     string         `json:"raw"`
+	// Parts are the other body parts (Apple Watch, AMP, calendar, delivery
+	// reports…), in message order; omitted when there are none.
+	Parts []EmailPart `json:"parts,omitempty"`
+	// Calendar is the invite from a text/calendar part or an .ics
+	// attachment; omitted when there is none.
+	Calendar *CalendarInvite `json:"calendar,omitempty"`
 }
 
 func parseEmail(raw []byte, recipients []string) (*ParsedEmail, []parsedAttachment, error) {
@@ -315,7 +321,12 @@ func parseEmail(raw []byte, recipients []string) (*ParsedEmail, []parsedAttachme
 		if strings.HasPrefix(mediaType, "text/html") {
 			parsed.HTML = string(decoded)
 		} else {
+			// The body stays in text as before (codes, links, the older UI
+			// read it); another type is also a part.
 			parsed.Text = string(decoded)
+			if mediaType != "text/plain" && keepAsPart(mediaType) {
+				addPart(parsed, mediaType, "", decoded)
+			}
 		}
 		return parsed, nil, nil
 	}
@@ -333,7 +344,25 @@ func parseEmail(raw []byte, recipients []string) (*ParsedEmail, []parsedAttachme
 		processPart(part, parsed, &atts)
 	}
 
+	// No calendar part: an .ics attachment is the invite.
+	for _, a := range atts {
+		if parsed.Calendar != nil {
+			break
+		}
+		if isCalendar(a.Type, a.Filename) {
+			parsed.Calendar = parseCalendar(string(a.content))
+		}
+	}
+
 	return parsed, atts, nil
+}
+
+// addPart keeps an alternative body part and reads its invite.
+func addPart(parsed *ParsedEmail, mediaType, filename string, content []byte) {
+	parsed.Parts = append(parsed.Parts, newPart(mediaType, content))
+	if parsed.Calendar == nil && isCalendar(mediaType, filename) {
+		parsed.Calendar = parseCalendar(string(content))
+	}
 }
 
 func processPart(part *multipart.Part, parsed *ParsedEmail, atts *[]parsedAttachment) {
@@ -395,10 +424,13 @@ func processPart(part *multipart.Part, parsed *ParsedEmail, atts *[]parsedAttach
 	decoded := decodeContent(body, part.Header.Get("Content-Transfer-Encoding"))
 	decoded = convertToUTF8(decoded, params["charset"])
 
-	if strings.HasPrefix(mediaType, "text/html") {
+	switch {
+	case strings.HasPrefix(mediaType, "text/html"):
 		parsed.HTML += string(decoded)
-	} else if strings.HasPrefix(mediaType, "text/plain") || ct == "" {
+	case strings.HasPrefix(mediaType, "text/plain") || ct == "":
 		parsed.Text += string(decoded)
+	case keepAsPart(mediaType):
+		addPart(parsed, mediaType, part.FileName(), decoded)
 	}
 }
 

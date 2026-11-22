@@ -1,0 +1,26 @@
+From: Mail Delivery System <MAILER-DAEMON@mx.example.com>
+To: app@example.com
+Subject: Undelivered Mail Returned to Sender
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=delivery-status; boundary="r"
+
+--r
+Content-Type: text/plain; charset=us-ascii
+
+I'm sorry to have to inform you that your message could not be delivered.
+--r
+Content-Type: message/delivery-status
+
+Reporting-MTA: dns; mx.example.com
+
+Final-Recipient: rfc822; nobody@example.org
+Action: failed
+Status: 5.1.1
+Diagnostic-Code: smtp; 550 5.1.1 User unknown
+--r
+Content-Type: text/rfc822-headers
+
+From: app@example.com
+To: nobody@example.org
+Subject: Welcome
+--r--

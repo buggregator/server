@@ -1,0 +1,20 @@
+From: Shop <shop@example.com>
+To: ann@example.com
+Subject: Your order shipped
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b1"
+
+--b1
+Content-Type: text/plain; charset=utf-8
+
+Your order shipped.
+--b1
+Content-Type: text/watch-html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<b>Shipped</b> =E2=9C=93
+--b1
+Content-Type: text/html; charset=utf-8
+
+<html><body><h1>Your order shipped</h1></body></html>
+--b1--

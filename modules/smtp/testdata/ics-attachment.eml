@@ -1,0 +1,22 @@
+From: App <app@example.com>
+To: ann@example.com
+Subject: Your booking
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="m"
+
+--m
+Content-Type: text/html; charset=utf-8
+
+<p>Booking confirmed.</p>
+--m
+Content-Type: text/calendar; charset=utf-8; name=booking.ics
+Content-Disposition: attachment; filename=booking.ics
+
+BEGIN:VCALENDAR
+BEGIN:VEVENT
+SUMMARY:Haircut
+DTSTART;VALUE=DATE:20261205
+DTEND;VALUE=DATE:20261206
+END:VEVENT
+END:VCALENDAR
+--m--
