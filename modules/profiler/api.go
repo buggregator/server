@@ -91,8 +91,11 @@ func handleTopFunctions(db *sql.DB) http.HandlerFunc {
 		if metric == "" {
 			metric = "cpu"
 		}
-		SortFunctions(funcs, metric)
+		// order=asc sorts the whole profile before the cut: the lowest N, not
+		// the top N reversed.
+		SortFunctionsOrder(funcs, metric, r.URL.Query().Get("order") == "asc")
 
+		total := len(funcs)
 		if len(funcs) > limit {
 			funcs = funcs[:limit]
 		}
@@ -107,6 +110,7 @@ func handleTopFunctions(db *sql.DB) http.HandlerFunc {
 			"schema":         topFunctionsSchema(),
 			"overall_totals": map[string]any{"cpu": peaks.CPU, "wt": peaks.WallTime, "mu": peaks.Memory, "pmu": peaks.PeakMem, "ct": peaks.Calls},
 			"functions":      functions,
+			"total":          total,
 		})
 	}
 }

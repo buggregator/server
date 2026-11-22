@@ -1221,7 +1221,7 @@ paths:
       - name: metric
         in: query
         required: false
-        description: Sort key, descending. Unknown values act as `cpu`.
+        description: Sort key. Unknown values act as `cpu`.
         schema:
           type: string
           default: cpu
@@ -1236,6 +1236,17 @@ paths:
           - excl_mu
           - excl_pmu
           - excl_ct
+      - name: order
+        in: query
+        required: false
+        description: Sort direction, applied to the whole profile before `limit`; `asc` gives the lowest N. Other values act
+          as `desc`.
+        schema:
+          type: string
+          default: desc
+          enum:
+          - desc
+          - asc
       security:
       - authToken: []
       responses:
@@ -7251,7 +7262,11 @@ components:
       - schema
       - overall_totals
       - functions
+      - total
       properties:
+        total:
+          type: integer
+          description: Number of functions in the profile before `limit`.
         schema:
           type: array
           description: Fixed column definitions for the table.
