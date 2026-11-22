@@ -30,6 +30,9 @@ type AuthConfig struct {
 	// required). Both empty = everyone the provider lets in.
 	AllowedEmails  []string `yaml:"allowed_emails"`  // e.g. ["me@gmail.com"]; env AUTH_ALLOWED_EMAILS (comma list)
 	AllowedDomains []string `yaml:"allowed_domains"` // e.g. ["mycompany.com"]; google: Workspace (hd) domain; env AUTH_ALLOWED_DOMAINS
+	// AdminEmails may read the audit log (GET /api/audit). Empty = every
+	// signed-in user.
+	AdminEmails []string `yaml:"admin_emails"` // env AUTH_ADMIN_EMAILS (comma list)
 }
 
 // UIConfig bounds the event lists served to the UI.
@@ -545,6 +548,7 @@ func LoadConfig() Config {
 	cfg.Auth.JWTSecret = coalesce(os.Getenv("AUTH_JWT_SECRET"), fileCfg.Auth.JWTSecret)
 	cfg.Auth.AllowedEmails = envList("AUTH_ALLOWED_EMAILS", fileCfg.Auth.AllowedEmails)
 	cfg.Auth.AllowedDomains = envList("AUTH_ALLOWED_DOMAINS", fileCfg.Auth.AllowedDomains)
+	cfg.Auth.AdminEmails = envList("AUTH_ADMIN_EMAILS", fileCfg.Auth.AdminEmails)
 
 	// UI list limits.
 	cfg.UI.DefaultLimit = resolveLimit(0, fileCfg.UI.DefaultLimit, uiDefaultLimit, os.Getenv("UI_DEFAULT_LIMIT"))

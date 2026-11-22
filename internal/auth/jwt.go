@@ -20,12 +20,22 @@ type TokenClaims struct {
 	// so an allow-list set later also cuts sessions issued before it.
 	EmailVerified bool   `json:"email_verified,omitempty"`
 	HostedDomain  string `json:"hd,omitempty"`
+	// UserID and SessionID tie the token to a users row and a sessions row;
+	// a revoked session (Logout) makes the token invalid.
+	UserID    string `json:"uid,omitempty"`
+	SessionID string `json:"sid,omitempty"`
+}
+
+// SessionChecker reports whether a server-side session is still open.
+type SessionChecker interface {
+	SessionValid(sessionID string) bool
 }
 
 // TokenStore creates and validates internal JWT tokens.
 type TokenStore struct {
-	secret []byte
-	access AccessPolicy
+	secret   []byte
+	access   AccessPolicy
+	sessions SessionChecker
 }
 
 // NewTokenStore creates a new TokenStore with the given HMAC secret.
@@ -37,6 +47,13 @@ func NewTokenStore(secret string) *TokenStore {
 // whose user the policy refuses is invalid (HTTP API and WebSocket alike).
 func (s *TokenStore) SetAccess(p AccessPolicy) {
 	s.access = p
+}
+
+// SetSessions makes every token check also require an open server-side
+// session: tokens without one (issued before sessions existed) or with a
+// revoked or expired one are invalid.
+func (s *TokenStore) SetSessions(c SessionChecker) {
+	s.sessions = c
 }
 
 // Create issues a new JWT token for the given user.
@@ -54,6 +71,8 @@ func (s *TokenStore) Create(u User) (string, error) {
 
 		EmailVerified: u.EmailVerified,
 		HostedDomain:  u.HostedDomain,
+		UserID:        u.ID,
+		SessionID:     u.SessionID,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -77,6 +96,8 @@ func (c *TokenClaims) user() *User {
 		Avatar:        c.Avatar,
 		EmailVerified: c.EmailVerified,
 		HostedDomain:  c.HostedDomain,
+		ID:            c.UserID,
+		SessionID:     c.SessionID,
 	}
 }
 
@@ -109,6 +130,9 @@ func (s *TokenStore) parse(tokenStr string) (*TokenClaims, error) {
 	}
 	if !s.access.Allows(*claims.user()) {
 		return nil, fmt.Errorf("token user not allowed by the sign-in policy")
+	}
+	if s.sessions != nil && !s.sessions.SessionValid(claims.SessionID) {
+		return nil, fmt.Errorf("token session is closed")
 	}
 	return claims, nil
 }

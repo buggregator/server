@@ -60,6 +60,88 @@ tags:
 - name: Ray
   description: Ray pauses (ray()->pause())
 paths:
+  /api/audit:
+    get:
+      tags:
+      - Auth
+      operationId: listAudit
+      summary: The audit log, newest first (only when auth is on)
+      description: 'Sign-ins (`login`, `login_denied`), `logout`, `settings.update` and every non-GET call of a protected
+        route (`events.clear`, `event.delete`, `sentry.clear`, `smtp.clear`, else the route pattern such as `POST /api/mocks`).
+        Kept 90 days. Only for `auth.admin_emails`; none set: every signed-in user. The route exists only when auth
+        is on.'
+      security:
+      - authToken: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+      - name: before
+        in: query
+        description: Entries with a smaller id (`next_before` of the previous page)
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: One page of entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        at:
+                          type: string
+                          description: UTC, `2006-01-02T15:04:05.000000Z`
+                        user_id:
+                          type: string
+                        user:
+                          type: string
+                          description: Email (or name) of the user; `guest` when unknown
+                        action:
+                          type: string
+                        target:
+                          type: string
+                          description: Request path and query of an API call
+                        status:
+                          type: integer
+                          description: HTTP status of the answer
+                        ip:
+                          type: string
+                  next_before:
+                    type: integer
+                    description: Pass as `before` for the next page; absent on an empty page
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Not an admin
+  /api/auth/logout:
+    post:
+      tags:
+      - Auth
+      operationId: logout
+      summary: Sign out, revoking the token's session on the server (only when auth is on)
+      description: The token stops working at once for the API and for new WebSocket connections. Other sessions of the
+        same user stay. The route exists only when auth is on.
+      security:
+      - authToken: []
+      responses:
+        '204':
+          description: Signed out
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/event/{uuid}:
     parameters:
     - $ref: '#/components/parameters/EventUUID'
@@ -664,18 +746,76 @@ paths:
                   data:
                     type: object
                     properties:
+                      id:
+                        type: string
+                        description: Id of the user on this server
+                      provider:
+                        type: string
                       username:
                         type: string
+                        description: Display name (name, else login)
                       email:
                         type: string
                       avatar:
                         type: string
                       logout_url:
                         type: string
+                        description: Always empty; sign out with POST /api/auth/logout
+                      is_admin:
+                        type: boolean
+                        description: May read GET /api/audit
         '401':
           $ref: '#/components/responses/Unauthorized'
       description: 'The route exists only when auth is on. With auth off the path is not an API route: the UI page answers
         it (200 text/html).'
+  /api/me/settings:
+    get:
+      tags:
+      - Auth
+      operationId: getMySettings
+      summary: The signed-in user's settings stored on the server (only when auth is on)
+      description: Keys and JSON values the UI stored for this user; they follow the user to every browser. The route
+        exists only when auth is on; with auth off the UI keeps its settings in the browser.
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: All settings of the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+      - Auth
+      operationId: putMySettings
+      summary: Merge settings of the signed-in user (only when auth is on)
+      description: Keys in the body replace stored ones; a `null` value removes the key; other keys stay. At most 64
+        keys per user, key 1-128 characters, value up to 16 KB of JSON.
+      security:
+      - authToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: All settings after the change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSettings'
+        '400':
+          description: Not a JSON object, a bad key, or more than 64 keys
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: Body over 256 KB or a value over 16 KB
   /api/metrics:
     get:
       tags:
@@ -4844,7 +4984,7 @@ paths:
       tags:
       - Auth
       operationId: ssoCallback
-      summary: OAuth2 callback; redirects to /login?token=<jwt>
+      summary: OAuth2 callback; redirects to /login?token=<jwt>[&return_to=<path>]
       security: []
       parameters:
       - name: code
@@ -4875,6 +5015,13 @@ paths:
       operationId: ssoLogin
       summary: Start the SSO login (only when auth is on)
       security: []
+      parameters:
+      - name: return_to
+        in: query
+        description: A path of this server to open after sign-in (`/#/events/sentry/<uuid>`). Only a path starting with
+          one `/`; anything else is ignored. The callback passes it on as `return_to` of `/login`.
+        schema:
+          type: string
       responses:
         '302':
           description: Redirect to the OAuth2 provider
@@ -5284,6 +5431,15 @@ components:
         local_only:
           type: boolean
           description: Auth is off, so release works only from this machine (localhost).
+    UserSettings:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+          description: Key to the stored JSON value
     UpdateState:
       type: object
       description: Progress of an update; also the payload of the update.progress WebSocket event.
