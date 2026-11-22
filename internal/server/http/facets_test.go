@@ -36,12 +36,13 @@ func setupFacetAPI(t *testing.T) (*http.ServeMux, *storage.SQLiteStore) {
 		t.Fatal(err)
 	}
 	store.SetFacetFunc(func(_ string, payload json.RawMessage) []event.Facet {
-		var p struct{ Host, Env, Feature string }
+		var p struct{ Host, Env, Feature, Level string }
 		_ = json.Unmarshal(payload, &p)
 		var s event.FacetSet
 		s.Add(event.FacetHost, p.Host)
 		s.Add(event.FacetEnv, p.Env)
 		s.AddTag("feature", p.Feature)
+		s.Add(event.FacetLevel, p.Level)
 		return s.List()
 	})
 	es := serverhttp.NewEventService(store, ws.NewHub(), registry, nil, db)
@@ -67,7 +68,7 @@ func TestAPI_FeedFilters(t *testing.T) {
 	mux, store := setupFacetAPI(t)
 	for i, p := range []string{
 		`{"host":"web-1","env":"dev","feature":"cart"}`,
-		`{"host":"web-2","env":"dev"}`,
+		`{"host":"web-2","env":"dev","level":"warning"}`,
 		`{"host":"web-1","env":"prod"}`,
 		`{}`,
 	} {
@@ -87,6 +88,7 @@ func TestAPI_FeedFilters(t *testing.T) {
 		{"tag=feature:cart", []string{"a"}},
 		{"tag=feature", []string{"a", "b", "c", "d"}}, // no value: ignored
 		{"bogus=1&host=", []string{"a", "b", "c", "d"}},
+		{"level=WARNING", []string{"b"}}, // levels match in any case
 	} {
 		for _, path := range []string{"/api/events", "/api/events/preview"} {
 			var resp struct {
@@ -115,11 +117,12 @@ func TestAPI_FeedFilters(t *testing.T) {
 		"host":        {{Value: "web-1", Count: 1}, {Value: "web-2", Count: 1}},
 		"env":         {{Value: "dev", Count: 2}, {Value: "prod", Count: 1}}, // own filter ignored
 		"tag:feature": {{Value: "cart", Count: 1}},
+		"level":       {{Value: "warning", Count: 1}},
 	}
 	if !reflect.DeepEqual(facets.Data, want) {
 		t.Errorf("facets = %v, want %v", facets.Data, want)
 	}
-	if !reflect.DeepEqual(facets.Keys, []string{"env", "host", "tag:feature"}) {
+	if !reflect.DeepEqual(facets.Keys, []string{"env", "host", "level", "tag:feature"}) {
 		t.Errorf("keys = %v", facets.Keys)
 	}
 }

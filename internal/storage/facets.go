@@ -17,8 +17,12 @@ import (
 type FacetFunc func(eventType string, payload json.RawMessage) []event.Facet
 
 // facetBackfillBatch is how many old events one backfill step indexes; each
-// step is one short write transaction, so ingestion is never held long.
-const facetBackfillBatch = 500
+// step is one short write transaction, and facetBackfillPause between steps
+// lets the feed and ingestion through (without it, on 120k events, the feed
+// waited 2-9 s for the database while the backfill ran).
+const facetBackfillBatch = 200
+
+var facetBackfillPause = 50 * time.Millisecond
 
 // MaxFacetValuesPerKey caps the values FacetCounts returns for one key.
 const MaxFacetValuesPerKey = 50
@@ -76,7 +80,7 @@ func facetConditions(col string, filters []event.FacetFilter, skipKey string) ([
 			"%s %s (SELECT uuid FROM event_facets WHERE key = ? AND value IN (%s))", col, op, ph))
 		args = append(args, f.Key)
 		for _, v := range f.Values {
-			args = append(args, v)
+			args = append(args, event.NormalizeFacetValue(f.Key, v))
 		}
 	}
 	return conds, args
@@ -215,6 +219,13 @@ func (s *SQLiteStore) BackfillFacets(ctx context.Context) error {
 		}
 		cursor = next
 		total += n
+		if cursor < cutoff && facetBackfillPause > 0 {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(facetBackfillPause):
+			}
+		}
 	}
 	slog.Info("facets: stored events indexed", "events", total, "took", time.Since(started).Round(time.Millisecond))
 	return nil

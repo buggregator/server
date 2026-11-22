@@ -62,6 +62,16 @@ func IsFacetKey(key string) bool {
 	return strings.HasPrefix(key, FacetTagPrefix) && len(key) > len(FacetTagPrefix)
 }
 
+// NormalizeFacetValue brings a value to its stored form: levels are lower
+// case, so Monolog's "WARNING" and Sentry's "warning" are one value.
+func NormalizeFacetValue(key, value string) string {
+	value = strings.TrimSpace(value)
+	if key == FacetLevel {
+		value = strings.ToLower(value)
+	}
+	return value
+}
+
 // FacetSet collects facets with trimming, length cap, tag cap and
 // de-duplication. The zero value is ready to use.
 type FacetSet struct {
@@ -72,7 +82,7 @@ type FacetSet struct {
 
 // Add adds key=value; empty values are skipped.
 func (s *FacetSet) Add(key, value string) {
-	value = strings.TrimSpace(value)
+	value = NormalizeFacetValue(key, value)
 	if value == "" || key == "" {
 		return
 	}

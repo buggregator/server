@@ -222,6 +222,7 @@ func TestFacets_Backfill(t *testing.T) {
 	if err := m.Run(); err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(storage.SetFacetBackfillPause(0))
 	s := storage.NewSQLiteStore(db)
 	s.SetFacetFunc(testFacets)
 	storeAt(t, s, "new", "sentry", "", `{"host":"web-3"}`, float64(n+1))

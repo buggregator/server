@@ -15,9 +15,9 @@ func TestFacets(t *testing.T) {
 		want    map[string][]string
 	}{
 		{"HostnameProcessor", `{"message":"Order placed","context":{},"level":200,"level_name":"INFO","channel":"orders","datetime":"2026-11-22T10:00:00+00:00","extra":{"hostname":"web-2"}}`,
-			map[string][]string{"channel": {"orders"}, "level": {"INFO"}, "host": {"web-2"}}},
+			map[string][]string{"channel": {"orders"}, "level": {"info"}, "host": {"web-2"}}},
 		{"no processor", `{"message":"x","level":400,"level_name":"ERROR","channel":"app","extra":[]}`,
-			map[string][]string{"channel": {"app"}, "level": {"ERROR"}}},
+			map[string][]string{"channel": {"app"}, "level": {"error"}}},
 		{"not json", `x`, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
