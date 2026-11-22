@@ -111,8 +111,21 @@ func AggregateFunctions(edges []EdgeRow, peaks Metrics) []FuncStats {
 
 // SortFunctions sorts function stats by the given metric in descending order.
 func SortFunctions(funcs []FuncStats, metric string) {
-	sort.Slice(funcs, func(i, j int) bool {
-		return GetFuncMetric(&funcs[i], metric) > GetFuncMetric(&funcs[j], metric)
+	SortFunctionsOrder(funcs, metric, false)
+}
+
+// SortFunctionsOrder sorts by metric, ascending when asc; ties by function
+// name, so a cut at a limit is the same on every call.
+func SortFunctionsOrder(funcs []FuncStats, metric string, asc bool) {
+	sort.SliceStable(funcs, func(i, j int) bool {
+		a, b := GetFuncMetric(&funcs[i], metric), GetFuncMetric(&funcs[j], metric)
+		if a != b {
+			if asc {
+				return a < b
+			}
+			return a > b
+		}
+		return funcs[i].Callee < funcs[j].Callee
 	})
 }
 
