@@ -16,6 +16,7 @@ import (
 type SQLiteStore struct {
 	db       *sql.DB
 	onDelete []func(uuids []string)
+	facets   FacetFunc
 }
 
 // Open creates a new SQLite database connection with a single connection.
@@ -143,11 +144,29 @@ func (s *SQLiteStore) deleteReturning(ctx context.Context, query string, args ..
 
 func (s *SQLiteStore) Store(ctx context.Context, ev event.Event) error {
 	payload, _ := json.Marshal(json.RawMessage(ev.Payload))
-	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO events (uuid, type, payload, timestamp, project, is_pinned) VALUES (?, ?, ?, ?, ?, ?)`,
-		ev.UUID, ev.Type, string(payload), fmt.Sprintf("%.6f", ev.Timestamp), ev.Project, boolToInt(ev.IsPinned),
-	)
-	return err
+	const insert = `INSERT INTO events (uuid, type, payload, timestamp, project, is_pinned) VALUES (?, ?, ?, ?, ?, ?)`
+	args := []any{ev.UUID, ev.Type, string(payload), fmt.Sprintf("%.6f", ev.Timestamp), ev.Project, boolToInt(ev.IsPinned)}
+
+	var facets []event.Facet
+	if s.facets != nil {
+		facets = s.facets(ev.Type, ev.Payload)
+	}
+	if len(facets) == 0 {
+		_, err := s.db.ExecContext(ctx, insert, args...)
+		return err
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op after Commit
+	if _, err := tx.ExecContext(ctx, insert, args...); err != nil {
+		return err
+	}
+	if err := writeFacets(ctx, tx, ev.UUID, facets); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *SQLiteStore) FindByUUID(ctx context.Context, uuid string) (*event.Event, error) {
@@ -159,28 +178,7 @@ func (s *SQLiteStore) FindByUUID(ctx context.Context, uuid string) (*event.Event
 
 func (s *SQLiteStore) FindAll(ctx context.Context, opts event.FindOptions) ([]event.Event, error) {
 	query := `SELECT uuid, type, payload, timestamp, project, is_pinned FROM events`
-	var args []any
-	var conditions []string
-
-	if opts.Type != "" {
-		conditions = append(conditions, "type = ?")
-		args = append(args, opts.Type)
-	}
-	if opts.Project != "" {
-		conditions = append(conditions, "project = ?")
-		args = append(args, opts.Project)
-	}
-	// Window bounds are compared numerically: timestamp is stored as text
-	// (fmt.Sprintf("%.6f")), and a string comparison would break as soon as the
-	// number of digits in unix seconds changes.
-	if opts.From > 0 {
-		conditions = append(conditions, "CAST(timestamp AS REAL) >= ?")
-		args = append(args, opts.From)
-	}
-	if opts.To > 0 {
-		conditions = append(conditions, "CAST(timestamp AS REAL) <= ?")
-		args = append(args, opts.To)
-	}
+	conditions, args := eventConditions(opts, "", "")
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
@@ -260,14 +258,36 @@ func (s *SQLiteStore) DeleteAll(ctx context.Context, opts event.DeleteOptions) e
 }
 
 func (s *SQLiteStore) UpdatePayload(ctx context.Context, uuid string, payload json.RawMessage) error {
-	res, err := s.db.ExecContext(ctx, `UPDATE events SET payload = ? WHERE uuid = ?`, string(payload), uuid)
+	if s.facets == nil {
+		res, err := s.db.ExecContext(ctx, `UPDATE events SET payload = ? WHERE uuid = ?`, string(payload), uuid)
+		if err != nil {
+			return err
+		}
+		if n, err := res.RowsAffected(); err == nil && n == 0 {
+			return event.ErrNotFound
+		}
+		return nil
+	}
+
+	// The merged payload may carry new facets (a Ray follow-up with origin).
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	if n, err := res.RowsAffected(); err == nil && n == 0 {
+	defer tx.Rollback() //nolint:errcheck // no-op after Commit
+	var eventType string
+	err = tx.QueryRowContext(ctx,
+		`UPDATE events SET payload = ? WHERE uuid = ? RETURNING type`, string(payload), uuid).Scan(&eventType)
+	if err == sql.ErrNoRows {
 		return event.ErrNotFound
 	}
-	return nil
+	if err != nil {
+		return err
+	}
+	if err := writeFacets(ctx, tx, uuid, s.facets(eventType, payload)); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *SQLiteStore) Pin(ctx context.Context, uuid string) error {

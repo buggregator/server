@@ -64,6 +64,21 @@ func (s *InstrumentedStore) FindAll(ctx context.Context, opts event.FindOptions)
 	return events, err
 }
 
+// FacetCounts passes through to the inner store when it counts facets
+// (storage.SQLiteStore); otherwise there are none.
+func (s *InstrumentedStore) FacetCounts(ctx context.Context, opts event.FindOptions, perKey int) (map[string][]event.FacetCount, error) {
+	fc, ok := s.inner.(interface {
+		FacetCounts(context.Context, event.FindOptions, int) (map[string][]event.FacetCount, error)
+	})
+	if !ok {
+		return map[string][]event.FacetCount{}, nil
+	}
+	start := time.Now()
+	counts, err := fc.FacetCounts(ctx, opts, perKey)
+	s.collector.StorageQueryDuration.WithLabelValues("facet_counts").Observe(time.Since(start).Seconds())
+	return counts, err
+}
+
 func (s *InstrumentedStore) Delete(ctx context.Context, uuid string) error {
 	// Look up the event type before deleting so we can decrement the gauge.
 	ev, _ := s.inner.FindByUUID(ctx, uuid)
