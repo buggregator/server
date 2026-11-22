@@ -146,8 +146,8 @@ func (h *Handlers) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	h.handleGetSettings(w, r)
 }
 
-// handleAudit lists the audit log, newest first: ?limit= (1-500, default
-// 100), ?before=<id> for the next page. Only admins (auth.admin_emails;
+// handleAudit lists the audit log, newest first: ?limit= (default 100, over
+// 500 gives 500), ?before=<id> for the next page. Only admins (auth.admin_emails;
 // none set: every signed-in user).
 func (h *Handlers) handleAudit(w http.ResponseWriter, r *http.Request) {
 	if !h.isAdmin(UserFromContext(r.Context())) {
