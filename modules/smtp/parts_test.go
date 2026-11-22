@@ -35,7 +35,7 @@ func TestParseEmail_AlternativeParts(t *testing.T) {
 		{"watch.eml", "text/watch-html=Apple Watch", "Your order shipped.", "<h1>Your order shipped</h1>"},
 		{"amp.eml", "text/x-amp-html=AMP", "Vote in our poll.", "<p>Vote in our poll.</p>"},
 		{"google-invite.eml", "text/calendar=Calendar", "You have been invited", "<b>Release sync</b>"},
-		{"outlook-cancel.eml", "text/calendar=Calendar", "", ""},
+		{"outlook-cancel.eml", "text/calendar=Calendar", "BEGIN:VCALENDAR", ""},
 		{"ics-attachment.eml", "", "", "Booking confirmed."},
 		{"bounce.eml", "message/delivery-status=Delivery status,text/rfc822-headers=Original headers", "could not be delivered", ""},
 	}
@@ -51,8 +51,12 @@ func TestParseEmail_AlternativeParts(t *testing.T) {
 			if !strings.Contains(p.HTML, tc.html) || (tc.html == "" && p.HTML != "") {
 				t.Errorf("html %q, want %q", p.HTML, tc.html)
 			}
-			// The alternative versions never leak into the main bodies.
+			// The alternative versions never leak into the main bodies
+			// (a single-part message keeps its body in text as before).
 			for _, x := range p.Parts {
+				if tc.file == "outlook-cancel.eml" {
+					break
+				}
 				if strings.Contains(p.HTML, x.Content) || strings.Contains(p.Text, x.Content) {
 					t.Errorf("%s content leaked into a main body", x.Type)
 				}
@@ -114,6 +118,15 @@ func TestParseEmail_CalendarInvite(t *testing.T) {
 	}
 }
 
+// A single-part message of another text type keeps its body in text (the
+// older UI, codes and links read it) and is also a part.
+func TestParseEmail_SinglePartOtherText(t *testing.T) {
+	p, _, _ := parseEmail([]byte("From: a@b.c\r\nContent-Type: text/markdown; charset=utf-8\r\n\r\n# Hello"), nil)
+	if p.Text != "# Hello" || partTypes(p) != "text/markdown=Markdown" {
+		t.Errorf("text %q, parts %q", p.Text, partTypes(p))
+	}
+}
+
 func TestICSTime(t *testing.T) {
 	l, _ := parseICSLine("DTSTART;TZID=Europe/Berlin:20261205T100000")
 	if v, tz, all := icsTime(l); v != "2026-12-05T10:00:00+01:00" || tz != "Europe/Berlin" || all {
@@ -131,10 +144,11 @@ func TestParseEmail_PartsOmittedAndTruncated(t *testing.T) {
 		t.Errorf("ordinary message carries parts/calendar: %s", b)
 	}
 
-	big := strings.Repeat("x", maxPartContent+10)
+	big := strings.Repeat("x", maxPartContent-1) + "✓✓"
 	raw := "From: a@b.c\r\nContent-Type: multipart/alternative; boundary=z\r\n\r\n--z\r\nContent-Type: text/watch-html\r\n\r\n" + big + "\r\n--z--\r\n"
 	p, _, _ = parseEmail([]byte(raw), nil)
-	if len(p.Parts) != 1 || !p.Parts[0].Truncated || len(p.Parts[0].Content) != maxPartContent || p.Parts[0].Size != len(big) {
+	// The cut falls inside "✓": it moves back to the character's start.
+	if len(p.Parts) != 1 || !p.Parts[0].Truncated || len(p.Parts[0].Content) != maxPartContent-1 || p.Parts[0].Size != len(big) {
 		t.Errorf("big part: %d parts, truncated %v", len(p.Parts), len(p.Parts) == 1 && p.Parts[0].Truncated)
 	}
 }

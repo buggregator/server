@@ -3,6 +3,7 @@ package smtp
 import (
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // maxPartContent caps the stored text of one alternative part; the whole
@@ -52,7 +53,11 @@ func newPart(mediaType string, content []byte) EmailPart {
 		p.Label = mediaType
 	}
 	if len(content) > maxPartContent {
-		content, p.Truncated = content[:maxPartContent], true
+		cut := maxPartContent
+		for cut > 0 && !utf8.RuneStart(content[cut]) {
+			cut-- // never split a UTF-8 character
+		}
+		content, p.Truncated = content[:cut], true
 	}
 	p.Content = string(content)
 	return p

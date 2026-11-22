@@ -318,13 +318,15 @@ func parseEmail(raw []byte, recipients []string) (*ParsedEmail, []parsedAttachme
 		body, _ := io.ReadAll(msg.Body)
 		decoded := decodeContent(body, msg.Header.Get("Content-Transfer-Encoding"))
 		decoded = convertToUTF8(decoded, params["charset"])
-		switch {
-		case strings.HasPrefix(mediaType, "text/html"):
+		if strings.HasPrefix(mediaType, "text/html") {
 			parsed.HTML = string(decoded)
-		case mediaType != "text/plain" && keepAsPart(mediaType):
-			addPart(parsed, mediaType, "", decoded)
-		default:
+		} else {
+			// The body stays in text as before (codes, links, the older UI
+			// read it); another type is also a part.
 			parsed.Text = string(decoded)
+			if mediaType != "text/plain" && keepAsPart(mediaType) {
+				addPart(parsed, mediaType, "", decoded)
+			}
 		}
 		return parsed, nil, nil
 	}
