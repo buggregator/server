@@ -76,6 +76,21 @@ func (a *App) Run() {
 		selfupdate.Exit(1)
 	}
 
+	// Feed filters: the facets cleanup trigger, then index the events stored
+	// before facets existed, in the background (the feed works meanwhile;
+	// old events join the filters as they are indexed).
+	if fs, ok := a.store.(*storage.SQLiteStore); ok {
+		if err := storage.InitFacets(ctx, a.db); err != nil {
+			slog.Error("facets: create trigger", "err", err)
+		} else {
+			go func() {
+				if err := fs.BackfillFacets(ctx); err != nil && ctx.Err() == nil {
+					slog.Error("facets: index stored events", "err", err)
+				}
+			}()
+		}
+	}
+
 	// Projects from the config file: after the migrations, which create the
 	// projects table (issue #432).
 	seedProjects(a.db, a.cfg.Projects)

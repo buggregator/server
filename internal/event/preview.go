@@ -43,6 +43,16 @@ func (r *PreviewRegistry) BuildPreview(ev Event) Preview {
 		}
 		p.SearchableText = mapper.ToSearchableText(ev.Payload)
 	}
+	p.Facets = FacetMap(r.Facets(ev.Type, ev.Payload))
 
 	return p
+}
+
+// Facets returns the filterable values of a payload of eventType, or nil
+// when its mapper extracts none.
+func (r *PreviewRegistry) Facets(eventType string, payload json.RawMessage) []Facet {
+	if fx, ok := r.Get(eventType).(FacetExtractor); ok {
+		return fx.Facets(payload)
+	}
+	return nil
 }

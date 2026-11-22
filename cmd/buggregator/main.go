@@ -254,6 +254,10 @@ func run() {
 
 	// Events removed by delete or clear-all take their files and module data
 	// with them.
+	// Index each event's filterable values (machine, environment, tags…)
+	// with it, for feed filters.
+	store.SetFacetFunc(registry.Previews().Facets)
+
 	store.OnDelete(func(uuids []string) {
 		for _, u := range uuids {
 			attachments.DeleteByEvent(u)

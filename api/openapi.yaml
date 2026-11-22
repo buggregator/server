@@ -159,6 +159,13 @@ paths:
       - $ref: '#/components/parameters/From'
       - $ref: '#/components/parameters/To'
       - $ref: '#/components/parameters/Window'
+      - $ref: '#/components/parameters/FacetHost'
+      - $ref: '#/components/parameters/FacetEnv'
+      - $ref: '#/components/parameters/FacetUser'
+      - $ref: '#/components/parameters/FacetChannel'
+      - $ref: '#/components/parameters/FacetLevel'
+      - $ref: '#/components/parameters/FacetRelease'
+      - $ref: '#/components/parameters/FacetTag'
       responses:
         '200':
           description: Events and the limits that were applied
@@ -223,6 +230,57 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/Error'
+  /api/events/facets:
+    get:
+      tags:
+      - Events
+      operationId: listEventFacets
+      summary: Values events can be filtered by, with counts
+      description: 'For each facet key (`host`, `env`, `user`, `channel`, `level`, `release`, `tag:<name>`) its values
+        with the number of events under the same type, project, window and filters as the feed, most frequent first,
+        at most 50 per key. A key''s counts ignore the filter on that same key, so picking one host still lists the
+        others.'
+      security:
+      - authToken: []
+      parameters:
+      - $ref: '#/components/parameters/EventType'
+      - $ref: '#/components/parameters/Project'
+      - $ref: '#/components/parameters/From'
+      - $ref: '#/components/parameters/To'
+      - $ref: '#/components/parameters/Window'
+      - $ref: '#/components/parameters/FacetHost'
+      - $ref: '#/components/parameters/FacetEnv'
+      - $ref: '#/components/parameters/FacetUser'
+      - $ref: '#/components/parameters/FacetChannel'
+      - $ref: '#/components/parameters/FacetLevel'
+      - $ref: '#/components/parameters/FacetRelease'
+      - $ref: '#/components/parameters/FacetTag'
+      responses:
+        '200':
+          description: Facet values with counts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - keys
+                properties:
+                  data:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/FacetCount'
+                  keys:
+                    type: array
+                    description: Facet keys present in `data`, sorted
+                    items:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/Error'
   /api/events/preview:
     get:
       tags:
@@ -240,6 +298,13 @@ paths:
       - $ref: '#/components/parameters/From'
       - $ref: '#/components/parameters/To'
       - $ref: '#/components/parameters/Window'
+      - $ref: '#/components/parameters/FacetHost'
+      - $ref: '#/components/parameters/FacetEnv'
+      - $ref: '#/components/parameters/FacetUser'
+      - $ref: '#/components/parameters/FacetChannel'
+      - $ref: '#/components/parameters/FacetLevel'
+      - $ref: '#/components/parameters/FacetRelease'
+      - $ref: '#/components/parameters/FacetTag'
       responses:
         '200':
           description: Previews and the limits that were applied
@@ -4491,6 +4556,71 @@ components:
       description: Upper time bound, unix seconds or RFC3339.
       schema:
         type: string
+    FacetHost:
+      name: host
+      in: query
+      description: 'Only events from these machines (repeat for several; prefix `not.` to exclude, e.g. `not.host=web-1`).
+        Sentry server_name, Ray/Inspector/profiler hostname, Monolog extra.hostname, request host of dumps and HTTP dumps.'
+      schema:
+        type: array
+        items:
+          type: string
+      explode: true
+    FacetEnv:
+      name: env
+      in: query
+      description: Only events of these environments (Sentry environment). Repeatable; `not.env` excludes.
+      schema:
+        type: array
+        items:
+          type: string
+      explode: true
+    FacetUser:
+      name: user
+      in: query
+      description: Only events of these users (Sentry user email, username, id or IP; Inspector user). Repeatable; `not.user` excludes.
+      schema:
+        type: array
+        items:
+          type: string
+      explode: true
+    FacetChannel:
+      name: channel
+      in: query
+      description: Only events of these channels (Monolog channel, Sentry logger). Repeatable; `not.channel` excludes.
+      schema:
+        type: array
+        items:
+          type: string
+      explode: true
+    FacetLevel:
+      name: level
+      in: query
+      description: Only events of these levels (Monolog level name, Sentry level). Repeatable; `not.level` excludes.
+      schema:
+        type: array
+        items:
+          type: string
+      explode: true
+    FacetRelease:
+      name: release
+      in: query
+      description: Only events of these releases (Sentry release). Repeatable; `not.release` excludes.
+      schema:
+        type: array
+        items:
+          type: string
+      explode: true
+    FacetTag:
+      name: tag
+      in: query
+      description: 'Only events with these tags, each as `name:value` (Sentry and profiler tags). Values of one tag name
+        are OR-ed, different names AND-ed; `not.tag` excludes.'
+      schema:
+        type: array
+        items:
+          type: string
+      explode: true
     Window:
       name: window
       in: query
@@ -4832,6 +4962,24 @@ components:
           type: string
         is_pinned:
           type: boolean
+        facets:
+          type: object
+          description: 'Filterable values of the event by facet key, e.g. `{"host": ["web-1"], "tag:feature": ["checkout"]}`;
+            absent when it has none.'
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    FacetCount:
+      type: object
+      required:
+      - value
+      - count
+      properties:
+        value:
+          type: string
+        count:
+          type: integer
     ListMeta:
       type: object
       required:

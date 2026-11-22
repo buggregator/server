@@ -57,6 +57,9 @@ type Preview struct {
 	Project        string          `json:"project,omitempty"`
 	SearchableText string          `json:"searchable_text"`
 	IsPinned       bool            `json:"is_pinned"`
+	// Facets are the event's filterable values ({"host": ["web-1"]}), so
+	// the UI can filter live events the same way the API does.
+	Facets map[string][]string `json:"facets,omitempty"`
 }
 
 // NewEvent creates an Event from an Incoming with a generated timestamp.

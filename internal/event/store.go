@@ -20,6 +20,9 @@ type FindOptions struct {
 	// PinnedFirst puts pinned events before the rest, so a limit never
 	// pushes a pinned event out of the list.
 	PinnedFirst bool
+
+	// Filters select events by their facets (machine, environment, tags…).
+	Filters []FacetFilter
 }
 
 // DeleteOptions configures batch deletion.
