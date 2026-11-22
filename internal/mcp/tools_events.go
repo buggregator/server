@@ -27,7 +27,7 @@ type eventFilterInput struct {
 	Level       []string `json:"level,omitempty" jsonschema:"Only events of these levels (Monolog level name, Sentry level)"`
 	Release     []string `json:"release,omitempty" jsonschema:"Only events of these releases (Sentry release)"`
 	Tag         []string `json:"tag,omitempty" jsonschema:"Only events with these tags, each as name:value (Sentry and profiler tags)"`
-	Trace       []string `json:"trace,omitempty" jsonschema:"Only events of these trace ids (Monolog extra.trace_id or context.trace_id)"`
+	Trace       []string `json:"trace,omitempty" jsonschema:"Only events of these trace ids: Monolog extra.trace_id or context.trace_id, mails with an X-Trace-Id / sentry-trace / traceparent header, HTTP dumps with a sentry-trace / traceparent header"`
 	ExcludeHost []string `json:"exclude_host,omitempty" jsonschema:"Leave out events from these machines"`
 	Query       string   `json:"query,omitempty" jsonschema:"Full-text search: every word must occur as a substring, case-insensitive (Monolog message, channel, context, extra)"`
 }

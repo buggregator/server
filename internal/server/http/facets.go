@@ -20,14 +20,14 @@ var facetParams = []string{
 	event.FacetChannel, event.FacetLevel, event.FacetRelease, event.FacetTrace,
 }
 
+// maxHistogramBucketSec caps ?bucket= at 366 days: a larger width would
+// overflow the bucket arithmetic.
+const maxHistogramBucketSec = 366 * 24 * 3600
+
 // parseFacetFilters reads feed filters from the query: repeated values of
 // one parameter are OR-ed, different parameters AND-ed.
 //
 //	?host=web-1&host=web-2&env=staging&tag=feature:checkout&not.level=debug
-
-// maxHistogramBucketSec caps ?bucket= at 366 days: a larger width would
-// overflow the bucket arithmetic.
-const maxHistogramBucketSec = 366 * 24 * 3600
 
 func parseFacetFilters(q url.Values) []event.FacetFilter {
 	byKey := map[string]*event.FacetFilter{}

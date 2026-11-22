@@ -194,7 +194,8 @@ func TestAPI_SearchAndHistogram(t *testing.T) {
 	}
 
 	// NUL bytes in q are dropped, not passed to SQLite.
-	for _, path := range []string{"/api/events?q=%00%00%00", "/api/events?q=ord%00er", "/api/events/histogram?q=%00"} {
+	for _, path := range []string{"/api/events?q=%00%00%00", "/api/events?q=ord%00er", "/api/events/histogram?q=%00",
+		"/api/events/histogram?from=1&to=1e30", "/api/events/histogram?from=1&to=1e30&bucket=31622400"} {
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
 		if rec.Code != http.StatusOK {

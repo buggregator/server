@@ -109,6 +109,21 @@ func storeTransaction(db *sql.DB, txn *Transaction, payload json.RawMessage, pro
 		return "", fmt.Errorf("insert sentry_transactions: %w", err)
 	}
 
+	if op == queueJobOp {
+		var data map[string]any
+		if txn.Contexts != nil && txn.Contexts.Trace != nil {
+			data = txn.Contexts.Trace.Data
+		}
+		if err := storeQueueJob(dbTx, queueJobRow{
+			TransactionID: txnID, TraceID: traceID, Project: project,
+			Job: txn.Transaction, Status: status,
+			StartTS: startTS, EndTS: endTS, DurationMS: durationMS,
+			attr: func(key string) any { return data[key] },
+		}); err != nil {
+			return "", err
+		}
+	}
+
 	// Insert spans.
 	errorCount := 0
 	if len(txn.Spans) > 0 {
@@ -317,19 +332,23 @@ func storeSegment(dbTx *sql.Tx, traceID string, span RawSpan, project string) er
 		RawSpan
 		Attributes map[string]any `json:"attributes,omitempty"`
 	}{span, span.Attrs})
-	_, err := dbTx.Exec(
+	txnID := event.GenerateUUID()
+	startTS := parseTimestamp(span.StartTimestamp.Number())
+	endTS := parseTimestamp(span.Timestamp.Number())
+	durationMS := computeDurationMS(span.StartTimestamp.Number(), span.Timestamp.Number())
+	res, err := dbTx.Exec(
 		`INSERT OR IGNORE INTO sentry_transactions
 			(id, event_id, trace_id, transaction_name, op, status, start_ts, end_ts, duration_ms, environment, release, measurements, payload, project_id, source, service_name, parent_span_id)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)`,
-		event.GenerateUUID(),
+		txnID,
 		traceID+"-"+span.SpanID,
 		traceID,
 		span.Description,
 		nullIfEmpty(span.Op),
 		nullIfEmpty(span.Status),
-		parseTimestamp(span.StartTimestamp.Number()),
-		parseTimestamp(span.Timestamp.Number()),
-		computeDurationMS(span.StartTimestamp.Number(), span.Timestamp.Number()),
+		startTS,
+		endTS,
+		durationMS,
 		nullIfEmpty(span.Data["sentry.environment"]),
 		nullIfEmpty(span.Data["sentry.release"]),
 		string(payload),
@@ -341,7 +360,24 @@ func storeSegment(dbTx *sql.Tx, traceID string, span RawSpan, project string) er
 	if err != nil {
 		return fmt.Errorf("insert segment transaction: %w", err)
 	}
-	return nil
+	// A segment seen before is ignored above: its job row is there too.
+	if n, _ := res.RowsAffected(); n == 0 || span.Op != queueJobOp {
+		return nil
+	}
+	return storeQueueJob(dbTx, queueJobRow{
+		TransactionID: txnID, TraceID: traceID, Project: project,
+		Job: span.Description, Status: span.Status,
+		StartTS: startTS, EndTS: endTS, DurationMS: durationMS,
+		attr: func(key string) any {
+			if v, ok := span.Attrs[key]; ok {
+				return v
+			}
+			if v, ok := span.Data[key]; ok {
+				return v
+			}
+			return nil
+		},
+	})
 }
 
 // transactionService names the service a Sentry transaction came from:

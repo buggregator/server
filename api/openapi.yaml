@@ -2319,6 +2319,179 @@ paths:
           $ref: '#/components/responses/Error'
         '500':
           $ref: '#/components/responses/Error'
+  /api/sentry/queues/jobs:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryListQueueJobs
+      summary: Queue jobs, newest last attempt first.
+      description: >-
+        Built from transactions with op `queue.process` (sentry-laravel QueueIntegration sends one per attempt when
+        `queue_job_transactions` is on; OTel messaging spans map to it). Attempts sharing `messaging.message.id` form
+        one job; its status is the last attempt's. Running jobs are not visible: an attempt arrives when it ends.
+      security:
+      - authToken: []
+      parameters:
+      - name: project
+        in: query
+        description: Project key. Without it every project is read.
+        schema:
+          type: string
+      - name: queue
+        in: query
+        description: Exact queue name (`messaging.destination.name`).
+        schema:
+          type: string
+      - name: job
+        in: query
+        description: Exact job class (the transaction name, e.g. `App\\Jobs\\SendInvoice`).
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: Lower bound on the last attempt's end. Unix seconds or ISO, UTC.
+        schema:
+          type: string
+      - name: to
+        in: query
+        description: Upper bound on the last attempt's end, same formats as `from`.
+        schema:
+          type: string
+      - name: window
+        in: query
+        description: Period back from now, like `15m`, `24h`, `7d`. Used only when `from` and `to` are both absent.
+        schema:
+          type: string
+      - name: status
+        in: query
+        description: '`ok` (last attempt ok), `failed` (last attempt failed), `retried` (more than one attempt).'
+        schema:
+          type: string
+          enum:
+          - ok
+          - failed
+          - retried
+      - name: page
+        in: query
+        description: Page number, starting at 1.
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: limit
+        in: query
+        description: Page size, 1..500. Out-of-range values fall back to the default.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 50
+      responses:
+        '200':
+          description: A page of jobs.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - meta
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SentryQueueJob'
+                  meta:
+                    $ref: '#/components/schemas/SentryListMeta'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/queues/jobs/{id}:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryGetQueueJob
+      summary: One queue job with its attempts, the errors of each attempt and the request that dispatched it.
+      security:
+      - authToken: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The job's `messaging.message.id`, or the transaction id of an attempt without one.
+        schema:
+          type: string
+      - name: project
+        in: query
+        description: Project key.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The job.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryQueueJobDetail'
+        '401':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /api/sentry/queues/summary:
+    get:
+      tags:
+      - Sentry
+      operationId: sentryQueueSummary
+      summary: Queue totals for a period (default the last hour) and the queues seen, for the filter.
+      security:
+      - authToken: []
+      parameters:
+      - name: project
+        in: query
+        description: Project key. Without it every project is read.
+        schema:
+          type: string
+      - name: queue
+        in: query
+        description: Exact queue name (`messaging.destination.name`).
+        schema:
+          type: string
+      - name: job
+        in: query
+        description: Exact job class (the transaction name, e.g. `App\\Jobs\\SendInvoice`).
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: Lower bound on the last attempt's end. Unix seconds or ISO, UTC.
+        schema:
+          type: string
+      - name: to
+        in: query
+        description: Upper bound on the last attempt's end, same formats as `from`.
+        schema:
+          type: string
+      - name: window
+        in: query
+        description: Period back from now, like `15m`, `24h`, `7d`, `all`. Default `1h` when `from`, `to` and `window` are absent.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Totals.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentryQueueSummary'
+        '401':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
   /api/sentry/traces/{traceId}/sequence:
     get:
       tags:
@@ -4744,8 +4917,9 @@ components:
     FacetTrace:
       name: trace
       in: query
-      description: Only events of these traces (Monolog `extra.trace_id` / `context.trace_id`, put there by a processor
-        in the app). Repeatable; `not.trace` excludes.
+      description: Only events of these traces. Monolog `extra.trace_id` / `context.trace_id` (put there by a processor
+        in the app); mails with an `X-Trace-Id`, `sentry-trace` or `traceparent` header; HTTP dumps with a `sentry-trace`
+        or `traceparent` header (Sentry and OTel SDKs add it to outgoing calls). Repeatable; `not.trace` excludes.
       schema:
         type: array
         items:
@@ -5266,6 +5440,204 @@ components:
               type: number
             failed:
               type: number
+    SentryQueueJob:
+      type: object
+      description: A queue job; fields of its last attempt unless said otherwise.
+      required:
+      - id
+      - message_id
+      - job
+      - queue
+      - connection
+      - status
+      - failed
+      - attempts
+      - failed_attempts
+      - retried
+      - duration_ms
+      - latency_ms
+      - started_at
+      - finished_at
+      - trace_id
+      - transaction_id
+      - project
+      properties:
+        id:
+          type: string
+          description: '`message_id`, or the transaction id when the attempt has none.'
+        message_id:
+          type: string
+          nullable: true
+        job:
+          type: string
+          description: Job class.
+        queue:
+          type: string
+        connection:
+          type: string
+        status:
+          type: string
+          description: Sentry span status of the last attempt (`ok`, `internal_error`, …).
+        failed:
+          type: boolean
+        attempts:
+          type: integer
+        failed_attempts:
+          type: integer
+        retried:
+          type: boolean
+        duration_ms:
+          type: integer
+          nullable: true
+        latency_ms:
+          type: integer
+          nullable: true
+          description: Time the attempt waited in the queue (sentry-laravel sends seconds, stored as ms).
+        started_at:
+          type: string
+          nullable: true
+          description: Start of the first attempt, ISO.
+        finished_at:
+          type: string
+          nullable: true
+          description: End of the last attempt, ISO.
+        trace_id:
+          type: string
+        transaction_id:
+          type: string
+        project:
+          type: string
+    SentryQueueJobDetail:
+      allOf:
+      - $ref: '#/components/schemas/SentryQueueJob'
+      - type: object
+        required:
+        - attempt_list
+        - dispatched_by
+        properties:
+          attempt_list:
+            type: array
+            description: Attempts by start time.
+            items:
+              type: object
+              required:
+              - transaction_id
+              - trace_id
+              - attempt
+              - status
+              - failed
+              - duration_ms
+              - latency_ms
+              - started_at
+              - finished_at
+              - gap_ms
+              - errors
+              properties:
+                transaction_id:
+                  type: string
+                trace_id:
+                  type: string
+                attempt:
+                  type: integer
+                  description: messaging.message.retry.count + 1.
+                status:
+                  type: string
+                failed:
+                  type: boolean
+                duration_ms:
+                  type: integer
+                  nullable: true
+                latency_ms:
+                  type: integer
+                  nullable: true
+                started_at:
+                  type: string
+                  nullable: true
+                finished_at:
+                  type: string
+                  nullable: true
+                gap_ms:
+                  type: integer
+                  nullable: true
+                  description: Pause since the previous attempt ended.
+                errors:
+                  type: array
+                  description: Error events of the attempt's trace captured while it ran.
+                  items:
+                    type: object
+                    required:
+                    - id
+                    - exception_type
+                    - exception_value
+                    - event_ts
+                    properties:
+                      id:
+                        type: string
+                        description: Sentry event id.
+                      exception_type:
+                        type: string
+                      exception_value:
+                        type: string
+                      event_ts:
+                        type: string
+          dispatched_by:
+            type: object
+            nullable: true
+            description: The transaction whose queue.publish span has this message id.
+            required:
+            - transaction_id
+            - trace_id
+            - transaction_name
+            - start_ts
+            properties:
+              transaction_id:
+                type: string
+              trace_id:
+                type: string
+              transaction_name:
+                type: string
+              start_ts:
+                type: string
+                nullable: true
+    SentryQueueSummary:
+      type: object
+      required:
+      - jobs
+      - failed
+      - retried
+      - attempts
+      - avg_duration_ms
+      - queues
+      properties:
+        jobs:
+          type: integer
+        failed:
+          type: integer
+          description: Jobs whose last attempt failed.
+        retried:
+          type: integer
+          description: Jobs with more than one attempt.
+        attempts:
+          type: integer
+        avg_duration_ms:
+          type: number
+          nullable: true
+          description: Mean attempt duration, one decimal.
+        queues:
+          type: array
+          items:
+            type: object
+            required:
+            - queue
+            - jobs
+            - failed
+            properties:
+              queue:
+                type: string
+              jobs:
+                type: integer
+              failed:
+                type: integer
     SentryListMeta:
       type: object
       description: Pagination info.
