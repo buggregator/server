@@ -306,6 +306,7 @@ paths:
         schema:
           type: integer
           minimum: 1
+          maximum: 31622400
       - $ref: '#/components/parameters/EventType'
       - $ref: '#/components/parameters/Project'
       - $ref: '#/components/parameters/From'
@@ -4755,6 +4756,7 @@ components:
       in: query
       description: >-
         Full-text search: events whose indexed text contains every word of q, as a substring, case-insensitive
+        (words shorter than 3 characters: case-insensitive for ASCII letters only)
         (Monolog: message, channel, keys and values of context and extra, first 4 KB). Quotes and other characters
         are literal. Types without indexed text never match.
       schema:
@@ -5635,6 +5637,7 @@ components:
       - spans
       - related_errors
       - related_log_count
+      - n_plus_one
       properties:
         trace_id:
           type: string
@@ -5653,6 +5656,48 @@ components:
         related_log_count:
           type: integer
           description: Logs with this trace id.
+        n_plus_one:
+          type: array
+          description: >-
+            Repeated database queries (N+1): database spans of one transaction
+            whose query, with literals, placeholders and IN/VALUES lists
+            normalized to ?, runs at least 5 times. Most repeated first.
+          items:
+            $ref: '#/components/schemas/SentryNPlusOne'
+    SentryNPlusOne:
+      type: object
+      required:
+      - transaction_id
+      - query
+      - count
+      - total_ms
+      - origin
+      - span_ids
+      properties:
+        transaction_id:
+          type: string
+          nullable: true
+        query:
+          type: string
+          description: The normalized query.
+        count:
+          type: integer
+        total_ms:
+          type: number
+          description: Sum of the spans' durations in ms, two decimals (from span start and end times).
+        origin:
+          type: string
+          nullable: true
+          description: >-
+            code.filepath:code.lineno of the first span that has it.
+            sentry-laravel sends it only for queries slower than
+            SENTRY_TRACE_SQL_ORIGIN_THRESHOLD_MS (100 ms by default), and
+            only when app code is within the first 20 stack frames of the
+            query (lazy-loaded Eloquent relations are usually deeper).
+        span_ids:
+          type: array
+          items:
+            type: string
     SentryTransaction:
       type: object
       description: The earliest transaction of the trace.
