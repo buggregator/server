@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -351,5 +352,32 @@ func TestUserStore_SettingsCap(t *testing.T) {
 	}
 	if got, _ := s.Settings("u"); len(got) != 2 || got["c"] == nil {
 		t.Errorf("settings %v", got)
+	}
+}
+
+// ?limit= of GET /api/audit: over the cap clamps to 500, not the default.
+func TestAuditLimit(t *testing.T) {
+	s := newUserStore(t)
+	tx, _ := s.db.Begin()
+	for i := 0; i < 600; i++ {
+		tx.Exec(`INSERT INTO audit_log (at, user_label, action) VALUES ('2026-11-22T00:00:00.000000Z', 'guest', 'x')`)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	h := NewHandlers(nil, NewTokenStore("x"), AccessPolicy{})
+	h.SetStore(s, nil)
+	for q, want := range map[string]int{"": 100, "0": 100, "1": 1, "500": 500, "501": 500, "600": 500, "-5": 100, "abc": 100} {
+		req := httptest.NewRequest("GET", "/api/audit?limit="+q, nil)
+		req = req.WithContext(context.WithValue(req.Context(), userContextKey, &User{Provider: "test", Email: "a@b.c"}))
+		rec := httptest.NewRecorder()
+		h.handleAudit(rec, req)
+		var page struct {
+			Data []AuditEntry `json:"data"`
+		}
+		json.Unmarshal(rec.Body.Bytes(), &page)
+		if rec.Code != 200 || len(page.Data) != want {
+			t.Errorf("limit=%q: %d rows (status %d), want %d", q, len(page.Data), rec.Code, want)
+		}
 	}
 }

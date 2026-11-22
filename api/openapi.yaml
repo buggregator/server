@@ -76,6 +76,7 @@ paths:
       parameters:
       - name: limit
         in: query
+        description: Page size; a larger value gives 500, a missing or non-positive one 100
         schema:
           type: integer
           minimum: 1

@@ -158,12 +158,28 @@ func (s *UserStore) Record(e AuditEntry) error {
 	return err
 }
 
-// ListAudit returns up to limit entries, newest first; before > 0 lists
-// entries older than that id (the next page).
-func (s *UserStore) ListAudit(limit int, before int64) ([]AuditEntry, error) {
-	if limit <= 0 || limit > 500 {
-		limit = 100
+// Page size of ListAudit: default when unset or not positive, cap above.
+const (
+	auditDefaultLimit = 100
+	auditMaxLimit     = 500
+)
+
+// auditLimit turns a requested page size into one ListAudit serves: not
+// positive (unset, garbage) → 100, over 500 → 500.
+func auditLimit(limit int) int {
+	switch {
+	case limit <= 0:
+		return auditDefaultLimit
+	case limit > auditMaxLimit:
+		return auditMaxLimit
 	}
+	return limit
+}
+
+// ListAudit returns up to limit entries (see auditLimit), newest first;
+// before > 0 lists entries older than that id (the next page).
+func (s *UserStore) ListAudit(limit int, before int64) ([]AuditEntry, error) {
+	limit = auditLimit(limit)
 	q := `SELECT id, at, user_id, user_label, action, target, status, ip FROM audit_log`
 	args := []any{}
 	if before > 0 {
