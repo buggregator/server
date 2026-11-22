@@ -1244,6 +1244,108 @@ paths:
                 type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/profiler/compare:
+    get:
+      tags:
+      - Profiler
+      operationId: profilerCompare
+      summary: Compare two profiles function by function.
+      description: >-
+        Every function of either profile with its exclusive wall time (µs), exclusive memory (bytes) and calls in both
+        profiles and the change (compare − base). A function missing from one profile counts 0 there. Biggest
+        wall-time change first, then memory, calls, name. `main()` is included: it carries the change of the whole run.
+      parameters:
+      - name: base
+        in: query
+        required: true
+        description: Profiler event UUID of the "before" profile.
+        schema:
+          type: string
+      - name: compare
+        in: query
+        required: true
+        description: Profiler event UUID of the "after" profile.
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: Functions to return, 1..1000 (larger values are capped).
+        schema:
+          type: integer
+          minimum: 1
+          default: 100
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Comparison.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - functions
+                - total
+                - base_totals
+                - compare_totals
+                properties:
+                  functions:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - function
+                      - base_excl_wt
+                      - compare_excl_wt
+                      - diff_excl_wt
+                      - base_excl_mu
+                      - compare_excl_mu
+                      - diff_excl_mu
+                      - base_ct
+                      - compare_ct
+                      - diff_ct
+                      properties:
+                        function:
+                          type: string
+                        base_excl_wt:
+                          type: integer
+                        compare_excl_wt:
+                          type: integer
+                        diff_excl_wt:
+                          type: integer
+                        base_excl_mu:
+                          type: integer
+                        compare_excl_mu:
+                          type: integer
+                        diff_excl_mu:
+                          type: integer
+                        base_ct:
+                          type: integer
+                        compare_ct:
+                          type: integer
+                        diff_ct:
+                          type: integer
+                  total:
+                    type: integer
+                    description: Functions in both profiles together, before the limit.
+                  base_totals:
+                    $ref: '#/components/schemas/ProfilerCompareTotals'
+                  compare_totals:
+                    $ref: '#/components/schemas/ProfilerCompareTotals'
+        '400':
+          description: '`base` or `compare` missing, or a bad `limit`. Plain text.'
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: No profile with that UUID. Plain text.
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/profiler/{uuid}/summary:
     get:
       tags:
@@ -7701,6 +7803,26 @@ components:
         ct:
           type: integer
           format: int64
+    ProfilerCompareTotals:
+      type: object
+      description: Totals of the whole profile.
+      required:
+      - cpu
+      - wt
+      - mu
+      - pmu
+      - ct
+      properties:
+        cpu:
+          type: integer
+        wt:
+          type: integer
+        mu:
+          type: integer
+        pmu:
+          type: integer
+        ct:
+          type: integer
     ProfilerSummary:
       type: object
       required:

@@ -19,6 +19,7 @@ func registerAPI(mux *http.ServeMux, db *sql.DB, protect func(http.Handler) http
 	route("GET /api/profiler/{uuid}/call-graph", handleCallGraph(db))
 	route("GET /api/profiler/{uuid}/top", handleTopFunctions(db))
 	route("GET /api/profiler/{uuid}/flame-chart", handleFlameChart(db))
+	route("GET /api/profiler/compare", handleCompare(db))
 }
 
 // --- Edge loading (delegated to query.go) ---
