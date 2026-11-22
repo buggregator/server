@@ -117,7 +117,11 @@ func eventConditions(opts event.FindOptions, alias, skipKey string) ([]string, [
 		args = append(args, opts.To)
 	}
 	fc, fa := facetConditions(col("uuid"), opts.Filters, skipKey)
-	return append(conds, fc...), append(args, fa...)
+	conds, args = append(conds, fc...), append(args, fa...)
+	if sc, sa, ok := searchCondition(col("uuid"), opts.Search); ok {
+		conds, args = append(conds, sc), append(args, sa...)
+	}
+	return conds, args
 }
 
 // FacetCounts returns, per facet key, its values with the number of events
@@ -188,16 +192,37 @@ func (s *SQLiteStore) FacetCounts(ctx context.Context, opts event.FindOptions, p
 	return result, nil
 }
 
-// BackfillFacets indexes the events stored before facets existed (rowid up
-// to the cutoff recorded by the migration), one short transaction per batch,
-// until done or ctx ends. Progress is saved, so a restart continues.
+// BackfillFacets indexes the facets of events stored before facets existed.
 func (s *SQLiteStore) BackfillFacets(ctx context.Context) error {
 	if s.facets == nil {
 		return nil
 	}
+	return s.backfill(ctx, "facets", "event_facets_backfill", func(ctx context.Context, tx *sql.Tx, uuid, typ, payload string) error {
+		return writeFacets(ctx, tx, uuid, s.facets(typ, json.RawMessage(payload)))
+	})
+}
+
+// BackfillSearch indexes the search text of events stored before search existed.
+func (s *SQLiteStore) BackfillSearch(ctx context.Context) error {
+	if s.search == nil {
+		return nil
+	}
+	return s.backfill(ctx, "search", "event_search_backfill", func(ctx context.Context, tx *sql.Tx, uuid, typ, payload string) error {
+		return writeSearch(ctx, tx, uuid, s.search(typ, json.RawMessage(payload)))
+	})
+}
+
+// indexFunc writes one stored event's index rows inside tx.
+type indexFunc func(ctx context.Context, tx *sql.Tx, uuid, typ, payload string) error
+
+// backfill indexes the events stored before an index existed (rowid up to
+// the cutoff the migration recorded in progressTable), one short
+// transaction per batch, until done or ctx ends. Progress is saved, so a
+// restart continues.
+func (s *SQLiteStore) backfill(ctx context.Context, name, progressTable string, write indexFunc) error {
 	var cursor, cutoff int64
 	err := s.db.QueryRowContext(ctx,
-		`SELECT cursor, cutoff FROM event_facets_backfill WHERE id = 1`).Scan(&cursor, &cutoff)
+		`SELECT cursor, cutoff FROM `+progressTable+` WHERE id = 1`).Scan(&cursor, &cutoff)
 	if err == sql.ErrNoRows {
 		return nil
 	}
@@ -208,12 +233,12 @@ func (s *SQLiteStore) BackfillFacets(ctx context.Context) error {
 		return nil
 	}
 	started, total := time.Now(), 0
-	slog.Info("facets: indexing stored events in the background", "from_rowid", cursor, "to_rowid", cutoff)
+	slog.Info(name+": indexing stored events in the background", "from_rowid", cursor, "to_rowid", cutoff)
 	for cursor < cutoff {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		next, n, err := s.backfillBatch(ctx, cursor, cutoff)
+		next, n, err := s.backfillBatch(ctx, progressTable, write, cursor, cutoff)
 		if err != nil {
 			return err
 		}
@@ -227,14 +252,14 @@ func (s *SQLiteStore) BackfillFacets(ctx context.Context) error {
 			}
 		}
 	}
-	slog.Info("facets: stored events indexed", "events", total, "took", time.Since(started).Round(time.Millisecond))
+	slog.Info(name+": stored events indexed", "events", total, "took", time.Since(started).Round(time.Millisecond))
 	return nil
 }
 
 // backfillBatch indexes one batch after cursor and saves the new cursor, in
 // one transaction: a Ray merge of the same event between the read and the
 // write cannot be overwritten by the stale payload.
-func (s *SQLiteStore) backfillBatch(ctx context.Context, cursor, cutoff int64) (int64, int, error) {
+func (s *SQLiteStore) backfillBatch(ctx context.Context, progressTable string, write indexFunc, cursor, cutoff int64) (int64, int, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return cursor, 0, err
@@ -270,11 +295,11 @@ func (s *SQLiteStore) backfillBatch(ctx context.Context, cursor, cutoff int64) (
 		next = cutoff
 	}
 	for _, it := range items {
-		if err := writeFacets(ctx, tx, it.uuid, s.facets(it.typ, json.RawMessage(it.payload))); err != nil {
+		if err := write(ctx, tx, it.uuid, it.typ, it.payload); err != nil {
 			return cursor, 0, err
 		}
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE event_facets_backfill SET cursor = ? WHERE id = 1`, next); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE `+progressTable+` SET cursor = ? WHERE id = 1`, next); err != nil {
 		return cursor, 0, err
 	}
 	if err := tx.Commit(); err != nil {

@@ -17,6 +17,7 @@ type SQLiteStore struct {
 	db       *sql.DB
 	onDelete []func(uuids []string)
 	facets   FacetFunc
+	search   SearchFunc
 }
 
 // Open creates a new SQLite database connection with a single connection.
@@ -151,7 +152,11 @@ func (s *SQLiteStore) Store(ctx context.Context, ev event.Event) error {
 	if s.facets != nil {
 		facets = s.facets(ev.Type, ev.Payload)
 	}
-	if len(facets) == 0 {
+	var text string
+	if s.search != nil {
+		text = s.search(ev.Type, ev.Payload)
+	}
+	if len(facets) == 0 && text == "" {
 		_, err := s.db.ExecContext(ctx, insert, args...)
 		return err
 	}
@@ -164,6 +169,9 @@ func (s *SQLiteStore) Store(ctx context.Context, ev event.Event) error {
 		return err
 	}
 	if err := writeFacets(ctx, tx, ev.UUID, facets); err != nil {
+		return err
+	}
+	if err := writeSearch(ctx, tx, ev.UUID, text); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -258,7 +266,7 @@ func (s *SQLiteStore) DeleteAll(ctx context.Context, opts event.DeleteOptions) e
 }
 
 func (s *SQLiteStore) UpdatePayload(ctx context.Context, uuid string, payload json.RawMessage) error {
-	if s.facets == nil {
+	if s.facets == nil && s.search == nil {
 		res, err := s.db.ExecContext(ctx, `UPDATE events SET payload = ? WHERE uuid = ?`, string(payload), uuid)
 		if err != nil {
 			return err
@@ -284,8 +292,15 @@ func (s *SQLiteStore) UpdatePayload(ctx context.Context, uuid string, payload js
 	if err != nil {
 		return err
 	}
-	if err := writeFacets(ctx, tx, uuid, s.facets(eventType, payload)); err != nil {
-		return err
+	if s.facets != nil {
+		if err := writeFacets(ctx, tx, uuid, s.facets(eventType, payload)); err != nil {
+			return err
+		}
+	}
+	if s.search != nil {
+		if err := writeSearch(ctx, tx, uuid, s.search(eventType, payload)); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }

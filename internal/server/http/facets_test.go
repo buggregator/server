@@ -35,6 +35,14 @@ func setupFacetAPI(t *testing.T) (*http.ServeMux, *storage.SQLiteStore) {
 	if err := storage.InitFacets(context.Background(), db); err != nil {
 		t.Fatal(err)
 	}
+	if err := storage.InitSearch(context.Background(), db); err != nil {
+		t.Fatal(err)
+	}
+	store.SetSearchFunc(func(_ string, payload json.RawMessage) string {
+		var p struct{ Message string }
+		_ = json.Unmarshal(payload, &p)
+		return p.Message
+	})
 	store.SetFacetFunc(func(_ string, payload json.RawMessage) []event.Facet {
 		var p struct{ Host, Env, Feature, Level string }
 		_ = json.Unmarshal(payload, &p)
@@ -124,5 +132,62 @@ func TestAPI_FeedFilters(t *testing.T) {
 	}
 	if !reflect.DeepEqual(facets.Keys, []string{"env", "host", "level", "tag:feature"}) {
 		t.Errorf("keys = %v", facets.Keys)
+	}
+}
+
+func TestAPI_SearchAndHistogram(t *testing.T) {
+	mux, store := setupFacetAPI(t)
+	ctx := context.Background()
+	for _, ev := range []event.Event{
+		{UUID: "a", Type: "monolog", Timestamp: 1795000021, Payload: json.RawMessage(`{"Message":"Order failed","Level":"error"}`)},
+		{UUID: "b", Type: "monolog", Timestamp: 1795000050, Payload: json.RawMessage(`{"Message":"order placed","Level":"info"}`)},
+		{UUID: "c", Type: "monolog", Timestamp: 1795000090, Payload: json.RawMessage(`{"Message":"cache warm","Level":"info"}`)},
+	} {
+		ev.Project = "default"
+		if err := store.Store(ctx, ev); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var list struct{ Data []struct{ UUID string } }
+	getJSON(t, mux, "/api/events?type=monolog&q=ORDER", &list)
+	if len(list.Data) != 2 {
+		t.Errorf("q=ORDER: %d events, want 2", len(list.Data))
+	}
+	getJSON(t, mux, "/api/events/preview?type=monolog&q=order+fail", &list)
+	if len(list.Data) != 1 || list.Data[0].UUID != "a" {
+		t.Errorf("preview q=order fail: %+v, want [a]", list.Data)
+	}
+
+	var facets struct {
+		Data map[string][]event.FacetCount
+	}
+	getJSON(t, mux, "/api/events/facets?type=monolog&q=order", &facets)
+	want := []event.FacetCount{{Value: "error", Count: 1}, {Value: "info", Count: 1}}
+	if !reflect.DeepEqual(facets.Data["level"], want) {
+		t.Errorf("facets under q=order: %v, want %v", facets.Data["level"], want)
+	}
+
+	var hist struct {
+		Bucket int64
+		Data   []storage.HistogramBucket
+	}
+	getJSON(t, mux, "/api/events/histogram?type=monolog&window=all", &hist)
+	wantHist := []storage.HistogramBucket{
+		{T: 1795000020, Count: 2, Levels: map[string]int{"error": 1, "info": 1}},
+		{T: 1795000080, Count: 1, Levels: map[string]int{"info": 1}},
+	}
+	if hist.Bucket != 60 || !reflect.DeepEqual(hist.Data, wantHist) {
+		t.Errorf("histogram = %d %+v, want 60 %+v", hist.Bucket, hist.Data, wantHist)
+	}
+	getJSON(t, mux, "/api/events/histogram?type=monolog&q=cache&bucket=10", &hist)
+	if hist.Bucket != 10 || len(hist.Data) != 1 || hist.Data[0].T != 1795000090 {
+		t.Errorf("histogram q=cache bucket=10 = %d %+v", hist.Bucket, hist.Data)
+	}
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/events/histogram?bucket=0", nil))
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("bucket=0: status %d, want 400", rec.Code)
 	}
 }

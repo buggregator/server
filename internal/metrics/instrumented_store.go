@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/buggregator/server/v2/internal/event"
+	"github.com/buggregator/server/v2/internal/storage"
 )
 
 // InstrumentedStore wraps event.Store with Prometheus metrics.
@@ -77,6 +78,21 @@ func (s *InstrumentedStore) FacetCounts(ctx context.Context, opts event.FindOpti
 	counts, err := fc.FacetCounts(ctx, opts, perKey)
 	s.collector.StorageQueryDuration.WithLabelValues("facet_counts").Observe(time.Since(start).Seconds())
 	return counts, err
+}
+
+// Histogram passes through to the inner store when it counts events per
+// time bucket (storage.SQLiteStore); otherwise there are none.
+func (s *InstrumentedStore) Histogram(ctx context.Context, opts event.FindOptions, bucketSec int64) ([]storage.HistogramBucket, int64, error) {
+	h, ok := s.inner.(interface {
+		Histogram(context.Context, event.FindOptions, int64) ([]storage.HistogramBucket, int64, error)
+	})
+	if !ok {
+		return []storage.HistogramBucket{}, bucketSec, nil
+	}
+	start := time.Now()
+	data, used, err := h.Histogram(ctx, opts, bucketSec)
+	s.collector.StorageQueryDuration.WithLabelValues("histogram").Observe(time.Since(start).Seconds())
+	return data, used, err
 }
 
 func (s *InstrumentedStore) Delete(ctx context.Context, uuid string) error {

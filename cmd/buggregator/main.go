@@ -259,6 +259,8 @@ func run() {
 	// Index each event's filterable values (machine, environment, tags…)
 	// with it, for feed filters.
 	store.SetFacetFunc(registry.Previews().Facets)
+	// Index the text full-text search finds events by (Monolog lines).
+	store.SetSearchFunc(registry.Previews().SearchText)
 
 	store.OnDelete(func(uuids []string) {
 		for _, u := range uuids {
