@@ -110,7 +110,11 @@ func (c *OAuthClient) applyIDToken(u *User, raw string) {
 	if u.HostedDomain == "" {
 		u.HostedDomain, _ = claims["hd"].(string)
 	}
-	if !u.EmailVerified {
+	// The token's verdict applies only to the same address, and never
+	// overrides an explicit email_verified from userinfo.
+	tokenEmail, _ := claims["email"].(string)
+	sameEmail := tokenEmail == "" || u.Email == "" || strings.EqualFold(tokenEmail, u.Email)
+	if !u.EmailVerified && !u.verifiedSet && sameEmail {
 		// Microsoft Entra sends no email_verified; its optional claim
 		// xms_edov says the email's domain is verified by the tenant.
 		u.EmailVerified = claimTrue(claims["email_verified"]) || claimTrue(claims["xms_edov"])
@@ -232,6 +236,7 @@ func (c *OAuthClient) mapUser(body []byte) (*User, error) {
 		u.Email, _ = raw["email"].(string)
 		u.Avatar, _ = raw["picture"].(string)
 		u.EmailVerified = claimTrue(raw["email_verified"])
+		_, u.verifiedSet = raw["email_verified"]
 		u.HostedDomain, _ = raw["hd"].(string)
 	}
 
