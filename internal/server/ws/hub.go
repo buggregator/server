@@ -28,7 +28,15 @@ type Hub struct {
 	// connectTimeout closes a socket that has not passed connect in time
 	// (auth on only).
 	connectTimeout time.Duration
+	// pingInterval is how often a connected client gets a ping ({}); the
+	// connect reply promises it, and centrifuge-js drops a socket that gets
+	// none within ping + its maxServerPingDelay (10 s).
+	pingInterval time.Duration
 }
+
+// DefaultPingInterval is the server ping period announced in the connect
+// reply (Centrifugo's default).
+const DefaultPingInterval = 25 * time.Second
 
 // DefaultConnectTimeout is how long, with auth on, a socket may stay open
 // without a connect that passed.
@@ -62,6 +70,7 @@ func NewHub() *Hub {
 	return &Hub{
 		clients:        make(map[*client]struct{}),
 		connectTimeout: DefaultConnectTimeout,
+		pingInterval:   DefaultPingInterval,
 	}
 }
 
@@ -146,6 +155,8 @@ func (h *Hub) HandleUpgrade(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	go h.pingLoop(c)
+
 	// Read loop — handle Centrifugo protocol commands.
 	for {
 		_, data, err := conn.Read(c.ctx)
@@ -153,6 +164,31 @@ func (h *Hub) HandleUpgrade(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		h.handleClientMessage(c, data)
+	}
+}
+
+// pingLoop sends a connected client a ping ({} in the Centrifugo JSON
+// protocol) every pingInterval until its socket ends. Without it
+// centrifuge-js, told to expect pings in the connect reply, closes and
+// reopens the socket every ~35 s and reloads the event list each time.
+func (h *Hub) pingLoop(c *client) {
+	t := time.NewTicker(h.pingInterval)
+	defer t.Stop()
+	for {
+		select {
+		case <-c.ctx.Done():
+			return
+		case <-t.C:
+			if !c.isConnected() {
+				continue
+			}
+			ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
+			err := c.conn.Write(ctx, websocket.MessageText, []byte("{}"))
+			cancel()
+			if err != nil {
+				return
+			}
+		}
 	}
 }
 
@@ -176,6 +212,11 @@ func (h *Hub) handleClientMessage(c *client, data []byte) {
 			if !h.connectClient(c, cmd.ID, cmd.Connect.Token) {
 				return
 			}
+			continue
+		}
+		if cmd.ID == 0 && cmd.Subscribe == nil && cmd.RPC == nil {
+			// The client's pong ({}) to a server ping: no reply, or the
+			// client would take the reply for a ping and pong again.
 			continue
 		}
 		if h.validToken != nil && !c.isConnected() {
@@ -281,7 +322,7 @@ func (h *Hub) handleConnect(id uint32) centrifugoReply {
 		Connect: &connectResult{
 			Client:  "go-buggregator",
 			Version: "0.0.1",
-			Ping:    25,
+			Ping:    max(1, int(h.pingInterval/time.Second)),
 			Pong:    true,
 			Subs:    subs,
 		},
