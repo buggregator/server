@@ -119,6 +119,8 @@ func (a *App) Run() {
 		}
 
 		tokens := auth.NewTokenStore(a.cfg.Auth.JWTSecret)
+		access := auth.NewAccessPolicy(a.cfg.Auth.AllowedEmails, a.cfg.Auth.AllowedDomains)
+		tokens.SetAccess(access)
 		authMiddleware = auth.Middleware(tokens, true)
 		a.hub.SetTokenValidator(func(token string) (time.Time, bool) {
 			exp, err := tokens.ExpiresAt(token)
@@ -139,7 +141,6 @@ func (a *App) Run() {
 			selfupdate.Exit(1)
 		}
 
-		access := auth.NewAccessPolicy(a.cfg.Auth.AllowedEmails, a.cfg.Auth.AllowedDomains)
 		handlers := auth.NewHandlers(oauth, tokens, access)
 		handlers.RegisterRoutes(mux)
 		handlers.RegisterProtectedRoutes(mux, authMiddleware)
