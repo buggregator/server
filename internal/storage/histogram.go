@@ -13,6 +13,9 @@ import (
 // a wider bucket.
 const MaxHistogramBuckets = 1440
 
+// maxHistogramBucketWidth caps a widened bucket at 100 years, in seconds.
+const maxHistogramBucketWidth = 100 * 366 * 24 * 3600
+
 // HistogramBucket is the number of events in one time bucket, split by level.
 type HistogramBucket struct {
 	// T is the bucket start, unix seconds.
@@ -55,8 +58,10 @@ func (s *SQLiteStore) Histogram(ctx context.Context, opts event.FindOptions, buc
 		}
 	}
 	if span := to - from; span > float64(bucketSec*MaxHistogramBuckets) {
-		n := int64(math.Ceil(span / float64(bucketSec*MaxHistogramBuckets)))
-		bucketSec *= n
+		// Capped: a span like from=1&to=1e30 would overflow int64. Only
+		// buckets that hold events are returned, so a cap is safe.
+		w := math.Ceil(span/float64(bucketSec*MaxHistogramBuckets)) * float64(bucketSec)
+		bucketSec = int64(math.Min(w, maxHistogramBucketWidth))
 	}
 
 	query := `SELECT CAST(CAST(e.timestamp AS REAL) / ? AS INTEGER) * ? AS t, COALESCE(f.value, ''), COUNT(*)

@@ -223,7 +223,9 @@ func TestClearSentry_MigrationPutsOldRowsInDefault(t *testing.T) {
 	entries, _ := migrations.ReadDir("migrations")
 	old := storage.NewMigrator(db)
 	for _, e := range entries {
-		if e.Name() == newest {
+		// A database from before the project column: no later migration
+		// either (they may read project_id).
+		if e.Name() >= newest {
 			continue
 		}
 		b, _ := migrations.ReadFile("migrations/" + e.Name())

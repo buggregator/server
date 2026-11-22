@@ -25,6 +25,9 @@ func registerAPI(mux *http.ServeMux, db *sql.DB, protect func(http.Handler) http
 	route("GET /api/sentry/service-map/edge", handleServiceMapEdge(db))
 	route("GET /api/sentry/traces/{traceId}/sequence", handleTraceSequence(db))
 	route("GET /api/sentry/counts", handleCounts(db))
+	route("GET /api/sentry/queues/jobs", handleQueueJobs(db))
+	route("GET /api/sentry/queues/jobs/{id}", handleQueueJob(db))
+	route("GET /api/sentry/queues/summary", handleQueueSummary(db))
 	route("DELETE /api/sentry/all", handleClearAll(db))
 }
 
@@ -60,7 +63,7 @@ func clearSentry(db *sql.DB, project string, keepPinned bool) error {
 	if project == "" && !keepPinned {
 		for _, t := range []string{
 			"sentry_breadcrumbs", "sentry_exceptions", "sentry_error_events",
-			"sentry_spans", "sentry_transactions", "sentry_traces",
+			"sentry_spans", "sentry_queue_jobs", "sentry_transactions", "sentry_traces",
 			"sentry_logs", "sentry_metrics", "sentry_feedback", "cron_checkins",
 		} {
 			if _, err := tx.Exec("DELETE FROM " + t); err != nil {
@@ -114,6 +117,7 @@ func clearSentry(db *sql.DB, project string, keepPinned bool) error {
 		`DELETE FROM sentry_error_events` + errWhere,
 		`DELETE FROM sentry_spans` + where,
 		`DELETE FROM sentry_transactions` + where,
+		`DELETE FROM sentry_queue_jobs WHERE transaction_id NOT IN (SELECT id FROM sentry_transactions)`,
 		`DELETE FROM sentry_logs` + where,
 		`DELETE FROM sentry_metrics` + where,
 		`DELETE FROM sentry_feedback` + fbWhere,
