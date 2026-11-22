@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,6 +18,8 @@ type ProviderEndpoints struct {
 	UserInfoURL string
 	// EmailsURL lists the user's emails with their verified flag (GitHub).
 	EmailsURL string
+	// Issuer is the OIDC issuer from discovery; empty for GitHub.
+	Issuer string
 }
 
 // OAuthClient wraps an oauth2.Config and provider-specific user mapping.
@@ -24,6 +27,7 @@ type OAuthClient struct {
 	config      oauth2.Config
 	userInfoURL string
 	emailsURL   string
+	issuer      string
 	provider    string
 }
 
@@ -56,6 +60,7 @@ func NewOAuthClient(provider, providerURL, clientID, clientSecret, callbackURL, 
 		config:      cfg,
 		userInfoURL: endpoints.UserInfoURL,
 		emailsURL:   endpoints.EmailsURL,
+		issuer:      endpoints.Issuer,
 		provider:    provider,
 	}, nil
 }
@@ -73,7 +78,78 @@ func (c *OAuthClient) Exchange(code string) (*User, error) {
 	}
 
 	client := c.config.Client(oauth2.NoContext, token)
-	return c.fetchUser(client)
+	u, err := c.fetchUser(client)
+	if err != nil {
+		return nil, err
+	}
+	if raw, ok := token.Extra("id_token").(string); ok && raw != "" {
+		c.applyIDToken(u, raw)
+	}
+	return u, nil
+}
+
+// applyIDToken fills what the userinfo answer lacks from the ID token:
+// email_verified, hd, and Microsoft Entra's xms_edov. The token came straight
+// from the token endpoint over TLS, which OIDC Core 3.1.3.7 accepts in place
+// of its signature; issuer, audience and subject are still checked, and a
+// token that fails them is ignored.
+func (c *OAuthClient) applyIDToken(u *User, raw string) {
+	claims, ok := decodeJWTClaims(raw)
+	if !ok {
+		return
+	}
+	if !audienceHas(claims["aud"], c.config.ClientID) {
+		return
+	}
+	if iss, _ := claims["iss"].(string); c.issuer != "" && strings.TrimRight(iss, "/") != strings.TrimRight(c.issuer, "/") {
+		return
+	}
+	if sub, _ := claims["sub"].(string); u.Subject != "" && sub != u.Subject {
+		return
+	}
+	if u.HostedDomain == "" {
+		u.HostedDomain, _ = claims["hd"].(string)
+	}
+	if !u.EmailVerified {
+		// Microsoft Entra sends no email_verified; its optional claim
+		// xms_edov says the email's domain is verified by the tenant.
+		u.EmailVerified = claimTrue(claims["email_verified"]) || claimTrue(claims["xms_edov"])
+	}
+	if u.Email == "" && u.EmailVerified {
+		u.Email, _ = claims["email"].(string)
+	}
+}
+
+// decodeJWTClaims returns the payload of a compact JWT without checking it.
+func decodeJWTClaims(raw string) (map[string]any, bool) {
+	parts := strings.Split(raw, ".")
+	if len(parts) != 3 {
+		return nil, false
+	}
+	body, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, false
+	}
+	var claims map[string]any
+	if json.Unmarshal(body, &claims) != nil {
+		return nil, false
+	}
+	return claims, true
+}
+
+// audienceHas reports whether the aud claim (a string or a list) names id.
+func audienceHas(aud any, id string) bool {
+	switch a := aud.(type) {
+	case string:
+		return a == id
+	case []any:
+		for _, v := range a {
+			if v == id {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // fetchUser retrieves the user profile from the provider's userinfo endpoint.
@@ -145,13 +221,14 @@ func (c *OAuthClient) mapUser(body []byte) (*User, error) {
 
 	switch c.provider {
 	case "github":
-		u.Username, _ = raw["login"].(string)
+		u.Username = strOr(raw, "name", "login")
 		u.Email, _ = raw["email"].(string)
 		u.Avatar, _ = raw["avatar_url"].(string)
 		u.EmailVerified = u.Email != ""
 	default:
 		// OIDC-compatible providers (Auth0, Google, Keycloak, Okta, Azure AD, GitLab).
-		u.Username = strOr(raw, "nickname", "preferred_username", "name", "login")
+		u.Subject, _ = raw["sub"].(string)
+		u.Username = strOr(raw, "name", "preferred_username", "nickname", "login")
 		u.Email, _ = raw["email"].(string)
 		u.Avatar, _ = raw["picture"].(string)
 		u.EmailVerified = claimTrue(raw["email_verified"])
@@ -181,6 +258,7 @@ func resolveEndpoints(provider, providerURL string) (*ProviderEndpoints, error) 
 
 // oidcDiscoveryDoc is the subset of fields we need from .well-known/openid-configuration.
 type oidcDiscoveryDoc struct {
+	Issuer                string `json:"issuer"`
 	AuthorizationEndpoint string `json:"authorization_endpoint"`
 	TokenEndpoint         string `json:"token_endpoint"`
 	UserinfoEndpoint      string `json:"userinfo_endpoint"`
@@ -221,6 +299,7 @@ func discoverOIDC(issuer string) (*ProviderEndpoints, error) {
 		AuthURL:     doc.AuthorizationEndpoint,
 		TokenURL:    doc.TokenEndpoint,
 		UserInfoURL: userInfoURL,
+		Issuer:      doc.Issuer,
 	}, nil
 }
 
@@ -234,13 +313,25 @@ func strOr(m map[string]any, keys ...string) string {
 	return ""
 }
 
-// claimTrue reads a boolean claim; some providers send "true" as a string.
+// claimTrue reads a boolean claim; some providers send it as "true", "1" or 1.
 func claimTrue(v any) bool {
 	switch b := v.(type) {
 	case bool:
 		return b
 	case string:
-		return strings.EqualFold(b, "true")
+		return strings.EqualFold(b, "true") || b == "1"
+	case float64:
+		return b == 1
 	}
 	return false
+}
+
+// DefaultScopes returns the scopes to ask for when none are configured.
+// GitHub is not OIDC: its scopes for the profile and the email list are
+// read:user and user:email.
+func DefaultScopes(provider string) string {
+	if provider == "github" {
+		return "read:user,user:email"
+	}
+	return "openid,email,profile"
 }

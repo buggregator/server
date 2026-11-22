@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/buggregator/server/v2/internal/auth"
 	"gopkg.in/yaml.v3"
 )
 
@@ -23,7 +24,7 @@ type AuthConfig struct {
 	ClientID     string `yaml:"client_id"`     // OAuth2 client ID.
 	ClientSecret string `yaml:"client_secret"` // OAuth2 client secret.
 	CallbackURL  string `yaml:"callback_url"`  // OAuth2 callback URL (e.g., http://localhost:8000/auth/sso/callback).
-	Scopes       string `yaml:"scopes"`        // Comma-separated scopes (default: "openid,email,profile").
+	Scopes       string `yaml:"scopes"`        // Comma-separated scopes (default: "openid,email,profile"; github: "read:user,user:email").
 	JWTSecret    string `yaml:"jwt_secret"`    // Secret for signing internal JWT tokens. Required when auth is enabled.
 	// AllowedEmails and AllowedDomains limit who may sign in (verified email
 	// required). Both empty = everyone the provider lets in.
@@ -540,7 +541,7 @@ func LoadConfig() Config {
 	cfg.Auth.ClientID = coalesce(os.Getenv("AUTH_CLIENT_ID"), fileCfg.Auth.ClientID)
 	cfg.Auth.ClientSecret = coalesce(os.Getenv("AUTH_CLIENT_SECRET"), fileCfg.Auth.ClientSecret)
 	cfg.Auth.CallbackURL = coalesce(os.Getenv("AUTH_CALLBACK_URL"), fileCfg.Auth.CallbackURL)
-	cfg.Auth.Scopes = coalesce(os.Getenv("AUTH_SCOPES"), fileCfg.Auth.Scopes, "openid,email,profile")
+	cfg.Auth.Scopes = coalesce(os.Getenv("AUTH_SCOPES"), fileCfg.Auth.Scopes, auth.DefaultScopes(cfg.Auth.Provider))
 	cfg.Auth.JWTSecret = coalesce(os.Getenv("AUTH_JWT_SECRET"), fileCfg.Auth.JWTSecret)
 	cfg.Auth.AllowedEmails = envList("AUTH_ALLOWED_EMAILS", fileCfg.Auth.AllowedEmails)
 	cfg.Auth.AllowedDomains = envList("AUTH_ALLOWED_DOMAINS", fileCfg.Auth.AllowedDomains)
