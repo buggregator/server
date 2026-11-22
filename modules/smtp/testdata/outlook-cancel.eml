@@ -1,0 +1,19 @@
+From: Bob <bob@example.com>
+To: ann@example.com
+Subject: Canceled: Planning
+MIME-Version: 1.0
+Content-Type: text/calendar; charset="utf-8"; method=CANCEL
+
+BEGIN:VCALENDAR
+METHOD:CANCEL
+BEGIN:VTIMEZONE
+TZID:W. Europe Standard Time
+END:VTIMEZONE
+BEGIN:VEVENT
+ORGANIZER;CN=Bob:mailto:bob@example.com
+SUMMARY;LANGUAGE=en-US:Planning
+DTSTART;TZID=W. Europe Standard Time:20261203T140000
+DTEND;TZID=W. Europe Standard Time:20261203T150000
+STATUS:CANCELLED
+END:VEVENT
+END:VCALENDAR

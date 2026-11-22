@@ -1,0 +1,19 @@
+From: News <news@example.com>
+To: ann@example.com
+Subject: Weekly poll
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="amp"
+
+--amp
+Content-Type: text/plain; charset=utf-8
+
+Vote in our poll.
+--amp
+Content-Type: text/x-amp-html; charset=utf-8
+
+<!doctype html><html ⚡4email><head><script async src="https://cdn.ampproject.org/v0.js"></script></head><body><amp-form>Vote</amp-form></body></html>
+--amp
+Content-Type: text/html; charset=utf-8
+
+<p>Vote in our poll.</p>
+--amp--

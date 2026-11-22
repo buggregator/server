@@ -6942,6 +6942,98 @@ components:
         raw:
           type: string
           description: Original RFC 822 source.
+        parts:
+          type: array
+          description: Other body parts in message order (Apple Watch `text/watch-html`, AMP `text/x-amp-html`, `text/calendar`,
+            delivery reports, other `text/*`). Omitted when there are none. HTML-like parts are untrusted HTML; AMP scripts
+            are not meant to run.
+          items:
+            type: object
+            required:
+            - type
+            - label
+            - content
+            - size
+            properties:
+              type:
+                type: string
+                description: Media type
+              label:
+                type: string
+                description: Short name for a tab (`Apple Watch`, `AMP`, `Calendar`, `Delivery status`, `Read receipt`,
+                  `Original headers`…; else the media type)
+              content:
+                type: string
+                description: Decoded text, UTF-8, at most 1 MB
+              size:
+                type: integer
+                description: Decoded size in bytes before truncation
+              truncated:
+                type: boolean
+                description: Content was cut at 1 MB (the whole message is in `raw`)
+        calendar:
+          $ref: '#/components/schemas/SmtpCalendarInvite'
+    SmtpCalendarInvite:
+      type: object
+      description: First event of a `text/calendar` part, else of an `.ics` attachment. Omitted when there is none. Times
+        are RFC 3339 when the zone is known (UTC or an IANA TZID); otherwise local `2006-01-02T15:04:05` with `tz` naming
+        the zone (e.g. Outlook's `W. Europe Standard Time`); a date `2006-01-02` for all-day events.
+      required:
+      - summary
+      properties:
+        method:
+          type: string
+          description: REQUEST, CANCEL, REPLY, PUBLISH…
+        summary:
+          type: string
+        start:
+          type: string
+        end:
+          type: string
+        tz:
+          type: string
+        all_day:
+          type: boolean
+        location:
+          type: string
+        description:
+          type: string
+          description: At most 4000 characters
+        url:
+          type: string
+        status:
+          type: string
+          description: CONFIRMED, TENTATIVE, CANCELLED
+        uid:
+          type: string
+        sequence:
+          type: string
+        rrule:
+          type: string
+          description: Recurrence rule as sent (e.g. `FREQ=WEEKLY;BYDAY=MO`)
+        organizer:
+          $ref: '#/components/schemas/SmtpCalendarPerson'
+        attendees:
+          type: array
+          description: At most 200
+          items:
+            allOf:
+            - $ref: '#/components/schemas/SmtpCalendarPerson'
+            - type: object
+              properties:
+                status:
+                  type: string
+                  description: NEEDS-ACTION, ACCEPTED, DECLINED, TENTATIVE
+                role:
+                  type: string
+                  description: REQ-PARTICIPANT, OPT-PARTICIPANT, CHAIR
+    SmtpCalendarPerson:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
     SmtpEvent:
       type: object
       description: A stored SMTP event.
