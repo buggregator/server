@@ -13,6 +13,10 @@ type User struct {
 	HostedDomain string `json:"-"`
 	// Subject is the OIDC `sub` claim, used to match the ID token to userinfo.
 	Subject string `json:"-"`
+	// ID is the users table id and SessionID the server-side session of the
+	// token; both empty for a guest and for a token issued before sessions.
+	ID        string `json:"-"`
+	SessionID string `json:"-"`
 	// verifiedSet is true when userinfo stated email_verified (true or false).
 	verifiedSet bool
 }

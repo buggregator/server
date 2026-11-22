@@ -31,6 +31,12 @@ func NewMuxRPCHandler(mux *http.ServeMux) *MuxRPCHandler {
 // HandleRPC converts an RPC call (e.g., DELETE api/event/{id}) into
 // an HTTP request, executes it against the mux, and returns the response.
 func (h *MuxRPCHandler) HandleRPC(method, uri string, data json.RawMessage) (json.RawMessage, error) {
+	return h.HandleRPCFrom("", method, uri, data)
+}
+
+// HandleRPCFrom is HandleRPC for a call from the WebSocket peer remoteAddr:
+// the bridged request carries it as RemoteAddr (the audit log's IP).
+func (h *MuxRPCHandler) HandleRPCFrom(remoteAddr, method, uri string, data json.RawMessage) (json.RawMessage, error) {
 	// Ensure URI starts with /.
 	if !strings.HasPrefix(uri, "/") {
 		uri = "/" + uri
@@ -79,6 +85,9 @@ func (h *MuxRPCHandler) HandleRPC(method, uri string, data json.RawMessage) (jso
 	}
 
 	req := httptest.NewRequest(method, uri, body)
+	if remoteAddr != "" {
+		req.RemoteAddr = remoteAddr
+	}
 	req.Header.Set("Content-Type", "application/json")
 	if token != "" {
 		req.Header.Set("X-Auth-Token", token)

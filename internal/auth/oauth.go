@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -226,6 +227,10 @@ func (c *OAuthClient) mapUser(body []byte) (*User, error) {
 	switch c.provider {
 	case "github":
 		u.Username = strOr(raw, "name", "login")
+		// The numeric account id: stable when the login or email changes.
+		if id, ok := raw["id"].(float64); ok {
+			u.Subject = strconv.FormatFloat(id, 'f', -1, 64)
+		}
 		u.Email, _ = raw["email"].(string)
 		u.Avatar, _ = raw["avatar_url"].(string)
 		u.EmailVerified = u.Email != ""

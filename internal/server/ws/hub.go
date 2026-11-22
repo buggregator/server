@@ -51,12 +51,19 @@ type RPCHandler interface {
 	HandleRPC(method, uri string, data json.RawMessage) (json.RawMessage, error)
 }
 
+// remoteRPCHandler is an RPCHandler that also takes the caller's address.
+type remoteRPCHandler interface {
+	HandleRPCFrom(remoteAddr, method, uri string, data json.RawMessage) (json.RawMessage, error)
+}
+
 // ProjectProvider returns the list of project keys for server-side subscriptions.
 type ProjectProvider func() []string
 
 type client struct {
 	conn *websocket.Conn
 	ctx  context.Context
+	// remoteAddr is the peer of the socket, passed on to RPC calls.
+	remoteAddr string
 
 	// mu guards the server-side subscriptions below and orders the connect
 	// reply before any push that depends on it.
@@ -64,6 +71,7 @@ type client struct {
 	connected bool            // the connect reply was sent
 	subs      map[string]bool // server-side channels the client knows
 	expiry    *time.Timer     // closes the socket when its token expires
+	token     string          // the token of the connect (auth on)
 }
 
 func NewHub() *Hub {
@@ -123,7 +131,7 @@ func (h *Hub) HandleUpgrade(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := &client{conn: conn, ctx: r.Context()}
+	c := &client{conn: conn, ctx: r.Context(), remoteAddr: r.RemoteAddr}
 	if h.validToken != nil {
 		deadline := time.AfterFunc(h.connectTimeout, func() {
 			if !c.isConnected() {
@@ -223,7 +231,7 @@ func (h *Hub) handleClientMessage(c *client, data []byte) {
 			// Auth on: nothing is answered before a connect with a valid token.
 			continue
 		}
-		reply := h.processCommand(cmd)
+		reply := h.processCommand(c, cmd)
 		replyBytes, _ := json.Marshal(reply)
 		c.conn.Write(c.ctx, websocket.MessageText, replyBytes)
 	}
@@ -260,6 +268,7 @@ func (h *Hub) connectClient(c *client, id uint32, token string) bool {
 	}
 	c.conn.Write(c.ctx, websocket.MessageText, replyBytes)
 	c.connected = true
+	c.token = token
 	if !expires.IsZero() {
 		if c.expiry != nil {
 			c.expiry.Stop()
@@ -269,6 +278,32 @@ func (h *Hub) connectClient(c *client, id uint32, token string) bool {
 		})
 	}
 	return true
+}
+
+// RecheckTokens closes, with 3500, every connected socket whose token no
+// longer passes the validator (its session was revoked by a logout, or the
+// allow-list dropped its user). centrifuge-js does not reconnect on 3500.
+func (h *Hub) RecheckTokens() {
+	if h.validToken == nil {
+		return
+	}
+	h.mu.RLock()
+	clients := make([]*client, 0, len(h.clients))
+	for c := range h.clients {
+		clients = append(clients, c)
+	}
+	h.mu.RUnlock()
+	for _, c := range clients {
+		c.mu.Lock()
+		token, connected := c.token, c.connected
+		c.mu.Unlock()
+		if !connected {
+			continue
+		}
+		if _, ok := h.validToken(token); !ok {
+			c.conn.Close(websocket.StatusCode(3500), "token revoked")
+		}
+	}
 }
 
 // refuseConnect answers a connect with error 109 and closes the socket.
@@ -291,7 +326,7 @@ func (c *client) isConnected() bool {
 }
 
 // processCommand handles a single Centrifugo protocol command.
-func (h *Hub) processCommand(cmd centrifugoCommand) centrifugoReply {
+func (h *Hub) processCommand(c *client, cmd centrifugoCommand) centrifugoReply {
 	if cmd.Connect != nil {
 		return h.handleConnect(cmd.ID)
 	}
@@ -299,7 +334,7 @@ func (h *Hub) processCommand(cmd centrifugoCommand) centrifugoReply {
 		return h.handleSubscribe(cmd.ID, cmd.Subscribe)
 	}
 	if cmd.RPC != nil {
-		return h.handleRPC(cmd.ID, cmd.RPC)
+		return h.handleRPC(c, cmd.ID, cmd.RPC)
 	}
 	// Ping (empty command with just id) — respond with empty reply.
 	return centrifugoReply{ID: cmd.ID}
@@ -336,7 +371,7 @@ func (h *Hub) handleSubscribe(id uint32, sub *subscribeRequest) centrifugoReply 
 	}
 }
 
-func (h *Hub) handleRPC(id uint32, rpc *rpcRequest) centrifugoReply {
+func (h *Hub) handleRPC(c *client, id uint32, rpc *rpcRequest) centrifugoReply {
 	if h.rpcHandler == nil {
 		return centrifugoReply{
 			ID:    id,
@@ -356,7 +391,13 @@ func (h *Hub) handleRPC(id uint32, rpc *rpcRequest) centrifugoReply {
 	httpMethod := strings.ToUpper(parts[0])
 	uri := parts[1]
 
-	result, err := h.rpcHandler.HandleRPC(httpMethod, uri, rpc.Data)
+	var result json.RawMessage
+	var err error
+	if rh, ok := h.rpcHandler.(remoteRPCHandler); ok && c != nil {
+		result, err = rh.HandleRPCFrom(c.remoteAddr, httpMethod, uri, rpc.Data)
+	} else {
+		result, err = h.rpcHandler.HandleRPC(httpMethod, uri, rpc.Data)
+	}
 	if err != nil {
 		return centrifugoReply{
 			ID:    id,
