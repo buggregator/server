@@ -25,6 +25,10 @@ type AuthConfig struct {
 	CallbackURL  string `yaml:"callback_url"`  // OAuth2 callback URL (e.g., http://localhost:8000/auth/sso/callback).
 	Scopes       string `yaml:"scopes"`        // Comma-separated scopes (default: "openid,email,profile").
 	JWTSecret    string `yaml:"jwt_secret"`    // Secret for signing internal JWT tokens. Required when auth is enabled.
+	// AllowedEmails and AllowedDomains limit who may sign in (verified email
+	// required). Both empty = everyone the provider lets in.
+	AllowedEmails  []string `yaml:"allowed_emails"`  // e.g. ["me@gmail.com"]; env AUTH_ALLOWED_EMAILS (comma list)
+	AllowedDomains []string `yaml:"allowed_domains"` // e.g. ["mycompany.com"]; google: Workspace (hd) domain; env AUTH_ALLOWED_DOMAINS
 }
 
 // UIConfig bounds the event lists served to the UI.
@@ -391,6 +395,21 @@ type ProjectDef struct {
 	Name string `yaml:"name"`
 }
 
+// envList reads a comma-separated env list, else the file's list.
+func envList(name string, file []string) []string {
+	v := os.Getenv(name)
+	if v == "" {
+		return file
+	}
+	var out []string
+	for _, p := range strings.Split(v, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 // LoadConfig reads configuration with priority: flags > env > config file > defaults.
 // corsOrigins picks the allowed origins: CORS_ORIGINS (comma-separated),
 // else the file's list, else all. Allowing all by default is what lets a
@@ -523,6 +542,8 @@ func LoadConfig() Config {
 	cfg.Auth.CallbackURL = coalesce(os.Getenv("AUTH_CALLBACK_URL"), fileCfg.Auth.CallbackURL)
 	cfg.Auth.Scopes = coalesce(os.Getenv("AUTH_SCOPES"), fileCfg.Auth.Scopes, "openid,email,profile")
 	cfg.Auth.JWTSecret = coalesce(os.Getenv("AUTH_JWT_SECRET"), fileCfg.Auth.JWTSecret)
+	cfg.Auth.AllowedEmails = envList("AUTH_ALLOWED_EMAILS", fileCfg.Auth.AllowedEmails)
+	cfg.Auth.AllowedDomains = envList("AUTH_ALLOWED_DOMAINS", fileCfg.Auth.AllowedDomains)
 
 	// UI list limits.
 	cfg.UI.DefaultLimit = resolveLimit(0, fileCfg.UI.DefaultLimit, uiDefaultLimit, os.Getenv("UI_DEFAULT_LIMIT"))

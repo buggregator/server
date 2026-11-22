@@ -16,16 +16,27 @@ type TokenClaims struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	Avatar   string `json:"avatar"`
+	// EmailVerified and HostedDomain let the access policy re-check a token,
+	// so an allow-list set later also cuts sessions issued before it.
+	EmailVerified bool   `json:"email_verified,omitempty"`
+	HostedDomain  string `json:"hd,omitempty"`
 }
 
 // TokenStore creates and validates internal JWT tokens.
 type TokenStore struct {
 	secret []byte
+	access AccessPolicy
 }
 
 // NewTokenStore creates a new TokenStore with the given HMAC secret.
 func NewTokenStore(secret string) *TokenStore {
 	return &TokenStore{secret: []byte(secret)}
+}
+
+// SetAccess makes every token check also apply the sign-in policy: a token
+// whose user the policy refuses is invalid (HTTP API and WebSocket alike).
+func (s *TokenStore) SetAccess(p AccessPolicy) {
+	s.access = p
 }
 
 // Create issues a new JWT token for the given user.
@@ -40,6 +51,9 @@ func (s *TokenStore) Create(u User) (string, error) {
 		Username: u.Username,
 		Email:    u.Email,
 		Avatar:   u.Avatar,
+
+		EmailVerified: u.EmailVerified,
+		HostedDomain:  u.HostedDomain,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -52,12 +66,18 @@ func (s *TokenStore) Validate(tokenStr string) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
+	return claims.user(), nil
+}
+
+func (c *TokenClaims) user() *User {
 	return &User{
-		Provider: claims.Provider,
-		Username: claims.Username,
-		Email:    claims.Email,
-		Avatar:   claims.Avatar,
-	}, nil
+		Provider:      c.Provider,
+		Username:      c.Username,
+		Email:         c.Email,
+		Avatar:        c.Avatar,
+		EmailVerified: c.EmailVerified,
+		HostedDomain:  c.HostedDomain,
+	}
 }
 
 // ExpiresAt validates a token and returns when it expires (zero: never).
@@ -86,6 +106,9 @@ func (s *TokenStore) parse(tokenStr string) (*TokenClaims, error) {
 	claims, ok := token.Claims.(*TokenClaims)
 	if !ok || !token.Valid {
 		return nil, fmt.Errorf("invalid token claims")
+	}
+	if !s.access.Allows(*claims.user()) {
+		return nil, fmt.Errorf("token user not allowed by the sign-in policy")
 	}
 	return claims, nil
 }

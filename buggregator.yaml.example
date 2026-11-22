@@ -117,6 +117,12 @@ metrics:
 #   callback_url: ${AUTH_CALLBACK_URL:}            # Callback URL (e.g., http://localhost:8000/auth/sso/callback)
 #   scopes: ${AUTH_SCOPES:openid,email,profile}    # Comma-separated scopes
 #   jwt_secret: ${AUTH_JWT_SECRET:}                # Secret for signing internal JWT tokens (required)
+#   # Who may sign in (the provider must confirm the email). Both empty = every
+#   # account the provider signs in, e.g. any Google account: set one when the
+#   # server is reachable from outside. Env: comma lists. Every request re-checks
+#   # the list, so setting one also signs out sessions that do not match it.
+#   allowed_emails: []                             # e.g. ["me@gmail.com"]; env AUTH_ALLOWED_EMAILS
+#   allowed_domains: []                            # e.g. ["mycompany.com"]; google: Workspace (hd) domain, others: email domain; env AUTH_ALLOWED_DOMAINS
 
 # TCP servers
 tcp:

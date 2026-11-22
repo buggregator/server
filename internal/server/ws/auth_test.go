@@ -184,3 +184,31 @@ func TestHub_AuthOff_NoConnectDeadline(t *testing.T) {
 		t.Fatalf("frame = %v, want the publication", m)
 	}
 }
+
+// A token issued before an allow-list was set is refused on connect once
+// the list is set (the check app.go wires: TokenStore.ExpiresAt).
+func TestHub_AuthOn_AllowListCutsOldToken(t *testing.T) {
+	tokens := auth.NewTokenStore("secret")
+	token, err := tokens.Create(auth.User{Provider: "google", Username: "bob", Email: "bob@gmail.com", EmailVerified: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tokens.SetAccess(auth.NewAccessPolicy(nil, []string{"acme.com"}))
+	h := NewHub()
+	h.SetProjectProvider(func() []string { return []string{"default"} })
+	h.SetTokenValidator(func(tok string) (time.Time, bool) {
+		exp, err := tokens.ExpiresAt(tok)
+		return exp, err == nil
+	})
+	c := dialHub(t, h)
+	waitClients(t, h, 1)
+
+	c.send(`{"id":1,"connect":{"token":"` + token + `"}}`)
+	reply := c.next()
+	if e, _ := reply["error"].(map[string]any); e == nil || reply["connect"] != nil {
+		t.Fatalf("connect reply = %v, want an error", reply)
+	}
+	if code := c.closedWith(); code != websocket.StatusPolicyViolation {
+		t.Errorf("close status = %v, want 1008", code)
+	}
+}
