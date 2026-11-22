@@ -2,6 +2,7 @@ package sentry
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strconv"
@@ -24,12 +25,21 @@ type queueJobRow struct {
 // storeQueueJob writes the attempt into sentry_queue_jobs, in the
 // transaction's own database transaction.
 func storeQueueJob(dbTx *sql.Tx, j queueJobRow) error {
+	// Attribute values come as JSON (string, float64), Sentry span data
+	// (string) or OTel (string, int64, float64): read them all, as the
+	// migration's json_extract does.
 	str := func(key string) string {
 		switch v := j.attr(key).(type) {
 		case string:
 			return v
 		case float64:
 			return strconv.FormatFloat(v, 'f', -1, 64)
+		case int64:
+			return strconv.FormatInt(v, 10)
+		case int:
+			return strconv.Itoa(v)
+		case json.Number:
+			return v.String()
 		}
 		return ""
 	}
@@ -37,6 +47,13 @@ func storeQueueJob(dbTx *sql.Tx, j queueJobRow) error {
 		switch v := j.attr(key).(type) {
 		case float64:
 			return v, true
+		case int64:
+			return float64(v), true
+		case int:
+			return float64(v), true
+		case json.Number:
+			f, err := v.Float64()
+			return f, err == nil
 		case string:
 			f, err := strconv.ParseFloat(v, 64)
 			return f, err == nil

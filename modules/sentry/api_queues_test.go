@@ -3,6 +3,7 @@ package sentry
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -211,17 +212,7 @@ func TestQueueJobs_MigrationBackfill(t *testing.T) {
 	if _, err := db.Exec(`DELETE FROM sentry_queue_jobs`); err != nil {
 		t.Fatal(err)
 	}
-	src, err := os.ReadFile("migrations/2024_01_01_000042_create_sentry_queue_jobs.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, stmt := range strings.Split(string(src), ";") {
-		if strings.TrimSpace(stmt) != "" {
-			if _, err := db.Exec(stmt); err != nil {
-				t.Fatalf("%v\n%s", err, stmt)
-			}
-		}
-	}
+	runQueueJobsMigration(t, db)
 	if got := dump(); strings.Join(got, "\n") != strings.Join(ingested, "\n") {
 		t.Errorf("backfill\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(ingested, "\n"))
 	}
@@ -252,5 +243,74 @@ func TestQueueJobs_ClearRemovesRows(t *testing.T) {
 	db.QueryRow(`SELECT COUNT(*) FROM sentry_queue_jobs`).Scan(&n)
 	if n != 0 {
 		t.Errorf("clear project default: %d rows left, want 0", n)
+	}
+}
+
+// An OTel segment carries typed attributes (otlpValue: int64, float64,
+// string). Ingest must read them as the migration fill does.
+func TestQueueJobs_SegmentAttrTypes(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		attrs map[string]any
+		msgID string
+		want  string // attempt/latency_ms
+	}{
+		{"otel ints", map[string]any{"messaging.message.id": int64(4711), "messaging.message.retry.count": int64(2), "messaging.message.receive.latency": int64(250)}, "4711", "3/250"},
+		{"otel doubles", map[string]any{"messaging.message.id": "m-1", "messaging.message.retry.count": float64(1), "messaging.message.receive.latency": 12.4}, "m-1", "2/12"},
+		{"strings", map[string]any{"messaging.message.id": "m-2", "messaging.message.retry.count": "0", "messaging.message.receive.latency": "7"}, "m-2", "1/7"},
+		{"laravel seconds", map[string]any{"messaging.system": "laravel", "messaging.message.id": "m-3", "messaging.message.retry.count": int64(0), "messaging.message.receive.latency": 1.5}, "m-3", "1/1500"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db := setupTestDB(t)
+			var span RawSpan
+			if err := json.Unmarshal([]byte(`{"span_id":"aaaabbbbccccdddd","trace_id":"0123456789abcdef0123456789abcdef","op":"queue.process","description":"ProcessOrder","status":"ok","start_timestamp":1700000000.0,"timestamp":1700000000.5,"is_segment":true}`), &span); err != nil {
+				t.Fatal(err)
+			}
+			span.Attrs = tc.attrs
+			tx, err := db.Begin()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := storeSegment(tx, span.TraceID, span, "default"); err != nil {
+				t.Fatal(err)
+			}
+			if err := tx.Commit(); err != nil {
+				t.Fatal(err)
+			}
+			read := func(how string) {
+				t.Helper()
+				var msg sql.NullString
+				var attempt int
+				var latency sql.NullInt64
+				if err := db.QueryRow(`SELECT message_id, attempt, latency_ms FROM sentry_queue_jobs`).Scan(&msg, &attempt, &latency); err != nil {
+					t.Fatalf("%s: %v", how, err)
+				}
+				got := fmt.Sprintf("%d/%d", attempt, latency.Int64)
+				if msg.String != tc.msgID || got != tc.want {
+					t.Errorf("%s: message_id %q, attempt/latency %s; want %q, %s", how, msg.String, got, tc.msgID, tc.want)
+				}
+			}
+			read("ingest")
+			if _, err := db.Exec(`DELETE FROM sentry_queue_jobs`); err != nil {
+				t.Fatal(err)
+			}
+			runQueueJobsMigration(t, db)
+			read("migration fill")
+		})
+	}
+}
+
+func runQueueJobsMigration(t *testing.T, db *sql.DB) {
+	t.Helper()
+	src, err := os.ReadFile("migrations/2024_01_01_000042_create_sentry_queue_jobs.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, stmt := range strings.Split(string(src), ";") {
+		if strings.TrimSpace(stmt) != "" {
+			if _, err := db.Exec(stmt); err != nil {
+				t.Fatalf("%v\n%s", err, stmt)
+			}
+		}
 	}
 }

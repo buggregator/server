@@ -151,6 +151,9 @@ func queueJobsList(db *sql.DB, r *http.Request) (map[string]any, int, error) {
 			data = append(data, job)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
 	return listResponse(data, total, currentPage(offset, limit), limit), http.StatusOK, nil
 }
 
@@ -195,6 +198,10 @@ func handleQueueSummary(db *sql.DB) http.HandlerFunc {
 			if rows.Scan(&name, &n, &nf) == nil {
 				queues = append(queues, map[string]any{"queue": name, "jobs": n, "failed": nf})
 			}
+		}
+		if err := rows.Err(); err != nil {
+			apiError(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		var avgMS *float64
@@ -281,7 +288,11 @@ func queueJobDetail(db *sql.DB, r *http.Request, id string) (map[string]any, int
 		attempts = append(attempts, a)
 		traces[traceID] = true
 	}
+	err = rows.Err()
 	rows.Close()
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
 
 	// Errors: an error of the attempt's trace captured while it ran.
 	for traceID := range traces {
@@ -314,7 +325,11 @@ func queueJobDetail(db *sql.DB, r *http.Request, id string) (map[string]any, int
 				}
 			}
 		}
+		err = erows.Err()
 		erows.Close()
+		if err != nil {
+			return nil, http.StatusInternalServerError, err
+		}
 	}
 
 	list := make([]map[string]any, 0, len(attempts))
@@ -329,6 +344,9 @@ func queueJobDetail(db *sql.DB, r *http.Request, id string) (map[string]any, int
 // loadDispatcher finds the transaction that queued the job: its queue.publish
 // span carries the same messaging.message.id. sentry-laravel continues the
 // dispatcher's trace in the job, so the span is in one of the job's traces.
+// Only spans of a stored transaction are searched: a standalone streamed
+// (span v2) queue.publish span has no transaction_id, and the job then has
+// no dispatched_by.
 func loadDispatcher(db *sql.DB, job map[string]any) any {
 	msgID, _ := job["message_id"].(*string)
 	if msgID == nil {
