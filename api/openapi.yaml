@@ -57,6 +57,8 @@ tags:
 - name: Profiler
 - name: Ingestion
   description: Where SDKs send events (matched by the event handlers)
+- name: Ray
+  description: Ray pauses (ray()->pause())
 paths:
   /api/event/{uuid}:
     parameters:
@@ -1294,6 +1296,72 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/Error'
+  /api/ray/locks/{name}:
+    post:
+      tags:
+      - Ray
+      operationId: rayReleaseLock
+      summary: Continue or stop a script paused by ray()->pause()
+      description: >-
+        The UI's Continue / Stop execution (also over WebSocket RPC as `post:api/ray/locks/{name}`). Releases the pause
+        the client polls at `GET /locks/{name}`, writes `content.state` into the event's `create_lock` payload and
+        re-broadcasts the event. A second call changes nothing and answers the state already set. Pauses live in
+        memory: after a server restart the lock is unknown (404) and the script has already gone on.
+      security:
+      - authToken: []
+      parameters:
+      - name: name
+        in: path
+        required: true
+        description: Lock name from the `create_lock` payload
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stop_execution:
+                  type: boolean
+                  description: true stops the script (StopExecutionRequested), false or absent continues it
+      responses:
+        '200':
+          description: Pause released
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - status
+                - state
+                properties:
+                  status:
+                    type: boolean
+                    const: true
+                  state:
+                    type: string
+                    enum:
+                    - continued
+                    - stopped
+                  warning:
+                    type: string
+                    description: The pause is released, but its state could not be saved into the event
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Unknown lock (never created, expired or the server restarted)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    const: false
+                  error:
+                    type: string
   /api/sentry/all:
     delete:
       tags:

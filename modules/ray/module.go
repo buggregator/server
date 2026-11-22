@@ -41,6 +41,8 @@ func (m *Module) RegisterRoutes(mux *http.ServeMux, store event.Store) {
 	})
 	// ray()->pause(): the PHP client polls this every second while paused.
 	// Public like the availability check: the client sends no credentials.
+	// It also takes any other GET to /locks/…, e.g. an http-dump@host capture
+	// of that path, which went to the ingestion pipeline before.
 	mux.HandleFunc("GET /locks/{name}", m.handleLockStatus)
 }
 
