@@ -224,10 +224,12 @@ func run() {
 	// Explain this error: a Sentry error to a harnsy project's agents over
 	// h2a, their answers on the event's channel. Off without url + token.
 	if cfg.Explain.On() {
-		registry.Register(explain.New(explain.Config{
+		explainMod := explain.New(explain.Config{
 			URL: cfg.Explain.URL, Token: cfg.Explain.Token, To: cfg.Explain.To,
 			MCP: explain.MCP{On: cfg.MCP.Enabled, ReadOnly: cfg.MCP.ReadOnly, Transport: cfg.MCP.Transport},
-		}))
+		})
+		hub.AddServerChannel(explain.StatusChannel)
+		registry.Register(explainMod)
 		slog.Info("explain: h2a enabled", "to", cfg.Explain.To)
 	}
 	// HTTP proxy — stores events as http-dump with response data.

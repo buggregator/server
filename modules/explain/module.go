@@ -31,6 +31,14 @@ const (
 	LegacyEventName = "explain.message"
 )
 
+// StatusChannel is the server channel every UI client is subscribed to;
+// StatusEventName on it says the pass's address list changed (the node
+// sends a new welcome when the person edits the pass).
+const (
+	StatusChannel   = "assist"
+	StatusEventName = "assist.status"
+)
+
 // MCP is what the module knows of Buggregator's own MCP server: when it is
 // on and read-only, every first message points the agents to it.
 type MCP struct {
@@ -64,6 +72,8 @@ type Module struct {
 	client sender
 	status string // connecting, connected, stopped
 	reason string // why stopped or last connection error
+	lastTo []h2a.Address // the address list of the last welcome
+	seen   bool          // a welcome came at least once
 	cancel context.CancelFunc
 	done   chan struct{}
 }
@@ -166,6 +176,9 @@ func (m *Module) loop(ctx context.Context) {
 		w := c.Welcome()
 		m.setStatus(c, "connected", "")
 		slog.Info("explain: connected to harnsy", "project", w.Project, "to", m.cfg.To)
+		// The current welcome at once, then each one the node sends again
+		// when the person edits the pass.
+		c.OnWelcome(m.onWelcome)
 
 		started := time.Now()
 		err = c.Run(ctx, m.onReply)
@@ -275,6 +288,40 @@ func (m *Module) broadcast(th Thread, msg Message) {
 			"message":      msg,
 		})
 	}
+}
+
+// onWelcome takes a welcome's address list: on a change it warns when the
+// configured address is not in it, and tells the open panels.
+func (m *Module) onWelcome(w h2a.Welcome) {
+	m.mu.Lock()
+	changed := !m.seen || !sameAddresses(m.lastTo, w.To)
+	m.lastTo, m.seen = append([]h2a.Address(nil), w.To...), true
+	m.mu.Unlock()
+	if !changed {
+		return
+	}
+	if len(w.To) > 0 && !hasAddress(w.To, m.cfg.To) {
+		slog.Warn("explain: the configured address is not in the pass; new threads go to the first one",
+			"to", m.cfg.To, "default", w.To[0].Address)
+	}
+	if m.bc != nil {
+		m.bc.Broadcast(StatusChannel, StatusEventName, map[string]any{
+			"recipients": recipients(w.To),
+			"default":    m.defaultRecipient(w.To),
+		})
+	}
+}
+
+func sameAddresses(a, b []h2a.Address) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func (m *Module) setStatus(c sender, status, reason string) {

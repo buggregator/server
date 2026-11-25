@@ -97,7 +97,7 @@ func TestContextText_ScrubsAll(t *testing.T) {
 			t.Errorf("%q sent:\n%s", bad, text)
 		}
 	}
-	for _, want := range []string{"Question: my DB_PASSWORD=[redacted] please", "Page: /p?token=[redacted]"} {
+	for _, want := range []string{"Question: my DB_PASSWORD=[redacted] please", "Page route: /p?token=[redacted]"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("lacks %q:\n%s", want, text)
 		}

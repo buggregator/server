@@ -119,7 +119,7 @@ func contextText(c Context, ev *event.Event, question string, p pointer, limit i
 	if c.Kind == KindEvent {
 		fmt.Fprintf(&tail, "Event: %s (%s, project %s)\n", ev.UUID, ev.Type, project)
 	} else {
-		tail.WriteString("Page: " + scrub(c.Key) + "\n")
+		tail.WriteString("Page route: " + scrub(c.Key) + "\n")
 	}
 	if p.MCP {
 		tail.WriteString("Buggregator data is available via the `buggregator` MCP connection (read-only)")

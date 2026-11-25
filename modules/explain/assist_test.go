@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/buggregator/server/v2/internal/module"
 	"github.com/buggregator/server/v2/internal/storage"
@@ -81,7 +82,7 @@ func TestAssist_EventThread(t *testing.T) {
 	if last := th["messages"].([]any)[1].(map[string]any); last["text"] != "The payment gateway refused order 15." || last["from"] != "agent" {
 		t.Errorf("thread: %v", th)
 	}
-	b := rec.all()
+	b := rec.messages()
 	if len(b) != 2 || b[0].channel != "events.project.shop" || b[0].name != EventName || b[0].payload["thread_id"] != float64(id) || b[0].payload["kind"] != "event" {
 		t.Fatalf("broadcasts: %+v", b)
 	}
@@ -115,7 +116,7 @@ func TestAssist_PageThread(t *testing.T) {
 		t.Fatalf("start: %d %v", code, th)
 	}
 	text := sentText(t, node.sent()[0])
-	for _, want := range []string{"looking at this page", "Page: Sentry · shop", "OrderNotFound x9", "Page: /sentry?project=shop"} {
+	for _, want := range []string{"looking at this page", "Page: Sentry · shop", "OrderNotFound x9", "Page route: /sentry?project=shop"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("sent text lacks %q:\n%s", want, text)
 		}
@@ -309,5 +310,40 @@ func TestAssist_Recipients(t *testing.T) {
 				t.Errorf("recent row: %v", row)
 			}
 		})
+	}
+}
+
+// The person adds a post to the pass: the node sends a new welcome on the
+// live connection; the status and the open panels get the new list without
+// a restart.
+func TestAssist_RecipientsFollowNewWelcome(t *testing.T) {
+	node := newFakeNode(t)
+	m, mux, rec := setup(t, Config{URL: node.url(), Token: testToken})
+	connected(t, m)
+	waitFor(t, "the first status broadcast", func() bool { return len(rec.all()) == 1 })
+	if b := rec.all()[0]; b.channel != StatusChannel || b.name != StatusEventName || len(b.payload["recipients"].([]any)) != 1 {
+		t.Fatalf("first broadcast: %+v", b)
+	}
+
+	node.welcomeAgain([]map[string]string{{"address": "lead", "name": "Project lead"}, {"address": "role:213", "name": "Go developer"}})
+	waitFor(t, "the new list", func() bool {
+		_, st := call(t, mux, "GET", "/api/assist", "")
+		r, _ := st["recipients"].([]any)
+		return len(r) == 2
+	})
+	waitFor(t, "the status broadcast", func() bool { return len(rec.all()) == 2 })
+	b := rec.all()[1]
+	if r := b.payload["recipients"].([]any); b.channel != StatusChannel || len(r) != 2 || r[1].(map[string]any)["address"] != "role:213" || b.payload["default"] != "lead" {
+		t.Errorf("broadcast: %+v", b)
+	}
+	// The new address can be picked at once.
+	if code, th := call(t, mux, "POST", "/api/assist/threads", `{"context":{"kind":"page","key":"/"},"to":"role:213"}`); code != 200 {
+		t.Errorf("start with the new address: %d %v", code, th)
+	}
+	// The same list again: no broadcast.
+	node.welcomeAgain([]map[string]string{{"address": "lead", "name": "Project lead"}, {"address": "role:213", "name": "Go developer"}})
+	time.Sleep(200 * time.Millisecond)
+	if n := len(rec.all()); n != 2 {
+		t.Errorf("%d broadcasts after the same list", n)
 	}
 }
