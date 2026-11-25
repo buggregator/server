@@ -153,6 +153,8 @@ func eventBody(ev event.Event) (string, error) {
 		return profilerBody(ev.Payload), nil
 	case "inspector":
 		return inspectorBody(ev.Payload), nil
+	case "smtp":
+		return smtpBody(ev.Payload), nil
 	}
 	return genericBody(ev), nil
 }
