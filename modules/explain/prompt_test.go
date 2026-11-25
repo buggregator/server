@@ -132,3 +132,30 @@ func TestPrompt_NotSentry(t *testing.T) {
 		t.Error("want an error for a payload that is not a Sentry event")
 	}
 }
+
+func TestPrompt_MessageEventStack(t *testing.T) {
+	stack := `{"frames":[{"filename":"main.go","function":"pay","lineno":12,"in_app":true}]}`
+	tests := []struct {
+		name    string
+		payload json.RawMessage
+	}{
+		{"sentry-go threads list", sdkEvent(t, "go/02-event.json")},
+		{"threads values", json.RawMessage(`{"message":"slow","threads":{"values":[{"id":1,"stacktrace":null},{"id":2,"crashed":true,"stacktrace":` + stack + `}]}}`)},
+		{"top-level stacktrace", json.RawMessage(`{"message":"slow","stacktrace":` + stack + `}`)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			text, err := Prompt(tt.payload, "", 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(text, "Message: ") || !strings.Contains(text, "Stack (most recent call first):\n  at ") {
+				t.Errorf("no message stack in:\n%s", text)
+			}
+		})
+	}
+	text, _ := Prompt(json.RawMessage(`{"message":"no stack"}`), "", 0)
+	if strings.Contains(text, "Stack") {
+		t.Errorf("stack for an event without one:\n%s", text)
+	}
+}

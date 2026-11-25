@@ -33,6 +33,8 @@ type fakeNode struct {
 	seq      int64
 	convs    int
 	ready    chan struct{}
+	drop     int // close this many connections right after the welcome
+	hellos   int
 }
 
 func newFakeNode(t *testing.T) *fakeNode {
@@ -66,9 +68,23 @@ func (n *fakeNode) serve(w http.ResponseWriter, r *http.Request) {
 		"limits": map[string]int{"frames_per_minute": 60, "messages_per_day": 100, "text_bytes": 16384, "frame_bytes": 262144, "queue": 500, "queue_hours": 24, "ping_seconds": 20, "idle_seconds": 60},
 	})
 	n.mu.Lock()
+	n.hellos++
+	if n.drop > 0 {
+		n.drop--
+		n.mu.Unlock()
+		// A refusal without a frame's id: Run returns it, a reason that passes.
+		n.write(ctx, c, map[string]any{"type": "error", "code": "h2a_frame", "text": "a frame is one JSON object of a known type"})
+		_ = c.Close(websocket.StatusNormalClosure, "")
+		return
+	}
 	n.conn = c
+	first := n.ready != nil
+	ready := n.ready
+	n.ready = nil
 	n.mu.Unlock()
-	close(n.ready)
+	if first {
+		close(ready)
+	}
 	for {
 		var f map[string]any
 		if !n.read(ctx, c, &f) {
@@ -332,4 +348,29 @@ func TestExplain_RoutesBesideSentry(t *testing.T) {
 		t.Fatal(err)
 	}
 	reg.RegisterProtectedRoutes(mux, func(h http.Handler) http.Handler { return h })
+}
+
+// A node that drops each connection right after the welcome gets a backoff,
+// not a tight loop, and the status says connecting while it retries.
+func TestExplain_DroppedConnectionsBackOff(t *testing.T) {
+	old := retryBase
+	retryBase = 100 * time.Millisecond
+	t.Cleanup(func() { retryBase = old })
+
+	node := newFakeNode(t)
+	node.drop = 1 << 30
+	m, _, _ := setup(t, Config{URL: node.url(), Token: testToken})
+	time.Sleep(1500 * time.Millisecond)
+	node.mu.Lock()
+	hellos := node.hellos
+	node.drop = 0
+	node.mu.Unlock()
+	// Retries after 100, 200, 400, 800 ms: a handful, never hundreds.
+	if hellos < 3 || hellos > 8 {
+		t.Errorf("%d sign-ins in 1.5 s", hellos)
+	}
+	if _, s, _ := m.current(); s == "stopped" {
+		t.Errorf("status %q while reconnecting", s)
+	}
+	waitFor(t, "a lasting connection", func() bool { _, s, _ := m.current(); return s == "connected" })
 }
