@@ -93,7 +93,13 @@ func (m *Module) handleFind(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_query", "give kind and key, or recent")
 		return
 	}
+	// A context without a conversation is the usual case when the panel
+	// opens, not an error: 200 {"thread": null}, no 404 in the console.
 	th, err := m.threads.byKey(q.Get("kind"), q.Get("key"))
+	if errors.Is(err, errNoThread) {
+		writeJSON(w, http.StatusOK, map[string]any{"thread": nil})
+		return
+	}
 	m.writeThread(w, th, err)
 }
 
