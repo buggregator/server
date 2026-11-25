@@ -98,8 +98,8 @@ func TestAssist_EventThread(t *testing.T) {
 
 	// Deleting the event drops its thread.
 	m.OnEventsDeleted([]string{"log-1"})
-	if code, _ := call(t, mux, "GET", "/api/assist/threads?kind=event&key=log-1", ""); code != 404 {
-		t.Errorf("thread after delete: %d", code)
+	if code, out := call(t, mux, "GET", "/api/assist/threads?kind=event&key=log-1", ""); code != 200 || out["thread"] != nil {
+		t.Errorf("thread after delete: %d %v", code, out)
 	}
 }
 
@@ -154,7 +154,6 @@ func TestAssist_Refusals(t *testing.T) {
 		{"question too long", "POST", "/api/assist/threads", `{"context":{"kind":"page","key":"/"},"text":"` + strings.Repeat("q", maxQuestionBytes+1) + `"}`, 400, "text_too_long"},
 		{"bad json", "POST", "/api/assist/threads", `nope`, 400, "bad_body"},
 		{"no query", "GET", "/api/assist/threads", "", 400, "bad_query"},
-		{"unknown context", "GET", "/api/assist/threads?kind=page&key=/x", "", 404, "assist_none"},
 		{"bad id", "GET", "/api/assist/threads/abc", "", 404, "assist_none"},
 		{"unknown id", "POST", "/api/assist/threads/99/messages", `{"text":"hi"}`, 404, "assist_none"},
 		{"empty follow-up", "POST", "/api/assist/threads/99/messages", `{"text":" "}`, 400, "text_required"},
@@ -169,6 +168,12 @@ func TestAssist_Refusals(t *testing.T) {
 	}
 	if n := len(node.sent()); n != 0 {
 		t.Errorf("node got %d messages, want none", n)
+	}
+
+	// No conversation for a context yet: 200 {"thread": null}.
+	code, out := call(t, mux, "GET", "/api/assist/threads?kind=page&key=/x", "")
+	if th, ok := out["thread"]; code != 200 || !ok || th != nil {
+		t.Errorf("unknown context: %d %v", code, out)
 	}
 }
 

@@ -105,12 +105,18 @@ paths:
           type: integer
       responses:
         '200':
-          description: The context's thread, or `{threads}` for recent
+          description: "The context's thread, `{\"thread\": null}` when it has none yet, or `{threads}` for recent"
           content:
             application/json:
               schema:
                 oneOf:
                 - $ref: '#/components/schemas/ExplainThread'
+                - type: object
+                  required:
+                  - thread
+                  properties:
+                    thread:
+                      type: 'null'
                 - type: object
                   required:
                   - threads
