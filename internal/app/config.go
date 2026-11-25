@@ -82,7 +82,10 @@ type Config struct {
 	// Broadcast is the Pusher-compatible events catcher (Laravel Reverb,
 	// Pusher, soketi): an optional upstream to forward to, app secrets.
 	Broadcast BroadcastConfig `yaml:"broadcast"`
-	Version   string          `yaml:"-"`
+	// Explain sends a Sentry error to a harnsy project's agents over h2a
+	// and shows their answers; off unless url and token are set.
+	Explain ExplainConfig `yaml:"explain"`
+	Version string        `yaml:"-"`
 
 	// Shortcuts.
 	HTTPAddr      string `yaml:"-"`
@@ -92,6 +95,16 @@ type Config struct {
 	VarDumperAddr string `yaml:"-"`
 	ProxyAddr     string `yaml:"-"`
 }
+
+// ExplainConfig is the h2a connection of «Explain this error» (a concept).
+type ExplainConfig struct {
+	URL   string `yaml:"url"`   // wss://<harnsy gateway>/h2a/v1
+	Token string `yaml:"token"` // the pass's token (h2a_…); a secret
+	To    string `yaml:"to"`    // address the explanations go to; default: lead
+}
+
+// On reports whether the explain module runs.
+func (c ExplainConfig) On() bool { return c.URL != "" && c.Token != "" }
 
 // MCPConfig controls the MCP (Model Context Protocol) server.
 type MCPConfig struct {
@@ -523,6 +536,11 @@ func LoadConfig() Config {
 	cfg.MCP.AuthToken = coalesce(os.Getenv("MCP_AUTH_TOKEN"), fileCfg.MCP.AuthToken)
 	mockWrite := envBool("MCP_MOCK_WRITE", fileCfg.MCP.MockWriteOn())
 	cfg.MCP.MockWrite = &mockWrite
+
+	// Explain this error over h2a.
+	cfg.Explain.URL = coalesce(os.Getenv("EXPLAIN_H2A_URL"), fileCfg.Explain.URL)
+	cfg.Explain.Token = coalesce(os.Getenv("EXPLAIN_H2A_TOKEN"), fileCfg.Explain.Token)
+	cfg.Explain.To = coalesce(os.Getenv("EXPLAIN_H2A_TO"), fileCfg.Explain.To, "lead")
 
 	// Xdebug proxy.
 	cfg.Xdebug.Enabled = envBool("XDEBUG_PROXY_ENABLED", fileCfg.Xdebug.Enabled)

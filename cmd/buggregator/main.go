@@ -18,6 +18,7 @@ import (
 	"github.com/buggregator/server/v2/internal/storage"
 	"github.com/buggregator/server/v2/modules/broadcast"
 	"github.com/buggregator/server/v2/modules/csp"
+	"github.com/buggregator/server/v2/modules/explain"
 	"github.com/buggregator/server/v2/modules/html"
 	"github.com/buggregator/server/v2/modules/httpdumps"
 	"github.com/buggregator/server/v2/modules/inspector"
@@ -219,6 +220,12 @@ func run() {
 		xdebugMod.SetBroadcaster(hub)
 		hub.AddServerChannel(xdebug.Channel)
 		registry.Register(xdebugMod)
+	}
+	// Explain this error: a Sentry error to a harnsy project's agents over
+	// h2a, their answers on the event's channel. Off without url + token.
+	if cfg.Explain.On() {
+		registry.Register(explain.New(explain.Config{URL: cfg.Explain.URL, Token: cfg.Explain.Token, To: cfg.Explain.To}))
+		slog.Info("explain: h2a enabled", "to", cfg.Explain.To)
 	}
 	// HTTP proxy — stores events as http-dump with response data.
 	registry.Register(proxyMod)
