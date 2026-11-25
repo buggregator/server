@@ -142,6 +142,9 @@ func TestPrompt_MessageEventStack(t *testing.T) {
 		{"sentry-go threads list", sdkEvent(t, "go/02-event.json")},
 		{"threads values", json.RawMessage(`{"message":"slow","threads":{"values":[{"id":1,"stacktrace":null},{"id":2,"crashed":true,"stacktrace":` + stack + `}]}}`)},
 		{"top-level stacktrace", json.RawMessage(`{"message":"slow","stacktrace":` + stack + `}`)},
+		{"empty top-level stacktrace", json.RawMessage(`{"message":"slow","stacktrace":{"frames":[]},"threads":[{"id":1,"stacktrace":` + stack + `}]}`)},
+		{"crashed thread with empty frames", json.RawMessage(`{"message":"slow","threads":{"values":[{"id":1,"crashed":true,"stacktrace":{"frames":[]}},{"id":2,"stacktrace":` + stack + `}]}}`)},
+		{"current thread with empty frames", json.RawMessage(`{"message":"slow","threads":[{"id":1,"current":true,"stacktrace":{"frames":[]}},{"id":2,"stacktrace":` + stack + `}]}`)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
