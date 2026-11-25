@@ -14,15 +14,16 @@ const redacted = "[redacted]"
 
 var (
 	// Headers whose whole value is a secret (every cookie, any scheme).
-	secretHeader = regexp.MustCompile(`(?im)^([ \t]*(?:set-cookie|cookie|authorization|proxy-authorization|x-sentry-auth|` + secretKey + `)[ \t]*:[ \t]*)\S.*$`)
+	secretHeader = regexp.MustCompile(`(?im)^([ \t]*(?:set-cookie|cookie|authorization|proxy-authorization|x-sentry-auth|` + secretKey + `)[ \t]*:[ \t]*)[^\s:].*$`)
 	// Credentials in a URL: a Sentry DSN key, user:password@host.
 	urlCreds = regexp.MustCompile(`(?i)\b([a-z][a-z0-9+.-]*://)[^\s/@:"'<>]+(?::[^\s/@"'<>]*)?@`)
 	// Authorization schemes with their credentials.
 	authScheme = regexp.MustCompile(`(?i)\b(bearer|basic|digest)\s+[A-Za-z0-9._~+/=-]+`)
 	// JSON: "secret_key": "value", 123456 or ["value", …].
 	jsonSecret = regexp.MustCompile(`(?i)("` + secretKey + `"\s*:\s*)(?:"(?:[^"\\]|\\.)*"|\[[^\]]*\]|-?\d[\d.eE+-]*)`)
-	// Text: key=value, key: value (env, query strings, logs).
-	kvSecret = regexp.MustCompile(`(?i)\b(` + secretKey + `)(\s*[=:]\s*)[^\s&,;"'<>]+`)
+	// Text: key=value, key: value (env, query strings, logs). A value never
+	// starts with ":", so Class::method stays.
+	kvSecret = regexp.MustCompile(`(?i)\b(` + secretKey + `)(\s*[=:]\s*)[^\s&,;"'<>:][^\s&,;"'<>]*`)
 	// Token shapes worth catching wherever they stand.
 	tokenShape = regexp.MustCompile(`\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[abposr]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16}|h2a_[A-Za-z0-9_-]{16,}|eyJ[\w-]{8,}\.[\w-]{8,}\.[\w-]{8,})`)
 )

@@ -34,6 +34,8 @@ func TestScrub(t *testing.T) {
 		{"csrf mismatch", `Illuminate\Session\TokenMismatchException: CSRF token mismatch.`, nil, []string{`TokenMismatchException: CSRF token mismatch.`}},
 		{"aws invalid token", `Aws\Exception\InvalidCredentialsException: The security token is invalid`, nil, []string{"InvalidCredentialsException: The security token is invalid"}},
 		{"error class line", `Error: TokenExpiredError: jwt expired`, nil, []string{"TokenExpiredError: jwt expired"}},
+		{"php method frame", `at App\Http\Middleware\VerifyCsrfToken::handle (VerifyCsrfToken.php:85)`, nil, []string{"VerifyCsrfToken::handle", "VerifyCsrfToken.php:85"}},
+		{"php static call", `PasswordBroker::sendResetLink failed`, nil, []string{"PasswordBroker::sendResetLink"}},
 		{"dotted config key", `spring.datasource.password=hunter2`, []string{"hunter2"}, nil},
 		{"plain error kept", `Order 15 not found in OrderService::load at app/Order.php:42`, nil, []string{"Order 15 not found in OrderService::load at app/Order.php:42"}},
 	}
