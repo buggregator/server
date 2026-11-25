@@ -2,6 +2,7 @@ package explain
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -168,6 +169,12 @@ func (r *recorder) all() []broadcast {
 // setup stores a real SDK error event and runs the module against the node.
 func setup(t *testing.T, cfg Config) (*Module, *http.ServeMux, *recorder) {
 	t.Helper()
+	db, store := setupDB(t)
+	return startModule(t, db, store, cfg)
+}
+
+func setupDB(t *testing.T) (*sql.DB, event.Store) {
+	t.Helper()
 	db, err := storage.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -177,18 +184,31 @@ func setup(t *testing.T, cfg Config) (*Module, *http.ServeMux, *recorder) {
 	if err := module.NewRegistry().Init(db, http.NewServeMux(), store); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Store(context.Background(), event.Event{UUID: "ev-1", Type: "sentry", Project: "default", Payload: sdkEvent(t, "node/02-event.json"), Timestamp: 1}); err != nil {
-		t.Fatal(err)
+	for _, ev := range []event.Event{
+		{UUID: "ev-1", Type: "sentry", Project: "default", Payload: sdkEvent(t, "node/02-event.json"), Timestamp: 1},
+		{UUID: "dump-1", Type: "var-dump", Project: "default", Payload: json.RawMessage(`{"payload":{"type":"string","value":"hello","label":"x"}}`), Timestamp: 1},
+		{UUID: "log-1", Type: "monolog", Project: "shop", Payload: json.RawMessage(`{"message":"Payment failed","channel":"app","level_name":"ERROR","context":{"order":15,"password":"hunter2"}}`), Timestamp: 1},
+	} {
+		if err := store.Store(context.Background(), ev); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := store.Store(context.Background(), event.Event{UUID: "dump-1", Type: "var-dump", Project: "default", Payload: json.RawMessage(`{}`), Timestamp: 1}); err != nil {
-		t.Fatal(err)
-	}
+	return db, store
+}
 
+// startModule runs the module the way the app does: migrations, init,
+// routes, then the h2a client.
+func startModule(t *testing.T, db *sql.DB, store event.Store, cfg Config) (*Module, *http.ServeMux, *recorder) {
+	t.Helper()
 	m := New(cfg)
 	rec := &recorder{}
 	m.SetBroadcaster(rec)
 	mux := http.NewServeMux()
-	m.RegisterRoutes(mux, store)
+	reg := module.NewRegistry()
+	reg.Register(m)
+	if err := reg.Init(db, mux, store); err != nil {
+		t.Fatal(err)
+	}
 	m.RegisterProtectedRoutes(mux, func(h http.Handler) http.Handler { return h })
 	if err := m.Start(context.Background()); err != nil {
 		t.Fatal(err)
@@ -245,10 +265,11 @@ func TestExplain_Conversation(t *testing.T) {
 	node.reply("conv-1", "loadOrder throws for a missing order; check the id first.")
 	waitFor(t, "the answer", func() bool {
 		_, th := call(t, mux, "GET", "/api/explain/event/ev-1", "")
-		return len(th["messages"].([]any)) == 2
+		return len(th["messages"].([]any)) == 3 // context, question, answer
 	})
 	b := rec.all()
-	if len(b) != 1 || b[0].channel != "events.project.default" || b[0].name != EventName || b[0].payload["event_uuid"] != "ev-1" {
+	if len(b) != 2 || b[0].channel != "events.project.default" || b[0].name != EventName || b[0].payload["key"] != "ev-1" ||
+		b[1].name != LegacyEventName || b[1].payload["event_uuid"] != "ev-1" {
 		t.Fatalf("broadcasts: %+v", b)
 	}
 	msg := b[0].payload["message"].(map[string]any)
@@ -259,7 +280,7 @@ func TestExplain_Conversation(t *testing.T) {
 
 	// A follow-up goes into the same conversation.
 	code, th = call(t, mux, "POST", "/api/explain/event/ev-1/messages", `{"text":"And how do I test it?"}`)
-	if code != 200 || len(th["messages"].([]any)) != 3 {
+	if code != 200 || len(th["messages"].([]any)) != 4 {
 		t.Fatalf("follow-up: %d %v", code, th)
 	}
 	sent = node.sent()
@@ -285,11 +306,10 @@ func TestExplain_Refusals(t *testing.T) {
 		errCode                  string
 	}{
 		{"unknown event", "POST", "/api/explain/event/nope", "", 404, "event_not_found"},
-		{"not sentry", "POST", "/api/explain/event/dump-1", "", 400, "explain_type"},
-		{"follow-up before explain", "POST", "/api/explain/event/ev-1/messages", `{"text":"hi"}`, 404, "explain_none"},
+		{"follow-up before explain", "POST", "/api/explain/event/ev-1/messages", `{"text":"hi"}`, 404, "assist_none"},
 		{"follow-up empty", "POST", "/api/explain/event/ev-1/messages", `{"text":"  "}`, 400, "text_required"},
 		{"bad json", "POST", "/api/explain/event/ev-1", `nope`, 400, "bad_body"},
-		{"no thread", "GET", "/api/explain/event/ev-1", "", 404, "explain_none"},
+		{"no thread", "GET", "/api/explain/event/ev-1", "", 404, "assist_none"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -310,7 +330,7 @@ func TestExplain_WrongTokenStops(t *testing.T) {
 	waitFor(t, "the refusal", func() bool { _, s, _ := m.current(); return s == "stopped" })
 
 	code, out := call(t, mux, "POST", "/api/explain/event/ev-1", "")
-	if code != 503 || out["code"] != "explain_offline" || !strings.Contains(out["error"].(string), "h2a_auth") {
+	if code != 503 || out["code"] != "assist_offline" || !strings.Contains(out["error"].(string), "h2a_auth") {
 		t.Errorf("explain while stopped: %d %v", code, out)
 	}
 	_, st := call(t, mux, "GET", "/api/explain", "")
@@ -323,7 +343,7 @@ func TestExplain_NodeAwayDoesNotBlock(t *testing.T) {
 	// Nothing listens there: Start returns at once, the module keeps trying.
 	m, mux, _ := setup(t, Config{URL: "ws://127.0.0.1:1/h2a/v1", Token: testToken})
 	code, out := call(t, mux, "POST", "/api/explain/event/ev-1", "")
-	if code != 503 || out["code"] != "explain_offline" {
+	if code != 503 || out["code"] != "assist_offline" {
 		t.Errorf("explain with harnsy away: %d %v", code, out)
 	}
 	if _, s, _ := m.current(); s != "connecting" {

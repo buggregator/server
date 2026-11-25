@@ -1,14 +1,14 @@
-// Package explain sends a Sentry error to the agents of a harnsy project
-// over h2a (github.com/harnesy/h2a-go) and shows their answers in
-// Buggregator: «Explain this error», then a conversation about it.
-//
-// A concept: conversations live in memory, the text is not scrubbed beyond
-// leaving out the request's headers and body. Off unless a URL and a token
-// are set.
+// Package explain lets the person talk to the agents of a harnsy project
+// over h2a (github.com/harnesy/h2a-go) about what they look at in
+// Buggregator: an event (the server builds its text) or a page (the client
+// describes it). Conversations are kept in SQLite; obvious secrets are
+// masked before a text leaves the machine. Off unless a URL and a token are
+// set.
 package explain
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -19,18 +19,32 @@ import (
 	"github.com/buggregator/server/v2/internal/event"
 	"github.com/buggregator/server/v2/internal/module"
 	"github.com/buggregator/server/v2/internal/server/tcp"
+	"github.com/buggregator/server/v2/internal/storage"
 	"github.com/harnesy/h2a-go"
 )
 
 // EventName is the WebSocket event of a new line in a thread, on the
-// event's project channel.
-const EventName = "explain.message"
+// thread's project channel. LegacyEventName is sent too for event threads
+// while the UI still uses /api/explain.
+const (
+	EventName       = "assist.message"
+	LegacyEventName = "explain.message"
+)
+
+// MCP is what the module knows of Buggregator's own MCP server: when it is
+// on and read-only, every first message points the agents to it.
+type MCP struct {
+	On        bool
+	ReadOnly  bool
+	Transport string // socket or http
+}
 
 // Config of the h2a connection.
 type Config struct {
 	URL   string // wss://<node gateway>/h2a/v1
 	Token string // the pass's token (h2a_…), a secret
 	To    string // the address the explanations go to; "" = lead
+	MCP   MCP
 }
 
 // sender is what the module needs of the h2a client.
@@ -58,7 +72,7 @@ func New(cfg Config) *Module {
 	if cfg.To == "" {
 		cfg.To = "lead"
 	}
-	return &Module{cfg: cfg, threads: newThreads(), status: "connecting"}
+	return &Module{cfg: cfg, status: "connecting"}
 }
 
 func (m *Module) Name() string { return "Explain (harnsy h2a)" }
@@ -72,7 +86,21 @@ func (m *Module) RegisterProtectedRoutes(mux *http.ServeMux, protect func(http.H
 	m.registerAPI(mux, protect)
 }
 
-func (m *Module) OnEventsDeleted(uuids []string) { m.threads.remove(uuids) }
+// RegisterMigrations adds the assist_threads and assist_messages tables.
+func (m *Module) RegisterMigrations(migrator *storage.Migrator) error {
+	return migrator.AddFromFS("explain", migrations, "migrations")
+}
+
+func (m *Module) OnInit(db *sql.DB) error {
+	m.threads = &threads{db: db}
+	return nil
+}
+
+func (m *Module) OnEventsDeleted(uuids []string) {
+	if err := m.threads.removeEvents(uuids); err != nil {
+		slog.Error("explain: dropping threads of deleted events", "err", err)
+	}
+}
 
 // TCPServers runs the h2a client with the other servers: started after
 // startup, stopped on shutdown. It opens no port.
@@ -213,11 +241,17 @@ func (m *Module) onReply(_ context.Context, r h2a.Reply) error {
 	if msg.At.IsZero() {
 		msg.At = time.Now().UTC()
 	}
-	th, ok := m.threads.add(r.Conversation, msg)
-	if !ok {
-		// A conversation from before a restart: nothing to show it under.
+	th, err := m.threads.byConversation(r.Conversation)
+	if err == nil {
+		th, err = m.threads.add(th.ID, msg)
+	}
+	if errors.Is(err, errNoThread) {
+		// A conversation started anew or deleted with its event.
 		slog.Warn("explain: answer to an unknown conversation dropped", "conversation", r.Conversation)
 		return nil
+	}
+	if err != nil {
+		return err // not acked: the node sends it again
 	}
 	m.broadcast(th, msg)
 	return nil
@@ -227,11 +261,20 @@ func (m *Module) broadcast(th Thread, msg Message) {
 	if m.bc == nil {
 		return
 	}
-	m.bc.Broadcast("events.project."+th.Project, EventName, map[string]any{
-		"event_uuid":   th.EventUUID,
-		"conversation": th.Conversation,
-		"message":      msg,
+	channel := "events.project." + th.Project
+	m.bc.Broadcast(channel, EventName, map[string]any{
+		"thread_id": th.ID,
+		"kind":      th.Kind,
+		"key":       th.Key,
+		"message":   msg,
 	})
+	if th.Kind == KindEvent {
+		m.bc.Broadcast(channel, LegacyEventName, map[string]any{
+			"event_uuid":   th.Key,
+			"conversation": th.Conversation,
+			"message":      msg,
+		})
+	}
 }
 
 func (m *Module) setStatus(c sender, status, reason string) {

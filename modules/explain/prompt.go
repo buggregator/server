@@ -40,18 +40,30 @@ func Prompt(payload json.RawMessage, question string, limit int) (string, error)
 	if limit <= 0 {
 		limit = defaultTextBytes
 	}
-	var ev sentry.ErrorEvent
-	if err := json.Unmarshal(payload, &ev); err != nil {
-		return "", fmt.Errorf("not a Sentry event: %w", err)
+	body, err := sentryBody(payload)
+	if err != nil {
+		return "", err
 	}
-
 	var b strings.Builder
-	b.WriteString("Explain this error caught by Buggregator: what happened, the likely cause, and how to fix it.\n")
+	b.WriteString(sentryIntro + "\n")
 	if q := strings.TrimSpace(question); q != "" {
 		b.WriteString("Question: " + q + "\n")
 	}
 	b.WriteString("\n")
+	b.WriteString(body)
+	return cut(b.String(), limit), nil
+}
 
+const sentryIntro = "Explain this error caught by Buggregator: what happened, the likely cause, and how to fix it."
+
+// sentryBody is the error itself: the exception chain with app frames, then
+// level, release, request line, tags and the last breadcrumbs.
+func sentryBody(payload json.RawMessage) (string, error) {
+	var ev sentry.ErrorEvent
+	if err := json.Unmarshal(payload, &ev); err != nil {
+		return "", fmt.Errorf("not a Sentry event: %w", err)
+	}
+	var b strings.Builder
 	exceptions := []sentry.ExceptionValue(nil)
 	if ev.Exception != nil {
 		exceptions = ev.Exception.Values
@@ -103,7 +115,7 @@ func Prompt(payload json.RawMessage, question string, limit int) (string, error)
 			}
 		}
 	}
-	return cut(b.String(), limit), nil
+	return b.String(), nil
 }
 
 func writeStack(b *strings.Builder, raw json.RawMessage) {
