@@ -74,6 +74,7 @@ func Prompt(payload json.RawMessage, question string, limit int) (string, error)
 			msg = ev.LogEntry.Message
 		}
 		b.WriteString("Message: " + msg + "\n")
+		writeStack(&b, messageStack(payload))
 	}
 
 	b.WriteString("\n")
@@ -148,6 +149,50 @@ func writeStack(b *strings.Builder, raw json.RawMessage) {
 		}
 		shown++
 	}
+}
+
+// messageStack finds the stack of a message event (CaptureMessage with
+// stack traces on): the top-level stacktrace, else a thread's — the crashed
+// one, the current one, then the first with frames. Threads come as a list
+// (sentry-go) or as {"values": [...]}.
+func messageStack(payload json.RawMessage) json.RawMessage {
+	var ev struct {
+		Stacktrace json.RawMessage `json:"stacktrace"`
+		Threads    json.RawMessage `json:"threads"`
+	}
+	if json.Unmarshal(payload, &ev) != nil {
+		return nil
+	}
+	if len(ev.Stacktrace) > 0 && string(ev.Stacktrace) != "null" {
+		return ev.Stacktrace
+	}
+	type thread struct {
+		Current    bool            `json:"current"`
+		Crashed    bool            `json:"crashed"`
+		Stacktrace json.RawMessage `json:"stacktrace"`
+	}
+	var list []thread
+	if json.Unmarshal(ev.Threads, &list) != nil {
+		var obj struct {
+			Values []thread `json:"values"`
+		}
+		if json.Unmarshal(ev.Threads, &obj) != nil {
+			return nil
+		}
+		list = obj.Values
+	}
+	for _, want := range []func(thread) bool{
+		func(t thread) bool { return t.Crashed },
+		func(t thread) bool { return t.Current },
+		func(thread) bool { return true },
+	} {
+		for _, t := range list {
+			if len(t.Stacktrace) > 0 && string(t.Stacktrace) != "null" && want(t) {
+				return t.Stacktrace
+			}
+		}
+	}
+	return nil
 }
 
 // request gives the method and URL only: headers, cookies and the body stay home.

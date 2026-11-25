@@ -323,6 +323,8 @@ paths:
           $ref: '#/components/responses/Error'
         '503':
           $ref: '#/components/responses/Error'
+        '504':
+          $ref: '#/components/responses/Error'
   /api/explain/event/{uuid}/messages:
     parameters:
     - $ref: '#/components/parameters/EventUUID'
@@ -357,6 +359,8 @@ paths:
         '502':
           $ref: '#/components/responses/Error'
         '503':
+          $ref: '#/components/responses/Error'
+        '504':
           $ref: '#/components/responses/Error'
   /api/events:
     get:

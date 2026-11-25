@@ -110,7 +110,7 @@ func (m *Module) loop(ctx context.Context) {
 		slog.Error("explain: bad h2a URL; module off", "err", err)
 		return
 	}
-	wait := 5 * time.Second
+	wait := retryBase
 	for ctx.Err() == nil {
 		c, err := h2a.Dial(ctx, h2a.Config{
 			URL:   m.cfg.URL,
@@ -130,32 +130,53 @@ func (m *Module) loop(ctx context.Context) {
 			}
 			m.setStatus(nil, "connecting", err.Error())
 			slog.Warn("explain: cannot reach harnsy, retrying", "err", err, "in", wait)
-			select {
-			case <-ctx.Done():
+			if !m.sleep(ctx, &wait) {
 				return
-			case <-time.After(wait):
-			}
-			if wait < time.Minute {
-				wait *= 2
 			}
 			continue
 		}
-		wait = 5 * time.Second
 		w := c.Welcome()
 		m.setStatus(c, "connected", "")
 		slog.Info("explain: connected to harnsy", "project", w.Project, "to", m.cfg.To)
 
+		started := time.Now()
 		err = c.Run(ctx, m.onReply)
 		_ = c.Close()
 		if ctx.Err() != nil {
 			return
 		}
-		m.setStatus(nil, "stopped", errString(err))
-		slog.Error("explain: h2a connection stopped", "err", err)
 		if err != nil && final(err) {
+			m.setStatus(nil, "stopped", errString(err))
+			slog.Error("explain: h2a connection stopped; not retrying", "err", err)
+			return
+		}
+		// A connection that lived a while resets the wait; one the node drops
+		// right after the welcome backs off like a failed sign-in.
+		if time.Since(started) > time.Minute {
+			wait = retryBase
+		}
+		m.setStatus(nil, "connecting", errString(err))
+		slog.Warn("explain: h2a connection lost, reconnecting", "err", err, "in", wait)
+		if !m.sleep(ctx, &wait) {
 			return
 		}
 	}
+}
+
+// retryBase is the first wait before a new sign-in; it doubles up to a minute.
+var retryBase = 5 * time.Second
+
+// sleep waits *wait, then doubles it up to a minute; false when ctx ended.
+func (m *Module) sleep(ctx context.Context, wait *time.Duration) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(*wait):
+	}
+	if *wait < time.Minute {
+		*wait *= 2
+	}
+	return true
 }
 
 // checkURL refuses at once what the SDK would refuse on every try.
