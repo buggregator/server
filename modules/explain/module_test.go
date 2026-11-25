@@ -136,6 +136,19 @@ func (n *fakeNode) reply(conversation, text string) {
 	})
 }
 
+// welcomeAgain sends a new welcome on the live connection, as the node does
+// when the person edits the pass.
+func (n *fakeNode) welcomeAgain(to []map[string]string) {
+	n.mu.Lock()
+	n.to = to
+	c := n.conn
+	n.mu.Unlock()
+	n.write(context.Background(), c, map[string]any{
+		"type": "welcome", "v": "1", "project": "App", "to": to,
+		"limits": map[string]int{"frames_per_minute": 60, "messages_per_day": 100, "text_bytes": 16384, "frame_bytes": 262144, "queue": 500, "queue_hours": 24, "ping_seconds": 20, "idle_seconds": 60},
+	})
+}
+
 func (n *fakeNode) sent() []map[string]any {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -159,6 +172,17 @@ func (r *recorder) Broadcast(channel, name string, payload any) {
 	r.mu.Lock()
 	r.got = append(r.got, broadcast{channel, name, m})
 	r.mu.Unlock()
+}
+
+// messages leaves out the status broadcasts.
+func (r *recorder) messages() []broadcast {
+	var out []broadcast
+	for _, b := range r.all() {
+		if b.name != StatusEventName {
+			out = append(out, b)
+		}
+	}
+	return out
 }
 
 func (r *recorder) all() []broadcast {
@@ -268,7 +292,7 @@ func TestExplain_Conversation(t *testing.T) {
 		_, th := call(t, mux, "GET", "/api/explain/event/ev-1", "")
 		return len(th["messages"].([]any)) == 3 // context, question, answer
 	})
-	b := rec.all()
+	b := rec.messages()
 	if len(b) != 2 || b[0].channel != "events.project.default" || b[0].name != EventName || b[0].payload["key"] != "ev-1" ||
 		b[1].name != LegacyEventName || b[1].payload["event_uuid"] != "ev-1" {
 		t.Fatalf("broadcasts: %+v", b)
