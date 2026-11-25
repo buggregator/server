@@ -153,8 +153,9 @@ func writeStack(b *strings.Builder, raw json.RawMessage) {
 
 // messageStack finds the stack of a message event (CaptureMessage with
 // stack traces on): the top-level stacktrace, else a thread's — the crashed
-// one, the current one, then the first with frames. Threads come as a list
-// (sentry-go) or as {"values": [...]}.
+// one, the current one, then any other. Only a stacktrace with frames counts:
+// an empty one (`"frames": []`) must not hide a later one. Threads come as a
+// list (sentry-go) or as {"values": [...]}.
 func messageStack(payload json.RawMessage) json.RawMessage {
 	var ev struct {
 		Stacktrace json.RawMessage `json:"stacktrace"`
@@ -163,7 +164,7 @@ func messageStack(payload json.RawMessage) json.RawMessage {
 	if json.Unmarshal(payload, &ev) != nil {
 		return nil
 	}
-	if len(ev.Stacktrace) > 0 && string(ev.Stacktrace) != "null" {
+	if hasFrames(ev.Stacktrace) {
 		return ev.Stacktrace
 	}
 	type thread struct {
@@ -187,12 +188,17 @@ func messageStack(payload json.RawMessage) json.RawMessage {
 		func(thread) bool { return true },
 	} {
 		for _, t := range list {
-			if len(t.Stacktrace) > 0 && string(t.Stacktrace) != "null" && want(t) {
+			if want(t) && hasFrames(t.Stacktrace) {
 				return t.Stacktrace
 			}
 		}
 	}
 	return nil
+}
+
+func hasFrames(raw json.RawMessage) bool {
+	var st stacktrace
+	return len(raw) > 0 && json.Unmarshal(raw, &st) == nil && len(st.Frames) > 0
 }
 
 // request gives the method and URL only: headers, cookies and the body stay home.
