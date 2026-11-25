@@ -327,6 +327,9 @@ func (a *App) Run() {
 		// "/mock/" is httpdumps.MockPrefix: mock OPTIONS rules answer preflights.
 		handler = httpserver.CORSMiddleware(handler, a.cfg.Server.CORSOrigins, "/mock/")
 	}
+	// Pages with Origin: null (the html event's sandboxed frame, file://)
+	// reach ingestion only, never the UI API or the WebSocket.
+	handler = httpserver.NullOriginGuard(handler, mux)
 	if a.metrics != nil {
 		handler = metrics.HTTPMiddleware(handler, a.metrics)
 	}
