@@ -84,3 +84,22 @@ func TestContextText_Limits(t *testing.T) {
 		}
 	}
 }
+
+// The question, the page title and the page key are masked like the body.
+func TestContextText_ScrubsAll(t *testing.T) {
+	c := Context{Kind: KindPage, Key: "/p?token=abcdef123456", Title: "login api_key=k-123456", Text: "list DB_PASSWORD=hunter2"}
+	text, err := contextText(c, nil, "my DB_PASSWORD=hunter2 please", pointer{}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{"hunter2", "abcdef123456", "k-123456"} {
+		if strings.Contains(text, bad) {
+			t.Errorf("%q sent:\n%s", bad, text)
+		}
+	}
+	for _, want := range []string{"Question: my DB_PASSWORD=[redacted] please", "Page: /p?token=[redacted]"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("lacks %q:\n%s", want, text)
+		}
+	}
+}
