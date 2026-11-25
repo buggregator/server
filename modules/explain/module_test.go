@@ -227,7 +227,10 @@ func TestExplain_Conversation(t *testing.T) {
 
 	// The agent answers: it lands in the thread and on the project channel.
 	node.reply("conv-1", "loadOrder throws for a missing order; check the id first.")
-	waitFor(t, "the answer", func() bool { _, th := call(t, mux, "GET", "/api/explain/event/ev-1", ""); return len(th["messages"].([]any)) == 2 })
+	waitFor(t, "the answer", func() bool {
+		_, th := call(t, mux, "GET", "/api/explain/event/ev-1", "")
+		return len(th["messages"].([]any)) == 2
+	})
 	b := rec.all()
 	if len(b) != 1 || b[0].channel != "events.project.default" || b[0].name != EventName || b[0].payload["event_uuid"] != "ev-1" {
 		t.Fatalf("broadcasts: %+v", b)
