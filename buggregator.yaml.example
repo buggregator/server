@@ -68,6 +68,15 @@ broadcast:
   #   - key: app-key
   #     secret: app-secret
 
+# Explain this error (concept): a Sentry error goes to the agents of a harnsy
+# project over h2a, their answers show under the event. Off until url and
+# token are set. The error's text (exception, stack with source lines, tags,
+# breadcrumbs, request method + URL) leaves this machine for the harnsy node.
+explain:
+  url: ${EXPLAIN_H2A_URL:}       # wss://<harnsy gateway>/h2a/v1
+  token: ${EXPLAIN_H2A_TOKEN:}   # the service pass's token (h2a_…); keep it secret
+  to: ${EXPLAIN_H2A_TO:lead}     # lead, or role:<id> from the pass
+
 # UI event lists: how much /api/events and /api/events/preview return
 ui:
   default_limit: ${UI_DEFAULT_LIMIT:}       # Events returned when the request has no limit param. Empty or 0 = unlimited

@@ -45,6 +45,8 @@ tags:
   description: Version, settings, health
 - name: Events
   description: Stored events of every type
+- name: Explain
+  description: «Explain this error» - a Sentry error to the agents of a harnsy project over h2a, their answers back
 - name: Projects
 - name: Auth
 - name: Metrics
@@ -228,6 +230,133 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
+          $ref: '#/components/responses/Error'
+  /api/explain:
+    get:
+      tags:
+      - Explain
+      operationId: explainStatus
+      summary: Whether «Explain this error» is connected to harnsy (only when explain.url and explain.token are set)
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Connection state
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - enabled
+                - status
+                - to
+                properties:
+                  enabled:
+                    type: boolean
+                  status:
+                    type: string
+                    enum: [connecting, connected, stopped]
+                  reason:
+                    type: string
+                    description: Why stopped, or the last connection error.
+                  project:
+                    type: string
+                    description: The harnsy project of the pass, when connected.
+                  to:
+                    type: string
+                    description: The address explanations go to (lead or role:<id>).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/explain/event/{uuid}:
+    parameters:
+    - $ref: '#/components/parameters/EventUUID'
+    get:
+      tags:
+      - Explain
+      operationId: getExplainThread
+      summary: The conversation with the agents about this event (kept in memory)
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Thread
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplainThread'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+      - Explain
+      operationId: explainEvent
+      summary: Send a Sentry error to the harnsy agents and start a conversation
+      description: Builds a plain-text description of the error (exception chain, app frames with source lines, tags, breadcrumbs,
+        request method and URL; no headers or body) and sends it over h2a. Answers arrive as `explain.message` on the event's
+        project channel.
+      security:
+      - authToken: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExplainText'
+      responses:
+        '200':
+          description: Sent; the new thread
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplainThread'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '502':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /api/explain/event/{uuid}/messages:
+    parameters:
+    - $ref: '#/components/parameters/EventUUID'
+    post:
+      tags:
+      - Explain
+      operationId: explainFollowUp
+      summary: A follow-up question in the event's conversation
+      security:
+      - authToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExplainText'
+      responses:
+        '200':
+          description: Sent; the thread
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplainThread'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '502':
+          $ref: '#/components/responses/Error'
+        '503':
           $ref: '#/components/responses/Error'
   /api/events:
     get:
@@ -5271,6 +5400,53 @@ components:
                 type: string
                 description: The event id (empty for envelopes without one)
   schemas:
+    ExplainText:
+      type: object
+      properties:
+        text:
+          type: string
+          maxLength: 4000
+          description: The person's question; required for a follow-up.
+    ExplainMessage:
+      type: object
+      required:
+      - from
+      - text
+      - at
+      properties:
+        from:
+          type: string
+          enum: [you, agent]
+        role:
+          type: string
+          description: The agent's post (agent messages).
+        project:
+          type: string
+          description: The harnsy project (agent messages).
+        text:
+          type: string
+        at:
+          type: string
+          format: date-time
+    ExplainThread:
+      type: object
+      required:
+      - event_uuid
+      - project
+      - conversation
+      - messages
+      properties:
+        event_uuid:
+          type: string
+        project:
+          type: string
+        conversation:
+          type: string
+          description: The h2a conversation id.
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExplainMessage'
     CronSchedule:
       type: object
       required:

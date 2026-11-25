@@ -5,9 +5,11 @@ go 1.26.1
 require (
 	github.com/andybalholm/brotli v1.2.0
 	github.com/brianvoe/gofakeit/v7 v7.18.1
+	github.com/coder/websocket v1.8.15
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
 	github.com/emersion/go-smtp v0.24.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/harnesy/h2a-go v0.2.0
 	github.com/klauspost/compress v1.18.0
 	github.com/modelcontextprotocol/go-sdk v1.4.0
 	github.com/prometheus/client_golang v1.23.2
