@@ -5096,7 +5096,7 @@ components:
       name: type
       in: query
       description: Only events of this type (`sentry`, `smtp`, `monolog`, `var-dump`, `ray`, `inspector`, `profiler`, `http-dump`,
-        `sms`, `broadcast`, ...)
+        `sms`, `broadcast`, `html`, ...)
       schema:
         type: string
     Project:
