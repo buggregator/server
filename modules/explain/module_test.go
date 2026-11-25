@@ -35,11 +35,12 @@ type fakeNode struct {
 	convs    int
 	ready    chan struct{}
 	drop     int // close this many connections right after the welcome
+	to       []map[string]string // the welcome's address list
 	hellos   int
 }
 
 func newFakeNode(t *testing.T) *fakeNode {
-	n := &fakeNode{t: t, ready: make(chan struct{})}
+	n := &fakeNode{t: t, ready: make(chan struct{}), to: []map[string]string{{"address": "lead", "name": "Project lead"}}}
 	n.srv = httptest.NewServer(http.HandlerFunc(n.serve))
 	t.Cleanup(n.srv.Close)
 	return n
@@ -65,7 +66,7 @@ func (n *fakeNode) serve(w http.ResponseWriter, r *http.Request) {
 	}
 	n.write(ctx, c, map[string]any{
 		"type": "welcome", "v": "1", "project": "App",
-		"to":     []map[string]string{{"address": "lead", "name": "Project lead"}},
+		"to":     n.to,
 		"limits": map[string]int{"frames_per_minute": 60, "messages_per_day": 100, "text_bytes": 16384, "frame_bytes": 262144, "queue": 500, "queue_hours": 24, "ping_seconds": 20, "idle_seconds": 60},
 	})
 	n.mu.Lock()

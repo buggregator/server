@@ -36,6 +36,7 @@ type Thread struct {
 	Title        string    `json:"title"`
 	Project      string    `json:"project"`
 	Conversation string    `json:"conversation"`
+	To           string    `json:"to"` // the h2a address the thread was started with
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 	Messages     []Message `json:"messages"`
@@ -48,6 +49,7 @@ type Summary struct {
 	Key       string    `json:"key"`
 	Title     string    `json:"title"`
 	Project   string    `json:"project"`
+	To        string    `json:"to"`
 	UpdatedAt time.Time `json:"updated_at"`
 	LastFrom  string    `json:"last_from"`
 }
@@ -65,12 +67,12 @@ func parseTime(s string) time.Time {
 	return t
 }
 
-const threadCols = `id, kind, key, title, project, conversation, created_at, updated_at`
+const threadCols = `id, kind, key, title, project, conversation, recipient, created_at, updated_at`
 
 func scanThread(row interface{ Scan(...any) error }) (Thread, error) {
 	var th Thread
 	var created, updated string
-	err := row.Scan(&th.ID, &th.Kind, &th.Key, &th.Title, &th.Project, &th.Conversation, &created, &updated)
+	err := row.Scan(&th.ID, &th.Kind, &th.Key, &th.Title, &th.Project, &th.Conversation, &th.To, &created, &updated)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Thread{}, errNoThread
 	}
@@ -114,7 +116,7 @@ func (t *threads) byConversation(conv string) (Thread, error) {
 
 // start records a new conversation for the context with its first messages,
 // replacing an older one of the same context.
-func (t *threads) start(c Context, project, conversation string, first []Message) (Thread, error) {
+func (t *threads) start(c Context, project, to, conversation string, first []Message) (Thread, error) {
 	now := time.Now().UTC().Format(timeFormat)
 	tx, err := t.db.Begin()
 	if err != nil {
@@ -127,8 +129,8 @@ func (t *threads) start(c Context, project, conversation string, first []Message
 	if _, err := tx.Exec(`DELETE FROM assist_threads WHERE kind = ? AND key = ?`, c.Kind, c.Key); err != nil {
 		return Thread{}, err
 	}
-	res, err := tx.Exec(`INSERT INTO assist_threads (kind, key, title, project, conversation, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		c.Kind, c.Key, c.Title, project, conversation, now, now)
+	res, err := tx.Exec(`INSERT INTO assist_threads (kind, key, title, project, conversation, recipient, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		c.Kind, c.Key, c.Title, project, conversation, to, now, now)
 	if err != nil {
 		return Thread{}, err
 	}
@@ -199,7 +201,7 @@ func (t *threads) recent(n int) ([]Summary, error) {
 	if n <= 0 || n > maxRecent {
 		n = maxRecent
 	}
-	rows, err := t.db.Query(`SELECT t.id, t.kind, t.key, t.title, t.project, t.updated_at,
+	rows, err := t.db.Query(`SELECT t.id, t.kind, t.key, t.title, t.project, t.recipient, t.updated_at,
 		COALESCE((SELECT sender FROM assist_messages m WHERE m.thread_id = t.id ORDER BY m.id DESC LIMIT 1), '')
 		FROM assist_threads t ORDER BY t.updated_at DESC, t.id DESC LIMIT ?`, n)
 	if err != nil {
@@ -210,7 +212,7 @@ func (t *threads) recent(n int) ([]Summary, error) {
 	for rows.Next() {
 		var s Summary
 		var updated string
-		if err := rows.Scan(&s.ID, &s.Kind, &s.Key, &s.Title, &s.Project, &updated, &s.LastFrom); err != nil {
+		if err := rows.Scan(&s.ID, &s.Kind, &s.Key, &s.Title, &s.Project, &s.To, &updated, &s.LastFrom); err != nil {
 			return nil, err
 		}
 		s.UpdatedAt = parseTime(updated)

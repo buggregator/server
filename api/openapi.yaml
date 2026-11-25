@@ -5630,6 +5630,9 @@ components:
         conversation:
           type: string
           description: The h2a conversation id.
+        to:
+          type: string
+          description: The h2a address the thread was started with ("" for threads from before).
         created_at:
           type: string
           format: date-time
@@ -5653,6 +5656,8 @@ components:
         title:
           type: string
         project:
+          type: string
+        to:
           type: string
         updated_at:
           type: string
@@ -5694,6 +5699,10 @@ components:
         new:
           type: boolean
           description: Drop the context's conversation and start over.
+        to:
+          type: string
+          description: The address to ask, one of `recipients` of GET /api/assist (else 400 `bad_recipient`); default
+            `default`. Follow-ups stay in the thread's conversation.
     AssistStatus:
       type: object
       required:
@@ -5715,7 +5724,25 @@ components:
           description: The harnsy project of the pass, when connected.
         to:
           type: string
-          description: The address the messages go to (lead or role:<id>).
+          description: The configured address (explain.to).
+        recipients:
+          type: array
+          description: The addresses this pass may write to (the h2a welcome list, refreshed on reconnect), when connected.
+          items:
+            type: object
+            required:
+            - address
+            - name
+            properties:
+              address:
+                type: string
+              name:
+                type: string
+              about:
+                type: string
+        default:
+          type: string
+          description: The address a new thread goes to without `to`, when connected.
         limits:
           type: object
           description: The node's limits, when connected.
