@@ -187,6 +187,7 @@ modules:
   monolog: true
   smtp: true
   sms: true
+  html: true          # your own HTML markup: curl -X POST http://html@127.0.0.1:8000 -H 'Content-Type: text/html' --data '<h1>Hi</h1>'
   broadcast: true
   http-dump: true
   profiler: true

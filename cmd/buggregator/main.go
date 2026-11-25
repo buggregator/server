@@ -18,6 +18,7 @@ import (
 	"github.com/buggregator/server/v2/internal/storage"
 	"github.com/buggregator/server/v2/modules/broadcast"
 	"github.com/buggregator/server/v2/modules/csp"
+	"github.com/buggregator/server/v2/modules/html"
 	"github.com/buggregator/server/v2/modules/httpdumps"
 	"github.com/buggregator/server/v2/modules/inspector"
 	"github.com/buggregator/server/v2/modules/monolog"
@@ -192,6 +193,9 @@ func run() {
 	}
 	if enabled.IsEnabled("csp") {
 		registry.Register(csp.New())
+	}
+	if enabled.IsEnabled("html") {
+		registry.Register(html.New())
 	}
 	var broadcastMod *broadcast.Module
 	if enabled.IsEnabled("broadcast") {

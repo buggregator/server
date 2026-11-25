@@ -297,6 +297,7 @@ type ModulesConfig struct {
 	SMTP      *bool `yaml:"smtp"`
 	SMS       *bool `yaml:"sms"`
 	CSP       *bool `yaml:"csp"`       // browser CSP / Reporting API reports
+	HTML      *bool `yaml:"html"`      // events with the sender's own HTML markup
 	Broadcast *bool `yaml:"broadcast"` // Pusher HTTP API events (Laravel Reverb, Pusher)
 	HttpDump  *bool `yaml:"http-dump"`
 	Profiler  *bool `yaml:"profiler"`
@@ -323,6 +324,8 @@ func (m *ModulesConfig) field(moduleType string) **bool {
 		return &m.SMS
 	case "csp":
 		return &m.CSP
+	case "html":
+		return &m.HTML
 	case "broadcast":
 		return &m.Broadcast
 	case "http-dump":
@@ -355,7 +358,7 @@ func (m *ModulesConfig) Disable(moduleType string) {
 
 // EnabledTypes returns a list of enabled module type strings.
 func (m ModulesConfig) EnabledTypes() []string {
-	all := []string{"sentry", "ray", "var-dump", "inspector", "monolog", "smtp", "sms", "csp", "broadcast", "http-dump", "profiler", "xdebug-trace"}
+	all := []string{"sentry", "ray", "var-dump", "inspector", "monolog", "smtp", "sms", "csp", "html", "broadcast", "http-dump", "profiler", "xdebug-trace"}
 	var enabled []string
 	for _, t := range all {
 		if m.IsEnabled(t) {
@@ -718,6 +721,7 @@ func modulesFromCSV(csv string) ModulesConfig {
 		SMTP:      boolPtr(enabled["smtp"], t, f),
 		SMS:       boolPtr(enabled["sms"], t, f),
 		CSP:       boolPtr(enabled["csp"], t, f),
+		HTML:      boolPtr(enabled["html"], t, f),
 		Broadcast: boolPtr(enabled["broadcast"], t, f),
 		HttpDump:  boolPtr(enabled["http-dump"], t, f),
 		Profiler:  boolPtr(enabled["profiler"], t, f),

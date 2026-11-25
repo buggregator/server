@@ -11,7 +11,7 @@ import (
 )
 
 type eventsListInput struct {
-	Type    string `json:"type,omitempty" jsonschema:"Filter by event type (sentry, profiler, var-dump, ray, inspector, smtp, monolog, http-dump)"`
+	Type    string `json:"type,omitempty" jsonschema:"Filter by event type (sentry, profiler, var-dump, ray, inspector, smtp, monolog, http-dump, sms, csp, html, broadcast, xdebug-trace)"`
 	Project string `json:"project,omitempty" jsonschema:"Filter by project key"`
 	Limit   int    `json:"limit,omitempty" jsonschema:"Maximum number of events to return (default 20, max 100)"`
 	eventFilterInput
