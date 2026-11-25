@@ -65,6 +65,8 @@ func (m *Module) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	if c != nil {
 		wel := c.Welcome()
 		out["project"] = wel.Project
+		out["recipients"] = recipients(wel.To)
+		out["default"] = m.defaultRecipient(wel.To)
 		out["limits"] = map[string]int{
 			"text_bytes":        wel.Limits.TextBytes,
 			"frames_per_minute": wel.Limits.FramesPerMinute,
@@ -127,6 +129,7 @@ type startRequest struct {
 	Context Context `json:"context"`
 	Text    string  `json:"text"`
 	New     bool    `json:"new"`
+	To      string  `json:"to"` // an address of GET /api/assist recipients; "" = default
 }
 
 // handleStart opens a conversation: the context's text (and the person's
@@ -149,10 +152,10 @@ func (m *Module) handleStart(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	m.start(w, r.Context(), in.Context, question, in.New)
+	m.start(w, r.Context(), in.Context, question, strings.TrimSpace(in.To), in.New)
 }
 
-func (m *Module) start(w http.ResponseWriter, ctx context.Context, c Context, question string, fresh bool) {
+func (m *Module) start(w http.ResponseWriter, ctx context.Context, c Context, question, to string, fresh bool) {
 	if !fresh {
 		th, err := m.threads.byKey(c.Kind, c.Key)
 		if err == nil {
@@ -185,12 +188,17 @@ func (m *Module) start(w http.ResponseWriter, ctx context.Context, c Context, qu
 	if cl == nil {
 		return
 	}
+	to, ok := m.recipient(cl.Welcome().To, to)
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "bad_recipient", "to is not an address this pass may write to: see recipients in GET /api/assist")
+		return
+	}
 	text, err := contextText(c, ev, question, pointer{MCP: m.cfg.MCP.On && m.cfg.MCP.ReadOnly}, cl.Welcome().Limits.TextBytes)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "assist_payload", err.Error())
 		return
 	}
-	acc, ok := m.send(w, ctx, cl, h2a.Message{To: m.cfg.To, Text: text})
+	acc, ok := m.send(w, ctx, cl, h2a.Message{To: to, Text: text})
 	if !ok {
 		return
 	}
@@ -199,7 +207,7 @@ func (m *Module) start(w http.ResponseWriter, ctx context.Context, c Context, qu
 	if question != "" {
 		first = append(first, Message{From: "you", Text: question, At: now})
 	}
-	th, err := m.threads.start(c, project, acc.Conversation, first)
+	th, err := m.threads.start(c, project, to, acc.Conversation, first)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "store", err.Error())
 		return
@@ -266,7 +274,7 @@ func (m *Module) handleLegacyStart(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	m.start(w, r.Context(), Context{Kind: KindEvent, Key: r.PathValue("uuid")}, question, true)
+	m.start(w, r.Context(), Context{Kind: KindEvent, Key: r.PathValue("uuid")}, question, "", true)
 }
 
 func (m *Module) handleLegacyMessage(w http.ResponseWriter, r *http.Request) {
@@ -286,6 +294,44 @@ func (m *Module) handleLegacyMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	m.followUp(w, r.Context(), th, text)
+}
+
+// recipients is the pass's address list from the welcome, never null.
+func recipients(list []h2a.Address) []h2a.Address {
+	if list == nil {
+		return []h2a.Address{}
+	}
+	return list
+}
+
+// defaultRecipient: the configured address when the pass may write to it,
+// else the first of the list; the configured one when the node sent none.
+func (m *Module) defaultRecipient(list []h2a.Address) string {
+	if len(list) == 0 || hasAddress(list, m.cfg.To) {
+		return m.cfg.To
+	}
+	return list[0].Address
+}
+
+// recipient resolves the address a new thread goes to; false when the pass
+// may not write there.
+func (m *Module) recipient(list []h2a.Address, to string) (string, bool) {
+	if to == "" {
+		return m.defaultRecipient(list), true
+	}
+	if len(list) == 0 {
+		return to, to == m.cfg.To
+	}
+	return to, hasAddress(list, to)
+}
+
+func hasAddress(list []h2a.Address, addr string) bool {
+	for _, a := range list {
+		if a.Address == addr {
+			return true
+		}
+	}
+	return false
 }
 
 func threadID(w http.ResponseWriter, r *http.Request) (int64, bool) {

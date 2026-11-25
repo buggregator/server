@@ -80,7 +80,7 @@ broadcast:
 explain:
   url: ${EXPLAIN_H2A_URL:}       # wss://<harnsy gateway>/h2a/v1
   token: ${EXPLAIN_H2A_TOKEN:}   # the service pass's token (h2a_…); keep it secret
-  to: ${EXPLAIN_H2A_TO:lead}     # lead, or role:<id> from the pass
+  to: ${EXPLAIN_H2A_TO:lead}     # default address: lead, or role:<id> from the pass; the panel can pick any address the pass may write to
 
 # UI event lists: how much /api/events and /api/events/preview return
 ui:

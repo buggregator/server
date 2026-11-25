@@ -217,11 +217,11 @@ func TestAssist_PageThreadsCapped(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 0; i < maxPageThreads+5; i++ {
-		if _, err := m.threads.start(Context{Kind: KindPage, Key: fmt.Sprintf("/p%d", i)}, "default", fmt.Sprintf("c%d", i), []Message{{From: "you", Text: "x"}}); err != nil {
+		if _, err := m.threads.start(Context{Kind: KindPage, Key: fmt.Sprintf("/p%d", i)}, "default", "lead", fmt.Sprintf("c%d", i), []Message{{From: "you", Text: "x"}}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := m.threads.start(Context{Kind: KindEvent, Key: "ev-1"}, "default", "ce", []Message{{From: "you", Text: "x"}}); err != nil {
+	if _, err := m.threads.start(Context{Kind: KindEvent, Key: "ev-1"}, "default", "lead", "ce", []Message{{From: "you", Text: "x"}}); err != nil {
 		t.Fatal(err)
 	}
 	var pages, msgs int
@@ -243,5 +243,71 @@ func TestAssist_PageThreadsCapped(t *testing.T) {
 	th, _ = m.threads.byID(th.ID)
 	if len(th.Messages) != maxMessages || th.Messages[len(th.Messages)-1].Text != fmt.Sprint(maxMessages+9) {
 		t.Errorf("%d messages kept, last %q", len(th.Messages), th.Messages[len(th.Messages)-1].Text)
+	}
+}
+
+func TestAssist_Recipients(t *testing.T) {
+	two := []map[string]string{{"address": "lead", "name": "Project lead"}, {"address": "role:7", "name": "Go developer", "about": "server code"}}
+	tests := []struct {
+		name        string
+		to          []map[string]string // the welcome's list; nil = the fake node's default (lead only)
+		cfgTo       string
+		wantDefault string
+		bodyTo      string
+		code        int
+		wantSentTo  string
+		errCode     string
+	}{
+		{"default is the configured address", two, "lead", "lead", "", 200, "lead", ""},
+		{"configured address not in the list: the first", two, "role:9", "lead", "", 200, "lead", ""},
+		{"picked from the list", two, "lead", "lead", "role:7", 200, "role:7", ""},
+		{"not in the list", two, "lead", "lead", "role:99", 400, "", "bad_recipient"},
+		{"node sends no list: only the configured one", []map[string]string{}, "role:3", "role:3", "role:3", 200, "role:3", ""},
+		{"node sends no list: others refused", []map[string]string{}, "role:3", "role:3", "lead", 400, "", "bad_recipient"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			node := newFakeNode(t)
+			if tt.to != nil {
+				node.to = tt.to
+			}
+			m, mux, _ := setup(t, Config{URL: node.url(), Token: testToken, To: tt.cfgTo})
+			connected(t, m)
+
+			_, st := call(t, mux, "GET", "/api/assist", "")
+			if st["default"] != tt.wantDefault || len(st["recipients"].([]any)) != len(node.to) {
+				t.Fatalf("status: %v", st)
+			}
+			body := `{"context":{"kind":"page","key":"/"}`
+			if tt.bodyTo != "" {
+				body += `,"to":"` + tt.bodyTo + `"`
+			}
+			code, th := call(t, mux, "POST", "/api/assist/threads", body+"}")
+			if code != tt.code || (tt.errCode != "" && th["code"] != tt.errCode) {
+				t.Fatalf("start: %d %v", code, th)
+			}
+			sent := node.sent()
+			if tt.code != 200 {
+				if len(sent) != 0 {
+					t.Errorf("node got %v", sent)
+				}
+				return
+			}
+			if len(sent) != 1 || sent[0]["to"] != tt.wantSentTo || th["to"] != tt.wantSentTo {
+				t.Fatalf("sent %v, thread to %v; want %s", sent, th["to"], tt.wantSentTo)
+			}
+			// A follow-up stays in the conversation: no new address.
+			id := int64(th["id"].(float64))
+			if code, _ := call(t, mux, "POST", fmt.Sprintf("/api/assist/threads/%d/messages", id), `{"text":"more","to":"lead"}`); code != 200 {
+				t.Fatalf("follow-up: %d", code)
+			}
+			if f := node.sent()[1]; f["to"] != nil || f["conversation"] != "conv-1" {
+				t.Errorf("follow-up frame: %v", f)
+			}
+			_, out := call(t, mux, "GET", "/api/assist/threads?recent=5", "")
+			if row := out["threads"].([]any)[0].(map[string]any); row["to"] != tt.wantSentTo {
+				t.Errorf("recent row: %v", row)
+			}
+		})
 	}
 }
