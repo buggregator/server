@@ -68,10 +68,15 @@ broadcast:
   #   - key: app-key
   #     secret: app-secret
 
-# Explain this error (concept): a Sentry error goes to the agents of a harnsy
-# project over h2a, their answers show under the event. Off until url and
-# token are set. The error's text (exception, stack with source lines, tags,
-# breadcrumbs, request method + URL) leaves this machine for the harnsy node.
+# Agents panel: talk to the agents of a harnsy project over h2a about an event
+# (any type; the server builds its text) or a page (the UI describes it). Off
+# until url and token are set. Only on the person's click, the text (for a
+# Sentry error: exception, stack with source lines, tags, breadcrumbs, request
+# line) leaves this machine for the harnsy node; obvious secrets (DSN keys,
+# Authorization, password=, tokens) are masked first. Conversations are kept
+# in the database. One Buggregator per pass: a second one with the same token
+# replaces the first. With mcp read_only on, the text points the agents to
+# Buggregator's MCP (see mcp below); the MCP token is never sent.
 explain:
   url: ${EXPLAIN_H2A_URL:}       # wss://<harnsy gateway>/h2a/v1
   token: ${EXPLAIN_H2A_TOKEN:}   # the service pass's token (h2a_…); keep it secret
@@ -159,6 +164,10 @@ tcp:
 #   addr: ${MCP_ADDR::8001}                                 # For transport=http (all interfaces)
 #   auth_token: ${MCP_AUTH_TOKEN:}                          # Bearer token for transport=http. Empty = no auth
 #   mock_write: ${MCP_MOCK_WRITE:true}                       # mock_rule_create/update/delete/from_request, mock_import_openapi, mock_group_delete; false = read and preview only
+#   read_only: ${MCP_READ_ONLY:false}                        # true = no tool that changes data or drives xdebug (event_delete, mock writes, xdebug step/continue/stop/wait/eval/breakpoint_set/remove)
+#   # For harnsy agents (explain/assist): transport http, addr 127.0.0.1:8001, read_only true,
+#   # an auth_token; add http://127.0.0.1:8001/ with "Authorization: Bearer <token>" to the
+#   # agents as an MCP connection named "buggregator". Buggregator never sends the token.
 
 # Xdebug proxy: PHP/Xdebug -> Buggregator -> IDE, plus MCP tools (xdebug_sessions,
 # xdebug_location, xdebug_stack, xdebug_variables, xdebug_property, xdebug_eval) on

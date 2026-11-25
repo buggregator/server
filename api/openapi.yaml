@@ -46,7 +46,8 @@ tags:
 - name: Events
   description: Stored events of every type
 - name: Explain
-  description: «Explain this error» - a Sentry error to the agents of a harnsy project over h2a, their answers back
+  description: Talk to the agents of a harnsy project over h2a about an event or a page (only when explain.url and explain.token
+    are set)
 - name: Projects
 - name: Auth
 - name: Metrics
@@ -62,6 +63,180 @@ tags:
 - name: Ray
   description: Ray pauses (ray()->pause())
 paths:
+  /api/assist:
+    get:
+      tags:
+      - Explain
+      operationId: assistStatus
+      summary: Whether the agents panel is connected to harnsy, the node's limits and Buggregator's MCP state
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Connection state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/assist/threads:
+    get:
+      tags:
+      - Explain
+      operationId: findAssistThread
+      summary: The thread of a context (kind + key), or the recent threads (recent)
+      security:
+      - authToken: []
+      parameters:
+      - name: kind
+        in: query
+        schema:
+          type: string
+          enum: [event, page]
+      - name: key
+        in: query
+        schema:
+          type: string
+      - name: recent
+        in: query
+        description: How many recent threads to list (at most 50).
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: The context's thread, or `{threads}` for recent
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/ExplainThread'
+                - type: object
+                  required:
+                  - threads
+                  properties:
+                    threads:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/AssistSummary'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+      - Explain
+      operationId: startAssistThread
+      summary: Start a conversation about an event or a page
+      description: For an event the server builds the text from the stored payload (client text ignored); for a page the client's
+        text (at most 4096 bytes) is used. Obvious secrets are masked before sending. The first message (`context` true) is the
+        text sent; the question follows as its own message. A context with a conversation answers 409 `assist_exists` with it,
+        unless `new` is true. Answers arrive as `assist.message` on `events.project.<project>`.
+      security:
+      - authToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistStart'
+      responses:
+        '200':
+          description: Sent; the new thread
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplainThread'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '502':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+        '504':
+          $ref: '#/components/responses/Error'
+        '409':
+          description: The context already has a conversation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    const: assist_exists
+                  error:
+                    type: string
+                  thread:
+                    $ref: '#/components/schemas/ExplainThread'
+        '413':
+          $ref: '#/components/responses/Error'
+  /api/assist/threads/{id}:
+    parameters:
+    - $ref: '#/components/parameters/AssistThreadID'
+    get:
+      tags:
+      - Explain
+      operationId: getAssistThread
+      summary: A thread by id
+      security:
+      - authToken: []
+      responses:
+        '200':
+          description: Thread
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplainThread'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/Error'
+  /api/assist/threads/{id}/messages:
+    parameters:
+    - $ref: '#/components/parameters/AssistThreadID'
+    post:
+      tags:
+      - Explain
+      operationId: assistFollowUp
+      summary: The person's next message in a thread
+      security:
+      - authToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExplainText'
+      responses:
+        '200':
+          description: Sent; the thread
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplainThread'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '502':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+        '504':
+          $ref: '#/components/responses/Error'
   /api/audit:
     get:
       tags:
@@ -236,7 +411,7 @@ paths:
       tags:
       - Explain
       operationId: explainStatus
-      summary: Whether «Explain this error» is connected to harnsy (only when explain.url and explain.token are set)
+      summary: Alias of GET /api/assist, kept until the UI moves
       security:
       - authToken: []
       responses:
@@ -245,26 +420,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required:
-                - enabled
-                - status
-                - to
-                properties:
-                  enabled:
-                    type: boolean
-                  status:
-                    type: string
-                    enum: [connecting, connected, stopped]
-                  reason:
-                    type: string
-                    description: Why stopped, or the last connection error.
-                  project:
-                    type: string
-                    description: The harnsy project of the pass, when connected.
-                  to:
-                    type: string
-                    description: The address explanations go to (lead or role:<id>).
+                $ref: '#/components/schemas/AssistStatus'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /api/explain/event/{uuid}:
@@ -274,7 +430,7 @@ paths:
       tags:
       - Explain
       operationId: getExplainThread
-      summary: The conversation with the agents about this event (kept in memory)
+      summary: Alias of GET /api/assist/threads?kind=event&key={uuid}
       security:
       - authToken: []
       responses:
@@ -292,9 +448,8 @@ paths:
       tags:
       - Explain
       operationId: explainEvent
-      summary: Send a Sentry error to the harnsy agents and start a conversation
-      description: Builds a plain-text description of the error (exception chain, app frames with source lines, tags, breadcrumbs,
-        request method and URL; no headers or body) and sends it over h2a. Answers arrive as `explain.message` on the event's
+      summary: Alias of POST /api/assist/threads for an event, always starting over
+      description: Any event type. Answers arrive as `assist.message` and, for this alias, `explain.message` on the event's
         project channel.
       security:
       - authToken: []
@@ -332,7 +487,7 @@ paths:
       tags:
       - Explain
       operationId: explainFollowUp
-      summary: A follow-up question in the event's conversation
+      summary: Alias of POST /api/assist/threads/{id}/messages for the event's thread
       security:
       - authToken: []
       requestBody:
@@ -5219,6 +5374,13 @@ components:
       description: Project key (a ping may use the X-Buggregator-Project header instead). Default `default`.
       schema:
         type: string
+    AssistThreadID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
     EventUUID:
       name: uuid
       in: path
@@ -5429,28 +5591,148 @@ components:
           description: The harnsy project (agent messages).
         text:
           type: string
+        context:
+          type: boolean
+          description: True on the first message, the context text as sent.
         at:
           type: string
           format: date-time
     ExplainThread:
       type: object
       required:
-      - event_uuid
+      - id
+      - kind
+      - key
       - project
       - conversation
       - messages
       properties:
-        event_uuid:
+        id:
+          type: integer
+          format: int64
+        kind:
+          type: string
+          enum: [event, page]
+        key:
+          type: string
+          description: The event uuid, or the page route.
+        title:
           type: string
         project:
           type: string
+          description: The Buggregator project; its channel gets the answers.
         conversation:
           type: string
           description: The h2a conversation id.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
         messages:
           type: array
           items:
             $ref: '#/components/schemas/ExplainMessage'
+    AssistSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        kind:
+          type: string
+        key:
+          type: string
+        title:
+          type: string
+        project:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+        last_from:
+          type: string
+          enum: [you, agent]
+    AssistStart:
+      type: object
+      required:
+      - context
+      properties:
+        context:
+          type: object
+          required:
+          - kind
+          - key
+          properties:
+            kind:
+              type: string
+              enum: [event, page]
+            key:
+              type: string
+              maxLength: 512
+              description: The event uuid, or the page route with its query.
+            title:
+              type: string
+            text:
+              type: string
+              maxLength: 4096
+              description: The page's own text (page only; ignored for an event).
+            project:
+              type: string
+              description: The page's project (page only); default otherwise.
+        text:
+          type: string
+          maxLength: 4000
+          description: The person's question.
+        new:
+          type: boolean
+          description: Drop the context's conversation and start over.
+    AssistStatus:
+      type: object
+      required:
+      - enabled
+      - status
+      - to
+      - mcp
+      properties:
+        enabled:
+          type: boolean
+        status:
+          type: string
+          enum: [connecting, connected, stopped]
+        reason:
+          type: string
+          description: Why stopped, or the last connection error.
+        project:
+          type: string
+          description: The harnsy project of the pass, when connected.
+        to:
+          type: string
+          description: The address the messages go to (lead or role:<id>).
+        limits:
+          type: object
+          description: The node's limits, when connected.
+          properties:
+            text_bytes:
+              type: integer
+            frames_per_minute:
+              type: integer
+            messages_per_day:
+              type: integer
+            queue:
+              type: integer
+        mcp:
+          type: object
+          description: Buggregator's own MCP server; agents are pointed to it only when on and read-only.
+          properties:
+            on:
+              type: boolean
+            read_only:
+              type: boolean
+            transport:
+              type: string
+              enum: [socket, http]
     CronSchedule:
       type: object
       required:

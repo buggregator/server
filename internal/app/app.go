@@ -287,6 +287,9 @@ func (a *App) Run() {
 			}
 		}
 		mcpSrv := mcpserver.NewServer(a.db, store, providers...)
+		if a.cfg.MCP.ReadOnly {
+			mcpserver.MakeReadOnly(mcpSrv)
+		}
 		switch a.cfg.MCP.Transport {
 		case "http":
 			go func() {
