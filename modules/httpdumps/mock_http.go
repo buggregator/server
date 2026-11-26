@@ -50,7 +50,8 @@ func (m *mockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		path = "/"
 	}
 	project := mockProject(r)
-	rule := m.rules.match(r.Method, path, project)
+	req := mockRequestOf(r, path)
+	rule := m.rules.match(r.Method, path, project, req)
 
 	// Mock bodies are user content served from the UI's origin: run them in an
 	// opaque origin, whatever headers the rule sets.
@@ -74,7 +75,8 @@ func (m *mockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		headers, ruleBody := rule.Headers, []byte(rule.Body)
 		if rule.Template {
-			out, err := renderMockRule(rule, mockRequestOf(r, rule, path))
+			req.Params = mockPathParams(rule.Path, path)
+			out, err := renderMockRule(rule, req)
 			if err != nil {
 				templateErr = err.Error()
 				headers = map[string]string{"Content-Type": "application/json"}
@@ -105,7 +107,7 @@ func (m *mockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	sent := mockSent{Status: status, Headers: h, Body: body, DelayMs: delayMs, TemplateError: templateErr}
 	if rule == nil {
-		sent.Near = m.rules.near(r.Method, path, project)
+		sent.Near = m.rules.near(r.Method, path, project, req)
 	}
 	m.store(r, project, rule, sent)
 
@@ -243,12 +245,12 @@ func (m *mockServer) store(r *http.Request, project string, rule *MockRule, sent
 	}
 }
 
-// mockRequestOf reads what the template helpers need. The body is read once
-// (first 1 MB) and put back, so the request is still captured whole.
-func mockRequestOf(r *http.Request, rule *MockRule, path string) *mockRequest {
+// mockRequestOf reads what rule conditions and template helpers need; the
+// path params are set once a rule is picked. The body is read once (first
+// 1 MB) and put back, so the request is still captured whole.
+func mockRequestOf(r *http.Request, path string) *mockRequest {
 	req := &mockRequest{
-		Method: r.Method, Path: path, Params: mockPathParams(rule.Path, path),
-		Query: r.URL.Query(), Header: r.Header,
+		Method: r.Method, Path: path, Query: r.URL.Query(), Header: r.Header,
 	}
 	if r.Body != nil {
 		head, _ := io.ReadAll(io.LimitReader(r.Body, maxMockRequestBody))

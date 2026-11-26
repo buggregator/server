@@ -122,14 +122,18 @@ func registerMockAPI(mux *http.ServeMux, rules *mockStore, db *sql.DB, protect f
 		if !ok {
 			return
 		}
-		// A client that does not know template/seed (an older UI) keeps them.
-		if !in.hasTemplate || !in.hasSeed {
+		// A client that does not know template/seed/conditions (an older UI)
+		// keeps them.
+		if !in.hasTemplate || !in.hasSeed || !in.hasConditions {
 			if old, err := rules.get(r.PathValue("id")); err == nil {
 				if !in.hasTemplate {
 					in.Template = old.Template
 				}
 				if !in.hasSeed {
 					in.Seed = old.Seed
+				}
+				if !in.hasConditions {
+					in.Conditions = old.Conditions
 				}
 			}
 		}
@@ -153,22 +157,26 @@ func registerMockAPI(mux *http.ServeMux, rules *mockStore, db *sql.DB, protect f
 // ruleInput is a decoded rule and which optional keys the body had.
 type ruleInput struct {
 	MockRule
-	hasTemplate, hasSeed bool
+	hasTemplate, hasSeed, hasConditions bool
 }
 
 // readRule decodes a rule from the body. "enabled" defaults to true when absent.
 func readRule(w http.ResponseWriter, r *http.Request) (ruleInput, bool) {
 	var in struct {
 		MockRule
-		Enabled  *bool  `json:"enabled"`
-		Template *bool  `json:"template"`
-		Seed     *int64 `json:"seed"`
+		Enabled    *bool            `json:"enabled"`
+		Template   *bool            `json:"template"`
+		Seed       *int64           `json:"seed"`
+		Conditions *[]MockCondition `json:"conditions"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 2*MaxMockBody)).Decode(&in); err != nil {
 		mockJSON(w, http.StatusBadRequest, map[string]any{"message": "invalid JSON body", "code": 400})
 		return ruleInput{}, false
 	}
-	out := ruleInput{MockRule: in.MockRule, hasTemplate: in.Template != nil, hasSeed: in.Seed != nil}
+	out := ruleInput{MockRule: in.MockRule, hasTemplate: in.Template != nil, hasSeed: in.Seed != nil, hasConditions: in.Conditions != nil}
+	if in.Conditions != nil {
+		out.Conditions = *in.Conditions
+	}
 	out.Enabled = in.Enabled == nil || *in.Enabled
 	if in.Template != nil {
 		out.Template = *in.Template
@@ -218,13 +226,17 @@ func previewMock(in mockPreviewInput) (map[string]any, error) {
 		header.Set(k, v)
 	}
 
+	req := &mockRequest{Method: method, Path: path, Params: mockPathParams(rule.Path, path),
+		Query: u.Query(), Header: header, Body: []byte(in.Request.Body)}
+	held, failed := rule.conditionsHold(req)
 	out := map[string]any{
-		"matched": (rule.Method == "ANY" || rule.Method == method) && matchMockPath(rule.Path, path),
+		"matched": (rule.Method == "ANY" || rule.Method == method) && matchMockPath(rule.Path, path) && held,
 		"status":  rule.Status, "headers": rule.Headers, "body": rule.Body, "error": nil,
 	}
+	if failed != nil {
+		out["failed_condition"] = failed.String()
+	}
 	if rule.Template {
-		req := &mockRequest{Method: method, Path: path, Params: mockPathParams(rule.Path, path),
-			Query: u.Query(), Header: header, Body: []byte(in.Request.Body)}
 		rendered, err := renderMockRule(&rule, req)
 		if err != nil {
 			out["status"], out["headers"], out["body"] = http.StatusInternalServerError, map[string]string{}, ""

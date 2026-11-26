@@ -163,6 +163,18 @@ type MockDef struct {
 	// Template makes body and header values Go templates (request values, fake data).
 	Template bool  `yaml:"template"`
 	Seed     int64 `yaml:"seed"` // not 0: the same fake data on every request
+	// Conditions on request headers and JSON body fields; all must hold.
+	Conditions []MockConditionDef `yaml:"conditions"`
+}
+
+// MockConditionDef is one condition of a config mock rule: in (header or
+// body), name (header name, or body path a.b, items.0.id, items.*.id), op
+// (equals, not_equals, exists, not_exists; default equals) and value.
+type MockConditionDef struct {
+	In    string `yaml:"in"`
+	Name  string `yaml:"name"`
+	Op    string `yaml:"op"`
+	Value string `yaml:"value"`
 }
 
 type WebhookDef struct {
