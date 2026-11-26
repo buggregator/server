@@ -80,6 +80,8 @@ type mockRuleFields struct {
 	Seed     *int64            `json:"seed,omitempty" jsonschema:"Not 0: the same fake data on every request"`
 	DelayMs  *int              `json:"delay_ms,omitempty" jsonschema:"Delay before the answer, 0-30000 ms"`
 	Enabled  *bool             `json:"enabled,omitempty" jsonschema:"Default true; a disabled rule never answers"`
+	// Conditions replace the rule's list when given ([] clears it).
+	Conditions *[]MockCondition `json:"conditions,omitempty" jsonschema:"Request conditions, all must hold besides method, path and project; a rule whose conditions fail is skipped and the next rule is tried (put specific rules above general ones). Each: in (header or body), name (header name in any case, or JSON body path a.b, items.0.id, items.*.id; $.a.b and a[0] work too), op (equals, not_equals, exists, not_exists), value (text; for a body field compared by the field's type: number, true/false, null, JSON object/list). A missing field never equals: equals/exists fail, not_equals/not_exists hold. At most 20. [] clears them."`
 }
 
 // apply sets the given fields on r.
@@ -111,6 +113,9 @@ func (f mockRuleFields) apply(r *MockRule) {
 	}
 	if f.Enabled != nil {
 		r.Enabled = *f.Enabled
+	}
+	if f.Conditions != nil {
+		r.Conditions = *f.Conditions
 	}
 }
 

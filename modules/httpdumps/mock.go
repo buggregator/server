@@ -51,6 +51,9 @@ type MockRule struct {
 	Template bool `json:"template"`
 	// Seed, when not 0, makes a template's fake data the same on every request.
 	Seed int64 `json:"seed"`
+	// Conditions on request headers and JSON body fields (#512); all must
+	// hold. Empty: method, path and project alone decide.
+	Conditions []MockCondition `json:"conditions"`
 	// Group names the OpenAPI import that made the rule ("" = none).
 	Group     string `json:"group"`
 	Enabled   bool   `json:"enabled"`
@@ -116,6 +119,7 @@ func (r *MockRule) Normalize() error {
 	}
 	r.Project = strings.TrimSpace(r.Project)
 	r.Name = strings.TrimSpace(r.Name)
+	r.Conditions = normalizeConditions(r.Conditions, errs)
 
 	if r.Template {
 		if _, err := parseMockTemplate("body", r.Body, nil); err != nil {
@@ -186,7 +190,7 @@ func matchMockPath(pattern, path string) bool {
 	return len(ps) == len(xs)
 }
 
-func (r *MockRule) matches(method, path, project string) bool {
+func (r *MockRule) matches(method, path, project string, req *mockRequest) bool {
 	if !r.Enabled {
 		return false
 	}
@@ -196,7 +200,11 @@ func (r *MockRule) matches(method, path, project string) bool {
 	if r.Method != "ANY" && r.Method != method {
 		return false
 	}
-	return matchMockPath(r.Path, path)
+	if !matchMockPath(r.Path, path) {
+		return false
+	}
+	ok, _ := r.conditionsHold(req)
+	return ok
 }
 
 // mockStore keeps the rules: config rules first (read-only), then the stored
@@ -235,7 +243,7 @@ func (s *mockStore) reload() error {
 		return nil
 	}
 	rows, err := s.db.Query(`SELECT id, COALESCE(project, ''), name, method, path, status, headers, body,
-		delay_ms, template, seed, enabled, position, source, group_name, created_at, updated_at FROM mock_rules ORDER BY position, created_at`)
+		delay_ms, template, seed, enabled, position, source, group_name, conditions, created_at, updated_at FROM mock_rules ORDER BY position, created_at`)
 	if err != nil {
 		return err
 	}
@@ -244,10 +252,10 @@ func (s *mockStore) reload() error {
 	var rules []MockRule
 	for rows.Next() {
 		var r MockRule
-		var headers string
+		var headers, conditions string
 		var enabled, tmpl int
 		if err := rows.Scan(&r.ID, &r.Project, &r.Name, &r.Method, &r.Path, &r.Status, &headers, &r.Body,
-			&r.DelayMs, &tmpl, &r.Seed, &enabled, &r.Position, &r.Source, &r.Group, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			&r.DelayMs, &tmpl, &r.Seed, &enabled, &r.Position, &r.Source, &r.Group, &conditions, &r.CreatedAt, &r.UpdatedAt); err != nil {
 			return err
 		}
 		r.Enabled = enabled == 1
@@ -255,6 +263,10 @@ func (s *mockStore) reload() error {
 		json.Unmarshal([]byte(headers), &r.Headers)
 		if r.Headers == nil {
 			r.Headers = map[string]string{}
+		}
+		json.Unmarshal([]byte(conditions), &r.Conditions)
+		if r.Conditions == nil {
+			r.Conditions = []MockCondition{}
 		}
 		rules = append(rules, r)
 	}
@@ -295,12 +307,12 @@ func (s *mockStore) get(id string) (MockRule, error) {
 }
 
 // match returns the first enabled rule for the request, or nil.
-func (s *mockStore) match(method, path, project string) *MockRule {
+func (s *mockStore) match(method, path, project string, req *mockRequest) *MockRule {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for _, list := range [][]MockRule{s.config, s.stored} {
 		for i := range list {
-			if list[i].matches(method, path, project) {
+			if list[i].matches(method, path, project, req) {
 				r := list[i]
 				return &r
 			}
@@ -310,18 +322,20 @@ func (s *mockStore) match(method, path, project string) *MockRule {
 }
 
 // MockNear is a rule that missed a request by one condition. Reason is
-// "disabled", "method" or "project".
+// "disabled", "method", "project" or "conditions"; for "conditions", Detail
+// names the first condition that failed ("header Authorization equals").
 type MockNear struct {
 	RuleID   string `json:"rule_id"`
 	RuleName string `json:"rule_name"`
 	Reason   string `json:"reason"`
+	Detail   string `json:"detail,omitempty"`
 }
 
 const maxMockNear = 5
 
 // near lists, in matching order, the rules whose path matches the request but
 // that missed it by exactly one other condition: why no rule matched.
-func (s *mockStore) near(method, path, project string) []MockNear {
+func (s *mockStore) near(method, path, project string, req *mockRequest) []MockNear {
 	var out []MockNear
 	for _, r := range s.list() {
 		if !matchMockPath(r.Path, path) {
@@ -337,8 +351,17 @@ func (s *mockStore) near(method, path, project string) []MockNear {
 		if r.Project != "" && r.Project != project {
 			misses = append(misses, "project")
 		}
+		detail := ""
+		if ok, failed := r.conditionsHold(req); !ok {
+			misses = append(misses, "conditions")
+			detail = failed.String()
+		}
 		if len(misses) == 1 {
-			out = append(out, MockNear{RuleID: r.ID, RuleName: r.Name, Reason: misses[0]})
+			near := MockNear{RuleID: r.ID, RuleName: r.Name, Reason: misses[0]}
+			if misses[0] == "conditions" {
+				near.Detail = detail
+			}
+			out = append(out, near)
 			if len(out) == maxMockNear {
 				break
 			}
@@ -361,13 +384,14 @@ func (s *mockStore) create(r MockRule, source string) (MockRule, error) {
 	// The position and the per-project cap are checked in the INSERT itself,
 	// so creates at once can neither share a position nor pass the cap.
 	headers, _ := json.Marshal(r.Headers)
+	conditions, _ := json.Marshal(r.Conditions)
 	res, err := s.db.Exec(`INSERT INTO mock_rules
-		(id, project, name, method, path, status, headers, body, delay_ms, template, seed, enabled, position, source, group_name, created_at, updated_at)
+		(id, project, name, method, path, status, headers, body, delay_ms, template, seed, enabled, position, source, group_name, conditions, created_at, updated_at)
 		SELECT ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-			(SELECT COALESCE(MAX(position), -1) + 1 FROM mock_rules), ?, ?, ?, ?
+			(SELECT COALESCE(MAX(position), -1) + 1 FROM mock_rules), ?, ?, ?, ?, ?
 		WHERE (SELECT COUNT(*) FROM mock_rules WHERE COALESCE(project, '') = ?) < ?`,
 		r.ID, r.Project, r.Name, r.Method, r.Path, r.Status, string(headers), r.Body, r.DelayMs,
-		boolInt(r.Template), r.Seed, boolInt(r.Enabled), r.Source, r.Group, r.CreatedAt, r.UpdatedAt,
+		boolInt(r.Template), r.Seed, boolInt(r.Enabled), r.Source, r.Group, string(conditions), r.CreatedAt, r.UpdatedAt,
 		r.Project, MaxMockRulesPerProject)
 	if err != nil {
 		return MockRule{}, err
@@ -396,10 +420,11 @@ func (s *mockStore) update(id string, r MockRule) (MockRule, error) {
 	r.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 
 	headers, _ := json.Marshal(r.Headers)
+	conditions, _ := json.Marshal(r.Conditions)
 	if _, err := s.db.Exec(`UPDATE mock_rules SET project = NULLIF(?, ''), name = ?, method = ?, path = ?, status = ?,
-		headers = ?, body = ?, delay_ms = ?, template = ?, seed = ?, enabled = ?, updated_at = ? WHERE id = ?`,
+		headers = ?, body = ?, delay_ms = ?, template = ?, seed = ?, enabled = ?, conditions = ?, updated_at = ? WHERE id = ?`,
 		r.Project, r.Name, r.Method, r.Path, r.Status, string(headers), r.Body, r.DelayMs,
-		boolInt(r.Template), r.Seed, boolInt(r.Enabled), r.UpdatedAt, id); err != nil {
+		boolInt(r.Template), r.Seed, boolInt(r.Enabled), string(conditions), r.UpdatedAt, id); err != nil {
 		return MockRule{}, err
 	}
 	s.refresh()
@@ -501,11 +526,15 @@ func (s *mockStore) replaceGroup(group, source string, rules []MockRule) ([]Mock
 		r.ID, r.Source, r.Group, r.Position, r.ReadOnly = event.GenerateUUID(), source, group, pos+i, false
 		r.CreatedAt, r.UpdatedAt = now, now
 		headers, _ := json.Marshal(r.Headers)
+		if r.Conditions == nil {
+			r.Conditions = []MockCondition{}
+		}
+		conditions, _ := json.Marshal(r.Conditions)
 		if _, err := tx.Exec(`INSERT INTO mock_rules
-			(id, project, name, method, path, status, headers, body, delay_ms, template, seed, enabled, position, source, group_name, created_at, updated_at)
-			VALUES (?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, project, name, method, path, status, headers, body, delay_ms, template, seed, enabled, position, source, group_name, conditions, created_at, updated_at)
+			VALUES (?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			r.ID, r.Project, r.Name, r.Method, r.Path, r.Status, string(headers), r.Body, r.DelayMs,
-			boolInt(r.Template), r.Seed, boolInt(r.Enabled), r.Position, r.Source, r.Group, r.CreatedAt, r.UpdatedAt); err != nil {
+			boolInt(r.Template), r.Seed, boolInt(r.Enabled), r.Position, r.Source, r.Group, string(conditions), r.CreatedAt, r.UpdatedAt); err != nil {
 			return nil, err
 		}
 		out[i] = r

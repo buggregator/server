@@ -340,6 +340,9 @@ func mockRules(defs []app.MockDef) []httpdumps.MockRule {
 			Headers: d.Headers, Body: d.Body, Project: d.Project,
 			Template: d.Template, Seed: d.Seed,
 		}
+		for _, c := range d.Conditions {
+			r.Conditions = append(r.Conditions, httpdumps.MockCondition{In: c.In, Name: c.Name, Op: c.Op, Value: c.Value})
+		}
 		if d.Delay != "" {
 			if delay, err := time.ParseDuration(d.Delay); err == nil {
 				r.DelayMs = int(delay / time.Millisecond)

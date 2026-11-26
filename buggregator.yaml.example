@@ -245,6 +245,17 @@ modules:
 #     seed: 42                     # optional; not 0 = the same fake data on every request
 #     headers: { Content-Type: application/json }
 #     body: '{"id": {{ path "id" }}, "customer": {{ fake "name" | json }}, "total": {{ fake "price" 5 500 }}}'
+#   - method: POST                 # conditions: the rule answers only when all hold;
+#     path: /payments              # otherwise the next rule is tried (keep specific rules first)
+#     conditions:
+#       - { in: body, name: card.token, op: equals, value: tok_ok }        # JSON body path: a.b, items.0.id, items.*.id
+#       - { in: header, name: authorization, op: exists }                   # header names in any case
+#     status: 200                  # ops: equals, not_equals, exists, not_exists; a missing field never equals
+#     body: '{"status": "paid"}'
+#   - method: POST
+#     path: /payments
+#     status: 402
+#     body: '{"error": "card_declined"}'
 
 # OpenAPI 3.0/3.1 specs (YAML or JSON) turned into read-only mock rules at start:
 # one rule per operation; the spec's example as the body, else a template with

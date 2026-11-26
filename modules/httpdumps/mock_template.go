@@ -163,7 +163,34 @@ type mockRequest struct {
 	Body   []byte
 
 	parsed  bool
+	bodyOK  bool
 	bodyVal any
+
+	// The body for rule conditions: numbers kept as json.Number, so big
+	// integers compare exactly.
+	numParsed bool
+	numOK     bool
+	numVal    any
+}
+
+// json is the request body read as JSON, parsed once; false when the body
+// is empty or not JSON.
+func (r *mockRequest) json() (any, bool) {
+	if !r.parsed {
+		r.parsed = true
+		r.bodyOK = len(r.Body) > 0 && json.Unmarshal(r.Body, &r.bodyVal) == nil
+	}
+	return r.bodyVal, r.bodyOK
+}
+
+// jsonNumbers is the body as JSON with numbers as json.Number, parsed once;
+// false when the body is empty or not JSON.
+func (r *mockRequest) jsonNumbers() (any, bool) {
+	if !r.numParsed {
+		r.numParsed = true
+		r.numVal, r.numOK = decodeJSONNumbers(r.Body)
+	}
+	return r.numVal, r.numOK
 }
 
 // mockPathParams returns the {name} segments of pattern taken from path, and
@@ -454,13 +481,7 @@ func (s *renderState) charge(n int) error {
 
 // body returns the JSON body value at a dot path; nil when missing.
 func (s *renderState) body(path string) any {
-	if !s.req.parsed {
-		s.req.parsed = true
-		if len(s.req.Body) > 0 {
-			_ = json.Unmarshal(s.req.Body, &s.req.bodyVal)
-		}
-	}
-	v := s.req.bodyVal
+	v, _ := s.req.json()
 	if path == "" {
 		return v
 	}
