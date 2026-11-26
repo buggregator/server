@@ -1,10 +1,11 @@
 package httpdumps
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 )
@@ -130,7 +131,7 @@ func (c MockCondition) holds(req *mockRequest) bool {
 		}
 	case MockInBody:
 		if req != nil {
-			if v, ok := req.json(); ok {
+			if v, ok := req.jsonNumbers(); ok {
 				found = lookupBody(v, bodyPath(c.Name))
 			}
 		}
@@ -180,25 +181,81 @@ func lookupBody(v any, keys []string) []any {
 	return nil
 }
 
-// jsonEquals compares a request value with the rule's text by the value's
-// type: a string as is, a number as a number ("15" = 15 = 15.0), true/false,
-// null, and an object or list as JSON.
+// jsonEquals compares a request value (decoded with json.Number) with the
+// rule's text by the value's type: a string as is, a number as a number
+// ("15" = 15 = 15.0; integers exactly, however big), true/false, null, and
+// an object or list as JSON.
 func jsonEquals(v any, want string) bool {
 	switch x := v.(type) {
 	case string:
 		return x == want
-	case float64:
-		f, err := strconv.ParseFloat(strings.TrimSpace(want), 64)
-		return err == nil && f == x
+	case json.Number:
+		return numbersEqual(string(x), strings.TrimSpace(want))
 	case bool:
 		return strings.TrimSpace(want) == strconv.FormatBool(x)
 	case nil:
 		return strings.TrimSpace(want) == "null"
 	default:
-		var w any
-		if json.Unmarshal([]byte(want), &w) != nil {
+		w, ok := decodeJSONNumbers([]byte(want))
+		return ok && valuesEqual(v, w)
+	}
+}
+
+func decodeJSONNumbers(b []byte) (any, bool) {
+	if len(b) == 0 {
+		return nil, false
+	}
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.UseNumber()
+	var v any
+	if dec.Decode(&v) != nil || dec.More() {
+		return nil, false
+	}
+	return v, true
+}
+
+// numbersEqual compares two numbers as text: integers exactly, anything
+// with a fraction or exponent as float64.
+func numbersEqual(a, b string) bool {
+	if x, ok := new(big.Int).SetString(a, 10); ok {
+		if y, ok := new(big.Int).SetString(b, 10); ok {
+			return x.Cmp(y) == 0
+		}
+	}
+	x, err1 := strconv.ParseFloat(a, 64)
+	y, err2 := strconv.ParseFloat(b, 64)
+	return err1 == nil && err2 == nil && x == y
+}
+
+// valuesEqual compares decoded JSON, numbers by numbersEqual.
+func valuesEqual(a, b any) bool {
+	switch x := a.(type) {
+	case json.Number:
+		y, ok := b.(json.Number)
+		return ok && numbersEqual(string(x), string(y))
+	case map[string]any:
+		y, ok := b.(map[string]any)
+		if !ok || len(x) != len(y) {
 			return false
 		}
-		return reflect.DeepEqual(v, w)
+		for k, xv := range x {
+			yv, ok := y[k]
+			if !ok || !valuesEqual(xv, yv) {
+				return false
+			}
+		}
+		return true
+	case []any:
+		y, ok := b.([]any)
+		if !ok || len(x) != len(y) {
+			return false
+		}
+		for i := range x {
+			if !valuesEqual(x[i], y[i]) {
+				return false
+			}
+		}
+		return true
 	}
+	return a == b
 }

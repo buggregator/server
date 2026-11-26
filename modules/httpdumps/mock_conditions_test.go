@@ -9,7 +9,7 @@ import (
 
 func TestMockCondition_Holds(t *testing.T) {
 	body := `{"card":{"token":"tok_ok","cvc":123,"saved":true,"note":null,"meta":{"a":1,"b":[1,2]}},
-		"items":[{"sku":"A-1","qty":2},{"sku":"B-2","qty":1.5}],"total":15}`
+		"items":[{"sku":"A-1","qty":2},{"sku":"B-2","qty":1.5}],"total":15,"id":9007199254740993}`
 	req := &mockRequest{
 		Header: http.Header{"Authorization": {"Bearer good"}, "X-Tag": {"one", "two"}},
 		Body:   []byte(body),
@@ -47,6 +47,11 @@ func TestMockCondition_Holds(t *testing.T) {
 		{"missing field is not_equals", MockCondition{In: "body", Name: "card.number", Op: "not_equals", Value: "4242"}, true},
 		{"missing field not_exists", MockCondition{In: "body", Name: "card.number", Op: "not_exists"}, true},
 		{"top-level", MockCondition{In: "body", Name: "total", Op: "not_equals", Value: "15"}, false},
+		{"big integer exact", MockCondition{In: "body", Name: "id", Op: "equals", Value: "9007199254740993"}, true},
+		{"big integer off by one", MockCondition{In: "body", Name: "id", Op: "equals", Value: "9007199254740992"}, false},
+		{"big integer inside an object", MockCondition{In: "body", Name: "card.meta", Op: "equals", Value: `{"a":1,"b":[1,2]}`}, true},
+		{"fraction as float", MockCondition{In: "body", Name: "items.1.qty", Op: "equals", Value: "1.50"}, true},
+		{"exponent as float", MockCondition{In: "body", Name: "total", Op: "equals", Value: "1.5e1"}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
