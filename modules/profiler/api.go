@@ -136,94 +136,123 @@ func handleCallGraph(db *sql.DB) http.HandlerFunc {
 		threshold := parseFloat(r.URL.Query().Get("threshold"), 0)   // 0-100, default 0
 		percentage := parseFloat(r.URL.Query().Get("percentage"), 10) // 0-100, default 10
 
-		// Build nodes (one per unique callee).
-		nodeMap := make(map[string]*EdgeRow)
-		for i := range edges {
-			e := &edges[i]
-			if _, ok := nodeMap[e.Callee]; !ok {
-				nodeMap[e.Callee] = e
-			}
+		recursion := RecursionLevels
+		var nodes, calls []EdgeRow
+		var recursive map[string]int64
+		if r.URL.Query().Get("recursion") == RecursionCollapsed {
+			recursion = RecursionCollapsed
+			nodes, calls, recursive = collapseRecursion(edges)
+		} else {
+			nodes, calls = graphLevels(edges)
 		}
 
-		// Filter and build nodes.
-		registeredUUIDs := make(map[string]bool) // track included nodes for edge filtering
-		nodes := make([]map[string]any, 0, len(nodeMap))
-		for _, e := range nodeMap {
-			pct := GetEdgePercent(e, metric)
+		graph := buildCallGraph(nodes, calls, recursive, metric, threshold, percentage)
+		graph["toolbar"] = callGraphToolbar()
+		graph["recursion"] = recursion
+		writeJSON(w, graph)
+	}
+}
 
-			// Filtering logic (matching PHP):
-			// Exclude if: NOT important (pct < percentage) AND satisfied (pct <= threshold)
-			isImportant := pct >= percentage
-			isSatisfied := pct <= threshold
-			if !isImportant && isSatisfied {
-				continue // skip this node
-			}
+// graphLevels is the call graph as stored: a node per callee name, so a
+// recursion level (foo@1) is a node of its own; the node's cost is its first
+// edge's.
+func graphLevels(edges []EdgeRow) (nodes, calls []EdgeRow) {
+	seen := make(map[string]bool)
+	for _, e := range edges {
+		if !seen[e.Callee] {
+			seen[e.Callee] = true
+			nodes = append(nodes, e)
+		}
+	}
+	return nodes, edges
+}
 
-			// Color: only colored if important (pct >= percentage), otherwise white.
-			nodeColor := "#FFFFFF"
-			if isImportant {
-				nodeColor = nodeColorByPercent(pct)
-			}
-			txtColor := textColorByLuminance(nodeColor)
+// buildCallGraph renders the nodes (one per callee name) and the calls between
+// them; recursive holds, by node name, the calls made at deeper recursion
+// levels.
+func buildCallGraph(nodeRows, calls []EdgeRow, recursive map[string]int64, metric string, threshold, percentage float64) map[string]any {
+	nodeMap := make(map[string]*EdgeRow, len(nodeRows))
+	for i := range nodeRows {
+		nodeMap[nodeRows[i].Callee] = &nodeRows[i]
+	}
 
-			name := e.Callee
-			if e.Cost.Calls > 0 {
-				name = fmt.Sprintf("%s (%dx)", e.Callee, e.Cost.Calls)
-			}
+	// Filter and build nodes.
+	registeredUUIDs := make(map[string]bool) // track included nodes for edge filtering
+	nodes := make([]map[string]any, 0, len(nodeRows))
+	for i := range nodeRows {
+		e := &nodeRows[i]
+		pct := GetEdgePercent(e, metric)
 
-			registeredUUIDs[e.UUID] = true
-			nodes = append(nodes, map[string]any{
-				"data": map[string]any{
-					"id":   e.UUID,
-					"name": name,
-					"cost": map[string]any{
-						"cpu": e.Cost.CPU, "wt": e.Cost.WallTime, "mu": e.Cost.Memory, "pmu": e.Cost.PeakMem, "ct": e.Cost.Calls,
-					},
-					"metrics":   map[string]any{"cost": GetEdgeMetricValue(e, metric), "percents": pct},
-					"color":     nodeColor,
-					"textColor": txtColor,
+		// Filtering logic (matching PHP):
+		// Exclude if: NOT important (pct < percentage) AND satisfied (pct <= threshold)
+		isImportant := pct >= percentage
+		isSatisfied := pct <= threshold
+		if !isImportant && isSatisfied {
+			continue // skip this node
+		}
+
+		// Color: only colored if important (pct >= percentage), otherwise white.
+		nodeColor := "#FFFFFF"
+		if isImportant {
+			nodeColor = nodeColorByPercent(pct)
+		}
+		txtColor := textColorByLuminance(nodeColor)
+
+		name := e.Callee
+		if n := recursive[e.Callee]; n > 0 {
+			name = fmt.Sprintf("%s (%dx, %d recursive)", e.Callee, e.Cost.Calls, n)
+		} else if e.Cost.Calls > 0 {
+			name = fmt.Sprintf("%s (%dx)", e.Callee, e.Cost.Calls)
+		}
+
+		registeredUUIDs[e.UUID] = true
+		nodes = append(nodes, map[string]any{
+			"data": map[string]any{
+				"id":   e.UUID,
+				"name": name,
+				"cost": map[string]any{
+					"cpu": e.Cost.CPU, "wt": e.Cost.WallTime, "mu": e.Cost.Memory, "pmu": e.Cost.PeakMem, "ct": e.Cost.Calls,
 				},
-			})
-		}
-
-		// Build edges — only between included nodes.
-		graphEdges := make([]map[string]any, 0)
-		for _, e := range edges {
-			if e.Caller == nil {
-				continue
-			}
-			parentEdge := nodeMap[*e.Caller]
-			targetEdge := nodeMap[e.Callee]
-			if parentEdge == nil || targetEdge == nil {
-				continue
-			}
-			if !registeredUUIDs[parentEdge.UUID] || !registeredUUIDs[targetEdge.UUID] {
-				continue
-			}
-
-			pct := GetEdgePercent(&e, metric)
-			isImportant := pct >= percentage
-			edgeColor := "#FFFFFF"
-			if isImportant {
-				edgeColor = nodeColorByPercent(pct)
-			}
-
-			graphEdges = append(graphEdges, map[string]any{
-				"data": map[string]any{
-					"source": parentEdge.UUID,
-					"target": targetEdge.UUID,
-					"label":  fmt.Sprintf("%.2f%%", pct),
-					"color":  edgeColor,
-				},
-			})
-		}
-
-		writeJSON(w, map[string]any{
-			"toolbar": callGraphToolbar(),
-			"nodes":   nodes,
-			"edges":   graphEdges,
+				"metrics":   map[string]any{"cost": GetEdgeMetricValue(e, metric), "percents": pct},
+				"color":     nodeColor,
+				"textColor": txtColor,
+			},
 		})
 	}
+
+	// Build edges — only between included nodes.
+	graphEdges := make([]map[string]any, 0)
+	for _, e := range calls {
+		if e.Caller == nil {
+			continue
+		}
+		parentEdge := nodeMap[*e.Caller]
+		targetEdge := nodeMap[e.Callee]
+		if parentEdge == nil || targetEdge == nil {
+			continue
+		}
+		if !registeredUUIDs[parentEdge.UUID] || !registeredUUIDs[targetEdge.UUID] {
+			continue
+		}
+
+		pct := GetEdgePercent(&e, metric)
+		isImportant := pct >= percentage
+		edgeColor := "#FFFFFF"
+		if isImportant {
+			edgeColor = nodeColorByPercent(pct)
+		}
+
+		graphEdges = append(graphEdges, map[string]any{
+			"data": map[string]any{
+				"source": parentEdge.UUID,
+				"target": targetEdge.UUID,
+				"label":  fmt.Sprintf("%.2f%%", pct),
+				"color":  edgeColor,
+			},
+		})
+	}
+
+	return map[string]any{"nodes": nodes, "edges": graphEdges}
 }
 
 // --- Flame Chart ---
