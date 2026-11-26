@@ -76,8 +76,7 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 
 		queryArgs := append(append([]any{}, args...), limit, offset)
 		rows, err := db.Query(
-			`SELECT t.trace_id, t.id, t.transaction_name, t.op, t.status, t.duration_ms,
-				tr.span_count, tr.error_count, t.start_ts
+			`SELECT t.trace_id, t.id, t.transaction_name, t.op, t.status, t.duration_ms, t.start_ts
 			FROM sentry_transactions t
 			JOIN sentry_traces tr ON tr.trace_id = t.trace_id`+where+`
 			ORDER BY t.start_ts DESC
@@ -93,13 +92,12 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 			traceID, txnID, txnName string
 			op, status              sql.NullString
 			durationMS              sql.NullInt64
-			spanCount, errorCount   int
 			startTS                 sql.NullString
 		}
 		var traceRows []traceRow
 		for rows.Next() {
 			var tr traceRow
-			if err := rows.Scan(&tr.traceID, &tr.txnID, &tr.txnName, &tr.op, &tr.status, &tr.durationMS, &tr.spanCount, &tr.errorCount, &tr.startTS); err != nil {
+			if err := rows.Scan(&tr.traceID, &tr.txnID, &tr.txnName, &tr.op, &tr.status, &tr.durationMS, &tr.startTS); err != nil {
 				rows.Close()
 				apiError(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -112,7 +110,14 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 		pc, pa := projectClause(r, "project_id")
 		var data []map[string]any
 		for _, tr := range traceRows {
-			previewSpans := loadPreviewSpans(db, tr.traceID, tr.startTS, 3, pc, pa)
+			// The row spans the whole trace (other services' async work too),
+			// as its preview does; received_at stays the root's start.
+			ext := loadTraceExtent(db, tr.traceID, pc, pa)
+			base, duration := tr.startTS, tr.durationMS
+			if ext.start.Valid {
+				base, duration = ext.start, ext.durationMS
+			}
+			previewSpans := loadPreviewSpans(db, tr.traceID, base, 3, pc, pa)
 			sources, services := traceSourcesServices(db, tr.traceID, pc, pa)
 
 			data = append(data, map[string]any{
@@ -121,9 +126,9 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 				"transaction_name": tr.txnName,
 				"op":               scanNullString(tr.op),
 				"status":           scanNullString(tr.status),
-				"duration_ms":      scanNullInt(tr.durationMS),
-				"span_count":       tr.spanCount,
-				"error_count":      tr.errorCount,
+				"duration_ms":      scanNullInt(duration),
+				"span_count":       ext.spanCount,
+				"error_count":      ext.errorCount,
 				"received_at":      scanNullString(tr.startTS),
 				"preview_spans":    previewSpans,
 				"sources":          sources,
@@ -137,6 +142,36 @@ func handleTracesList(db *sql.DB) http.HandlerFunc {
 
 		apiJSON(w, listResponse(data, total, currentPage(offset, limit), limit))
 	}
+}
+
+// traceExtent is a trace's span in time and its counts, over the
+// transactions and spans of the selected project (all when none).
+type traceExtent struct {
+	start                 sql.NullString // the earliest start, RFC3339 with ms
+	durationMS            sql.NullInt64  // earliest start → latest end
+	spanCount, errorCount int
+}
+
+// loadTraceExtent reads a trace's earliest start and latest end over its
+// transactions and spans, so every span of the trace sits within
+// [start, start+duration]. Times are compared as julianday: the stored
+// strings differ in precision and zone form. A span without an end ends
+// after its duration.
+func loadTraceExtent(db *sql.DB, traceID, projectClause string, projectArgs []any) traceExtent {
+	var ext traceExtent
+	const bounds = `julianday(start_ts) AS s,
+		COALESCE(julianday(end_ts), julianday(start_ts) + COALESCE(duration_ms, 0) / 86400000.0) AS e`
+	args := append(append(append([]any{traceID}, projectArgs...), traceID), projectArgs...)
+	db.QueryRow(`SELECT strftime('%Y-%m-%dT%H:%M:%fZ', MIN(s)), CAST(ROUND((MAX(e) - MIN(s)) * 86400000) AS INTEGER)
+		FROM (SELECT `+bounds+` FROM sentry_transactions WHERE trace_id = ?`+projectClause+`
+			UNION ALL SELECT `+bounds+` FROM sentry_spans WHERE trace_id = ?`+projectClause+`)
+		WHERE s IS NOT NULL`, args...).Scan(&ext.start, &ext.durationMS)
+	if ext.durationMS.Valid && ext.durationMS.Int64 < 0 {
+		ext.durationMS.Int64 = 0
+	}
+	db.QueryRow(`SELECT COUNT(*), COALESCE(SUM(is_error <> 0), 0) FROM sentry_spans WHERE trace_id = ?`+projectClause,
+		append([]any{traceID}, projectArgs...)...).Scan(&ext.spanCount, &ext.errorCount)
+	return ext
 }
 
 func handleTraceDetail(db *sql.DB) http.HandlerFunc {
