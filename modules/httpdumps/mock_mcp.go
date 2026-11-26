@@ -222,7 +222,7 @@ func registerMockTools(server *sdkmcp.Server, rules *mockStore, requests mockReq
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name: "mock_requests_list",
 		Description: "Requests the mock server got, newest first: the request (method, uri, headers, query, body), whether a rule matched, which rule, and what was sent back (status, headers, body up to 64 KB, template_error). " +
-			"An unmatched request got 404 and lists near rules that missed it by one condition (disabled, method or project).",
+			"An unmatched request got 404 and lists near rules that missed it by one condition: disabled, method, project, or conditions (then detail names the first request condition that failed, e.g. \"header Authorization equals\").",
 	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in mockRequestsInput) (*sdkmcp.CallToolResult, any, error) {
 		limit := in.Limit
 		if limit <= 0 {
