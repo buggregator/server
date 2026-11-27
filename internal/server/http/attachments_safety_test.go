@@ -47,7 +47,7 @@ func setupAttachmentMux(t *testing.T) (*http.ServeMux, func(uuid, name, mime str
 	return mux, add
 }
 
-func assertSafetyHeaders(t *testing.T, h http.Header) {
+func assertSafetyHeaders(t *testing.T, h http.Header, wantCORP string) {
 	t.Helper()
 	if got := h.Get("X-Content-Type-Options"); got != "nosniff" {
 		t.Errorf("X-Content-Type-Options = %q", got)
@@ -55,7 +55,7 @@ func assertSafetyHeaders(t *testing.T, h http.Header) {
 	if csp := h.Get("Content-Security-Policy"); !strings.Contains(csp, "sandbox") || !strings.Contains(csp, "default-src 'none'") {
 		t.Errorf("Content-Security-Policy = %q", csp)
 	}
-	if got := h.Get("Cross-Origin-Resource-Policy"); got != "same-origin" {
+	if got := h.Get("Cross-Origin-Resource-Policy"); got != wantCORP {
 		t.Errorf("Cross-Origin-Resource-Policy = %q", got)
 	}
 }
@@ -96,7 +96,8 @@ func TestAttachmentPreview_OnlySafeTypesInline(t *testing.T) {
 				if rec.Code != 200 {
 					t.Fatalf("status %d", rec.Code)
 				}
-				assertSafetyHeaders(t, rec.Header())
+				// Preview must load from the UI's sandboxed (opaque-origin) mail iframe.
+				assertSafetyHeaders(t, rec.Header(), "cross-origin")
 				if got := rec.Header().Get("Content-Type"); got != c.wantType {
 					t.Errorf("Content-Type = %q, want %q", got, c.wantType)
 				}
@@ -133,7 +134,7 @@ func TestAttachmentDownload_SafeHeadersAndFilename(t *testing.T) {
 			if rec.Code != 200 {
 				t.Fatalf("status %d", rec.Code)
 			}
-			assertSafetyHeaders(t, rec.Header())
+			assertSafetyHeaders(t, rec.Header(), "same-origin")
 			if got := rec.Header().Get("Content-Type"); got != "application/octet-stream" {
 				t.Errorf("Content-Type = %q", got)
 			}

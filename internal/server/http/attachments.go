@@ -95,7 +95,7 @@ func downloadAttachment(db *sql.DB, store *storage.AttachmentStore, table string
 			return
 		}
 
-		setAttachmentSafetyHeaders(w)
+		setAttachmentSafetyHeaders(w, "same-origin")
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Header().Set("Content-Disposition", contentDisposition("attachment", name))
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
@@ -129,7 +129,9 @@ func previewAttachment(db *sql.DB, store *storage.AttachmentStore, table string)
 			return
 		}
 
-		setAttachmentSafetyHeaders(w)
+		// cross-origin: the UI shows mail HTML in a sandboxed srcdoc iframe
+		// (opaque origin), and its cid: images load from here.
+		setAttachmentSafetyHeaders(w, "cross-origin")
 		if ct, ok := inlinePreviewType(mimeType); ok {
 			w.Header().Set("Content-Type", ct)
 			w.Header().Set("Content-Disposition", contentDisposition("inline", name))
@@ -147,11 +149,11 @@ func previewAttachment(db *sql.DB, store *storage.AttachmentStore, table string)
 // same-origin images and media may load.
 const attachmentCSP = "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox"
 
-func setAttachmentSafetyHeaders(w http.ResponseWriter) {
+func setAttachmentSafetyHeaders(w http.ResponseWriter, corp string) {
 	h := w.Header()
 	h.Set("X-Content-Type-Options", "nosniff")
 	h.Set("Content-Security-Policy", attachmentCSP)
-	h.Set("Cross-Origin-Resource-Policy", "same-origin")
+	h.Set("Cross-Origin-Resource-Policy", corp)
 }
 
 // inlineImageTypes are raster image types a browser renders without running
