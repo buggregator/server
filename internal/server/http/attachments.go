@@ -3,7 +3,10 @@ package http
 import (
 	"database/sql"
 	"fmt"
+	"mime"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/buggregator/server/v2/internal/storage"
 )
@@ -92,8 +95,9 @@ func downloadAttachment(db *sql.DB, store *storage.AttachmentStore, table string
 			return
 		}
 
+		setAttachmentSafetyHeaders(w)
 		w.Header().Set("Content-Type", "application/octet-stream")
-		w.Header().Set("Content-Disposition", "attachment; filename=\""+name+"\"")
+		w.Header().Set("Content-Disposition", contentDisposition("attachment", name))
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
 		w.Write(data)
 	}
@@ -104,11 +108,11 @@ func previewAttachment(db *sql.DB, store *storage.AttachmentStore, table string)
 		eventUUID := r.PathValue("eventUuid")
 		uuid := r.PathValue("uuid")
 
-		var name, path, mime string
+		var name, path, mimeType string
 		var storedEventUUID string
 		err := db.QueryRowContext(r.Context(),
 			"SELECT event_uuid, name, path, mime FROM "+table+" WHERE uuid = ?", uuid,
-		).Scan(&storedEventUUID, &name, &path, &mime)
+		).Scan(&storedEventUUID, &name, &path, &mimeType)
 		if err != nil {
 			http.Error(w, "attachment not found", 404)
 			return
@@ -125,8 +129,85 @@ func previewAttachment(db *sql.DB, store *storage.AttachmentStore, table string)
 			return
 		}
 
-		w.Header().Set("Content-Type", mime)
+		setAttachmentSafetyHeaders(w)
+		if ct, ok := inlinePreviewType(mimeType); ok {
+			w.Header().Set("Content-Type", ct)
+			w.Header().Set("Content-Disposition", contentDisposition("inline", name))
+		} else {
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.Header().Set("Content-Disposition", contentDisposition("attachment", name))
+		}
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
 		w.Write(data)
 	}
 }
 
+// attachmentCSP keeps any attachment body away from the UI origin: the
+// sandbox directive gives the document an opaque origin, and nothing but
+// same-origin images and media may load.
+const attachmentCSP = "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox"
+
+func setAttachmentSafetyHeaders(w http.ResponseWriter) {
+	h := w.Header()
+	h.Set("X-Content-Type-Options", "nosniff")
+	h.Set("Content-Security-Policy", attachmentCSP)
+	h.Set("Cross-Origin-Resource-Policy", "same-origin")
+}
+
+// inlineImageTypes are raster image types a browser renders without running
+// code. SVG is left out on purpose: it can carry script.
+var inlineImageTypes = map[string]bool{
+	"image/png":                true,
+	"image/jpeg":               true,
+	"image/gif":                true,
+	"image/webp":               true,
+	"image/avif":               true,
+	"image/bmp":                true,
+	"image/x-icon":             true,
+	"image/vnd.microsoft.icon": true,
+}
+
+// inlinePreviewType returns the Content-Type to serve a stored attachment
+// inline with, and false when the type is not safe to show inline. The
+// stored MIME comes from the sender, so only an allowlist passes.
+func inlinePreviewType(stored string) (string, bool) {
+	mediaType, _, err := mime.ParseMediaType(stored)
+	if err != nil {
+		return "", false
+	}
+	mediaType = strings.ToLower(mediaType)
+	switch {
+	case inlineImageTypes[mediaType], mediaType == "application/pdf":
+		return mediaType, true
+	case mediaType == "text/plain":
+		return "text/plain; charset=utf-8", true
+	case strings.HasPrefix(mediaType, "audio/"), strings.HasPrefix(mediaType, "video/"):
+		return mediaType, true
+	}
+	return "", false
+}
+
+// contentDisposition builds a Content-Disposition value whose filename cannot
+// break out of the header: the plain filename is an ASCII fallback with
+// quotes, backslashes and control characters replaced, and a non-ASCII name
+// also goes as RFC 5987 filename*.
+func contentDisposition(kind, name string) string {
+	var fallback strings.Builder
+	ascii := true
+	for _, r := range name {
+		switch {
+		case r > 0x7e:
+			ascii = false
+			fallback.WriteByte('_')
+		case r < 0x20, r == 0x7f, r == '"', r == '\\':
+			fallback.WriteByte('_')
+		default:
+			fallback.WriteRune(r)
+		}
+	}
+	v := kind + "; filename=\"" + fallback.String() + "\""
+	if !ascii {
+		v += "; filename*=UTF-8''" + strings.ReplaceAll(url.QueryEscape(name), "+", "%20")
+	}
+	return v
+}
