@@ -47,7 +47,9 @@ func registerTraceTools(server *sdkmcp.Server, db *sql.DB) {
 		Name: "sentry_trace_get",
 		Description: "One Sentry trace: the root transaction, the request timeline as a span tree (op, description such as the SQL or URL, " +
 			"start offset and duration in ms, errors, code place file:line when the SDK sent it), N+1 groups (normalized query, count, total ms, " +
-			"origin file:line), the errors raised in the trace and the queue job attempts that ran in it.",
+			"origin file:line), the errors raised in the trace and the queue job attempts that ran in it. " +
+			"Each error has its type, message and frame (file, line, function of the top in-app frame); " +
+			"call sentry_event with the error's id as uuid for the full stack.",
 	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in sentryTraceGetInput) (*sdkmcp.CallToolResult, any, error) {
 		if in.TraceID == "" {
 			return nil, nil, fmt.Errorf("trace_id is required")
