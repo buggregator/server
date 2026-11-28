@@ -27,7 +27,9 @@ func registerQueueTools(server *sdkmcp.Server, db *sql.DB) {
 		Name: "queue_jobs",
 		Description: "Queue jobs seen through Sentry tracing (sentry-laravel QueueIntegration: one transaction per attempt, op queue.process). " +
 			"Without id: jobs, newest first, each with its class, queue, last status, attempts and duration. With id: one job's attempts in order, " +
-			"the exception of each failed attempt and the request that dispatched it. Running jobs are not visible (Sentry sends an attempt when it ends).",
+			"the exception of each failed attempt and the request that dispatched it. Running jobs are not visible (Sentry sends an attempt when it ends). " +
+			"Each error has its type, message and frame (file, line, function of the top in-app frame); " +
+			"call sentry_event with the error's id as uuid for the full stack.",
 	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, in queueJobsInput) (*sdkmcp.CallToolResult, any, error) {
 		var (
 			res map[string]any

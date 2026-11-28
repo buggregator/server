@@ -296,7 +296,7 @@ func queueJobDetail(db *sql.DB, r *http.Request, id string) (map[string]any, int
 
 	// Errors: an error of the attempt's trace captured while it ran.
 	for traceID := range traces {
-		erows, err := db.Query(`SELECT e.event_id, e.event_ts, se.exception_type, se.exception_value
+		erows, err := db.Query(`SELECT e.event_id, e.event_ts, se.exception_type, se.exception_value, se.stacktrace
 			FROM sentry_error_events e
 			LEFT JOIN sentry_exceptions se ON se.error_event_id = e.id AND se.position = 0
 			WHERE e.trace_id = ?`, traceID)
@@ -305,8 +305,8 @@ func queueJobDetail(db *sql.DB, r *http.Request, id string) (map[string]any, int
 		}
 		for erows.Next() {
 			var eventID string
-			var ts, excType, excValue sql.NullString
-			if erows.Scan(&eventID, &ts, &excType, &excValue) != nil {
+			var ts, excType, excValue, stack sql.NullString
+			if erows.Scan(&eventID, &ts, &excType, &excValue, &stack) != nil {
 				continue
 			}
 			t, err := parseRFC3339(ts.String)
@@ -319,6 +319,7 @@ func queueJobDetail(db *sql.DB, r *http.Request, id string) (map[string]any, int
 						"id":              eventID,
 						"exception_type":  scanNullString(excType),
 						"exception_value": scanNullString(excValue),
+						"frame":           topAppFrame(stack.String),
 						"event_ts":        ts.String,
 					})
 					break

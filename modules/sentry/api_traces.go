@@ -473,7 +473,7 @@ func traceSourcesServices(db *sql.DB, traceID string, projectClause string, proj
 func loadRelatedErrors(db *sql.DB, traceID string, projectClause string, projectArgs []any) []map[string]any {
 	// Use a single query to avoid nested connection issues with SQLite.
 	rows, err := db.Query(
-		`SELECT e.event_id, se.exception_type, `+tsUTC("e.received_at")+`
+		`SELECT e.event_id, se.exception_type, se.exception_value, se.stacktrace, `+tsUTC("e.received_at")+`
 		FROM sentry_error_events e
 		LEFT JOIN sentry_exceptions se ON se.error_event_id = e.id AND se.position = 0
 		WHERE e.trace_id = ?`+strings.Replace(projectClause, "project_id", "e.project_id", 1)+` ORDER BY e.received_at DESC`, append([]any{traceID}, projectArgs...)...,
@@ -486,17 +486,19 @@ func loadRelatedErrors(db *sql.DB, traceID string, projectClause string, project
 	var result []map[string]any
 	for rows.Next() {
 		var (
-			id         string
-			excType    sql.NullString
-			receivedAt string
+			id                          string
+			excType, excValue, stackStr sql.NullString
+			receivedAt                  string
 		)
-		if err := rows.Scan(&id, &excType, &receivedAt); err != nil {
+		if err := rows.Scan(&id, &excType, &excValue, &stackStr, &receivedAt); err != nil {
 			continue
 		}
 		result = append(result, map[string]any{
-			"id":             id,
-			"exception_type": scanNullString(excType),
-			"received_at":    receivedAt,
+			"id":              id,
+			"exception_type":  scanNullString(excType),
+			"exception_value": scanNullString(excValue),
+			"frame":           topAppFrame(stackStr.String),
+			"received_at":     receivedAt,
 		})
 	}
 
@@ -504,6 +506,51 @@ func loadRelatedErrors(db *sql.DB, traceID string, projectClause string, project
 		result = []map[string]any{}
 	}
 	return result
+}
+
+// topAppFrame returns the frame an exception was thrown in within the
+// application's own code: the last in_app frame of a Sentry stacktrace
+// (frames go oldest call first), else the last frame. nil without frames.
+func topAppFrame(stacktraceJSON string) map[string]any {
+	if stacktraceJSON == "" {
+		return nil
+	}
+	var st struct {
+		Frames []struct {
+			Filename string `json:"filename"`
+			AbsPath  string `json:"abs_path"`
+			Lineno   int    `json:"lineno"`
+			Function string `json:"function"`
+			InApp    *bool  `json:"in_app"`
+		} `json:"frames"`
+	}
+	if json.Unmarshal([]byte(stacktraceJSON), &st) != nil || len(st.Frames) == 0 {
+		return nil
+	}
+	pick := len(st.Frames) - 1
+	for i := len(st.Frames) - 1; i >= 0; i-- {
+		if f := st.Frames[i]; f.InApp != nil && *f.InApp {
+			pick = i
+			break
+		}
+	}
+	f := st.Frames[pick]
+	file := f.Filename
+	if file == "" {
+		file = f.AbsPath
+	}
+	if file == "" {
+		return nil
+	}
+	var line any
+	if f.Lineno > 0 {
+		line = f.Lineno
+	}
+	return map[string]any{
+		"file":     file,
+		"line":     line,
+		"function": nullIfEmpty(f.Function),
+	}
 }
 
 // parseRFC3339 tries multiple time formats for stored timestamps.

@@ -43,6 +43,43 @@ func TestMCP_QueueJobs(t *testing.T) {
 			t.Errorf("job output lacks %s:\n%s", want, text)
 		}
 	}
+
+	// The failed attempt's error points at the code and leads to sentry_event.
+	var job struct {
+		TraceID     string `json:"trace_id"`
+		AttemptList []struct {
+			TraceID string `json:"trace_id"`
+			Errors  []struct {
+				ID    string `json:"id"`
+				Frame *struct {
+					File string `json:"file"`
+					Line int    `json:"line"`
+				} `json:"frame"`
+			} `json:"errors"`
+		} `json:"attempt_list"`
+	}
+	if err := json.Unmarshal([]byte(text), &job); err != nil {
+		t.Fatal(err)
+	}
+	var errID, errTrace string
+	for _, a := range job.AttemptList {
+		for _, e := range a.Errors {
+			if e.Frame == nil || e.Frame.File == "" || e.Frame.Line == 0 {
+				t.Errorf("error %s: frame %+v, want file and line", e.ID, e.Frame)
+			}
+			errID, errTrace = e.ID, a.TraceID
+		}
+	}
+	if errID == "" {
+		t.Fatalf("no attempt error in:\n%s", text)
+	}
+	trace := callTool(t, session, "sentry_trace_get", map[string]any{"trace_id": errTrace})
+	if !strings.Contains(trace, `"frame": {`) || !strings.Contains(trace, errID) {
+		t.Errorf("sentry_trace_get errors lack the frame of %s:\n%.2000s", errID, trace)
+	}
+	if ev := callTool(t, session, "sentry_event", map[string]any{"uuid": errID}); !strings.Contains(ev, "RuntimeException") {
+		t.Errorf("sentry_event(%s) = %.500s", errID, ev)
+	}
 }
 
 // replaySDK feeds a recorded SDK session (modules/sentry/testdata/sdk/<dir>)
