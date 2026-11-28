@@ -107,7 +107,7 @@ func TestMCP_ListTools(t *testing.T) {
 	expected := []string{
 		"events_list", "events_facets", "event_get", "event_delete",
 		"profiler_summary", "profiler_top", "profiler_call_graph",
-		"sentry_event", "vardump_get", "queue_jobs",
+		"sentry_event", "vardump_get", "queue_jobs", "sentry_traces_list", "sentry_trace_get",
 	}
 	found := make(map[string]bool)
 	for _, tool := range result.Tools {

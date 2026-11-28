@@ -24,6 +24,7 @@ func NewServer(db *sql.DB, store event.Store, providers ...ToolProvider) *sdkmcp
 	registerProfilerTools(server, db)
 	registerSentryTools(server, store)
 	registerQueueTools(server, db)
+	registerTraceTools(server, db)
 	registerVarDumpTools(server, store)
 	for _, p := range providers {
 		p.RegisterMCPTools(server)
